@@ -5,7 +5,7 @@ import { SiteHeader } from "./SiteHeader";
 /** Header, main landmark and footer. `width` sets the content measure. */
 export function Page({ children, className, bare = false }: { children: React.ReactNode; className?: string; bare?: boolean }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-bg text-ink">
+    <div className="flex min-h-dvh flex-col overflow-x-clip bg-bg text-ink">
       <SiteHeader />
       <main id="main" tabIndex={-1} className={cx("flex-1 outline-none", !bare && "mx-auto w-full max-w-7xl px-4 pt-8 pb-20 sm:px-6", className)}>
         {children}
