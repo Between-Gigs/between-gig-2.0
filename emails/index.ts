@@ -6,6 +6,8 @@
 import { invite, type InviteProps } from "./invite";
 import { profileSubmitted, type ProfileSubmittedProps } from "./profile-submitted";
 import { signInCode, type SignInCodeProps } from "./sign-in-code";
+import { comingSoon, type ComingSoonProps } from "./coming-soon";
+import { welcome, type WelcomeProps } from "./welcome";
 import { defaultContext, type EmailContext, type RenderedEmail } from "./layout";
 import type { EmailTemplate } from "@/lib/data/types";
 
@@ -35,6 +37,14 @@ export const emailTemplates = {
     name: "profile-submitted", label: "Profile submitted", when: "Right after a Gigster submits their profile for review.",
     render: profileSubmitted, sample: { firstName: "Maya", profileUrl: "https://between-gigs.com/profile", editUrl: "https://between-gigs.com/profile/edit" },
   } satisfies TemplateInfo<ProfileSubmittedProps>,
+  welcome: {
+    name: "welcome", label: "Welcome", when: "When someone joins the call sheet on /professionals.",
+    render: welcome, sample: { storyboardUrl: "https://between-gigs.com/storyboard" },
+  } satisfies TemplateInfo<WelcomeProps>,
+  "coming-soon": {
+    name: "coming-soon", label: "Coming soon", when: "After either Storyboard form: offering skills or describing a project.",
+    render: comingSoon, sample: { kind: "talent" },
+  } satisfies TemplateInfo<ComingSoonProps>,
 } as const;
 
 export const emailNames = Object.keys(emailTemplates) as EmailTemplate[];

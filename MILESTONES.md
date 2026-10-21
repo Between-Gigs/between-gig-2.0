@@ -37,7 +37,16 @@ The client's critical path for Gigsters, plus owner search.
 
 Done when: a person can go invite email → register → complete and submit the questionnaire → see their profile, and an owner can search and open it, in light and dark, desktop and phone, with the QA suite passing.
 
-## Milestone 3 · Every page and email in the initial funnel, redesigned
+## Milestone 3 · Every page and email in the initial funnel, redesigned ✅
+
+Done 21 Oct 2026. Handoff: [docs/handoff/milestone-3.md](docs/handoff/milestone-3.md).
+
+- [x] `/professionals` with the 3-step "Get on the call sheet" dialog
+- [x] Welcome and Coming-soon emails (previews at `/emails`)
+- [x] `/storyboard`: the approved artwork as a book, catalog of commissions, talent and buyer forms
+- [x] Privacy (with request form), Terms, Provider standards, Licensing & insurance
+- [x] Journal list, article (with budget planner, production kit, FilmLA chart) and author pages
+- [x] QA routes and end-to-end funnel flow in `pnpm check`
 
 The live funnel today: Crew Stories / iMessage → `/professionals` → "Get on the call sheet" (email + ZIP, then optional service details) → **Welcome email** → `/storyboard` → talent or buyer form → **Coming-soon email**.
 

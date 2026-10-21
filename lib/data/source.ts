@@ -1,6 +1,7 @@
 import type {
-  EmailTemplate, InviteLookup, OutboxEmail, PeopleQuery, Person, PersonSummary, Profile, ProfileDraft,
-  ProfileFields, RegisterResult, RequestCodeResult, Role, Session, SignInResult,
+  EmailTemplate, InviteLookup, OutboxEmail, PeopleQuery, Person, PersonSummary, PrivacyRequest, Profile, ProfileDraft,
+  ProfileFields, RegisterResult, RequestCodeResult, Role, Session, SignInResult, SketchKind, SketchSubmission,
+  WaitlistResult, WaitlistSignup,
 } from "./types";
 
 /**
@@ -53,6 +54,17 @@ export interface DataSource {
     outbox(): Promise<OutboxEmail[]>;
     get(id: string): Promise<OutboxEmail | null>;
     queue(template: EmailTemplate, to: string, props: Record<string, string>): Promise<OutboxEmail>;
+  };
+
+  /** The public funnel (Milestone 3). Each call maps to an existing route in the live app; see docs/handoff/milestone-3.md. */
+  funnel: {
+    /** Step 1 of "Get on the call sheet": email + ZIP (+ category from the card that opened it). Queues the welcome email. */
+    joinWaitlist(input: { email: string; zip: string; category?: string; placement: string }): Promise<WaitlistResult>;
+    /** Step 2 (optional): service category and "What would you offer?". */
+    addDetails(signupId: string, input: { category: string; details: string }): Promise<WaitlistSignup>;
+    /** Storyboard forms. Queues the coming-soon email. */
+    submitSketch(kind: SketchKind, answers: Record<string, string>): Promise<SketchSubmission>;
+    privacyRequest(email: string, message: string): Promise<PrivacyRequest>;
   };
 
   /** Sample-only controls for the demo switcher. The live implementation omits them. */

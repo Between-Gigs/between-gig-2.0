@@ -39,6 +39,11 @@ async function open(route, { theme, width }) {
   await page.goto(`${base}${route.path}`);
   await page.waitForLoadState("networkidle");
   if (route.ready) await page.locator(route.ready).first().waitFor({ timeout: 8000 });
+  // Load lazy images so full-page screenshots show them.
+  await page.evaluate(async () => {
+    for (const img of document.querySelectorAll("img[loading=lazy]")) img.loading = "eager";
+    await Promise.all(Array.from(document.images).filter((i) => !i.complete).map((i) => new Promise((r) => { i.onload = i.onerror = r; setTimeout(r, 3000); })));
+  });
   if (route.act) await route.act(page);
   await page.waitForTimeout(150);
   return { context, page, errors };

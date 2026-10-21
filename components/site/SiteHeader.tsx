@@ -1,6 +1,6 @@
 "use client";
-import { Avatar, Badge, Button, Logo, Menu, ThemeToggle, cx, type MenuEntry } from "@ds/components";
-import { ChevronDown, LogOut, PencilLine, UserRound, Users } from "lucide-react";
+import { Avatar, Button, IconButton, Logo, Menu, ThemeToggle, cx, type MenuEntry } from "@ds/components";
+import { ChevronDown, LogOut, Menu as MenuIcon, PencilLine, UserRound, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { data } from "@/lib/data";
@@ -19,9 +19,9 @@ export function SiteHeader() {
     ? [{ href: "/owners/people/", label: "People" }, { href: "/emails/", label: "Emails" }]
     : session?.role === "gigster"
       ? [{ href: "/profile/", label: "My profile" }, { href: "/profile/edit/", label: "Edit profile" }]
-      : [];
+      : [{ href: "/professionals/", label: "For professionals" }, { href: "/storyboard/", label: "Storyboard" }, { href: "/journal/", label: "Journal" }];
 
-  const current = (href: string) => pathname === href || pathname === href.replace(/\/$/, "");
+  const current = (href: string) => pathname === href || pathname === href.replace(/\/$/, "") || (href !== "/" && pathname.startsWith(href));
 
   const signOut = async () => {
     await data.auth.signOut();
@@ -53,7 +53,6 @@ export function SiteHeader() {
           </nav>
         )}
         <div className="ml-auto flex items-center gap-3">
-          <span className="hidden lg:block"><Badge tone="neutral" size="sm">Fictional sample</Badge></span>
           <ThemeToggle size="sm" showLabel={false} />
           {loading ? <span className="h-8 w-20" aria-hidden="true" /> : session ? (
             <Menu align="end" items={menu}
@@ -65,7 +64,13 @@ export function SiteHeader() {
                 </Button>
               } />
           ) : (
-            !pathname.startsWith("/login") && <ButtonLink href="/login/" size="sm">Sign in</ButtonLink>
+            <>
+              {!pathname.startsWith("/login") && <ButtonLink href="/login/" size="sm">Sign in</ButtonLink>}
+              <span className="md:hidden">
+                <Menu align="end" items={links.map((l) => ({ label: l.label, checked: current(l.href) || undefined, onSelect: () => router.push(l.href) }))}
+                  trigger={<IconButton label="Menu" variant="ghost" size="sm" icon={<MenuIcon />} />} />
+              </span>
+            </>
           )}
         </div>
       </div>

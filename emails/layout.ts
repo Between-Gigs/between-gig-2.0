@@ -166,3 +166,9 @@ export const spacer = (h: number) => `<div style="height:${h}px;line-height:${h}
 /** The plain-text twin's footer. */
 export const textFooter = (reason: string, site: string) =>
   `—\n${reason}\nBetween Gigs · 11766 Wilshire Blvd · Los Angeles, CA 90025\nContact us: hello@between-gigs.com\nPrivacy: ${site}/privacy\nUnsubscribe: email hello@between-gigs.com with the subject "Unsubscribe from Between Gigs updates".`;
+
+/** A full-width image inside the card, optionally linked. Width/height attributes keep Outlook from blowing it up. */
+export function image({ src, alt, width = 512, height, href, caption }: { src: string; alt: string; width?: number; height: number; href?: string; caption?: string }) {
+  const img = `<img src="${esc(src)}" width="${width}" height="${height}" alt="${esc(alt)}" style="display:block;width:100%;max-width:${width}px;height:auto;border:0;border-radius:14px;color:${light.inkMuted};font-family:${FONT_UI};font-size:14px">`;
+  return `${href ? `<a href="${esc(href)}" style="text-decoration:none">${img}</a>` : img}${caption ? `<p class="e-subtle" style="margin:8px 0 0;font-family:${FONT_UI};font-size:12px;line-height:18px;color:${light.inkSubtle}">${esc(caption)}</p>` : ""}`;
+}

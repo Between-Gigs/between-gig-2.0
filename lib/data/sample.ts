@@ -10,7 +10,7 @@ import { blankFields, buildSeed, DEMO_TOKENS, SAMPLE_OWNER, type SeedState } fro
 import type { DataSource } from "./source";
 import type {
   EmailTemplate, Invite, InviteLookup, OutboxEmail, PeopleQuery, Person, PersonStatus, PersonSummary, Profile,
-  ProfileDraft, Role, Session,
+  PrivacyRequest, ProfileDraft, Role, Session, SketchSubmission, WaitlistSignup,
 } from "./types";
 import { personStatuses } from "./types";
 
@@ -24,6 +24,9 @@ interface Challenge { email: string; code: string; expiresAt: string; sentAt: st
 
 interface State extends SeedState {
   outbox: OutboxEmail[];
+  waitlist?: WaitlistSignup[];
+  sketches?: SketchSubmission[];
+  privacy?: PrivacyRequest[];
   session: Session | null;
   challenges: Challenge[];
 }
@@ -309,6 +312,55 @@ export const sampleSource: DataSource = {
       const email = queue(state, template, to, props);
       save(state);
       return clone(email);
+    },
+  },
+
+  funnel: {
+    async joinWaitlist({ email, zip, category = "", placement }) {
+      await latency(250);
+      const address = email.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) return { ok: false, error: "email" };
+      if (!/^\d{5}$/.test(zip)) return { ok: false, error: "zip" };
+      const state = load();
+      state.waitlist ??= [];
+      // Joining twice is fine: keep the first signup (like leads.email in D1), no second welcome email.
+      const existing = state.waitlist.find((w) => w.email === address);
+      if (existing) return { ok: true, signup: clone(existing), alreadyJoined: true };
+      const signup: WaitlistSignup = { id: uid(), email: address, zip, category, details: "", placement, createdAt: now() };
+      state.waitlist.unshift(signup);
+      queue(state, "welcome", address, { storyboardUrl: absoluteUrl("/storyboard/") });
+      save(state);
+      return { ok: true, signup: clone(signup), alreadyJoined: false };
+    },
+    async addDetails(signupId, { category, details }) {
+      await latency(200);
+      const state = load();
+      const signup = state.waitlist?.find((w) => w.id === signupId);
+      if (!signup) throw new Error("Unknown signup");
+      signup.category = category || signup.category;
+      signup.details = details.trim();
+      save(state);
+      return clone(signup);
+    },
+    async submitSketch(kind, answers) {
+      await latency(250);
+      const state = load();
+      state.sketches ??= [];
+      const { name = "", email = "", ...rest } = answers;
+      const sketch: SketchSubmission = { id: uid(), kind, name: name.trim(), email: email.trim().toLowerCase(), answers: rest, createdAt: now() };
+      state.sketches.unshift(sketch);
+      queue(state, "coming-soon", sketch.email, { kind });
+      save(state);
+      return clone(sketch);
+    },
+    async privacyRequest(email, message) {
+      await latency(200);
+      const state = load();
+      state.privacy ??= [];
+      const request: PrivacyRequest = { id: uid(), email: email.trim().toLowerCase(), message: message.trim(), createdAt: now() };
+      state.privacy.unshift(request);
+      save(state);
+      return clone(request);
     },
   },
 

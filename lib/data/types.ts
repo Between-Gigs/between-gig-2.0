@@ -139,7 +139,7 @@ export type RegisterResult =
   | { ok: true; person: Person }
   | { ok: false; error: InviteState | "terms" | "name" };
 
-export type EmailTemplate = "invite" | "sign-in-code" | "profile-submitted";
+export type EmailTemplate = "invite" | "sign-in-code" | "profile-submitted" | "welcome" | "coming-soon";
 
 /** A queued email. Production: a row in the Resend outbox, sent by the existing worker. */
 export interface OutboxEmail {
@@ -174,3 +174,39 @@ export interface PersonSummary {
   /** How much of the questionnaire is filled, 0 to 1. */
   completeness: number;
 }
+
+/* ---- Milestone 3: the public funnel ---- */
+
+/** "Get on the call sheet" on /professionals. Production: D1 `leads` (+ `form_responses`), welcome email queued. */
+export interface WaitlistSignup {
+  id: string;
+  email: string;
+  zip: string;
+  /** A waitlistCategories id (lib/data/taxonomy.ts), from a service card, a sample profile or step 2. */
+  category: string;
+  /** Step 2's "What would you offer?" (optional). */
+  details: string;
+  /** Which button opened the dialog: hero, nav, service, profile-maya, footer… (the old analytics placement). */
+  placement: string;
+  createdAt: string;
+}
+
+export type WaitlistResult =
+  | { ok: true; signup: WaitlistSignup; alreadyJoined: boolean }
+  | { ok: false; error: "email" | "zip" };
+
+export type SketchKind = "talent" | "buyer";
+
+/** A Storyboard form: talent ("Offer your skills") or buyer ("Find talent for a project"). Production: D1 `sketches`. */
+export interface SketchSubmission {
+  id: string;
+  kind: SketchKind;
+  name: string;
+  email: string;
+  /** Every other answer, keyed by field name (role, services, location, availability, rate, project, timing, team_size, budget, details). */
+  answers: Record<string, string>;
+  createdAt: string;
+}
+
+/** The privacy page's contact form. Production: D1 `privacy_requests`. */
+export interface PrivacyRequest { id: string; email: string; message: string; createdAt: string }

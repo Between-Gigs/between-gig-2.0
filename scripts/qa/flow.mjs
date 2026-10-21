@@ -33,6 +33,7 @@ export async function flow({ browser, base, outDir }) {
       await page.evaluate(() => window.bgSample.signInAs("invited"));
       await page.goto(`${base}/emails/`);
       await page.getByRole("link", { name: "Professional onboarding is open" }).click();
+      await page.waitForURL(/\/emails\/invite\/\?outbox=/);
       await page.locator("iframe").waitFor();
       const href = await page.frameLocator("iframe").getByRole("link", { name: /Create your profile/ }).getAttribute("href");
       if (!href?.includes("/join/?invite=")) throw new Error(`invite link looks wrong: ${href}`);
@@ -140,7 +141,54 @@ export async function flow({ browser, base, outDir }) {
       await expectText("Waiting for review");
     });
 
-  if (ok && errors.length) problems.push(`flow: page errors: ${errors.join(" | ")}`);
+  // Milestone 3: the public funnel.
+  const funnel = ok
+    && await step("call-sheet-signup", async () => {
+      await page.evaluate(() => window.bgSample.signInAs("invited"));
+      await page.goto(`${base}/professionals/`);
+      await page.getByRole("button", { name: "I offer this service: Interior styling" }).click();
+      await expectText("Interested in offering: Interior Styling");
+      await page.getByRole("button", { name: "Get on the call sheet" }).last().click();
+      await expectText("Enter your email address");
+      await page.getByLabel("Email").fill("new.gigster@example.com");
+      await page.getByLabel("ZIP code").fill("90026");
+      await page.getByRole("dialog").getByRole("button", { name: "Get on the call sheet" }).click();
+      await expectText("You're on the list.");
+      await page.getByLabel("What would you offer?").fill("Room styling and sourcing between shoots.");
+      await page.getByRole("button", { name: "Save optional details" }).click();
+      await expectText("Thank you for joining!");
+    })
+    && await step("storyboard-talent", async () => {
+      await page.goto(`${base}/storyboard/`);
+      await page.getByRole("button", { name: "Next page", exact: true }).click();
+      await expectText("Page 2 of 20");
+      await page.getByRole("button", { name: "Offer your skills" }).click();
+      await page.getByRole("button", { name: "Save my professional interest" }).click();
+      await expectText("Fill this in to continue.");
+      const answers = { "Your name": "Sam Rivera", "Email for follow-up": "sam.rivera@example.com", "Your entertainment role or craft": "Scenic carpenter", "What services would you like to offer?": "Custom furniture and repairs.", "Where can you work?": "Los Angeles", "When are you available?": "Weekdays between shoots" };
+      for (const [label, value] of Object.entries(answers)) await page.getByLabel(label, { exact: false }).first().fill(value);
+      await page.getByRole("button", { name: "Save my professional interest" }).click();
+      await expectText("Your professional interest is saved.");
+    })
+    && await step("funnel-emails", async () => {
+      await page.goto(`${base}/emails/`);
+      await page.getByRole("link", { name: "Your next chapter starts here." }).waitFor();
+      await page.getByRole("link", { name: "Thank you. The next chapter is coming." }).waitFor();
+    })
+    && await step("privacy-request", async () => {
+      await page.goto(`${base}/privacy/`);
+      await page.getByLabel("Email used for your signup").fill("new.gigster@example.com");
+      await page.getByLabel("Your request").fill("Please remove me from the waitlist.");
+      await page.getByRole("button", { name: "Send privacy request" }).click();
+      await expectText("Your request has been saved");
+    })
+    && await step("journal", async () => {
+      await page.goto(`${base}/journal/`);
+      await page.getByRole("link", { name: "Between productions, the craft is still here." }).click();
+      await page.getByRole("heading", { name: "Fewer days on location." }).waitFor();
+    });
+
+  if (ok && funnel && errors.length) problems.push(`flow: page errors: ${errors.join(" | ")}`);
   await context.close();
   return problems;
 }

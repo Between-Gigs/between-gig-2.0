@@ -1,5 +1,5 @@
 "use client";
-import { Badge, Button } from "@ds/components";
+import { Button } from "@ds/components";
 import { Reveal } from "@ds/motion";
 import { ArrowRight, Mail, Search, UserRoundPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -33,7 +33,7 @@ export function Overview() {
 
   return (
     <Page bare>
-      <BrandBand eyebrow="Between Gigs 2.0 · Milestone 2" title="Extraordinary talent." accent="Everyday solutions.">
+      <BrandBand eyebrow="Between Gigs 2.0 · Milestones 2 and 3" title="Extraordinary talent." accent="Everyday solutions.">
         <p className="mt-4 max-w-xl text-body-lg text-ink-muted">A clickable preview of the Gigster journey, from the invite email to a profile owners can find. Everyone in it is a fictional sample, and nothing leaves your browser.</p>
         <ul aria-label="Sample Gigsters" className="mt-8 flex -space-x-3">
           {faces.map((f, i) => (
@@ -63,7 +63,7 @@ export function Overview() {
             <p className="mt-2 text-body-md text-ink-muted">Use the <b className="text-ink">Demo</b> button in the corner to switch between a visitor, an invited Gigster, a Gigster at each status, and an owner, or to reset the sample data.</p>
           </div>
           <ul className="grid gap-2 text-body-md">
-            {[["/login/", "Sign in with an email code"], ["/profile/", "My profile and its status"], ["/p/maya/", "A public profile (approved)"], ["/emails/", "All emails and the sample outbox"]].map(([href, label]) => (
+            {[["/professionals/", "For professionals: get on the call sheet"], ["/storyboard/", "The interactive Storyboard and its forms"], ["/journal/", "The Journal"], ["/login/", "Sign in with an email code"], ["/p/maya/", "A public profile (approved)"], ["/emails/", "All emails and the sample outbox"]].map(([href, label]) => (
               <li key={href} className="flex items-center justify-between gap-3 border-b border-line pb-2 last:border-0">
                 <span className="text-ink">{label}</span>
                 <ButtonLink href={href} size="sm" variant="ghost" iconEnd={<ArrowRight />} aria-label={`Open: ${label}`}>Open</ButtonLink>
@@ -71,7 +71,7 @@ export function Overview() {
             ))}
           </ul>
         </section>
-        <p className="mt-6 flex items-center gap-2 text-caption text-ink-subtle"><Badge tone="neutral" size="sm">Fictional sample</Badge>Names shown are illustrative samples for this draft.</p>
+        <p className="mt-6 text-caption text-ink-subtle">Names shown are illustrative samples for this draft.</p>
       </div>
     </Page>
   );

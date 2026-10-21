@@ -34,4 +34,25 @@ export const routes = [
   { name: "owner-people-grid", path: "/owners/people/", setup: as("owner"), ready: "[data-results]", act: async (page) => { await page.getByRole("radio", { name: "Grid" }).click(); } },
   { name: "owner-person", path: "/owners/people/hana-kim/", setup: as("owner"), ready: "h1" },
   { name: "not-found", path: "/no-such-page/", ready: "h1" },
+  // Milestone 3: the public funnel.
+  { name: "professionals", path: "/professionals/", ready: "h1" },
+  {
+    name: "call-sheet-dialog", path: "/professionals/", setup: reset, ready: "h1",
+    act: async (page) => { await page.getByRole("button", { name: "Get on the call sheet" }).first().click(); await page.getByRole("dialog").waitFor(); },
+  },
+  { name: "storyboard", path: "/storyboard/", ready: "h1" },
+  {
+    name: "storyboard-form", path: "/storyboard/", setup: reset, ready: "h1",
+    act: async (page) => { await page.getByRole("button", { name: "Offer your skills" }).click(); await page.getByRole("dialog").waitFor(); },
+  },
+  { name: "privacy", path: "/privacy/", ready: "h1" },
+  { name: "terms", path: "/terms/", ready: "h1" },
+  { name: "provider-standards", path: "/provider-standards/", ready: "h1" },
+  { name: "licensing-insurance", path: "/licensing-insurance/", ready: "h1" },
+  { name: "journal", path: "/journal/", ready: "h1" },
+  { name: "journal-article", path: "/journal/the-birthday-that-became-a-production/", ready: "h1" },
+  { name: "journal-report", path: "/journal/the-downtime-economy/", ready: "h1" },
+  { name: "journal-author", path: "/journal/authors/between-gigs/", ready: "h1" },
+  { name: "email-welcome", path: "/emails/welcome/", ready: "iframe" },
+  { name: "email-coming-soon", path: "/emails/coming-soon/", ready: "iframe" },
 ];

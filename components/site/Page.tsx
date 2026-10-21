@@ -1,4 +1,4 @@
-import { cx } from "@ds/components";
+import { cx } from "@ds/components/cx";
 import { SiteFooter } from "./SiteFooter";
 import { SiteHeader } from "./SiteHeader";
 

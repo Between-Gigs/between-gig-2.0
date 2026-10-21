@@ -1,0 +1,586 @@
+[
+ {
+  "id": "a-comedian-not-just-a-plus-one",
+  "title": "A comedian walks into a birthday party. What happens next?",
+  "dek": "A good evening starts by turning “come hang out” into something both the host and the performer can picture.",
+  "category": "Production guide",
+  "byline": "Between Gigs · Field notes",
+  "date": "2026-09-26",
+  "cover": "art/storyboard/solo-actor-coach.jpg",
+  "coverAlt": "Storyboard illustration of a performer coaching a scene",
+  "note": "An imagined working example developed from our service ideas. No real booking, provider availability or customer result is implied.",
+  "blocks": [
+   {
+    "type": "paragraph",
+    "text": "Imagine the message: “It’s my birthday. Could you come over and make everyone laugh?” It sounds inviting. It is also three possible jobs hiding in one sentence. A comedian might perform a set, host the evening, or make a short social appearance. Each asks for a different kind of preparation and presence.",
+    "id": "a-comedian-not-just-a-plus-one-1"
+   },
+   {
+    "type": "paragraph",
+    "text": "Justin’s birthday idea gave us a useful place to begin. Before finding a performer, make the invitation clear enough that a performer can decide whether it is a good fit. The brief should leave room for personality while removing the awkward surprises.",
+    "id": "a-comedian-not-just-a-plus-one-2"
+   },
+   {
+    "type": "heading",
+    "text": "Scene one: choose the job.",
+    "id": "a-comedian-not-just-a-plus-one-3"
+   },
+   {
+    "type": "heading",
+    "text": "A set, a host, or an appearance?",
+    "level": 3,
+    "id": "a-comedian-not-just-a-plus-one-4"
+   },
+   {
+    "type": "paragraph",
+    "text": "For a set, describe the performance length, audience, space and tone. For an emcee, describe the entire running order: introductions, transitions, speeches, games and the closing moment. For an appearance, agree what participation means and when it ends. An invitation to a party does not quietly become a commitment to entertain all night.",
+    "id": "a-comedian-not-just-a-plus-one-5"
+   },
+   {
+    "type": "quote",
+    "text": "“Make it fun” is the ambition. The brief tells us what we are making.",
+    "id": "a-comedian-not-just-a-plus-one-6"
+   },
+   {
+    "type": "heading",
+    "text": "Scene two: give the room a personality.",
+    "id": "a-comedian-not-just-a-plus-one-7"
+   },
+   {
+    "type": "paragraph",
+    "text": "A mixed-age family dinner is a different room from a late-night gathering of close friends. Tell the performer who will be there, which subjects are welcome, which should be left alone, and whether you want any participation. Share the information needed to prepare; a good joke does not require handing over everyone’s private history.",
+    "id": "a-comedian-not-just-a-plus-one-8"
+   },
+   {
+    "type": "image",
+    "text": "Storyboard note → The room, the people and the moment shape the performance.",
+    "src": "art/storyboard/backyard-wedding.jpg",
+    "alt": "An illustrated crew preparing an intimate backyard celebration",
+    "id": "a-comedian-not-just-a-plus-one-9"
+   },
+   {
+    "type": "heading",
+    "text": "The five-minute practical conversation",
+    "level": 3,
+    "id": "a-comedian-not-just-a-plus-one-10"
+   },
+   {
+    "type": "paragraph",
+    "text": "Where will people sit? Can everyone hear? Who introduces the performer? Is a microphone available, and who checks it? Will dinner service pause during the set? The answers can change the experience more than an elaborate backdrop. Confirm recording plans too, so a private performance does not unexpectedly become public content.",
+    "id": "a-comedian-not-just-a-plus-one-11"
+   },
+   {
+    "type": "heading",
+    "text": "Scene three: write the invitation again.",
+    "id": "a-comedian-not-just-a-plus-one-12"
+   },
+   {
+    "type": "paragraph",
+    "text": "Here is a fictional starting brief: “We’re planning a birthday dinner for a small group of adults. We’d like a short, warm comedy set after dinner, with light audience interaction and no surprise roast. Please tell us what information and equipment you need, how you prepare, and what the quoted scope includes.” Add the real date, location, guest count and budget range before sending it.",
+    "id": "a-comedian-not-just-a-plus-one-13"
+   },
+   {
+    "type": "paragraph",
+    "text": "Then let the professional improve the idea. They may suggest a different length, a better moment in the evening, or a format you had not considered. The goal is an agreement that makes both sides comfortable enough to do something memorable.",
+    "id": "a-comedian-not-just-a-plus-one-14"
+   },
+   {
+    "type": "quote",
+    "text": "Leave room for spontaneity inside a plan everyone understands.",
+    "id": "a-comedian-not-just-a-plus-one-15"
+   }
+  ],
+  "sources": []
+ },
+ {
+  "id": "from-screen-credit-to-clear-service",
+  "title": "Your credit tells a story. Your service opens a door.",
+  "dek": "A storyboard exercise for translating a career’s worth of craft into something a new client understands.",
+  "category": "Story",
+  "byline": "Between Gigs · Field notes",
+  "date": "2026-09-26",
+  "cover": "art/storyboard/solo-carpenter.jpg",
+  "coverAlt": "Detailed graphite storyboard of a carpenter making a custom piece",
+  "note": "An imagined working example developed from our service ideas. No real booking, provider availability or customer result is implied.",
+  "blocks": [
+   {
+    "type": "paragraph",
+    "text": "A carpenter stands beside a beautiful piece of furniture. The person admiring it does not know the production titles, the department hierarchy or the pressure of an overnight set change. They know they need a table that fits their room. There is a perfectly good conversation waiting to happen.",
+    "id": "from-screen-credit-to-clear-service-1"
+   },
+   {
+    "type": "paragraph",
+    "text": "This is one of the ideas at the heart of Between Gigs: entertainment industry professionals have expertise that can be useful in other settings. The challenge is to describe the work from the new client’s side of the table, without shrinking the professional’s experience.",
+    "id": "from-screen-credit-to-clear-service-2"
+   },
+   {
+    "type": "heading",
+    "text": "Frame one: start with the outcome.",
+    "id": "from-screen-credit-to-clear-service-3"
+   },
+   {
+    "type": "paragraph",
+    "text": "“Set carpenter” establishes a background. “Custom furniture and creative builds” begins to describe a service. Go one step further: what can someone ask you to make, and what would they receive? A specific example helps a buyer imagine a real project and helps you decide which requests belong in your practice.",
+    "id": "from-screen-credit-to-clear-service-4"
+   },
+   {
+    "type": "quote",
+    "text": "Show the thing someone can use. Then show the craft that makes it possible.",
+    "id": "from-screen-credit-to-clear-service-5"
+   },
+   {
+    "type": "heading",
+    "text": "Frame two: make the invisible work visible.",
+    "id": "from-screen-credit-to-clear-service-6"
+   },
+   {
+    "type": "paragraph",
+    "text": "The finished object is only one frame. There is also the conversation, the measurement, the material choice, the sketch, the build and the handoff. Show a few of those steps with work you have permission to share. Explain which decisions the client makes and when they need to make them.",
+    "id": "from-screen-credit-to-clear-service-7"
+   },
+   {
+    "type": "image",
+    "text": "Pull back → The outcome is personal. The working method is professional.",
+    "src": "art/storyboard/home-transformation.jpg",
+    "alt": "Storyboard of entertainment craft applied to a home project",
+    "id": "from-screen-credit-to-clear-service-8"
+   },
+   {
+    "type": "heading",
+    "text": "Write one useful example",
+    "level": 3,
+    "id": "from-screen-credit-to-clear-service-9"
+   },
+   {
+    "type": "paragraph",
+    "text": "Try this fictional service description: “I create custom freestanding furniture. We start with the dimensions, how you will use the piece, material preferences and your timing. I then propose a design and scope for review before the build.” The exact offer should reflect your own capabilities. Do not imply that a furniture service includes structural or regulated construction work.",
+    "id": "from-screen-credit-to-clear-service-10"
+   },
+   {
+    "type": "heading",
+    "text": "Frame three: draw the edges.",
+    "id": "from-screen-credit-to-clear-service-11"
+   },
+   {
+    "type": "paragraph",
+    "text": "A clear offer also has boundaries. Say what is included, what information you need, how revisions are agreed, and whether delivery or installation is part of the proposal. A portfolio can spark interest; a practical scope is what lets a conversation move forward.",
+    "id": "from-screen-credit-to-clear-service-12"
+   },
+   {
+    "type": "paragraph",
+    "text": "The same exercise works across crafts. A costume professional can explain the particular wardrobe service they offer. A sound professional can describe the recording or event sound outcome they can deliver. The industry title remains part of the story, while the service gives a new client a way into it.",
+    "id": "from-screen-credit-to-clear-service-13"
+   },
+   {
+    "type": "heading",
+    "text": "One page. One possible project.",
+    "id": "from-screen-credit-to-clear-service-14"
+   },
+   {
+    "type": "paragraph",
+    "text": "Start with one service you want to perform and one buyer who might need it. Write the outcome, show a relevant example, outline the steps and state the boundaries. Read it aloud to someone outside your department. If they can describe when they would call you, the translation is beginning to work.",
+    "id": "from-screen-credit-to-clear-service-15"
+   }
+  ],
+  "sources": []
+ },
+ {
+  "id": "the-handoff-is-the-show",
+  "title": "The handoff is part of the show.",
+  "dek": "A missing prop, a late meal, an unclear cue: small gaps can become the whole evening. Here’s how to think through them.",
+  "category": "Production guide",
+  "byline": "Between Gigs · Field notes",
+  "date": "2026-09-26",
+  "cover": "art/storyboard/assemble-the-crew.jpg",
+  "coverAlt": "Storyboard of a production team planning a shared event",
+  "note": "An imagined working example developed from our service ideas. No real booking, provider availability or customer result is implied.",
+  "blocks": [
+   {
+    "type": "paragraph",
+    "text": "Picture the Western mystery birthday. An actor is ready to reveal the next clue. The guests are listening. The sound cue is waiting. The clue itself is still in a box beside the loading door. Everyone has done most of their job, and the scene still cannot begin.",
+    "id": "the-handoff-is-the-show-1"
+   },
+   {
+    "type": "paragraph",
+    "text": "In this imagined version of Justin’s ModWest Ranch idea, the problem is not a shortage of creativity. It is an unassigned handoff. Somebody needed to move a particular object to a particular person before a particular moment. “Props are sorted” was not quite enough.",
+    "id": "the-handoff-is-the-show-2"
+   },
+   {
+    "type": "heading",
+    "text": "Walk through the transitions.",
+    "id": "the-handoff-is-the-show-3"
+   },
+   {
+    "type": "paragraph",
+    "text": "A running order tells you what happens. A handoff plan tells you how one moment becomes the next. For every transition, ask four questions: what must be ready, who hands it over, who receives it, and how do they know it is ready? Write the answers in the same place as the cue.",
+    "id": "the-handoff-is-the-show-4"
+   },
+   {
+    "type": "heading",
+    "text": "From arrival to the first scene",
+    "level": 3,
+    "id": "the-handoff-is-the-show-5"
+   },
+   {
+    "type": "paragraph",
+    "text": "Transport confirms arrivals to the production lead. Wardrobe confirms that performers are ready. Props places the first clue in the agreed position. Sound confirms the microphone check. The lead gives the host a clear readiness signal. These are proposed responsibilities for our fictional event; a real team should assign them together.",
+    "id": "the-handoff-is-the-show-6"
+   },
+   {
+    "type": "image",
+    "text": "Trace the arrow → A great experience depends on the moments between departments.",
+    "src": "art/storyboard/solo-sound.jpg",
+    "alt": "Graphite storyboard of a sound professional preparing event equipment",
+    "id": "the-handoff-is-the-show-7"
+   },
+   {
+    "type": "heading",
+    "text": "When one detail changes",
+    "id": "the-handoff-is-the-show-8"
+   },
+   {
+    "type": "paragraph",
+    "text": "Suppose more guests are invited. Meals are the obvious change, but seating, transport, group sizes and the audibility of the final reveal may also need attention. The production lead checks which scopes are affected, gets revised proposals where needed and returns the decision to the host. Nobody should discover a larger commitment by arriving at the venue.",
+    "id": "the-handoff-is-the-show-9"
+   },
+   {
+    "type": "quote",
+    "text": "A change is ready when the people affected by it know what changed.",
+    "id": "the-handoff-is-the-show-10"
+   },
+   {
+    "type": "heading",
+    "text": "Keep one running order.",
+    "level": 3,
+    "id": "the-handoff-is-the-show-11"
+   },
+   {
+    "type": "paragraph",
+    "text": "Use a version and a time on the plan. Name the person who approves changes and the person who distributes them. A shared document can help, but the tool alone cannot settle conflicting instructions. Agree which version is current and how the team will hear about an urgent change.",
+    "id": "the-handoff-is-the-show-12"
+   },
+   {
+    "type": "heading",
+    "text": "Rehearse the gap, not only the scene.",
+    "id": "the-handoff-is-the-show-13"
+   },
+   {
+    "type": "paragraph",
+    "text": "Walk the route from guest arrival to the closing toast. Include meals, breaks and resets. Try the reveal from where a guest will actually stand. Give the team a simple way to pause and ask for help. The rehearsal may suggest fewer moving parts; that can be a creative improvement rather than a compromise.",
+    "id": "the-handoff-is-the-show-14"
+   },
+   {
+    "type": "paragraph",
+    "text": "Afterward, keep a short debrief: what surprised us, what worked, and what would we change next time? Good coordination is not about making people obey a perfect spreadsheet. It is about giving skilled people enough shared understanding to respond well when the evening becomes real.",
+    "id": "the-handoff-is-the-show-15"
+   }
+  ],
+  "sources": []
+ },
+ {
+  "id": "a-different-stage",
+  "title": "The gig changes. The talent stays.",
+  "dek": "Peter’s Springsteen note opens a bigger conversation about the work we can do between the work we’re known for.",
+  "category": "Story",
+  "byline": "Between Gigs · Inspired by a note from Peter Lenkov",
+  "date": "2026-09-26",
+  "cover": "art/journal/music-next-stage.jpg",
+  "coverAlt": "Concept storyboard of a fictional drummer moving from a concert stage to an intimate wedding",
+  "note": "Editorial inspired by Peter’s note. Illustrations are imagined scenes; the musicians mentioned are not affiliated with or bookable through Between Gigs.",
+  "blocks": [
+   {
+    "id": "m1",
+    "type": "paragraph",
+    "text": "A tour ends. A calendar opens. The hands that held the drumsticks yesterday have not forgotten what to do today."
+   },
+   {
+    "id": "m2",
+    "type": "paragraph",
+    "text": "Peter Lenkov sent us an observation about Max Weinberg, Bruce Springsteen’s longtime drummer: when the E Street Band stopped working together, Weinberg played private celebrations. The note was a small story with a large implication. A different room can still need the same remarkable skill."
+   },
+   {
+    "id": "m3",
+    "type": "heading",
+    "text": "A little history. A much bigger idea."
+   },
+   {
+    "id": "m4",
+    "type": "paragraph",
+    "text": "The band’s break began in October 1989, rather than the 1990s as recalled in the note. In a 2012 interview with The Forward, Weinberg confirmed that he took bar mitzvah engagements after the band disbanded. The New Jersey Hall of Fame also documents the wider range of work he explored before joining Conan O’Brien’s late-night show in 1993."
+   },
+   {
+    "id": "m5",
+    "type": "quote",
+    "text": "“When the E Street Band was disbanded, I took bar mitzvah gigs so I could play the drums.” — Max Weinberg, The Forward, 2012"
+   },
+   {
+    "id": "m6",
+    "type": "paragraph",
+    "text": "There is something useful in that image: a world-class professional doing work that matters to a smaller audience. For the family in the room, this is the big night. Scale changes. Care does not have to."
+   },
+   {
+    "id": "m7",
+    "type": "image",
+    "src": "art/storyboard/backyard-wedding.jpg",
+    "alt": "Graphite storyboard of a crew creating a backyard celebration",
+    "text": "Scene 02 · A smaller stage can still be someone’s biggest moment."
+   },
+   {
+    "id": "m8",
+    "type": "heading",
+    "text": "Translate the craft."
+   },
+   {
+    "id": "m9",
+    "type": "paragraph",
+    "text": "An entertainment credit tells you where someone worked. A service tells you what they can do for you. The translation matters: a set carpenter can create a custom dining table. A costume professional can help someone assemble a wardrobe. A location scout can find a venue with the right atmosphere, access and practical details."
+   },
+   {
+    "id": "m10",
+    "type": "paragraph",
+    "text": "The buyer should not need to understand a call sheet to make a good request. They should be able to say: here is the occasion, here is what success looks like, here is the time available. The professional can then turn that ambition into a clear proposal."
+   },
+   {
+    "id": "m11",
+    "type": "quote",
+    "text": "The room is different. The standard can be the same."
+   },
+   {
+    "id": "m12",
+    "type": "heading",
+    "text": "What a good brief makes possible"
+   },
+   {
+    "id": "m13",
+    "type": "paragraph",
+    "text": "For a private music event, start with the date, location, audience, musical direction and performance length. Then resolve the less glamorous questions: who supplies sound, when the band can load in, whether rehearsal is required, what travel involves and what happens if a touring commitment changes. Professionalism lives in those details as much as it lives onstage."
+   },
+   {
+    "id": "m14",
+    "type": "paragraph",
+    "text": "Peter’s note also suggested exploring the music industry in time. That remains an opportunity to investigate, not an announced launch or a promise of access to particular performers. We would begin with working professionals, defined availability and real buyer needs."
+   },
+   {
+    "id": "m15",
+    "type": "paragraph",
+    "text": "Between Gigs starts with a simple belief: people who make extraordinary things for an audience can make extraordinary things for a person, a family or a business. The next opportunity may ask for the same craft in a new setting."
+   }
+  ],
+  "sources": [
+   {
+    "label": "Max Weinberg interview · The Forward, March 29, 2012",
+    "url": "https://forward.com/schmooze/153950/q-and-a-max-weinberg-on-springsteen-and-conan/"
+   },
+   {
+    "label": "Max Weinberg biography · New Jersey Hall of Fame",
+    "url": "https://njhalloffame.org/2022-nominees-voting/2022-max-weinberg/"
+   }
+  ]
+ },
+ {
+  "id": "the-birthday-that-became-a-production",
+  "title": "I wanted a birthday party. I needed a production manager.",
+  "dek": "A Western mystery at ModWest Ranch: follow the idea from “wouldn’t it be fun?” to cast, crew, call sheet and budget.",
+  "category": "Production guide",
+  "byline": "Between Gigs · From Justin’s production thought experiment",
+  "date": "2026-09-26",
+  "cover": "art/journal/modwest-mystery.jpg",
+  "coverAlt": "Imagined Western mystery birthday with costumed actors, guests and a production manager at a ranch",
+  "note": "An imagined production inspired by Justin’s ModWest Ranch idea. This is not a completed event, confirmed venue plan, booking offer or vendor quote.",
+  "blocks": [
+   {
+    "id": "r1",
+    "type": "paragraph",
+    "text": "It began with a wonderfully dangerous question: could I hire a comedian to come to my birthday party? A moment later, the party had actors, costume designers and a Western mystery at ModWest Ranch. Then came the practical realization: someone has to feed the guests. And the crew. And get everyone there."
+   },
+   {
+    "id": "r2",
+    "type": "paragraph",
+    "text": "That is where the idea becomes a production. The experience onstage depends on a second experience behind it: people arriving with what they need, knowing what happens next, and having time to do their work well."
+   },
+   {
+    "id": "r3",
+    "type": "heading",
+    "text": "Write the night before buying the props."
+   },
+   {
+    "id": "r4",
+    "type": "paragraph",
+    "text": "For this imagined version, guests arrive as visitors to a Western town. An emcee welcomes them. Three actors introduce a missing keepsake and conflicting accounts of its disappearance. Small groups follow clues through agreed areas of the venue. Dinner becomes the intermission; the final reveal brings everyone together before the birthday toast."
+   },
+   {
+    "id": "r5",
+    "type": "paragraph",
+    "text": "That is a creative starting point, not a fixed script. The first real decisions are the audience, duration, guest count, accessibility needs, weather alternative and boundaries of guest participation. A good mystery includes a graceful way to watch without performing."
+   },
+   {
+    "id": "r6",
+    "type": "image",
+    "src": "art/storyboard/assemble-the-crew.jpg",
+    "alt": "Production coordinator, builder, host and sound specialist planning together",
+    "text": "Scene 02 · The production manager connects creative choices to people, time and resources."
+   },
+   {
+    "id": "r7",
+    "type": "heading",
+    "text": "Give every moving part an owner."
+   },
+   {
+    "id": "r8",
+    "type": "paragraph",
+    "text": "The production manager holds the master plan. A writer or director shapes the clues and rehearsals. Performers own their scenes; wardrobe owns fittings and returns; props owns the items guests handle. Catering needs two headcounts: guests and crew. Transport needs names, locations and call times. Sound needs a cue list that follows the actual running order."
+   },
+   {
+    "id": "r9",
+    "type": "paragraph",
+    "text": "Justin’s original idea included an animal wrangler. Treat animals as a separate creative and operational decision: involve the venue and a qualified wrangler before including them. The sample budget below leaves animals out until that scope is understood. The core mystery works perfectly well without them."
+   },
+   {
+    "id": "r10",
+    "type": "budget",
+    "text": "Build a first-pass budget"
+   },
+   {
+    "id": "r11",
+    "type": "paragraph",
+    "text": "These adjustable allowances demonstrate how a budget works; they are invented planning inputs in US dollars. Replace every allowance with a written quote. Venue, taxes, gratuities, permits, insurance, accessibility accommodations and any animal services still need separate confirmation. Increasing the guest count changes meals immediately, and may also trigger a new staffing, transport or venue plan."
+   },
+   {
+    "id": "r12",
+    "type": "toolkit",
+    "text": "The production kit"
+   },
+   {
+    "id": "r13",
+    "type": "heading",
+    "text": "Rehearse the handoffs."
+   },
+   {
+    "id": "r14",
+    "type": "paragraph",
+    "text": "Work backward from the first guest arrival. Reserve time for venue access, load-in, wardrobe checks, sound checks, crew food and a full walk-through. Rehearse the moments between departments: who cues the first actor, who moves guests to dinner, who stops the action if someone needs help, and who owns the weather call."
+   },
+   {
+    "id": "r15",
+    "type": "quote",
+    "text": "The best production makes the complicated part invisible to the guest."
+   },
+   {
+    "id": "r16",
+    "type": "paragraph",
+    "text": "This is the kind of project that inspires Between Gigs: several entertainment industry professionals, bringing different skills to one memorable experience. Shared budgets, linked scopes and coordinated bookings are product ideas we are exploring. For a real event today, appoint a lead and agree responsibilities directly with each provider."
+   }
+  ],
+  "sources": []
+ },
+ {
+  "id": "the-downtime-economy",
+  "title": "Between productions, the craft is still here.",
+  "dek": "The downtime economy: what the production numbers tell us, what they don’t, and why translating a skill into a service is a business problem worth solving.",
+  "category": "Industry report",
+  "byline": "Between Gigs · Research & perspective",
+  "date": "2026-09-26",
+  "cover": "art/journal/downtime-storyboard-v2.jpg",
+  "coverAlt": "Illustrated production professionals explaining opportunities beyond the set",
+  "note": "Research snapshot · September 26, 2026. Reported facts, editorial interpretation and hypothetical calculations are labeled separately.",
+  "blocks": [
+   {
+    "id": "d1",
+    "type": "paragraph",
+    "text": "Picture a workshop after a production wraps. The tools are put away, the next call has not arrived, and a very capable person has time they did not plan to have. What might that craft make possible in another setting?"
+   },
+   {
+    "id": "d2",
+    "type": "paragraph",
+    "text": "Entertainment industry professionals build expertise over years and sell it through projects measured in weeks or months. When a project ends, the expertise remains. The next buyer often has no obvious way to recognize it, describe it or hire it for a different kind of job."
+   },
+   {
+    "id": "d3",
+    "type": "heading",
+    "text": "First, the evidence."
+   },
+   {
+    "id": "d4",
+    "type": "report",
+    "text": "Less activity. Uneven recovery."
+   },
+   {
+    "id": "d5",
+    "type": "paragraph",
+    "text": "FilmLA counted 19,694 on-location shoot days in Greater Los Angeles during 2025, down 16.1% from 23,480 in 2024. Its July 23, 2026 update reported 4,711 shoot days in the second quarter of 2026, down 12.7% year over year. Within that quarter, television rose 34.4% from the previous quarter while remaining below its year-earlier level."
+   },
+   {
+    "id": "d6",
+    "type": "paragraph",
+    "text": "These are regional on-location activity measures. They are not a count of unemployed people, an individual’s lost income, or a census of all entertainment work. Soundstage work and activity outside FilmLA’s covered jurisdictions are not captured by this comparison. An improving quarter in one category and a difficult year can both be real."
+   },
+   {
+    "id": "d7",
+    "type": "heading",
+    "text": "The translation gap"
+   },
+   {
+    "id": "d8",
+    "type": "paragraph",
+    "text": "Our interpretation: one opportunity lies in making expertise legible to a new buyer. “Art department” names a world. “A custom display for your shop” names an outcome. “Production coordination” sounds abstract. “A launch event where every supplier knows the plan” is immediately useful."
+   },
+   {
+    "id": "d9",
+    "type": "image",
+    "src": "art/storyboard/solo-carpenter.jpg",
+    "alt": "A graphite storyboard showing a skilled carpenter at work",
+    "text": "Scene 02 · Make the outcome visible: the same hands, a different brief."
+   },
+   {
+    "id": "d10",
+    "type": "paragraph",
+    "text": "That translation alone is not enough. A buyer still needs evidence of relevant work, an intelligible scope, a realistic schedule and a price they can evaluate. A professional needs respect for preparation, expenses, boundaries and existing commitments. A marketplace earns its place by reducing those frictions."
+   },
+   {
+    "id": "d11",
+    "type": "quote",
+    "text": "A profile is a promise. A clear scope is the beginning of a business."
+   },
+   {
+    "id": "d12",
+    "type": "heading",
+    "text": "Do the small math before the big pitch."
+   },
+   {
+    "id": "d13",
+    "type": "paragraph",
+    "text": "Consider a hypothetical $1,000 project with $250 of direct expenses and 15 total hours, including preparation and travel. That leaves $750 before tax and overhead: $50 per hour. If the actual effort becomes 25 hours, the same project yields $30 per hour. Those figures are a worked example, not observed marketplace earnings."
+   },
+   {
+    "id": "d14",
+    "type": "paragraph",
+    "text": "The lesson is operational. Count all the hours. Define revisions. Price the actual deliverable. Track what the work costs to perform. More bookings are not automatically better if they consume the time needed for better-paid work or create an impossible schedule."
+   },
+   {
+    "id": "d15",
+    "type": "heading",
+    "text": "What we should measure"
+   },
+   {
+    "id": "d16",
+    "type": "paragraph",
+    "text": "For an early pilot, we would track qualified requests, proposals accepted, time to agree a scope, income after direct project expenses, repeat bookings and schedule conflicts. These are proposed measures, not current Between Gigs results. Membership totals alone cannot tell us whether the work is useful."
+   },
+   {
+    "id": "d17",
+    "type": "paragraph",
+    "text": "Peter’s founding idea was to create opportunities instead of waiting for them. The responsible version is specific: help someone sell a skill they already possess, to a buyer with a need they can actually meet, under terms both can understand. That will not repair an entire industry. It is a concrete piece of work worth doing."
+   }
+  ],
+  "sources": [
+   {
+    "label": "FilmLA · Full-year 2025 production update, January 15, 2026",
+    "url": "https://filmla.com/rising-california-film-tv-tax-credit-productions-signal-growing-industry-momentum-amid-2025-production-losses/"
+   },
+   {
+    "label": "FilmLA · Q2 2026 production update, July 23, 2026",
+    "url": "https://filmla.com/california-film-tax-incentives-continue-to-create-job-opportunities-in-scripted-production/"
+   }
+  ]
+ }
+]
