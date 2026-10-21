@@ -55,7 +55,7 @@ export async function flow({ browser, base, outDir }) {
       await expectText("You've already joined");
     })
     && await step("sign-out", async () => {
-      await page.goto(`${base}/`);
+      await page.goto(`${base}/preview/`);
       await page.getByRole("button", { name: /Account:/ }).click();
       await page.getByRole("menuitem", { name: "Sign out" }).click();
       await page.waitForURL(/\/login\/\?signedOut=1/);

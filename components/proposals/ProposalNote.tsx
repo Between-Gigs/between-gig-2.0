@@ -13,12 +13,12 @@ export function ProposalNote({ n, title, children, className }: { n: number; tit
   const on = React.useContext(NotesContext);
   if (!on) return null;
   return (
-    <aside aria-label={`Design note ${n}: ${title}`} className={cx("rounded-xl border border-dashed border-line-dashed bg-surface p-4 text-body-sm text-ink-muted", className)}>
+    <div role="note" aria-label={`Design note ${n}: ${title}`} className={cx("rounded-xl border border-dashed border-line-dashed bg-surface p-4 text-body-sm text-ink-muted", className)}>
       <p className="mb-1 flex items-center gap-2 text-label-md text-ink">
         <span className="grid size-6 shrink-0 place-items-center rounded-full bg-highlight font-mono text-data-sm text-ink">{n}</span>
         <Lightbulb className="size-4 text-ink-brand" aria-hidden="true" />{title}
       </p>
       <div className="grid gap-1.5">{children}</div>
-    </aside>
+    </div>
   );
 }
