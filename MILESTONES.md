@@ -75,7 +75,12 @@ Simple, calm, for the owners (Patti & Peter), not the OS shell.
 - Emails: **Approved** and **Changes requested** to the Gigster.
 - Waitlist view (the ~500 sign-ups): invite status (Not invited / Invited / Opened / Registered).
 
-## Milestone 5 · The "call sheet" home page
+## Milestone 5 · The "call sheet" home page ✅
+
+Done 21 Oct 2026. Handoff: [docs/handoff/milestone-5.md](docs/handoff/milestone-5.md).
+
+- [x] 5a: `/` rebuilt from the ComingSoon template, same words, “Get on the call sheet ↗” → /professionals (the Milestone 2–4 guide moved to `/preview`)
+- [x] 5b: `/proposals/home`: signed out, Gigster and owner home pages as designed proposals, with design notes
 
 - **5a.** Today's homepage ("Extraordinary talent. Everyday solutions." / "Coming soon." / "Los Angeles Call Sheet" / "Get on the call sheet ↗") rebuilt in the new style.
 - **5b.** A second version with recommendations for what the home page should be once the platform is open, **logged out** (clients finding help; Gigsters joining) and **logged in** (Gigster: profile status, next steps, requests; owner: review queue), as designed proposals with rationale.

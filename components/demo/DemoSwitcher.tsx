@@ -1,6 +1,6 @@
 "use client";
 import { Button, Popover, Select, useToast } from "@ds/components";
-import { FlaskConical, Inbox, RotateCcw, ShieldCheck, UserRound, UserRoundPlus, Users } from "lucide-react";
+import { Compass, FlaskConical, Inbox, RotateCcw, ShieldCheck, UserRound, UserRoundPlus, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -42,7 +42,7 @@ export function DemoSwitcher() {
         <p className="text-body-sm text-ink-muted">Sample mode: everything stays in this browser. Now viewing as <b className="text-ink">{role}</b>.</p>
         <div className="grid gap-2">
           <Button size="sm" fullWidth iconStart={<UserRound />} className="justify-start"
-            onClick={async () => { await data.auth.signOut(); go("/"); }}>Visitor (signed out)</Button>
+            onClick={async () => { await data.auth.signOut(); go("/preview/"); }}>Visitor (signed out)</Button>
           <Button size="sm" fullWidth iconStart={<UserRoundPlus />} className="justify-start"
             onClick={async () => { const r = await demo.signInAs("invited"); go(`/join/?invite=${r.inviteToken}`); }}>Invited Gigster (opens the invite link)</Button>
           <div className="grid gap-2 rounded-md border border-line p-2">
@@ -62,9 +62,10 @@ export function DemoSwitcher() {
           </ul>
         </div>
         <div className="flex flex-wrap gap-2 border-t border-line pt-3">
+          <Button size="sm" variant="ghost" iconStart={<Compass />} onClick={() => go("/preview/")}>Preview guide</Button>
           <Button size="sm" variant="ghost" iconStart={<Inbox />} onClick={() => go("/emails/")}>Emails & outbox</Button>
           <Button size="sm" variant="ghost" iconStart={<RotateCcw />}
-            onClick={async () => { await demo.reset(); setOpen(false); toast({ message: "Sample data reset", tone: "success" }); router.push("/"); }}>Reset sample data</Button>
+            onClick={async () => { await demo.reset(); setOpen(false); toast({ message: "Sample data reset", tone: "success" }); router.push("/preview/"); }}>Reset sample data</Button>
         </div>
         <p className="flex items-center gap-1.5 text-caption text-ink-subtle"><ShieldCheck className="size-3.5" aria-hidden="true" />Not part of the product. Hidden in production builds.</p>
       </Popover>

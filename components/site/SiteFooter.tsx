@@ -23,6 +23,8 @@ export function SiteFooter() {
           <Link className={linkClass} href="/storyboard/">Storyboard</Link>
           <Link className={linkClass} href="/journal/">The Journal</Link>
           <Link className={linkClass} href="/emails/">Email previews</Link>
+          <Link className={linkClass} href="/preview/">Preview guide</Link>
+          <Link className={linkClass} href="/proposals/home/">Home page proposals</Link>
         </nav>
         <nav aria-label="Legal and standards" className="grid content-start gap-1.5">
           <h2 className="mb-1 text-label-sm text-ink">Legal</h2>
