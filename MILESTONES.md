@@ -14,7 +14,16 @@ Source of the priorities: Justin's voice note of 21 Oct 2026 (`docs/voice-note-2
 
 Done. Tokens (light/dark), 51 React components, motion (page transitions, scroll reveals, theme reveal), materials, icons (Lucide + create-icon skill), templates (Coming soon, Search results, Gigster profile, Gigster onboarding), QA (contrast, axe, keyboard, detail inspection). Repo: `Between-Gigs/between-gigs-design-system`.
 
-## Milestone 2 · Email, login, profile builder, profile page, Gigster search
+## Milestone 2 · Email, login, profile builder, profile page, Gigster search ✅
+
+Done 21 Oct 2026. Handoff: [docs/handoff/milestone-2.md](docs/handoff/milestone-2.md) · data seams: [docs/handoff/data-layer.md](docs/handoff/data-layer.md) · system gaps: [docs/design-system-requests.md](docs/design-system-requests.md).
+
+- [x] Emails: invite, sign-in code, profile submitted, with previews at `/emails` (light / dark, desktop / phone, plain text) and a sample outbox
+- [x] Register from invite (`/join`), used / expired / unknown invite states; email-code sign in (`/login`), resend, wrong / expired codes; sign out
+- [x] Profile builder (`/profile/edit`): five steps, autosave and resume, per-step validation with summary, live preview, submit → confirmation + queued email
+- [x] My profile (`/profile`) with status banner for every status; public profile (`/p/[slug]`, approved only)
+- [x] Owner people search (`/owners/people`) and person view, with the seams for Milestone 4
+- [x] Demo switcher, GitHub Pages workflow, QA (screens, axe, end-to-end flow) in `pnpm check`
 
 The client's critical path for Gigsters, plus owner search.
 

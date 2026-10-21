@@ -16,7 +16,7 @@ export function PersonPhoto({ id, name, src, className, morph = false, alt, text
     return <img src={asset(src)} alt={alt ?? `Portrait of ${name || "this Gigster"}`} decoding="async" style={style} className={cx("block object-cover", className)} />;
   }
   return (
-    <span role="img" aria-label={alt ?? `${name || "Gigster"} (no photo yet)`} style={style}
+    <span {...(alt === "" ? { "aria-hidden": true } : { role: "img", "aria-label": alt ?? `${name || "Gigster"} (no photo yet)` })} style={style}
       className={cx("grid place-items-center bg-surface-selected font-display text-ink-brand select-none", textClass, className)}>
       <span aria-hidden="true">{initials(name || "?")}</span>
     </span>

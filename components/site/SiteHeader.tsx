@@ -60,7 +60,7 @@ export function SiteHeader() {
               header={<div className="px-3 pt-1 pb-2"><p className="truncate text-label-md text-ink">{session.name || "Gigster"}</p><p className="truncate text-body-sm text-ink-muted">{session.email}</p></div>}
               trigger={
                 <Button variant="ghost" size="sm" aria-label={`Account: ${session.name || session.email}`} iconEnd={<ChevronDown />} className="pl-1.5">
-                  <Avatar name={session.name || session.email} size="sm" />
+                  <Avatar name={(session.name || session.email).replace(/\s*\(.*\)$/, "")} size="sm" />
                   <span className="hidden max-w-32 truncate sm:inline">{session.name.split(" ")[0] || "Account"}</span>
                 </Button>
               } />

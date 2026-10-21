@@ -42,6 +42,8 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
   const [request, setRequest] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
   const root = React.useRef<HTMLDivElement>(null);
+  // The owner view already has the person's name as its page title.
+  const Name = mode === "owner" ? "h2" : "h1";
   const rate = f.rate ? `$${f.rate}/${basisShort[f.basis]}` : null;
   const where = f.market === "la" ? `${f.areas.join(" · ") || "Los Angeles"}, Los Angeles area` : f.otherCity;
   const sections = [["overview", "Overview"], ["services", "Services"], ...(portfolio.length ? [["portfolio", "Portfolio"]] : []), ["experience", "Experience"], ["faqs", "FAQs"]] as [string, string][];
@@ -88,7 +90,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
             </div>
             <div className="min-w-0 sm:col-span-7">
               <Reveal effect="fade-up"><p className="text-eyebrow text-ink-brand uppercase">{f.services[0] ?? f.position}</p></Reveal>
-              <Reveal effect="fade-up" delay={80}><h1 className="mt-2 font-display text-display-md break-words text-ink sm:text-display-lg">{f.name}</h1></Reveal>
+              <Reveal effect="fade-up" delay={80}><Name className="mt-2 font-display text-display-md break-words text-ink sm:text-display-lg">{f.name}</Name></Reveal>
               <Reveal effect="fade-up" delay={160}>
                 <p className="mt-2 text-body-lg text-ink-muted">{helps.slice(0, 3).join(" · ")}</p>
                 <ul className="mt-5 grid gap-2 text-body-md text-ink">

@@ -1,0 +1,16 @@
+# Design system requests
+
+Things Between Gigs 2.0 needed that the design system (v1.6.2, fc658c8) doesn't have yet. Each is built locally in this app for now; once the system ships it, swap the local version out. Nothing here was pushed to the design system repo.
+
+| # | Need | Built locally as | Proposal for the system |
+| --- | --- | --- | --- |
+| 1 | Status words for the Gigster funnel: **Invited**, **Registered**, **Submitted** (StatusBadge has Draft, Changes requested, Approved, but not these). | `components/people/PersonStatusBadge.tsx`: Badge + icon. Tones: Invited / Registered neutral, Draft warning, Submitted info, Changes requested warning, Approved success. | Add `invited`, `registered`, `submitted` to `StatusBadge` and BRAND.md's status table. Decide whether Submitted is info (as here, so it doesn't share amber with Draft) or warning ("Needs review"). |
+| 2 | A link that looks like a Button (navigation, mailto). | `components/ui/ButtonLink.tsx`, reusing `buttonVariants` / `buttonSizes`. | `Button` with `href` (renders `<a>`) or `asChild`. |
+| 3 | A portrait larger than Avatar's 48px, with an initials fallback, for search cards and profile heroes. | `components/people/PersonPhoto.tsx` (initials on `surface-selected`, `ink-brand`, Sora). | `Avatar` sizes `xl` / `fill`, or a `Portrait` component. |
+| 4 | Toggle-chip multi-select (the onboarding template's `ChipPicker`). | `components/profile/ChipPicker.tsx`, copied from the template's `parts.tsx`, plus an invalid state. | Promote `ChipPicker` from the template to a component (or extend `Tag` with `selected` for groups) with `invalid`. |
+| 5 | Photo upload control. | `components/profile/PhotoPicker.tsx`. | A `FileInput` / `ImagePicker` molecule with drop zone (dashed `line-dashed`). |
+| 6 | Breadcrumbs that use the app's router. | Pass full hrefs with base path; the crumbs do a full page load. | `Breadcrumbs` accepts a `linkAs` / render prop for Next `Link`. |
+| 7 | Literal color values for email. | `scripts/build-email-tokens.mjs` writes `emails/tokens.ts` from `tokens.json`. | Ship an `email` export from `build-tokens.py` (resolved light and dark hex per semantic token). |
+| 8 | Logo as PNG for email clients. | `scripts/build-email-assets.mjs` renders `public/email/between-gigs-wide-on-{light,dark}.png` (2x). | Add PNG exports to `logos/`. |
+| 9 | Route-level view transitions (morph across a Next.js route change). | `lib/motion.ts` (`useMorphNavigate`, `useSettleWhen`). | A router-agnostic `startRouteTransition(navigate, ready)` in `src/motion`. |
+| 10 | React 19 peer range. | Works as is with React 19.2. | Widen `peerDependencies` to `^18.2 \|\| ^19`. |

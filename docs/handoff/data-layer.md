@@ -1,0 +1,79 @@
+# Data layer: from sample to backend
+
+Everything the UI reads or writes goes through one interface, `DataSource` (`lib/data/source.ts`). Today `lib/data/index.ts` exports the localStorage sample (`lib/data/sample.ts`). To go live, write a second implementation that calls the Worker API and export it from `lib/data/index.ts` instead. No component imports the sample directly (the demo switcher and QA use the optional `demo` block, which the live implementation leaves out).
+
+Every method is async and returns plain JSON-able objects, so each maps to one API route. Types live in `lib/data/types.ts`.
+
+## What is real and what is sample
+
+| | Sample (now) | Production (Anu) |
+| --- | --- | --- |
+| Storage | One localStorage key `bg2-sample-v1`, seeded from `lib/data/seed.ts` | Cloudflare D1 |
+| Auth | Session object in the same key | Supabase auth (email OTP), session cookie |
+| Email | Rendered and pushed to a local outbox, visible at `/emails` | Rendered by the same `emails/*.ts` functions and queued in the Resend outbox |
+| Photos | Resized to 480px JPEG data URL | Upload to storage (R2 or Supabase Storage), keep the URL |
+| Authorization | Client-side guard only (`lib/guard.ts`) | Checked in the API on every call |
+
+## Proposed tables (D1)
+
+The existing `leads` table holds the waitlist (email, ZIP `zip_code`, `category`). Milestone 2 needs, as a proposal:
+
+| Table | Columns | Notes |
+| --- | --- | --- |
+| `people` | `id`, `lead_id` → `leads.id`, `email`, `name`, `slug` (unique), `status`, `invited_at`, `registered_at`, `submitted_at`, `approved_at`, `updated_at`, `auth_user_id` (Supabase) | One row per invited waitlist sign-up. `status` is one of `invited · registered · draft · submitted · changes_requested · approved`. |
+| `invites` | `token_hash` (unique), `person_id`, `email`, `created_at`, `expires_at`, `used_at` | Store a hash of the token, never the token. 30-day expiry in the copy. |
+| `profile_drafts` | `person_id` (pk), `fields` (JSON), `step`, `saved_at` | The autosaved working copy. |
+| `profiles` | `person_id` (pk), `fields` (JSON), `submitted_at` | Frozen copy at submit. The public page reads only this, and only when `people.status = 'approved'`. |
+| `review_notes` | `id`, `person_id`, `section` (`about · skills · where · story`), `note`, `by`, `created_at` | Written by owners in Milestone 4 ("Suggest edits"). One short note per section, no threads. |
+
+`fields` is `ProfileFields` (`lib/data/types.ts`) as JSON. If you'd rather keep everything in `form_responses` (`form_id = 'gigster-profile'`, `payload` JSON), `profile_drafts` and `profiles` map onto it one-to-one; the interface doesn't change.
+
+## Method by method
+
+### people (owners, except `getPublic` and `similar`)
+
+| Method | Route (proposal) | Backend |
+| --- | --- | --- |
+| `list(query)` | `GET /api/people?text&status&service&area&availability&sort` | `people` left join `profiles` / `profile_drafts`; owner role required. Filtering by service / area reads the JSON `fields` (`json_each`) or denormalised columns. `completeness` is computed with `lib/profile/validate.ts` (share it with the Worker). |
+| `get(id)` | `GET /api/people/:id` | Owner, or the person themself. |
+| `getPublic(slug)` | `GET /api/p/:slug` | Public. Returns `profile: null` unless `status = 'approved'`. Never return email. |
+| `similar(id)` | `GET /api/p/:slug/similar` | Approved people, prefer ones with photos. |
+
+### invites
+
+| Method | Route | Backend |
+| --- | --- | --- |
+| `lookup(token)` | `GET /api/invites/:token` | Hash the token, look up `invites`. `state`: `valid`, `used` (`used_at` set), `expired` (`expires_at` past), `unknown`. Return only the email and state, not the person. |
+
+### auth (Supabase)
+
+| Method | Route | Backend |
+| --- | --- | --- |
+| `session()` | `GET /api/session` | Supabase session → `people` row → `{ personId, email, role, name }`. Owners are the existing `hub_memberships` (`super_admin`) or a new `owner` role. |
+| `register({ token, name, acceptTerms })` | `POST /api/register` | Validate the invite, create the Supabase user for the invite's email (or link on first OTP), set `people.name`, `slug`, `status = 'registered'`, `invites.used_at`. Record the terms version (like `leads.consent_version`). |
+| `requestCode(email)` | `POST /api/auth/code` | `supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } })`, with the `sign-in-code` template as the Supabase email template, or generate the code yourself and queue `emails/sign-in-code.ts`. Errors: `unknown-email`, `not-registered`, `rate-limited` (30 s between sends). |
+| `verifyCode(email, code)` | `POST /api/auth/verify` | `supabase.auth.verifyOtp({ email, token, type: 'email' })`. Map Supabase errors to `wrong-code`, `expired-code`, `too-many-attempts`. 10-minute expiry, 5 tries. |
+| `signOut()` | `POST /api/auth/signout` | `supabase.auth.signOut()`. |
+| `onChange(listener)` | – | Supabase `onAuthStateChange`. |
+
+### profiles
+
+| Method | Route | Backend |
+| --- | --- | --- |
+| `getDraft(personId)` | `GET /api/profile/draft` | `profile_drafts`, or a blank draft with the registered name. |
+| `saveDraft(personId, fields, step)` | `PUT /api/profile/draft` | Upsert. First save moves `registered → draft`. Never changes `submitted / approved`. The builder calls this ~0.7 s after the last change. |
+| `submit(personId)` | `POST /api/profile/submit` | Validate with `validateAll` server-side, copy draft → `profiles`, `status = 'submitted'`, clear `review_notes`, queue `profile-submitted`. |
+| `getProfile(personId)` | `GET /api/profile` | `profiles`. |
+
+### emails (Resend outbox)
+
+| Method | Route | Backend |
+| --- | --- | --- |
+| `outbox()` / `get(id)` | – | Owner tooling only; not needed in production UI. |
+| `queue(template, to, props)` | server-side only | Insert into the existing `welcome_email_outbox` with `message_type = template` and `template_payload = JSON.stringify(props)`. The sender renders with `renderEmail(template, props, { assetBase: SITE_URL, siteUrl: SITE_URL })` and sends `subject`, `html`, `text` through Resend from `Between Gigs <hello@between-gigs.com>`. |
+
+The **invite** email isn't sent by the UI in this milestone: send it in a batch script over `leads` (one `people` + `invites` row per lead, then queue `invite` with `inviteUrl = ${SITE_URL}/join?invite=${token}`). Mark the batch so it can be resumed.
+
+## Email assets
+
+The emails load the logo from `${assetBase}/email/between-gigs-wide-on-{light,dark}.png`. Deploy `public/email/` to `https://between-gigs.com/email/`. Rebuild the PNGs with `node scripts/build-email-assets.mjs` after a logo change.
