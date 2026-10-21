@@ -54,10 +54,6 @@ export const routes = [
   { name: "terms", path: "/terms/", ready: "h1" },
   { name: "provider-standards", path: "/provider-standards/", ready: "h1" },
   { name: "licensing-insurance", path: "/licensing-insurance/", ready: "h1" },
-  { name: "journal", path: "/journal/", ready: "h1" },
-  { name: "journal-article", path: "/journal/the-birthday-that-became-a-production/", ready: "h1" },
-  { name: "journal-report", path: "/journal/the-downtime-economy/", ready: "h1" },
-  { name: "journal-author", path: "/journal/authors/between-gigs/", ready: "h1" },
   // Milestone 4: the owners' tools.
   { name: "owner-dashboard", path: "/owners/", setup: as("owner"), ready: "h1" },
   { name: "owner-review-queue", path: "/owners/review/", setup: as("owner"), ready: "h1" },

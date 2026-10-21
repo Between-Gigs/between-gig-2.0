@@ -7,7 +7,7 @@ The client-facing Between Gigs product, redesigned on the [Between Gigs Design S
 - **Starting point:** [docs/current-state.md](docs/current-state.md) — what the existing app (`imagine-os/between-gigs`) has today
 - **Handoffs:** [Milestone 2](docs/handoff/milestone-2.md) · [Milestone 3](docs/handoff/milestone-3.md) · [Milestone 4](docs/handoff/milestone-4.md) · [Milestone 5](docs/handoff/milestone-5.md) · [data layer](docs/handoff/data-layer.md) · [design system requests](docs/design-system-requests.md)
 
-Status: Milestones 1 (design system), 2 (emails, login, profile builder, profiles, owner search) 3 (the public funnel: /professionals, Storyboard, emails, policies, Journal) 4 (owner dashboard, review, waitlist invites) and 5 (the call-sheet home and home page proposals) done. Start at `/preview` for a guided tour.
+Status: Milestones 1 to 5 done: the design system; emails, login, profile builder, profiles and owner search; the public funnel (/professionals, Storyboard, emails, policies; the Journal is built but hidden); the owner dashboard, review and waitlist invites; and the call-sheet home with home page proposals. Start at `/preview` for a guided tour.
 
 ## Develop
 

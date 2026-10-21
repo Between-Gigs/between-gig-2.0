@@ -19,7 +19,7 @@ export function SiteHeader() {
     ? [{ href: "/owners/", label: "Dashboard" }, { href: "/owners/review/", label: "Review" }, { href: "/owners/people/", label: "People" }, { href: "/owners/waitlist/", label: "Waitlist" }, { href: "/emails/", label: "Emails" }]
     : session?.role === "gigster"
       ? [{ href: "/profile/", label: "My profile" }, { href: "/profile/edit/", label: "Edit profile" }]
-      : [{ href: "/professionals/", label: "For professionals" }, { href: "/storyboard/", label: "Storyboard" }, { href: "/journal/", label: "Journal" }];
+      : [{ href: "/professionals/", label: "For professionals" }, { href: "/storyboard/", label: "Storyboard" }];
 
   const current = (href: string) => {
     const path = pathname.endsWith("/") ? pathname : `${pathname}/`;

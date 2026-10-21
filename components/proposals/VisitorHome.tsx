@@ -5,7 +5,6 @@ import { ArrowRight, ArrowUpRight, Brush, CalendarCheck, Camera, Film, Hammer, M
 import Link from "next/link";
 import * as React from "react";
 import { data, type Person, type Profile } from "@/lib/data";
-import { articles } from "@/lib/journal";
 import { basisShort, monthStatusLabel } from "@/lib/data/taxonomy";
 import { asset } from "@/lib/site";
 import { scenePages } from "@/lib/storyboard";
@@ -153,24 +152,6 @@ export function VisitorHome() {
         <p>We say exactly what review means, and link the licensing disclosure, instead of "verified" badges we can't back up yet (see /provider-standards).</p>
       </ProposalNote>
 
-      {/* Journal */}
-      <section aria-labelledby="v-journal" className="mt-14">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="v-journal" className="font-display text-display-sm text-ink">From The Journal</h2>
-          <Link href="/journal/" className="text-label-md text-link underline underline-offset-2">All stories</Link>
-        </div>
-        <ul className="mt-5 grid gap-4 md:grid-cols-3">
-          {articles.slice(0, 3).map((a) => (
-            <li key={a.id} className="group relative overflow-hidden rounded-2xl border border-line bg-surface">
-              <img src={asset(a.cover)} alt="" loading="lazy" className="aspect-3/2 w-full object-cover" />
-              <div className="grid gap-1 p-4"><p className="text-label-sm text-ink-brand">{a.category}</p><h3 className="font-display text-heading-md text-ink"><Link href={`/journal/${a.id}/`} className="after:absolute after:inset-0 group-hover:text-ink-brand">{a.title}</Link></h3></div>
-            </li>
-          ))}
-        </ul>
-      </section>
-      <ProposalNote n={7} title="Stories that teach clients how to hire" className="mt-3">
-        <p>The production guides ("I wanted a birthday party. I needed a production manager.") turn a vague idea into a brief. They're the best bridge from browsing to booking.</p>
-      </ProposalNote>
     </div>
   );
 }

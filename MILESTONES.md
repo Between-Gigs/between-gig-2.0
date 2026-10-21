@@ -45,7 +45,7 @@ Done 21 Oct 2026. Handoff: [docs/handoff/milestone-3.md](docs/handoff/milestone-
 - [x] Welcome and Coming-soon emails (previews at `/emails`)
 - [x] `/storyboard`: the approved artwork as a book, catalog of commissions, talent and buyer forms
 - [x] Privacy (with request form), Terms, Provider standards, Licensing & insurance
-- [x] Journal list, article (with budget planner, production kit, FilmLA chart) and author pages
+- [x] Journal list, article (with budget planner, production kit, FilmLA chart) and author pages, **hidden for now** (in `app/_journal`)
 - [x] QA routes and end-to-end funnel flow in `pnpm check`
 
 The live funnel today: Crew Stories / iMessage → `/professionals` → "Get on the call sheet" (email + ZIP, then optional service details) → **Welcome email** → `/storyboard` → talent or buyer form → **Coming-soon email**.

@@ -5,6 +5,8 @@
 The live funnel, rebuilt:
 `/professionals → "Get on the call sheet" (email + ZIP, then optional details) → Welcome email → /storyboard → talent or buyer form → Coming-soon email`
 
+> **Update (21 Oct 2026): the Journal is hidden for now.** Its routes moved to `app/_journal` (a private folder, so it isn't built) and every link to it is removed. Rename the folder back to `app/journal` and restore the links to bring it back.
+
 ## Routes
 
 | Route | What | Source of the copy (imagine-os/between-gigs) |

@@ -4,9 +4,7 @@ import { ArrowRight, CalendarCheck, CircleCheck, Eye, Inbox, Link2, PencilLine }
 import Link from "next/link";
 import * as React from "react";
 import { data, type MonthStatus, type PersonSummary } from "@/lib/data";
-import { articles } from "@/lib/journal";
 import { monthStatusLabel } from "@/lib/data/taxonomy";
-import { asset } from "@/lib/site";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { PersonStatusBadge } from "@/components/people/PersonStatusBadge";
 import { ButtonLink } from "@/components/ui/ButtonLink";
@@ -96,21 +94,6 @@ export function GigsterHome({ personId }: { personId: string }) {
       </div>
       <ProposalNote n={3} title="Requests get the biggest panel, even before they exist" >
         <p>Booking is the reason Gigsters join. Reserving the space now (with an honest empty state) sets the expectation without inventing activity. When booking ships, this becomes an inbox.</p>
-      </ProposalNote>
-
-      <section aria-labelledby="g-journal">
-        <h2 id="g-journal" className="font-display text-heading-lg text-ink">For your next chapter</h2>
-        <ul className="mt-4 grid gap-4 md:grid-cols-2">
-          {articles.filter((a) => a.id === "from-screen-credit-to-clear-service" || a.id === "the-downtime-economy").map((a) => (
-            <li key={a.id} className="group relative flex gap-4 overflow-hidden rounded-2xl border border-line bg-surface p-3">
-              <img src={asset(a.cover)} alt="" loading="lazy" className="aspect-square w-24 shrink-0 rounded-xl object-cover" />
-              <div className="grid content-center gap-1"><p className="text-label-sm text-ink-brand">{a.category}</p><h3 className="text-label-md text-ink"><Link href={`/journal/${a.id}/`} className="after:absolute after:inset-0 group-hover:text-ink-brand">{a.title}</Link></h3></div>
-            </li>
-          ))}
-        </ul>
-      </section>
-      <ProposalNote n={4} title="Help them translate their craft" >
-        <p>The Journal's "From screen credit to clear service" is exactly the coaching a new Gigster needs. Surfacing it next to their profile turns the Journal into onboarding.</p>
       </ProposalNote>
 
       <p className={cx("flex items-center gap-2 text-caption text-ink-subtle")}><CircleCheck className="size-3.5" aria-hidden="true" />Showing {p.name}{p.sample ? " (fictional sample)" : ""}.</p>

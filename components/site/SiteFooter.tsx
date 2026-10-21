@@ -21,7 +21,6 @@ export function SiteFooter() {
           <h2 className="mb-1 text-label-sm text-ink">Explore</h2>
           <Link className={linkClass} href="/professionals/">For professionals</Link>
           <Link className={linkClass} href="/storyboard/">Storyboard</Link>
-          <Link className={linkClass} href="/journal/">The Journal</Link>
           <Link className={linkClass} href="/emails/">Email previews</Link>
           <Link className={linkClass} href="/preview/">Preview guide</Link>
           <Link className={linkClass} href="/proposals/home/">Home page proposals</Link>

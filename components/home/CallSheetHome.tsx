@@ -8,7 +8,6 @@ import Link from "next/link";
 const links = [
   { label: "For professionals", href: "/professionals/" },
   { label: "Storyboard", href: "/storyboard/" },
-  { label: "Journal", href: "/journal/" },
   { label: "Privacy", href: "/privacy/" },
   { label: "Terms", href: "/terms/" },
 ];

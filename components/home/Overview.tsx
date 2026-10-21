@@ -63,7 +63,7 @@ export function Overview() {
             <p className="mt-2 text-body-md text-ink-muted">Use the <b className="text-ink">Demo</b> button in the corner to switch between a visitor, an invited Gigster, a Gigster at each status, and an owner, or to reset the sample data.</p>
           </div>
           <ul className="grid gap-2 text-body-md">
-            {[["/", "Home: the call sheet (today)"], ["/proposals/home/", "Home once we open: three proposals"], ["/professionals/", "For professionals: get on the call sheet"], ["/storyboard/", "The interactive Storyboard and its forms"], ["/journal/", "The Journal"], ["/login/", "Sign in with an email code"], ["/p/maya/", "A public profile (approved)"], ["/emails/", "All emails and the sample outbox"]].map(([href, label]) => (
+            {[["/", "Home: the call sheet (today)"], ["/proposals/home/", "Home once we open: three proposals"], ["/professionals/", "For professionals: get on the call sheet"], ["/storyboard/", "The interactive Storyboard and its forms"], ["/login/", "Sign in with an email code"], ["/p/maya/", "A public profile (approved)"], ["/emails/", "All emails and the sample outbox"]].map(([href, label]) => (
               <li key={href} className="flex items-center justify-between gap-3 border-b border-line pb-2 last:border-0">
                 <span className="text-ink">{label}</span>
                 <ButtonLink href={href} size="sm" variant="ghost" iconEnd={<ArrowRight />} aria-label={`Open: ${label}`}>Open</ButtonLink>

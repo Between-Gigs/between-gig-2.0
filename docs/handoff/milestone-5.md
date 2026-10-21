@@ -26,6 +26,8 @@ Every block reuses something already built: the data seams from Milestones 2–4
 
 **Not real yet, and labelled so on the page:** the search box (there is no public search route; the owner search could become one), the availability switch (it doesn't save), and Requests (that needs booking).
 
+The Journal sections were taken out of the proposals when the Journal was hidden (see Milestone 3).
+
 ## For Anu
 
 - `/` is static and has no data. When the platform opens, this proposal suggests `/` picks a view from the session: signed out → visitor home, Gigster → Gigster home, owner → owner home.

@@ -181,11 +181,6 @@ export async function flow({ browser, base, outDir }) {
       await page.getByLabel("Your request").fill("Please remove me from the waitlist.");
       await page.getByRole("button", { name: "Send privacy request" }).click();
       await expectText("Your request has been saved");
-    })
-    && await step("journal", async () => {
-      await page.goto(`${base}/journal/`);
-      await page.getByRole("link", { name: "Between productions, the craft is still here." }).click();
-      await page.getByRole("heading", { name: "Fewer days on location." }).waitFor();
     });
 
   // Milestone 4: the owners review and invite.
