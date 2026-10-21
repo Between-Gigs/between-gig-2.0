@@ -1,0 +1,176 @@
+/*
+ * Between Gigs 2.0 data model. These types are the contract between the UI and the backend.
+ * The sample implementation (./sample.ts) keeps them in localStorage; Anu's implementation maps them
+ * to Cloudflare D1, Supabase auth and the Resend outbox. See docs/handoff/data-layer.md.
+ */
+
+/** Where a Gigster is on the way from waitlist to a public profile. Order matters: it is the funnel. */
+export type PersonStatus = "invited" | "registered" | "draft" | "submitted" | "changes_requested" | "approved";
+
+export const personStatuses: PersonStatus[] = ["invited", "registered", "draft", "submitted", "changes_requested", "approved"];
+
+export type Role = "gigster" | "owner";
+
+/** A person from the waitlist, from the moment they are invited. */
+export interface Person {
+  id: string;
+  email: string;
+  /** Empty until they register. */
+  name: string;
+  /** Public URL handle, /p/[slug]. Set at registration, from the name. */
+  slug: string;
+  status: PersonStatus;
+  /** ZIP from the waitlist sign-up ("Get on the call sheet"). */
+  waitlistZip: string;
+  /** Service category picked at sign-up (lib/data/taxonomy.ts → waitlistCategories), if any. */
+  waitlistCategory: string;
+  invitedAt: string;
+  registeredAt?: string;
+  submittedAt?: string;
+  approvedAt?: string;
+  updatedAt: string;
+  /** The owners' notes when status is changes_requested. One short note per section, no threads. */
+  reviewNotes?: ReviewNote[];
+  /** Marks seed people so the UI can label them as fictional. Real records leave it unset. */
+  sample?: boolean;
+}
+
+export type ProfileSection = "about" | "skills" | "where" | "story";
+
+export interface ReviewNote {
+  section: ProfileSection;
+  note: string;
+  /** Who wrote it, e.g. "Owner (sample)". */
+  by: string;
+  at: string;
+}
+
+export type Market = "la" | "other";
+export type MonthStatus = "available" | "limited" | "away";
+export type RateBasis = "hourly" | "project" | "day";
+export type InsuranceAnswer = "private" | "yes" | "no";
+export type WorkMode = "on-site" | "studio" | "both";
+
+/**
+ * The questionnaire (profile builder), field for field. Fields and copy follow the design system's
+ * GigsterOnboarding template (the client's prototype C).
+ */
+export interface ProfileFields {
+  /** A data URL in the sample (resized to 480px); a storage URL in production. */
+  photo: string;
+  name: string;
+  years: string;
+  position: string;
+  imdb: string;
+  credits: string[];
+  skills: string[];
+  services: string[];
+  other: string;
+  market: Market;
+  otherCity: string;
+  zip: string;
+  areas: string[];
+  travel: string;
+  month: string;
+  monthStatus: MonthStatus;
+  dates: string;
+  rate: string;
+  basis: RateBasis;
+  about: string;
+  languages: string;
+  insurance: InsuranceAnswer;
+  tools: string;
+  transport: string;
+  mode: WorkMode;
+}
+
+/** The person's working copy: what the builder autosaves. */
+export interface ProfileDraft {
+  personId: string;
+  fields: ProfileFields;
+  /** Builder step to resume at (0 to 4). */
+  step: number;
+  savedAt: string;
+}
+
+/** A submitted (and later approved) profile: a frozen copy of the draft at submit time. */
+export interface Profile {
+  personId: string;
+  fields: ProfileFields;
+  submittedAt: string;
+  /** Sample people only: portfolio images and an area tag that the questionnaire doesn't collect yet. */
+  extras?: { portfolio: { src: string; caption: string }[]; tagline: string; helps: string[] };
+}
+
+export type InviteState = "valid" | "used" | "expired" | "unknown";
+
+export interface Invite {
+  token: string;
+  personId: string;
+  email: string;
+  createdAt: string;
+  expiresAt: string;
+  usedAt?: string;
+}
+
+export interface InviteLookup {
+  state: InviteState;
+  invite?: Invite;
+  person?: Person;
+}
+
+export interface Session {
+  personId: string | null;
+  email: string;
+  role: Role;
+  name: string;
+  startedAt: string;
+}
+
+export type SignInResult =
+  | { ok: true; session: Session }
+  | { ok: false; error: "wrong-code" | "expired-code" | "too-many-attempts" | "no-code" };
+
+export type RequestCodeResult =
+  | { ok: true; email: string; expiresAt: string }
+  | { ok: false; error: "unknown-email" | "not-registered" | "rate-limited" };
+
+export type RegisterResult =
+  | { ok: true; person: Person }
+  | { ok: false; error: InviteState | "terms" | "name" };
+
+export type EmailTemplate = "invite" | "sign-in-code" | "profile-submitted";
+
+/** A queued email. Production: a row in the Resend outbox, sent by the existing worker. */
+export interface OutboxEmail {
+  id: string;
+  template: EmailTemplate;
+  to: string;
+  subject: string;
+  /** The template's props, so the preview can render exactly what was queued. */
+  props: Record<string, string>;
+  status: "queued" | "sent";
+  createdAt: string;
+}
+
+export type PeopleSort = "updated" | "name" | "status";
+
+export interface PeopleQuery {
+  text?: string;
+  status?: PersonStatus | "all";
+  service?: string | "all";
+  area?: string | "all";
+  availability?: MonthStatus | "all";
+  sort?: PeopleSort;
+}
+
+/** One row in the owner's people list: the person plus the parts of their profile worth searching. */
+export interface PersonSummary {
+  person: Person;
+  /** Submitted profile if there is one, else the draft, else null. */
+  fields: ProfileFields | null;
+  /** True when fields come from an unsubmitted draft. */
+  fromDraft: boolean;
+  /** How much of the questionnaire is filled, 0 to 1. */
+  completeness: number;
+}

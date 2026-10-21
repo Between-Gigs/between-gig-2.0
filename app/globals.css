@@ -1,0 +1,11 @@
+@import "tailwindcss";
+@import "../packages/design-system/styles/between-gigs.css";
+
+/* Tailwind scans the vendored components for the classes they use. */
+@source "../packages/design-system/src";
+
+@layer base {
+  body { min-height: 100dvh; }
+  /* Anchor targets clear the sticky header. */
+  :target { scroll-margin-top: --spacing(24); }
+}
