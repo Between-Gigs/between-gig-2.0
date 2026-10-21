@@ -12,6 +12,8 @@ const config = [
     rules: {
       // Sample photos and email previews are plain <img>: the static export has no image optimizer.
       "@next/next/no-img-element": "off",
+      // Product copy is full of apostrophes; React renders them safely.
+      "react/no-unescaped-entities": "off",
     },
   },
 ];
