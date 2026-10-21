@@ -36,7 +36,7 @@ export function DemoSwitcher() {
   const go = (href: string) => { setOpen(false); router.push(href); };
 
   return (
-    <div className="fixed bottom-4 left-4 z-toast print:hidden">
+    <div data-demo-switcher="" className="fixed bottom-4 left-4 z-toast print:hidden">
       <Popover open={open} onOpenChange={setOpen} label="Demo switcher" title="Demo switcher" width="md"
         trigger={<Button variant="strong" size="sm" iconStart={<FlaskConical />} className="shadow-lg">Demo</Button>}>
         <p className="text-body-sm text-ink-muted">Sample mode: everything stays in this browser. Now viewing as <b className="text-ink">{role}</b>.</p>
