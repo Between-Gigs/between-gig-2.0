@@ -230,3 +230,49 @@ export function buildSeed(): SeedState {
   }
   return { people, invites, drafts, profiles };
 }
+
+/* ---- Milestone 4: the waitlist and activity ---- */
+
+const FIRST = ["Avery", "Blake", "Camila", "Dev", "Elliot", "Farah", "Gabe", "Harper", "Isa", "Jules", "Kai", "Lena", "Mateo", "Noor", "Oscar", "Paz", "Quincy", "Rae", "Soren", "Tess", "Uma", "Vic", "Wren", "Xavi", "Yara", "Zane", "Ines", "Rafael", "Bea", "Cyrus", "Dahlia", "Emre", "Fern", "Gus", "Hollis", "Ida", "Jasper", "Kit", "Lux", "Milo"];
+const LAST = ["Abbott", "Banks", "Castillo", "Dorsey", "Ellison", "Fujita", "Garza", "Holm", "Ibarra", "Jensen", "Kaur", "Lindqvist", "Mendez", "Novak", "Ortega", "Pryor", "Quinn", "Rojas", "Sato", "Thorne", "Underwood", "Vance", "Whitaker", "Xu", "Yates", "Zamora", "Okoye", "Haddad", "Bianchi", "Moreau"];
+const ZIPS = ["90026", "90027", "90028", "90029", "90036", "90039", "90042", "90046", "90065", "90068", "91501", "91505", "91601", "91604", "90401", "90034", "90016", "90012", "91101", "91203", "90291", "90066", "90019", "90004"];
+const CATS = ["", "", "builds", "makeup", "hair", "wardrobe", "interiors", "photo", "events", "coaching", "venues", "archives", "other"];
+
+/** Tiny deterministic PRNG, so every reset gives the same fictional waitlist. */
+function prng(seed: number) {
+  return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+
+/**
+ * About 500 fictional waitlist sign-ups (the client's real list is ~500), including the 24 seed people.
+ * Emails are @example.com; joined between 20 Sep and 18 Oct 2026, like the live call sheet.
+ */
+export function buildWaitlist(people: Person[], total = 500) {
+  const rand = prng(20261021);
+  const pick = <T,>(xs: T[]) => xs[Math.floor(rand() * xs.length)];
+  const joined = () => new Date(Date.UTC(2026, 8, 20) + Math.floor(rand() * 28 * 86400000)).toISOString();
+  const rows = people.map((p, i) => ({ id: `wl-${String(i).padStart(3, "0")}`, email: p.email, zip: p.waitlistZip, category: p.waitlistCategory, details: "", placement: "hero", createdAt: new Date(new Date(p.invitedAt).getTime() - (5 + Math.floor(rand() * 20)) * 86400000).toISOString() }));
+  const used = new Set(rows.map((r) => r.email));
+  for (let i = rows.length; rows.length < total; i++) {
+    const f = pick(FIRST), l = pick(LAST);
+    let email = `${f}.${l}`.toLowerCase() + "@example.com";
+    for (let n = 2; used.has(email); n++) email = `${f}.${l}${n}`.toLowerCase() + "@example.com";
+    used.add(email);
+    rows.push({ id: `wl-${String(i).padStart(3, "0")}`, email, zip: pick(ZIPS), category: pick(CATS), details: "", placement: pick(["hero", "nav", "service", "footer", "profile-maya"]), createdAt: joined() });
+  }
+  return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/** Activity derived from the seed people's dates, newest first. */
+export function buildActivity(people: Person[]) {
+  const events: { id: string; kind: "invited" | "registered" | "submitted" | "approved" | "changes_requested"; personId: string; who: string; by?: string; at: string }[] = [];
+  for (const p of people) {
+    const who = p.name || p.email;
+    events.push({ id: `a-${p.id}-inv`, kind: "invited", personId: p.id, who, by: SAMPLE_OWNER.name, at: p.invitedAt });
+    if (p.registeredAt) events.push({ id: `a-${p.id}-reg`, kind: "registered", personId: p.id, who, at: p.registeredAt });
+    if (p.submittedAt) events.push({ id: `a-${p.id}-sub`, kind: "submitted", personId: p.id, who, at: p.submittedAt });
+    if (p.approvedAt) events.push({ id: `a-${p.id}-app`, kind: "approved", personId: p.id, who, by: SAMPLE_OWNER.name, at: p.approvedAt });
+    if (p.status === "changes_requested") events.push({ id: `a-${p.id}-chg`, kind: "changes_requested", personId: p.id, who, by: SAMPLE_OWNER.name, at: p.updatedAt });
+  }
+  return events.sort((a, b) => b.at.localeCompare(a.at));
+}

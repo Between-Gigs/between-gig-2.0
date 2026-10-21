@@ -1,7 +1,7 @@
 import type {
   EmailTemplate, InviteLookup, OutboxEmail, PeopleQuery, Person, PersonSummary, PrivacyRequest, Profile, ProfileDraft,
   ProfileFields, RegisterResult, RequestCodeResult, Role, Session, SignInResult, SketchKind, SketchSubmission,
-  WaitlistResult, WaitlistSignup,
+  WaitlistResult, WaitlistSignup, ActivityEvent, DashboardSummary, ReviewNoteInput, WaitlistQuery, WaitlistRow,
 } from "./types";
 
 /**
@@ -65,6 +65,21 @@ export interface DataSource {
     /** Storyboard forms. Queues the coming-soon email. */
     submitSketch(kind: SketchKind, answers: Record<string, string>): Promise<SketchSubmission>;
     privacyRequest(email: string, message: string): Promise<PrivacyRequest>;
+  };
+
+  /** The owners' tools (Milestone 4). Owner role required on every call. */
+  owners: {
+    dashboard(): Promise<DashboardSummary>;
+    activity(limit?: number): Promise<ActivityEvent[]>;
+    /** Submitted profiles, oldest first. */
+    reviewQueue(): Promise<PersonSummary[]>;
+    /** submitted → approved. Publishes /p/[slug] and queues the "approved" email. */
+    approve(personId: string): Promise<Person>;
+    /** submitted → changes_requested, with one short note per section. Queues the "changes-requested" email. */
+    requestChanges(personId: string, notes: ReviewNoteInput[]): Promise<Person>;
+    waitlist(query?: WaitlistQuery): Promise<WaitlistRow[]>;
+    /** Invites waitlist sign-ups: creates the person and invite, queues the invite email. Skips anyone already invited. */
+    invite(signupIds: string[]): Promise<{ invited: number; skipped: number }>;
   };
 
   /** Sample-only controls for the demo switcher. The live implementation omits them. */

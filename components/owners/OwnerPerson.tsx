@@ -1,5 +1,5 @@
 "use client";
-import { Banner, Breadcrumbs, EmptyState, Progress, Skeleton } from "@ds/components";
+import { Banner, Breadcrumbs, EmptyState, Progress, Skeleton, cx } from "@ds/components";
 import { Eye, Mail, SearchX, Sparkles } from "lucide-react";
 import * as React from "react";
 import { data, type PersonSummary, type Profile } from "@/lib/data";
@@ -13,23 +13,31 @@ import { ProfileView } from "@/components/profile/ProfileView";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { OwnerGate } from "./OwnerGate";
+import { ReviewDone, ReviewPanel } from "./ReviewPanel";
 
 const date = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null);
 
 /** /owners/people/[id]: one person as the owners see them: where they are, what they've filled in, their profile. */
 export function OwnerPerson({ id }: { id: string }) {
-  return <OwnerGate>{() => <Person id={id} />}</OwnerGate>;
+  return <OwnerGate>{() => <Person key={id} id={id} />}</OwnerGate>;
 }
 
 function Person({ id }: { id: string }) {
   const [s, setS] = React.useState<PersonSummary | null | undefined>(undefined);
   const [profile, setProfile] = React.useState<Profile | null>(null);
-  React.useEffect(() => {
-    void Promise.all([data.people.get(id), data.profiles.getProfile(id)]).then(([summary, p]) => { setS(summary); setProfile(p); });
-  }, [id]);
+  const [decided, setDecided] = React.useState<{ next?: { id: string; name: string } } | null>(null);
+  const load = React.useCallback(() => Promise.all([data.people.get(id), data.profiles.getProfile(id)]).then(([summary, p]) => { setS(summary); setProfile(p); }), [id]);
+  React.useEffect(() => { void load(); }, [load]);
+  const afterDecision = async () => {
+    await load();
+    const queue = await data.owners.reviewQueue();
+    const next = queue.find((q) => q.person.id !== id);
+    setDecided({ next: next && { id: next.person.id, name: next.person.name } });
+    window.scrollTo({ top: 0 });
+  };
   useSettleWhen(s !== undefined);
 
-  const crumbs = (label: string) => <Breadcrumbs items={[{ label: "People", href: `${basePath}/owners/people/` }, { label }]} />;
+  const crumbs = (label: string) => <Breadcrumbs items={[{ label: "Dashboard", href: `${basePath}/owners/` }, { label: "People", href: `${basePath}/owners/people/` }, { label }]} />;
 
   if (s === undefined) return <Page><div aria-busy="true" aria-label="Loading" className="grid gap-4"><Skeleton className="h-4 w-40" /><Skeleton shape="block" className="h-40" /></div></Page>;
   if (s === null) {
@@ -51,7 +59,9 @@ function Person({ id }: { id: string }) {
   return (
     <Page>
       {crumbs(name)}
-      <header className="mt-4 grid gap-6 rounded-2xl border border-line bg-surface p-5 shadow-sm md:grid-cols-12 md:items-center">
+      {decided && <div className="mt-4"><ReviewDone person={p} next={decided.next} /></div>}
+      <div className="mt-4 grid gap-6 lg:grid-cols-12 lg:items-start">
+      <header className={cx("grid gap-6 rounded-2xl border border-line bg-surface p-5 shadow-sm md:grid-cols-12 md:items-center", p.status === "submitted" && fields ? "lg:col-span-8" : "lg:col-span-12")}>
         <div className="flex min-w-0 items-center gap-4 md:col-span-6">
           {!fields && <PersonPhoto id={p.id} morph name={p.name || "?"} alt="" className="size-16 shrink-0 rounded-xl" textClass="text-heading-lg" />}
           {fields && <PersonPhoto id={p.id} morph={false} name={p.name} src={fields.photo || undefined} alt="" className="size-16 shrink-0 rounded-xl" textClass="text-heading-lg" />}
@@ -73,16 +83,15 @@ function Person({ id }: { id: string }) {
         </dl>
         {fields && <Progress className="md:col-span-12" value={Math.round(completeness * 100)} label={fromDraft ? "Questionnaire (draft)" : "Questionnaire"} />}
       </header>
+      {p.status === "submitted" && fields && <div className="lg:sticky lg:top-24 lg:col-span-4"><ReviewPanel person={p} fields={fields} onDone={afterDecision} /></div>}
+      </div>
 
-      {p.status === "changes_requested" && (
+      {p.status === "changes_requested" && !decided && (
         <Banner tone="warning" className="mt-4" title="Changes requested">
           <ul className="grid gap-1">{(p.reviewNotes ?? []).map((n) => <li key={n.note}><b>{sectionLabel[n.section]}:</b> {n.note}</li>)}</ul>
         </Banner>
       )}
-      {p.status === "submitted" && (
-        <Banner tone="info" className="mt-4" title="Waiting for review">Approve and Suggest edits arrive with the owner dashboard in Milestone 4.</Banner>
-      )}
-      {p.status === "approved" && (
+      {p.status === "approved" && !decided && (
         <Banner tone="success" className="mt-4" title="Live" action={<ButtonLink href={`/p/${p.slug}/`} size="sm" iconStart={<Eye />}>Public page</ButtonLink>}>Clients can find this profile.</Banner>
       )}
 

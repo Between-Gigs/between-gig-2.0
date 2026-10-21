@@ -16,12 +16,16 @@ export function SiteHeader() {
   const { session, loading } = useSession();
 
   const links: NavLink[] = session?.role === "owner"
-    ? [{ href: "/owners/people/", label: "People" }, { href: "/emails/", label: "Emails" }]
+    ? [{ href: "/owners/", label: "Dashboard" }, { href: "/owners/review/", label: "Review" }, { href: "/owners/people/", label: "People" }, { href: "/owners/waitlist/", label: "Waitlist" }, { href: "/emails/", label: "Emails" }]
     : session?.role === "gigster"
       ? [{ href: "/profile/", label: "My profile" }, { href: "/profile/edit/", label: "Edit profile" }]
       : [{ href: "/professionals/", label: "For professionals" }, { href: "/storyboard/", label: "Storyboard" }, { href: "/journal/", label: "Journal" }];
 
-  const current = (href: string) => pathname === href || pathname === href.replace(/\/$/, "") || (href !== "/" && pathname.startsWith(href));
+  const current = (href: string) => {
+    const path = pathname.endsWith("/") ? pathname : `${pathname}/`;
+    // "/owners/" is the dashboard only; its sub-pages light their own tab.
+    return href === "/owners/" ? path === href : path === href || path.startsWith(href);
+  };
 
   const signOut = async () => {
     await data.auth.signOut();
@@ -31,7 +35,7 @@ export function SiteHeader() {
   const menu: MenuEntry[] = session ? [
     { heading: session.role === "owner" ? "Signed in as owner" : "Signed in" },
     ...(session.role === "owner"
-      ? [{ label: "People", icon: <Users />, onSelect: () => router.push("/owners/people/") }]
+      ? links.map((l) => ({ label: l.label, icon: l.href === "/owners/people/" ? <Users /> : undefined, checked: current(l.href) || undefined, onSelect: () => router.push(l.href) }))
       : [{ label: "My profile", icon: <UserRound />, onSelect: () => router.push("/profile/") }, { label: "Edit profile", icon: <PencilLine />, onSelect: () => router.push("/profile/edit/") }]),
     "separator",
     { label: "Sign out", icon: <LogOut />, onSelect: () => void signOut() },
@@ -42,7 +46,7 @@ export function SiteHeader() {
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
         <Link href="/" aria-label="Between Gigs home" className="rounded-md"><Logo height={28} /></Link>
         {links.length > 0 && (
-          <nav aria-label="Main" className="ml-4 hidden items-center gap-1 md:flex">
+          <nav aria-label="Main" className={cx("ml-4 hidden items-center gap-1", links.length > 3 ? "lg:flex" : "md:flex")}>
             {links.map((l) => (
               <Link key={l.href} href={l.href} aria-current={current(l.href) ? "page" : undefined}
                 className={cx("relative inline-flex min-h-10 items-center rounded-md px-3 text-label-md transition-colors duration-fast",

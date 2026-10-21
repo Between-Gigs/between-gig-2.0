@@ -53,6 +53,17 @@ export const routes = [
   { name: "journal-article", path: "/journal/the-birthday-that-became-a-production/", ready: "h1" },
   { name: "journal-report", path: "/journal/the-downtime-economy/", ready: "h1" },
   { name: "journal-author", path: "/journal/authors/between-gigs/", ready: "h1" },
+  // Milestone 4: the owners' tools.
+  { name: "owner-dashboard", path: "/owners/", setup: as("owner"), ready: "h1" },
+  { name: "owner-review-queue", path: "/owners/review/", setup: as("owner"), ready: "h1" },
+  { name: "owner-review", path: "/owners/people/imani-carter/", setup: as("owner"), ready: "#review-h" },
+  {
+    name: "owner-suggest-edits", path: "/owners/people/theo-nakamura/", setup: as("owner"), ready: "#review-h",
+    act: async (page) => { await page.getByRole("button", { name: "Suggest edits" }).click(); await page.getByRole("dialog").waitFor(); },
+  },
+  { name: "owner-waitlist", path: "/owners/waitlist/", setup: as("owner"), ready: "[data-results]" },
+  { name: "email-approved", path: "/emails/approved/", ready: "iframe" },
+  { name: "email-changes-requested", path: "/emails/changes-requested/", ready: "iframe" },
   { name: "email-welcome", path: "/emails/welcome/", ready: "iframe" },
   { name: "email-coming-soon", path: "/emails/coming-soon/", ready: "iframe" },
 ];

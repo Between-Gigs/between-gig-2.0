@@ -111,6 +111,8 @@ export interface Invite {
   createdAt: string;
   expiresAt: string;
   usedAt?: string;
+  /** First time the invite link was opened. Drives "Opened" on the waitlist. */
+  openedAt?: string;
 }
 
 export interface InviteLookup {
@@ -139,7 +141,7 @@ export type RegisterResult =
   | { ok: true; person: Person }
   | { ok: false; error: InviteState | "terms" | "name" };
 
-export type EmailTemplate = "invite" | "sign-in-code" | "profile-submitted" | "welcome" | "coming-soon";
+export type EmailTemplate = "invite" | "sign-in-code" | "profile-submitted" | "welcome" | "coming-soon" | "approved" | "changes-requested";
 
 /** A queued email. Production: a row in the Resend outbox, sent by the existing worker. */
 export interface OutboxEmail {
@@ -210,3 +212,48 @@ export interface SketchSubmission {
 
 /** The privacy page's contact form. Production: D1 `privacy_requests`. */
 export interface PrivacyRequest { id: string; email: string; message: string; createdAt: string }
+
+/* ---- Milestone 4: the owners' tools ---- */
+
+/** Where a waitlist sign-up is with their invite. */
+export type InviteStatus = "not_invited" | "invited" | "opened" | "registered";
+export const inviteStatuses: InviteStatus[] = ["not_invited", "invited", "opened", "registered"];
+
+export interface WaitlistRow {
+  signup: WaitlistSignup;
+  inviteStatus: InviteStatus;
+  /** Set once invited. */
+  personId?: string;
+  invitedAt?: string;
+}
+
+export interface WaitlistQuery {
+  text?: string;
+  inviteStatus?: InviteStatus | "all";
+  category?: string | "all";
+  sort?: "joined-new" | "joined-old" | "email" | "zip";
+}
+
+export type ActivityKind = "joined_waitlist" | "invited" | "opened" | "registered" | "submitted" | "approved" | "changes_requested";
+
+/** One line in "Recent activity". Production: an events table written by each API action. */
+export interface ActivityEvent {
+  id: string;
+  kind: ActivityKind;
+  personId?: string;
+  /** Name if known, else the email. */
+  who: string;
+  /** The owner who acted (approve, suggest edits, invite). */
+  by?: string;
+  at: string;
+}
+
+export interface DashboardSummary {
+  counts: Record<PersonStatus, number>;
+  waitlist: Record<InviteStatus, number> & { total: number };
+  /** Submitted profiles, oldest first. */
+  reviewQueue: PersonSummary[];
+  activity: ActivityEvent[];
+}
+
+export type ReviewNoteInput = { section: ProfileSection; note: string };

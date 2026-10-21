@@ -6,6 +6,8 @@
 import { invite, type InviteProps } from "./invite";
 import { profileSubmitted, type ProfileSubmittedProps } from "./profile-submitted";
 import { signInCode, type SignInCodeProps } from "./sign-in-code";
+import { approved, type ApprovedProps } from "./approved";
+import { changesRequested, type ChangesRequestedProps } from "./changes-requested";
 import { comingSoon, type ComingSoonProps } from "./coming-soon";
 import { welcome, type WelcomeProps } from "./welcome";
 import { defaultContext, type EmailContext, type RenderedEmail } from "./layout";
@@ -45,6 +47,14 @@ export const emailTemplates = {
     name: "coming-soon", label: "Coming soon", when: "After either Storyboard form: offering skills or describing a project.",
     render: comingSoon, sample: { kind: "talent" },
   } satisfies TemplateInfo<ComingSoonProps>,
+  approved: {
+    name: "approved", label: "Profile approved", when: "When an owner approves a submitted profile.",
+    render: approved, sample: { firstName: "Imani", profileUrl: "https://between-gigs.com/p/imani-carter", editUrl: "https://between-gigs.com/profile/edit" },
+  } satisfies TemplateInfo<ApprovedProps>,
+  "changes-requested": {
+    name: "changes-requested", label: "Changes requested", when: "When an owner suggests edits, one note per section.",
+    render: changesRequested, sample: { firstName: "Hana", notes: "about|Please add a profile photo that shows your face clearly.\nstory|Tell clients a little more about what a session with you looks like.", editUrl: "https://between-gigs.com/profile/edit?step=review" },
+  } satisfies TemplateInfo<ChangesRequestedProps>,
 } as const;
 
 export const emailNames = Object.keys(emailTemplates) as EmailTemplate[];

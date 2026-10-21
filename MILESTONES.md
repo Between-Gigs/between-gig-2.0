@@ -57,7 +57,15 @@ The live funnel today: Crew Stories / iMessage → `/professionals` → "Get on 
 - Journal list, article and author pages.
 - Same copy as approved (Patti Lenkov approved `/professionals` copy on 27 Sep 2026); polish, don't rewrite.
 
-## Milestone 4 · Executive / admin experience
+## Milestone 4 · Executive / admin experience ✅
+
+Done 21 Oct 2026. Handoff: [docs/handoff/milestone-4.md](docs/handoff/milestone-4.md).
+
+- [x] Owner sign-in (email code) → `/owners` dashboard: counts by status, ready for review, waitlist progress, recent activity
+- [x] People list (`/owners/people`): search, filter by status / service / area / availability, sort; bulk invite lives on the waitlist
+- [x] Review (`/owners/review` queue → person page): profile as clients see it, checklist, Approve profile or Suggest edits (one note per section)
+- [x] Approved and Changes requested emails
+- [x] Waitlist (`/owners/waitlist`): ~500 sign-ups, Not invited / Invited / Opened / Registered, select and invite in bulk
 
 Simple, calm, for the owners (Patti & Peter), not the OS shell.
 

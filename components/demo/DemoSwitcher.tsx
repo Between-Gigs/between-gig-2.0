@@ -51,7 +51,7 @@ export function DemoSwitcher() {
               onClick={async () => { await demo.signInAs("gigster", gigster); go("/profile/"); }}>Sign in as this Gigster</Button>
           </div>
           <Button size="sm" fullWidth iconStart={<Users />} className="justify-start"
-            onClick={async () => { await demo.signInAs("owner"); go("/owners/people/"); }}>Owner (sample): search people</Button>
+            onClick={async () => { await demo.signInAs("owner"); go("/owners/"); }}>Owner (sample): dashboard</Button>
         </div>
         <div className="grid gap-1 border-t border-line pt-3">
           <p className="text-label-sm text-ink-subtle">Invite link states</p>

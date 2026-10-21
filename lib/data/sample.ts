@@ -6,15 +6,18 @@
 import { renderEmail } from "@/emails";
 import { completeness, validateAll } from "@/lib/profile/validate";
 import { absoluteUrl } from "@/lib/site";
-import { blankFields, buildSeed, DEMO_TOKENS, SAMPLE_OWNER, type SeedState } from "./seed";
+import { blankFields, buildActivity, buildSeed, buildWaitlist, DEMO_TOKENS, SAMPLE_OWNER, type SeedState } from "./seed";
 import type { DataSource } from "./source";
 import type {
   EmailTemplate, Invite, InviteLookup, OutboxEmail, PeopleQuery, Person, PersonStatus, PersonSummary, Profile,
   PrivacyRequest, ProfileDraft, Role, Session, SketchSubmission, WaitlistSignup,
+  ActivityEvent, ActivityKind, InviteStatus, WaitlistRow,
 } from "./types";
+import { inviteStatuses } from "./types";
 import { personStatuses } from "./types";
 
-const KEY = "bg2-sample-v1";
+// v2: Milestone 4 added the waitlist and activity log. A new key resets older demo data.
+const KEY = "bg2-sample-v2";
 const CHANGE = "bg2-sample-change";
 const CODE_TTL_MS = 10 * 60 * 1000;
 const RESEND_AFTER_MS = 30 * 1000;
@@ -27,6 +30,7 @@ interface State extends SeedState {
   waitlist?: WaitlistSignup[];
   sketches?: SketchSubmission[];
   privacy?: PrivacyRequest[];
+  activity?: ActivityEvent[];
   session: Session | null;
   challenges: Challenge[];
 }
@@ -38,8 +42,24 @@ const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 const latency = (ms = 60) => new Promise((r) => setTimeout(r, ms));
 
 function fresh(): State {
-  return { ...buildSeed(), outbox: [], session: null, challenges: [] };
+  const seed = buildSeed();
+  return { ...seed, outbox: [], session: null, challenges: [], waitlist: buildWaitlist(seed.people), activity: buildActivity(seed.people) };
 }
+
+function log(state: State, kind: ActivityKind, who: { personId?: string; name?: string; email: string }, by?: string) {
+  state.activity ??= [];
+  state.activity.unshift({ id: uid(), kind, personId: who.personId, who: who.name || who.email, by, at: now() });
+}
+
+function inviteStatusOf(state: State, email: string): { status: InviteStatus; personId?: string; invitedAt?: string } {
+  const person = state.people.find((p) => p.email.toLowerCase() === email.toLowerCase());
+  if (!person) return { status: "not_invited" };
+  if (person.status !== "invited") return { status: "registered", personId: person.id, invitedAt: person.invitedAt };
+  const opened = state.invites.some((i) => i.personId === person.id && i.openedAt);
+  return { status: opened ? "opened" : "invited", personId: person.id, invitedAt: person.invitedAt };
+}
+
+const ownerName = (state: State) => (state.session?.role === "owner" ? state.session.name : SAMPLE_OWNER.name);
 
 let memory: State | null = null;
 
@@ -167,7 +187,15 @@ export const sampleSource: DataSource = {
   invites: {
     async lookup(token) {
       await latency();
-      return lookupInvite(load(), token);
+      const state = load();
+      const found = lookupInvite(state, token);
+      const invite = state.invites.find((i) => i.token === token.trim());
+      if (found.state === "valid" && invite && !invite.openedAt) {
+        invite.openedAt = now();
+        log(state, "opened", { personId: invite.personId, email: invite.email });
+        save(state);
+      }
+      return found;
     },
   },
 
@@ -190,6 +218,7 @@ export const sampleSource: DataSource = {
       person.registeredAt = t;
       person.updatedAt = t;
       state.invites.find((i) => i.token === token)!.usedAt = t;
+      log(state, "registered", { personId: person.id, name: person.name, email: person.email });
       state.session = sessionFor(person);
       save(state, true);
       return { ok: true, person: clone(person) };
@@ -282,6 +311,7 @@ export const sampleSource: DataSource = {
       person.submittedAt = t;
       person.updatedAt = t;
       person.reviewNotes = undefined;
+      log(state, "submitted", { personId: person.id, name: person.name, email: person.email });
       queue(state, "profile-submitted", person.email, {
         firstName: person.name.split(" ")[0] ?? "",
         profileUrl: absoluteUrl("/profile/"),
@@ -328,6 +358,7 @@ export const sampleSource: DataSource = {
       if (existing) return { ok: true, signup: clone(existing), alreadyJoined: true };
       const signup: WaitlistSignup = { id: uid(), email: address, zip, category, details: "", placement, createdAt: now() };
       state.waitlist.unshift(signup);
+      log(state, "joined_waitlist", { email: address });
       queue(state, "welcome", address, { storyboardUrl: absoluteUrl("/storyboard/") });
       save(state);
       return { ok: true, signup: clone(signup), alreadyJoined: false };
@@ -361,6 +392,102 @@ export const sampleSource: DataSource = {
       state.privacy.unshift(request);
       save(state);
       return clone(request);
+    },
+  },
+
+  owners: {
+    async dashboard() {
+      await latency();
+      const state = load();
+      const counts = Object.fromEntries(personStatuses.map((st) => [st, state.people.filter((p) => p.status === st).length])) as Record<PersonStatus, number>;
+      const waitlist = Object.fromEntries(inviteStatuses.map((st) => [st, 0])) as Record<InviteStatus, number> & { total: number };
+      for (const w of state.waitlist ?? []) waitlist[inviteStatusOf(state, w.email).status]++;
+      waitlist.total = state.waitlist?.length ?? 0;
+      return { counts, waitlist, reviewQueue: await sampleSource.owners.reviewQueue(), activity: clone((state.activity ?? []).slice(0, 12)) };
+    },
+    async activity(limit = 50) {
+      await latency(0);
+      return clone((load().activity ?? []).slice(0, limit));
+    },
+    async reviewQueue() {
+      await latency(0);
+      const state = load();
+      return state.people.filter((p) => p.status === "submitted")
+        .sort((a, b) => (a.submittedAt ?? "").localeCompare(b.submittedAt ?? ""))
+        .map((p) => summarize(state, p));
+    },
+    async approve(personId) {
+      await latency(250);
+      const state = load();
+      const person = state.people.find((p) => p.id === personId);
+      if (!person || person.status !== "submitted") throw new Error("Only submitted profiles can be approved");
+      const t = now();
+      Object.assign(person, { status: "approved", approvedAt: t, updatedAt: t, reviewNotes: undefined });
+      log(state, "approved", { personId, name: person.name, email: person.email }, ownerName(state));
+      queue(state, "approved", person.email, {
+        firstName: person.name.split(" ")[0] ?? "", profileUrl: absoluteUrl(`/p/${person.slug}/`), editUrl: absoluteUrl("/profile/edit/"),
+      });
+      save(state);
+      return clone(person);
+    },
+    async requestChanges(personId, notes) {
+      await latency(250);
+      const state = load();
+      const person = state.people.find((p) => p.id === personId);
+      const clean = notes.map((n) => ({ ...n, note: n.note.trim() })).filter((n) => n.note);
+      if (!person || person.status !== "submitted") throw new Error("Only submitted profiles can be sent back");
+      if (!clean.length) throw new Error("Add at least one note");
+      const t = now();
+      const by = ownerName(state);
+      Object.assign(person, { status: "changes_requested", updatedAt: t, reviewNotes: clean.map((n) => ({ ...n, by, at: t })) });
+      log(state, "changes_requested", { personId, name: person.name, email: person.email }, by);
+      queue(state, "changes-requested", person.email, {
+        firstName: person.name.split(" ")[0] ?? "",
+        // Email props are strings: one note per line, "section|note".
+        notes: clean.map((n) => `${n.section}|${n.note.replace(/\n/g, " ")}`).join("\n"),
+        editUrl: absoluteUrl("/profile/edit/?step=review"),
+      });
+      save(state);
+      return clone(person);
+    },
+    async waitlist(query = {}) {
+      await latency();
+      const state = load();
+      const text = query.text?.trim().toLowerCase();
+      const rows: WaitlistRow[] = (state.waitlist ?? []).map((signup) => {
+        const s = inviteStatusOf(state, signup.email);
+        return { signup: clone(signup), inviteStatus: s.status, personId: s.personId, invitedAt: s.invitedAt };
+      }).filter((r) =>
+        (!query.inviteStatus || query.inviteStatus === "all" || r.inviteStatus === query.inviteStatus)
+        && (!query.category || query.category === "all" || r.signup.category === query.category)
+        && (!text || `${r.signup.email} ${r.signup.zip} ${r.signup.details}`.toLowerCase().includes(text)));
+      const sort = query.sort ?? "joined-new";
+      rows.sort((a, b) => sort === "email" ? a.signup.email.localeCompare(b.signup.email)
+        : sort === "zip" ? a.signup.zip.localeCompare(b.signup.zip) || a.signup.email.localeCompare(b.signup.email)
+        : sort === "joined-old" ? a.signup.createdAt.localeCompare(b.signup.createdAt)
+        : b.signup.createdAt.localeCompare(a.signup.createdAt));
+      return rows;
+    },
+    async invite(signupIds) {
+      await latency(300);
+      const state = load();
+      let invited = 0, skipped = 0;
+      const by = ownerName(state);
+      for (const id of signupIds) {
+        const signup = state.waitlist?.find((w) => w.id === id);
+        if (!signup || inviteStatusOf(state, signup.email).status !== "not_invited") { skipped++; continue; }
+        const t = now();
+        const personId = `${signup.email.split("@")[0].replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${uid().slice(0, 4)}`;
+        const person: Person = { id: personId, email: signup.email, name: "", slug: "", status: "invited", waitlistZip: signup.zip, waitlistCategory: signup.category, invitedAt: t, updatedAt: t, sample: true };
+        const token = `${personId}-${uid()}`;
+        state.people.push(person);
+        state.invites.push({ token, personId, email: signup.email, createdAt: t, expiresAt: new Date(Date.now() + 30 * 86400000).toISOString() });
+        queue(state, "invite", signup.email, { inviteUrl: absoluteUrl(`/join/?invite=${token}`), email: signup.email });
+        log(state, "invited", { personId, email: signup.email }, by);
+        invited++;
+      }
+      save(state);
+      return { invited, skipped };
     },
   },
 

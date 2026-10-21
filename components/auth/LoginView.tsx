@@ -84,7 +84,7 @@ export function LoginView() {
     }
     toast({ message: `Signed in as ${r.session.email}`, tone: "success" });
     const next = params.get("next");
-    router.push(next && next.startsWith("/") && !next.startsWith("//") ? next : r.session.role === "owner" ? "/owners/people/" : "/profile/");
+    router.push(next && next.startsWith("/") && !next.startsWith("//") ? next : r.session.role === "owner" ? "/owners/" : "/profile/");
   };
 
   const back = () => startPageTransition(() => { setStep("email"); setCodeError(undefined); setCode(""); }, { effect: "shift", direction: "back", target: stage.current });

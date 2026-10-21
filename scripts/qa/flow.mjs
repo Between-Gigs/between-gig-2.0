@@ -138,7 +138,7 @@ export async function flow({ browser, base, outDir }) {
       await page.getByRole("link", { name: "Riley Park" }).click();
       await page.waitForURL(/\/owners\/people\/riley-park\/?$/);
       await page.getByRole("heading", { name: "Riley Park", level: 1 }).waitFor();
-      await expectText("Waiting for review");
+      await page.locator("#review-h").waitFor();
     });
 
   // Milestone 3: the public funnel.
@@ -188,7 +188,54 @@ export async function flow({ browser, base, outDir }) {
       await page.getByRole("heading", { name: "Fewer days on location." }).waitFor();
     });
 
-  if (ok && funnel && errors.length) problems.push(`flow: page errors: ${errors.join(" | ")}`);
+  // Milestone 4: the owners review and invite.
+  const owners = ok && funnel
+    && await step("owner-dashboard", async () => {
+      await page.evaluate(() => window.bgSample.signInAs("owner"));
+      await page.goto(`${base}/owners/`);
+      await expectText("waiting for your review");
+      await page.getByRole("link", { name: "See the queue" }).click();
+      await page.waitForURL(/\/owners\/review\/?$/);
+      await page.getByRole("link", { name: "Imani Carter" }).waitFor();
+    })
+    && await step("owner-approve", async () => {
+      await page.goto(`${base}/owners/people/imani-carter/`);
+      await page.getByRole("checkbox", { name: /photo shows their face/ }).check();
+      await page.getByRole("button", { name: "Approve profile" }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "Approve profile" }).click();
+      await expectText("Approved · now live");
+      await page.goto(`${base}/p/imani-carter/`);
+      await page.getByRole("heading", { name: "Imani Carter", level: 1 }).waitFor();
+    })
+    && await step("owner-suggest-edits", async () => {
+      await page.goto(`${base}/owners/people/theo-nakamura/`);
+      await page.getByRole("button", { name: "Suggest edits" }).click();
+      await page.getByRole("button", { name: "Send to Theo" }).click();
+      await expectText("Add a note to at least one section.");
+      await page.getByLabel("Your story").fill("Tell clients what a portrait session with you feels like.");
+      await page.getByRole("button", { name: "Send to Theo" }).click();
+      await expectText("Edits sent");
+      await page.evaluate(() => window.bgSample.signInAs("gigster", "theo-nakamura"));
+      await page.goto(`${base}/profile/`);
+      await expectText("Tell clients what a portrait session with you feels like.");
+      await page.evaluate(() => window.bgSample.signInAs("owner"));
+    })
+    && await step("owner-bulk-invite", async () => {
+      await page.goto(`${base}/owners/waitlist/?status=not_invited`);
+      await page.locator("[data-results]").waitFor();
+      const boxes = page.getByRole("checkbox", { name: /^Select .*@example\.com$/ });
+      for (let i = 0; i < 3; i++) await boxes.nth(i).check();
+      await page.getByRole("button", { name: "Invite 3 people" }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "Send 3 invites" }).click();
+      await expectText("3 invites sent");
+    })
+    && await step("owner-emails", async () => {
+      await page.goto(`${base}/emails/`);
+      await page.getByRole("link", { name: /Your profile is live/ }).first().waitFor();
+      await page.getByRole("link", { name: /A few small changes to your profile, Theo/ }).waitFor();
+    });
+
+  if (ok && funnel && owners && errors.length) problems.push(`flow: page errors: ${errors.join(" | ")}`);
   await context.close();
   return problems;
 }

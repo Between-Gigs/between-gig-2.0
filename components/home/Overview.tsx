@@ -22,18 +22,18 @@ export function Overview() {
   };
   const startOwner = async () => {
     await data.demo?.signInAs("owner");
-    router.push("/owners/people/");
+    router.push("/owners/");
   };
 
   const steps = [
     { n: "01", icon: <Mail />, title: "The invite", body: "What the 500 waitlist sign-ups receive: professional onboarding is open, with a personal link.", action: <ButtonLink href="/emails/invite/" size="sm" iconEnd={<ArrowRight />}>Open the invite email</ButtonLink> },
     { n: "02", icon: <UserRoundPlus />, title: "Join and build a profile", body: "Register from the invite, sign in with an email code, answer the questionnaire and submit for review.", action: <Button size="sm" variant="primary" iconEnd={<ArrowRight />} onClick={startInvite}>Start as an invited Gigster</Button> },
-    { n: "03", icon: <Search />, title: "Owners find everyone", body: "Search and filter every person by status, service, area and availability, then open their profile.", action: <Button size="sm" iconEnd={<ArrowRight />} onClick={startOwner}>Search as an owner</Button> },
+    { n: "03", icon: <Search />, title: "Owners review and invite", body: "A calm dashboard: who's waiting for review, approve or suggest edits, and invite the waitlist in bulk.", action: <Button size="sm" iconEnd={<ArrowRight />} onClick={startOwner}>Open the owner dashboard</Button> },
   ];
 
   return (
     <Page bare>
-      <BrandBand eyebrow="Between Gigs 2.0 · Milestones 2 and 3" title="Extraordinary talent." accent="Everyday solutions.">
+      <BrandBand eyebrow="Between Gigs 2.0 · Milestones 2 to 4" title="Extraordinary talent." accent="Everyday solutions.">
         <p className="mt-4 max-w-xl text-body-lg text-ink-muted">A clickable preview of the Gigster journey, from the invite email to a profile owners can find. Everyone in it is a fictional sample, and nothing leaves your browser.</p>
         <ul aria-label="Sample Gigsters" className="mt-8 flex -space-x-3">
           {faces.map((f, i) => (
