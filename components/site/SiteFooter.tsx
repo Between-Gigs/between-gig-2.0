@@ -21,9 +21,6 @@ export function SiteFooter() {
           <h2 className="mb-1 text-label-sm text-ink">Explore</h2>
           <Link className={linkClass} href="/professionals/">For professionals</Link>
           <Link className={linkClass} href="/storyboard/">Storyboard</Link>
-          <Link className={linkClass} href="/emails/">Email previews</Link>
-          <Link className={linkClass} href="/preview/">Preview guide</Link>
-          <Link className={linkClass} href="/proposals/home/">Home page proposals</Link>
         </nav>
         <nav aria-label="Legal and standards" className="grid content-start gap-1.5">
           <h2 className="mb-1 text-label-sm text-ink">Legal</h2>
@@ -34,7 +31,7 @@ export function SiteFooter() {
         </nav>
       </div>
       <div className="border-t border-line">
-        <p className="mx-auto max-w-7xl px-4 py-5 text-caption text-ink-subtle sm:px-6">© 2026 Between Gigs. All rights reserved. BETWEEN GIGS™ is a trademark of Between Gigs. · Preview build: people in the app's sample data are fictional.</p>
+        <p className="mx-auto max-w-7xl px-4 py-5 text-caption text-ink-subtle sm:px-6">© 2026 Between Gigs. All rights reserved. BETWEEN GIGS™ is a trademark of Between Gigs. · Preview build: people in the sample data are fictional. <Link href="/preview/" className="underline underline-offset-2 hover:text-ink-brand">Preview guide</Link></p>
       </div>
     </footer>
   );

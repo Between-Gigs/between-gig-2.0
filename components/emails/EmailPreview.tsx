@@ -103,7 +103,8 @@ function Preview({ name }: { name: EmailTemplate }) {
           </section>
         </aside>
 
-        <div className="min-w-0 lg:col-span-8">
+        {/* Phones: the email first, its details after. */}
+        <div className="order-first min-w-0 lg:order-none lg:col-span-8">
           <Tabs value={tab} onChange={setTab}>
             <TabList label="Format">
               <Tab value="html">HTML</Tab>

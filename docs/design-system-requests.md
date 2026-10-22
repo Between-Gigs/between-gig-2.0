@@ -22,3 +22,10 @@ the Coming soon page. The app adds `phosphor-dots` (`app/globals.css`): the same
 painted over the panel's own `surface-brand` instead of repainting it `forest-950`. Request: a system utility (or a
 `backdrop-europium` variant that keeps the ground) so this lives in the design system, and an update to
 MATERIALS.md's "one per page" note.
+
+## Dark status surfaces (app override for now)
+
+In dark mode `--warning-soft` (amber-900), `--info-soft` (blue-900) and `--danger-soft` (red-900) read as muddy
+brown, navy and maroon on the forest surfaces; the client review flagged the warning banners in particular. The app
+overrides them in `app/globals.css` as a hint of the status tone over `--surface-raised` (7% / 7% / 9% in oklab), letting the icon and title carry the tone. Request:
+adopt these (or tuned equivalents) in the system's dark tokens.

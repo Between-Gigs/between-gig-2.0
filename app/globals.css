@@ -50,3 +50,22 @@
   100% { --comet: 160deg; opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .glow-horizon[data-comet]::after { animation: none; } }
+
+/*
+ * Dark-mode status surfaces. The system's amber-900 / blue-900 / red-900 read as muddy brown, navy and maroon
+ * on forest green. Here they're the bright status tone tinted over the surface instead, so warnings and notes
+ * stay readable and on-brand. Same token names, so every Banner and Badge follows. See
+ * docs/design-system-requests.md.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme=light]) {
+    --warning-soft: color-mix(in oklab, var(--warning) 7%, var(--surface-raised));
+    --info-soft: color-mix(in oklab, var(--info) 7%, var(--surface-raised));
+    --danger-soft: color-mix(in oklab, var(--danger) 9%, var(--surface-raised));
+  }
+}
+[data-theme=dark] {
+  --warning-soft: color-mix(in oklab, var(--warning) 7%, var(--surface-raised));
+  --info-soft: color-mix(in oklab, var(--info) 7%, var(--surface-raised));
+  --danger-soft: color-mix(in oklab, var(--danger) 9%, var(--surface-raised));
+}

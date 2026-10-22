@@ -26,7 +26,7 @@ export function CallSheetHome() {
         <header className="relative z-raised flex items-center justify-between gap-4 px-6 py-6 sm:px-10">
           <Link href="/" aria-label="Between Gigs home" className="rounded-md"><Logo height={30} /></Link>
           <div className="flex items-center gap-3">
-            <Link href="/login/" className="inline-flex min-h-8 items-center rounded-md px-2 text-label-md text-ink-muted transition-colors duration-fast hover:text-ink">Log in</Link>
+            <Link href="/login/" className="inline-flex min-h-8 items-center rounded-md px-2 text-label-md text-ink-muted transition-colors duration-fast hover:text-ink">Sign in</Link>
             <ThemeToggle size="sm" showLabel={false} />
           </div>
         </header>

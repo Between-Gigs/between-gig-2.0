@@ -142,7 +142,7 @@ export function button(href: string, label: string, variant: "primary" | "second
   const fg = primary ? light.onAction : light.ink;
   const border = primary ? light.action : light.lineStrong;
   return `<table role="presentation" class="e-btn" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 8px"><tr>
-<td align="center" class="${primary ? "" : "e-card"}" bgcolor="${bg}" style="background-color:${bg};border:1px solid ${border};border-radius:10px;mso-padding-alt:14px 28px">
+<td align="center" class="${primary ? "" : "e-card"}" bgcolor="${bg}" style="background-color:${bg};${primary ? "" : `border:1px solid ${border};`}border-radius:10px;mso-padding-alt:14px 28px">
 <a href="${esc(href)}" class="${primary ? "" : "e-ink"}" style="display:inline-block;padding:14px 28px;font-family:${FONT_UI};font-size:16px;line-height:20px;font-weight:700;color:${fg};text-decoration:none;border-radius:10px">${esc(label)}&nbsp;&rarr;</a>
 </td></tr></table>`;
 }
@@ -152,7 +152,7 @@ export const link = (href: string, label: string) => `<a class="e-link" href="${
 /** Numbered rows ("01 About you …"), the same numbering the builder uses. */
 export function steps(rows: [string, string][]) {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px">${rows.map(([t, d], i) => `<tr>
-<td valign="top" width="44" class="e-line" style="padding:14px 0;border-top:1px solid ${light.line};font-family:${FONT_MONO};font-size:13px;line-height:22px;color:${light.inkBrand}"><span class="e-brand" style="color:${light.inkBrand}">0${i + 1}</span></td>
+<td valign="top" width="44" class="e-line" style="padding:14px 0;border-top:1px solid ${light.line};font-family:${FONT_UI};font-size:14px;line-height:22px;font-weight:700;color:${light.inkBrand}"><span class="e-brand" style="color:${light.inkBrand}">0${i + 1}</span></td>
 <td valign="top" class="e-line" style="padding:14px 0;border-top:1px solid ${light.line};font-family:${FONT_UI}"><p class="e-ink" style="margin:0;font-size:15px;line-height:22px;font-weight:700;color:${light.ink}">${esc(t)}</p><p class="e-muted" style="margin:2px 0 0;font-size:14px;line-height:21px;color:${light.inkMuted}">${esc(d)}</p></td>
 </tr>`).join("")}</table>`;
 }
