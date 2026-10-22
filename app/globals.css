@@ -17,13 +17,36 @@
 /*
  * The Europium phosphor dots from the design system's backdrop-europium (the Coming soon field), laid over a
  * brand panel's own forest instead of repainting it, so every forest-green surface carries the same dotted
- * grain. Same layers, sizes and strengths as the system's; see docs/design-system-requests.md.
+ * grain. Same layers and sizes as the system's, at about half the strength so it stays in the background
+ * (the client asked for it subtle); see docs/design-system-requests.md.
  */
 @utility phosphor-dots {
   background-image:
-    radial-gradient(color-mix(in oklab, --theme(--color-mint-300) 22%, transparent) .7px, transparent 1.3px),
-    radial-gradient(color-mix(in oklab, --theme(--color-mint-500) 12%, transparent) .6px, transparent 1.2px),
-    radial-gradient(80% 45% at 50% 115%, color-mix(in oklab, --theme(--color-mint-500) 14%, transparent), transparent 75%);
+    radial-gradient(color-mix(in oklab, --theme(--color-mint-300) 11%, transparent) .7px, transparent 1.3px),
+    radial-gradient(color-mix(in oklab, --theme(--color-mint-500) 6%, transparent) .6px, transparent 1.2px),
+    radial-gradient(80% 45% at 50% 115%, color-mix(in oklab, --theme(--color-mint-500) 10%, transparent), transparent 75%);
   background-size: 10px 10px, 17px 17px, auto;
   background-position: 0 0, 5px 7px, 0 0;
 }
+
+/*
+ * A shooting star along the glow-horizon curve: a sharp, bright head with a fading tail that runs once from
+ * left to right the first time a horizon comes into view (HorizonComets sets data-comet). It is the horizon's
+ * own top edge, revealed by a moving conic mask centred on the ellipse: 90deg is the top of the curve, and
+ * the visible arc spans roughly 30deg to 150deg.
+ */
+@property --comet { syntax: "<angle>"; inherits: false; initial-value: 24deg; }
+.glow-horizon::after {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; opacity: 0;
+  border: 2px solid --theme(--color-mint-100);
+  filter: drop-shadow(0 0 2px --theme(--color-mint-100)) drop-shadow(0 0 6px --theme(--color-mint-300)) drop-shadow(0 0 16px --theme(--color-mint-500));
+  mask-image: conic-gradient(from -90deg at 50% 50%, transparent calc(var(--comet) - 22deg), black calc(var(--comet) - .5deg), transparent var(--comet));
+}
+.glow-horizon[data-comet]::after { animation: horizon-comet 2.2s cubic-bezier(.45, 0, .2, 1) .35s both; }
+@keyframes horizon-comet {
+  0% { --comet: 24deg; opacity: 0; }
+  12% { opacity: 1; }
+  82% { opacity: 1; }
+  100% { --comet: 160deg; opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .glow-horizon[data-comet]::after { animation: none; } }

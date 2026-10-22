@@ -2,6 +2,7 @@
 import { ToastProvider } from "@ds/components";
 import { ClerkLayer } from "@/components/auth/ClerkLayer";
 import { clerkEnabled } from "@/lib/auth/clerk";
+import { HorizonComets } from "./HorizonComets";
 import { SampleHook } from "./SampleHook";
 
 /** Client-side roots: Clerk (when a publishable key is set), and the toast queue. */
@@ -13,6 +14,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       </a>
       {children}
       <SampleHook />
+      <HorizonComets />
     </ToastProvider>
   );
   return clerkEnabled ? <ClerkLayer>{app}</ClerkLayer> : app;
