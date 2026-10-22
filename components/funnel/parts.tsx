@@ -3,12 +3,25 @@ import { Reveal } from "@ds/motion";
 import { ArrowUpRight } from "lucide-react";
 import { asset } from "@/lib/site";
 
+/**
+ * The glowing horizon of a dark brand panel. From lg up it sits where the system puts it (80% down the panel);
+ * below lg it is anchored about 80px above the panel's bottom edge instead, so on a tall phone panel the arc stays under
+ * the content rather than cutting through it. Give the panel's content enough bottom padding (pb-28 or so).
+ */
+export function Horizon({ className }: { className?: string }) {
+  return (
+    <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-96 lg:h-full">
+      <span className={cx("glow-horizon", className ?? "opacity-60")} />
+    </span>
+  );
+}
+
 /** Eyebrow + two-line display heading with the second line in ink-brand (BRAND.md "headline accents"). */
 export function SectionHeading({ id, eyebrow, title, accent, center, className, children }: {
   id?: string; eyebrow?: string; title: string; accent?: string; center?: boolean; className?: string; children?: React.ReactNode;
 }) {
   return (
-    <div className={cx("grid gap-3", center && "justify-items-center text-center", className)}>
+    <div className={cx("grid content-start gap-3", center && "justify-items-center text-center", className)}>
       {eyebrow && <Reveal effect="fade-up"><p className="text-eyebrow text-ink-brand uppercase">{eyebrow}</p></Reveal>}
       <Reveal effect="fade-up" delay={60}>
         <h2 id={id} className="max-w-3xl font-display text-display-sm text-balance text-ink sm:text-display-md">

@@ -48,7 +48,7 @@ export function Overview() {
               <Reveal effect="fade-up" delay={i * 70} className="flex h-full flex-col gap-3 rounded-2xl border border-line bg-surface p-6 shadow-lg">
                 <div className="flex items-center justify-between">
                   <span className="grid size-10 place-items-center rounded-full bg-surface-selected text-ink-brand [&_svg]:size-5">{s.icon}</span>
-                  <span className="font-mono text-data-md text-ink-subtle">{s.n}</span>
+                  <span className="text-label-md text-ink-subtle tabular-nums">{s.n}</span>
                 </div>
                 <h2 className="font-display text-heading-lg text-ink">{s.title}</h2>
                 <p className="text-body-md text-ink-muted">{s.body}</p>

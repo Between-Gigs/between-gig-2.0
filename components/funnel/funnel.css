@@ -1,0 +1,27 @@
+/*
+ * Small pieces of the public pages that need real CSS: the carousel's scroll affordance and the credits-roll
+ * marquee. Colors are design tokens; masks use "black" only for their alpha channel.
+ */
+
+/* Carousel: a thin visible scrollbar and soft edges that hint there is more to either side. */
+.bg-carousel { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; overscroll-behavior-x: contain; }
+.bg-carousel::-webkit-scrollbar { height: 6px; }
+.bg-carousel::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 999px; }
+.bg-carousel:where([data-more-end]) { mask-image: linear-gradient(90deg, black 0 88%, transparent 100%); }
+.bg-carousel:where([data-more-start]) { mask-image: linear-gradient(90deg, transparent 0, black 12%); }
+.bg-carousel:where([data-more-start][data-more-end]) { mask-image: linear-gradient(90deg, transparent 0, black 10%, black 90%, transparent 100%); }
+
+/* In grid mode (wider screens) the row is a plain grid: no fades, nothing to scroll. */
+@media (width >= 48rem) { .bg-carousel[data-grid=md] { mask-image: none; overflow: visible; padding-bottom: 0; } }
+@media (width >= 64rem) { .bg-carousel[data-grid=lg] { mask-image: none; overflow: visible; padding-bottom: 0; } }
+
+/* Credits roll: two identical tracks slide left forever; hover or focus pauses; reduced motion holds still. */
+.bg-marquee { display: flex; overflow: hidden; mask-image: linear-gradient(90deg, transparent 0, black 8%, black 92%, transparent 100%); }
+.bg-marquee-track { display: flex; flex: none; gap: 0; animation: bg-marquee 60s linear infinite; }
+.bg-marquee:hover .bg-marquee-track, .bg-marquee:focus-within .bg-marquee-track { animation-play-state: paused; }
+@keyframes bg-marquee { to { transform: translateX(-100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .bg-marquee { overflow-x: auto; }
+  .bg-marquee-track { animation: none; }
+  .bg-marquee-track[aria-hidden="true"] { display: none; }
+}

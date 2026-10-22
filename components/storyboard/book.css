@@ -94,13 +94,13 @@
 .sb-prev { left: 0; width: 50%; }
 .sb-next { right: 0; width: 50%; }
 
-/* Captions under the book: the page title in caps, its story in italic. Old fades out before new fades in. */
+/* Captions under the book: the page title in caps, its story in italic Figtree. Old fades out before new fades in. */
 .sb-captions { display: grid; justify-items: center; text-align: center; min-height: 56px; }
 .sb-captions > * { grid-area: 1 / 1; margin: 0; }
 .sb-caption { display: grid; gap: 6px; animation: sb-cap-in .5s ease both; }
 .sb-caption.live { animation: none; }
 .sb-caption-title { font-size: var(--text-label-md); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-muted); font-weight: 600; }
-.sb-caption-story { font-family: var(--font-serif); font-size: var(--text-body-lg); line-height: 1.35; font-style: italic; color: var(--ink-subtle); }
+.sb-caption-story { font-family: var(--font-sans); font-size: var(--text-body-lg); line-height: 1.35; font-style: italic; color: var(--ink-subtle); }
 @keyframes sb-cap-in { 0% { opacity: 0; } }
 
 /* Peter's handwritten "Your next chapter starts here." is black ink on transparent: lift it to light ink in dark mode. */

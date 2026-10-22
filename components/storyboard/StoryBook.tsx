@@ -7,7 +7,7 @@ import { scenePages } from "@/lib/storyboard";
 import { createBook, type BookState } from "./engine";
 import "./book.css";
 
-export interface StoryBookHandle { goTo: (index: number) => void }
+export interface StoryBookHandle { goTo: (index: number) => void; prefetch: (index: number) => void }
 
 /**
  * The Storyboard hero, as approved: one centered column. Peter's handwritten "Your next chapter starts
@@ -47,7 +47,7 @@ export const StoryBook = React.forwardRef<StoryBookHandle, { onPlan: (kind: "buy
       return () => { removeEventListener("keydown", onKey); e.destroy(); engine.current = null; };
     }, []);
 
-    React.useImperativeHandle(ref, () => ({ goTo: (i: number) => engine.current?.goTo(i) }), []);
+    React.useImperativeHandle(ref, () => ({ goTo: (i: number) => engine.current?.goTo(i), prefetch: (i: number) => engine.current?.prefetch(i) }), []);
 
     const page = scenePages[state.index];
     return (
@@ -57,8 +57,10 @@ export const StoryBook = React.forwardRef<StoryBookHandle, { onPlan: (kind: "buy
         </h1>
 
         <div ref={stage} className="sb-stage" role="group" aria-roledescription="book" aria-label="The Storyboard: a sketchbook of what Between Gigs talent can do">
-          <IconButton label="Previous page" variant="ghost" icon={<ChevronLeft />} disabled={!state.canPrev}
-            onClick={() => engine.current?.step("prev")} className="absolute top-1/2 left-0 z-raised -translate-y-1/2 sm:-left-2" />
+          {/* Beside the book from sm up; on a phone they move below it, off the artwork. */}
+          <span className="hidden sm:contents">
+            <TurnButton dir="prev" disabled={!state.canPrev} onClick={() => engine.current?.step("prev")} className="absolute top-1/2 -left-2 z-raised -translate-y-1/2" />
+          </span>
           <div ref={frame} className="sb-3d">
             <div className="sb-tilt">
               <div aria-hidden="true" className="sb-cast ambient" />
@@ -67,8 +69,9 @@ export const StoryBook = React.forwardRef<StoryBookHandle, { onPlan: (kind: "buy
               <div ref={book} className="sb-book" />
             </div>
           </div>
-          <IconButton label="Next page" variant="ghost" icon={<ChevronRight />} disabled={!state.canNext}
-            onClick={() => engine.current?.step("next")} className="absolute top-1/2 right-0 z-raised -translate-y-1/2 sm:-right-2" />
+          <span className="hidden sm:contents">
+            <TurnButton dir="next" disabled={!state.canNext} onClick={() => engine.current?.step("next")} className="absolute top-1/2 -right-2 z-raised -translate-y-1/2" />
+          </span>
         </div>
 
         {/* Live caption for the current page; the visual one cross-fades with the turn. */}
@@ -76,17 +79,19 @@ export const StoryBook = React.forwardRef<StoryBookHandle, { onPlan: (kind: "buy
         <div ref={captions} aria-hidden="true" className="sb-captions max-w-3xl px-4" />
 
         <div className="flex flex-wrap items-center justify-center gap-3">
+          <span className="contents sm:hidden"><TurnButton dir="prev" disabled={!state.canPrev} onClick={() => engine.current?.step("prev")} /></span>
           <div role="group" aria-label="Zoom" className="flex items-center gap-1 rounded-full border border-line bg-surface/70 px-1.5 py-1 backdrop-blur-sm">
             <IconButton label="Zoom out" variant="ghost" size="sm" icon={<Minus />} disabled={state.zoom <= 0.901} onClick={() => engine.current?.zoom(1 / 1.16)} />
-            <span className="min-w-10 text-center font-mono text-data-sm text-ink-subtle tabular-nums">{Math.round(state.zoom * 100)}%</span>
+            <span className="min-w-10 text-center text-label-sm text-ink-subtle tabular-nums">{Math.round(state.zoom * 100)}%</span>
             <IconButton label="Zoom in" variant="ghost" size="sm" icon={<Plus />} disabled={state.zoom >= 1.499} onClick={() => engine.current?.zoom(1.16)} />
           </div>
-          <span className="font-mono text-data-sm text-ink-subtle tabular-nums">{state.index + 1} / {scenePages.length}</span>
+          <span className="text-label-sm text-ink-subtle tabular-nums">{state.index + 1} / {scenePages.length}</span>
+          <span className="contents sm:hidden"><TurnButton dir="next" disabled={!state.canNext} onClick={() => engine.current?.step("next")} /></span>
         </div>
         <p className={cx("text-caption tracking-widest text-ink-subtle uppercase transition-opacity duration-slow", hinted && "opacity-0")}>Drag the page or use the arrows to turn</p>
 
         <div className="flex flex-wrap justify-center gap-3">
-          <Button variant="strong" size="lg" iconEnd={<ArrowRight />} onClick={() => onPlan("buyer")}>Find talent for a project</Button>
+          <Button variant="primary" size="lg" className="glow-hover" iconEnd={<ArrowRight />} onClick={() => onPlan("buyer")}>Find talent for a project</Button>
           <Button variant="secondary" size="lg" onClick={() => onPlan("talent")}>Offer your skills</Button>
         </div>
 
@@ -95,3 +100,12 @@ export const StoryBook = React.forwardRef<StoryBookHandle, { onPlan: (kind: "buy
     );
   },
 );
+
+/** Page-turn arrow on a solid surface, so it reads over the artwork and beside it in both themes. */
+function TurnButton({ dir, disabled, onClick, className }: { dir: "prev" | "next"; disabled: boolean; onClick: () => void; className?: string }) {
+  return (
+    <IconButton label={dir === "prev" ? "Previous page" : "Next page"} variant="ghost" icon={dir === "prev" ? <ChevronLeft /> : <ChevronRight />}
+      disabled={disabled} onClick={onClick}
+      className={cx("rounded-full border border-line bg-surface/90 shadow-md backdrop-blur-sm hover:bg-surface disabled:opacity-60", className)} />
+  );
+}

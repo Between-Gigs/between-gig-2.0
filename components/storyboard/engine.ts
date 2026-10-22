@@ -37,6 +37,23 @@ export function createBook(opts: {
   let capOut: HTMLElement | null = null, capIn: HTMLElement | null = null;
   let coverTimer: number | null = null;
 
+  /*
+   * Pages load on demand: the current spread plus two either side, warmed again after every turn, so the
+   * next leaf is always decoded before it lifts. Holding the Image objects keeps them in the memory cache.
+   */
+  const warmed = new Map<number, HTMLImageElement>();
+  function warm(i: number) {
+    if (i < 0 || i >= M || warmed.has(i)) return;
+    const im = new Image(); im.decoding = "async"; im.src = pages[i].url;
+    warmed.set(i, im);
+    void im.decode?.().catch(() => undefined);
+  }
+  let ready = false;   // until the first page has loaded, don't compete with it
+  function warmAround(i: number) {
+    if (!ready) return;
+    for (const d of [1, -1, 2, -2]) warm(i + d);
+  }
+
   const el = (tag: string, cls?: string) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
   const report = () => onChange({ index: turn ? turn.to : idx, canPrev: target("prev") !== null, canNext: target("next") !== null, zoom: view.tz });
 
@@ -124,7 +141,7 @@ export function createBook(opts: {
     book.textContent = "";
     if (!turn) {
       const f = el("div", "sb-full");
-      const im = new Image(); im.src = pages[idx].url; im.alt = `${pages[idx].title}. ${pages[idx].story}`; im.draggable = false;
+      const im = new Image(); im.src = pages[idx].url; warmed.set(idx, warmed.get(idx) ?? im); im.alt = `${pages[idx].title}. ${pages[idx].story}`; im.draggable = false;
       f.appendChild(im); book.appendChild(f);
       frame.style.setProperty("--shade", "0");
     } else {
@@ -142,6 +159,7 @@ export function createBook(opts: {
     layout();
     caption();
     report();
+    warmAround(turn ? turn.to : idx);
   }
 
   function layout() { frame.style.setProperty("--bw", `${book.clientWidth}px`); }
@@ -235,9 +253,20 @@ export function createBook(opts: {
     if (!turn) return;
     animateTo(0, () => { turn = null; paint(); }, 150, 24);
   }
+  /* A leaf never lifts onto a blank page: if the page behind it is still loading, the turn waits for it. */
+  let waiting = false;
+  function loaded(i: number) { warm(i); return warmed.get(i)!.complete; }
+  function afterLoad(i: number, fn: () => void) {
+    if (waiting) return;
+    waiting = true;
+    const im = warmed.get(i)!;
+    const go = () => { waiting = false; fn(); };
+    im.addEventListener("load", go, { once: true }); im.addEventListener("error", go, { once: true });
+  }
   function step(dir: Dir) {
     if (turn) { idx = turn.to; turn = null; }   // finish whatever is in flight first
     const to = target(dir); if (to === null) return;
+    if (!loaded(to)) { afterLoad(to, () => step(dir)); return; }
     onInteract?.();
     if (pages[idx].cover || pages[to].cover) { transitionCover(dir); return; }
     if (startTurn(dir)) commit();
@@ -261,6 +290,7 @@ export function createBook(opts: {
     const r = book.getBoundingClientRect();
     const dir: Dir = (e.clientX - r.left) / r.width > 0.5 ? "next" : "prev";
     const to = target(dir); if (to === null) return;
+    if (!loaded(to)) { afterLoad(to, () => step(dir)); return; }
     if (pages[idx].cover || pages[to].cover) { transitionCover(dir); return; }
     if (!startTurn(dir)) return;
     drag = { dir, x0: e.clientX, w: r.width, moved: 0, vel: 0, tPrev: performance.now() };
@@ -295,12 +325,17 @@ export function createBook(opts: {
   addEventListener("blur", onBlur);
   addEventListener("resize", layout);
 
-  // Warm the cache so the first turns don't flash.
-  pages.forEach((p) => { const im = new Image(); im.src = p.url; });
   paint();
+  // Once the opening page is in, fetch its neighbours in the background.
+  const first = warmed.get(idx);
+  const begin = () => { if (ready) return; ready = true; warmAround(turn ? turn.to : idx); };
+  if (first && !first.complete) { first.addEventListener("load", begin, { once: true }); first.addEventListener("error", begin, { once: true }); }
+  else begin();
 
   return {
     step, goTo,
+    /** Start loading a page ahead of a jump to it (the catalog calls this on hover and focus). */
+    prefetch: (i: number) => warm(i),
     zoom: (factor: number) => setView(view.trx, view.try_, view.tz * factor),
     destroy() {
       if (raf !== null) cancelAnimationFrame(raf);

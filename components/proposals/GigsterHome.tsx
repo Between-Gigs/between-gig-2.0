@@ -8,7 +8,21 @@ import { monthStatusLabel } from "@/lib/data/taxonomy";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { PersonStatusBadge } from "@/components/people/PersonStatusBadge";
 import { ButtonLink } from "@/components/ui/ButtonLink";
-import { ProposalNote } from "./ProposalNote";
+import { Horizon } from "@/components/funnel/parts";
+import { ProposalNote, type Note } from "./ProposalNote";
+
+/** The reasoning beside each section, shown with "Show design notes". */
+export const gigsterNotes: Note[] = [
+  { title: "One next step, always", body: <>
+        <p>Every status has exactly one thing to do (or "nothing, we're on it"). It's the same decision the status banner on /profile makes, promoted to the top of home so a Gigster never has to work out what's expected.</p>
+  </> },
+  { title: "Availability in one tap, without a review", body: <>
+        <p>The promise on /professionals is "Pause your availability when the call comes." Today that means reopening the questionnaire. Proposal: a one-tap switch here that doesn't send the profile back to review (Milestone 2 open question 3).</p>
+  </> },
+  { title: "Requests get the biggest panel, even before they exist", body: <>
+        <p>Booking is the reason Gigsters join. Reserving the space now (with an honest empty state) sets the expectation without inventing activity. When booking ships, this becomes an inbox.</p>
+  </> },
+];
 
 /** Proposal: home for a signed-in Gigster. Status, the one next step, availability in one tap, requests. */
 export function GigsterHome({ personId }: { personId: string }) {
@@ -42,8 +56,8 @@ export function GigsterHome({ personId }: { personId: string }) {
             <PersonStatusBadge status={p.status} audience="gigster" className="w-fit" />
           </div>
         </div>
-        <div data-theme="dark" className="relative isolate overflow-hidden rounded-2xl bg-surface-brand phosphor-dots p-5 lg:col-span-5">
-          <span aria-hidden="true" className="glow-horizon opacity-60" />
+        <div data-theme="dark" className="relative isolate overflow-hidden rounded-2xl bg-surface-brand phosphor-dots p-5 pb-24 lg:col-span-5 lg:pb-5">
+          <Horizon />
           <div className="relative z-raised grid gap-2">
             <p className="text-label-sm text-ink-brand">Next step</p>
             <h3 className="font-display text-heading-lg text-ink">{next.title}</h3>
@@ -52,9 +66,7 @@ export function GigsterHome({ personId }: { personId: string }) {
           </div>
         </div>
       </section>
-      <ProposalNote n={1} title="One next step, always" >
-        <p>Every status has exactly one thing to do (or "nothing, we're on it"). It's the same decision the status banner on /profile makes, promoted to the top of home so a Gigster never has to work out what's expected.</p>
-      </ProposalNote>
+      <ProposalNote n={1} />
 
       <section aria-labelledby="g-availability" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 lg:grid-cols-12 lg:items-center">
         <div className="lg:col-span-5">
@@ -67,9 +79,7 @@ export function GigsterHome({ personId }: { personId: string }) {
           <p aria-live="polite" className="text-body-sm text-ink-muted">{monthStatusLabel[availability]} · preview only, not saved</p>
         </div>
       </section>
-      <ProposalNote n={2} title="Availability in one tap, without a review" >
-        <p>The promise on /professionals is "Pause your availability when the call comes." Today that means reopening the questionnaire. Proposal: a one-tap switch here that doesn't send the profile back to review (Milestone 2 open question 3).</p>
-      </ProposalNote>
+      <ProposalNote n={2} />
 
       <div className="grid gap-6 lg:grid-cols-12">
         <section aria-labelledby="g-requests" className="rounded-2xl border border-line bg-surface p-5 lg:col-span-7">
@@ -92,9 +102,7 @@ export function GigsterHome({ personId }: { personId: string }) {
           {p.status === "approved" && <Banner tone="success" title="You're live">Clients across Los Angeles can find you.</Banner>}
         </section>
       </div>
-      <ProposalNote n={3} title="Requests get the biggest panel, even before they exist" >
-        <p>Booking is the reason Gigsters join. Reserving the space now (with an honest empty state) sets the expectation without inventing activity. When booking ships, this becomes an inbox.</p>
-      </ProposalNote>
+      <ProposalNote n={3} />
 
       <p className={cx("flex items-center gap-2 text-caption text-ink-subtle")}><CircleCheck className="size-3.5" aria-hidden="true" />Showing {p.name}{p.sample ? " (fictional sample)" : ""}.</p>
     </div>

@@ -186,7 +186,7 @@ export const plans: Record<"talent" | "buyer", Plan> = {
       { name: "services", label: "What services would you like to offer?", placeholder: "Describe the work you could do for people or businesses.", control: "textarea", wide: true, max: 1200 },
       { name: "location", label: "Where can you work?", placeholder: "City, ZIP, remote, or travel radius", autocomplete: "address-level2", max: 200 },
       { name: "availability", label: "When are you available?", placeholder: "e.g. weekdays between shoots", max: 200 },
-      { name: "rate", label: "Rate or preferred range", optional: true, max: 200 },
+      { name: "rate", label: "Rate or preferred range", placeholder: "Hourly, day or project rate", optional: true, max: 200 },
       { name: "details", label: "Anything else we should know?", placeholder: "Experience, interests, or the kind of work you want next.", control: "textarea", wide: true, optional: true, max: 1200 },
     ],
   },

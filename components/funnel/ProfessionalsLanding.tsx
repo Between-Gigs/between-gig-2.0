@@ -1,13 +1,14 @@
 "use client";
 import { Accordion, Button, cx } from "@ds/components";
 import { Reveal } from "@ds/motion";
-import { ArrowRight, ArrowUpRight, Brush, CalendarCheck, Camera, Drama, Film, Hammer, MapPinned, Scissors, Shirt, Sofa } from "lucide-react";
+import { Brush, CalendarCheck, Camera, Drama, Film, Hammer, MapPinned, Scissors, Shirt, Sofa } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { asset } from "@/lib/site";
 import { Page } from "@/components/site/Page";
 import { CallSheetDialog } from "./CallSheetDialog";
-import { CallSheetButton, Founders, SectionHeading } from "./parts";
+import { Carousel } from "./Carousel";
+import { CallSheetButton, Founders, Horizon, SectionHeading } from "./parts";
 
 /*
  * /professionals. Copy is the live page's, approved by Patti Lenkov on 27 Sep 2026
@@ -29,7 +30,7 @@ const services = [
 ];
 
 const profiles = [
-  { id: "maya", name: "Maya", title: "Art Director → Interior Styling", category: "interiors", img: "maya", credits: "Independent shorts and branded shoots", services: "Room styling, mood boards and sourcing", pricing: "Styling consultations: $95-$140 / hour", availability: "Weekday afternoons between shoots", portfolio: "A warm living-room styling concept" },
+  { id: "simone", name: "Simone", title: "Art Director → Interior Styling", category: "interiors", img: "simone", credits: "Independent shorts and branded shoots", services: "Room styling, mood boards and sourcing", pricing: "Styling consultations: $95-$140 / hour", availability: "Weekday afternoons between shoots", portfolio: "A warm living-room styling concept" },
   { id: "luis", name: "Luis", title: "Set Carpenter → Custom Builds", category: "builds", img: "luis", credits: "Television sets and music videos", services: "Custom furniture and creative builds", pricing: "Design consultations from $450. Fabrication quoted by project.", availability: "Weekends; 2-3 weeks' lead time", portfolio: "A sculpted walnut sideboard" },
   { id: "renee", name: "Renee", title: "Production Coordinator → Events", category: "events", img: "renee", credits: "Commercial shoots and indie-film logistics", services: "Event timelines and vendor coordination", pricing: "Coordination: $75-$110 / hour", availability: "Weekday planning and event-day coverage by arrangement", portfolio: "An intimate garden event" },
   { id: "devon", name: "Devon", title: "Location Scout → Commercial Locations & Venues", category: "venues", img: "devon", credits: "Independent films and commercial shoots", services: "Restaurant and retail location research, corporate-event venues, and hotel and restaurant scouting for travel companies", pricing: "Scouting packages from $350", availability: "Select weekdays between productions", portfolio: "A garden courtyard event setting" },
@@ -54,8 +55,8 @@ export function ProfessionalsLanding() {
     <Page bare>
       {/* Hero */}
       <section data-theme="dark" aria-labelledby="hero-h" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
-        <span aria-hidden="true" className="glow-horizon opacity-60" />
-        <div className="relative z-raised mx-auto grid max-w-7xl items-center gap-12 px-4 pt-14 pb-24 sm:px-6 lg:grid-cols-12 lg:pt-20 lg:pb-28">
+        <Horizon />
+        <div className="relative z-raised mx-auto grid max-w-7xl items-center gap-12 px-4 pt-14 pb-36 sm:px-6 lg:grid-cols-12 lg:pt-20 lg:pb-28">
           <div className="lg:col-span-7">
             <Reveal effect="fade-up"><p className="text-eyebrow text-ink-brand uppercase">Entertainment expertise. Everyday possibilities.</p></Reveal>
             <Reveal effect="fade-up" delay={80}>
@@ -68,7 +69,7 @@ export function ProfessionalsLanding() {
               <p className="mt-3 max-w-xl text-body-md text-ink-muted">Offer your expertise to people and businesses beyond the industry. Clients don't need to work in entertainment to hire you.</p>
               <div className="mt-8 flex flex-wrap items-center gap-4">
                 <CallSheetButton onClick={() => join("hero")} />
-                <p className="font-mono text-data-sm tracking-wider text-ink-subtle uppercase">Los Angeles Call Sheet · Free to join</p>
+                <p className="text-label-md text-ink-muted">Los Angeles Call Sheet · Free to join</p>
               </div>
             </Reveal>
           </div>
@@ -78,7 +79,7 @@ export function ProfessionalsLanding() {
               <Reveal key={f} effect="fade-up" delay={200 + i * 90}
                 className={cx("absolute w-56 overflow-hidden rounded-xl border-4 border-surface shadow-lg",
                   ["top-0 left-6 -rotate-6", "top-10 right-2 rotate-3", "bottom-0 left-0 rotate-2", "right-12 bottom-6 -rotate-3"][i])}>
-                <img src={asset(`art/storyboard/${f}.jpg`)} alt="" className="aspect-3/2 w-full object-cover" />
+                <img src={asset(`art/storyboard/thumbs/${f}.jpg`)} alt="" width={800} height={533} decoding="async" className="aspect-3/2 h-auto w-full object-cover" />
               </Reveal>
             ))}
           </div>
@@ -98,7 +99,7 @@ export function ProfessionalsLanding() {
 
       {/* How it works / services */}
       <section id="services" aria-labelledby="services-h" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-20 sm:px-6">
-        <div className="grid gap-8 lg:grid-cols-12">
+        <div className="grid gap-8 lg:grid-cols-12 lg:items-center">
           <SectionHeading id="services-h" eyebrow="How it works" title="Your craft." accent="More possibilities." className="lg:col-span-5" />
           <Reveal effect="fade-up" delay={120} className="grid content-start gap-3 lg:col-span-7">
             <h3 className="font-display text-heading-lg text-ink">An on-demand talent marketplace for entertainment industry professionals.</h3>
@@ -106,81 +107,83 @@ export function ProfessionalsLanding() {
             <p className="text-body-lg text-ink-muted">Our professionals come from entertainment. Our clients are anyone who could use their expertise.</p>
           </Reveal>
         </div>
-        <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {services.map((s, i) => (
-            <li key={s.cat}>
-              <Reveal effect="fade-up" delay={(i % 5) * 50} className="flex h-full flex-col gap-2 rounded-2xl border border-line bg-surface p-5 transition duration-base hover:-translate-y-0.5 hover:shadow-md">
-                <span className="grid size-10 place-items-center rounded-full bg-surface-selected text-ink-brand" aria-hidden="true"><s.icon className="size-5" /></span>
-                <h3 className="mt-2 font-display text-heading-md text-ink">{s.from}</h3>
-                <p className="text-label-md text-ink-brand"><span aria-hidden="true">→ </span>{s.to}</p>
-                <p className="text-body-sm text-ink-muted">{s.text}</p>
-                <details className="group mt-1 text-body-sm">
-                  <summary className="inline-flex min-h-6 cursor-pointer items-center gap-1 text-label-sm text-ink marker:content-none">
-                    <ArrowRight className="size-3.5 transition-transform duration-fast group-open:rotate-90" aria-hidden="true" />Explore service ideas
-                  </summary>
-                  <ul className="mt-2 grid list-disc gap-1 pl-5 text-ink-muted">{s.ideas.map((x) => <li key={x}>{x}</li>)}</ul>
-                </details>
-                <div className="mt-auto pt-3">
-                  <Button size="sm" variant="ghost" iconEnd={<ArrowUpRight />} className="-ml-3" onClick={() => join("service", s.cat)} aria-label={`I offer this service: ${s.to}`}>I offer this service</Button>
-                </div>
-              </Reveal>
-            </li>
+        {/* One row of cards to swipe (or page with the arrows), not ten stacked cards: one action per card. */}
+        <Carousel label="Services you could offer" className="mt-10" itemClassName="w-4/5 sm:w-5/12 lg:w-1/4">
+          {services.map((s) => (
+            <article key={s.cat} className="flex w-full flex-col gap-2 rounded-2xl border border-line bg-surface p-5">
+              <span className="grid size-10 place-items-center rounded-full bg-surface-selected text-ink-brand" aria-hidden="true"><s.icon className="size-5" /></span>
+              <h3 className="mt-2 font-display text-heading-md text-ink">{s.from}</h3>
+              <p className="text-label-md text-ink-brand"><span aria-hidden="true">→ </span>{s.to}</p>
+              <p className="text-body-sm text-ink-muted">{s.text}</p>
+              <ul aria-label={`Service ideas: ${s.to}`} className="mt-1 grid gap-1 text-body-sm text-ink-muted">
+                {s.ideas.map((x) => <li key={x} className="flex gap-2"><span aria-hidden="true" className="mt-2 size-1 shrink-0 rounded-full bg-action" />{x}</li>)}
+              </ul>
+              <div className="mt-auto pt-3">
+                <Button size="sm" fullWidth onClick={() => join("service", s.cat)} aria-label={`I offer this service: ${s.to}`}>I offer this service</Button>
+              </div>
+            </article>
           ))}
-        </ul>
+        </Carousel>
       </section>
 
       {/* Sample profiles */}
       <section id="profiles" aria-labelledby="profiles-h" className="scroll-mt-20 bg-surface-sunken py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <SectionHeading id="profiles-h" eyebrow="Sample professional profiles" title="Here's how your skills" accent="could translate." />
-          <ul className="mt-10 grid gap-6 md:grid-cols-2">
-            {profiles.map((p, i) => (
-              <li key={p.id}>
-                <Reveal effect="fade-up" delay={(i % 2) * 80} className="flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
-                  <img src={asset(`art/samples/${p.img}.jpg`)} alt={`Illustrative portrait of ${p.name}, and ${p.portfolio.toLowerCase()}`} loading="lazy" className="aspect-3/2 w-full object-cover" />
-                  <div className="flex flex-1 flex-col gap-3 p-5">
-                    <div>
-                      <h3 className="font-display text-heading-lg text-ink">{p.name}</h3>
-                      <p className="text-label-md text-ink-brand">{p.title}</p>
-                    </div>
-                    <dl className="grid gap-2 text-body-sm sm:grid-cols-4">
-                      {[["Background", p.credits], ["Services", p.services], ["Pricing", p.pricing], ["Availability", p.availability]].map(([k, v]) => (
-                        <div key={k} className="contents"><dt className="text-label-sm text-ink-subtle">{k}</dt><dd className="text-ink-muted sm:col-span-3">{v}</dd></div>
-                      ))}
-                    </dl>
-                    <div className="mt-auto pt-2"><Button iconEnd={<ArrowUpRight />} onClick={() => join(`profile-${p.id}`, p.category)}>Create a profile like this</Button></div>
+          <Carousel label="Sample professional profiles" className="mt-10" gridFrom="md" itemClassName="w-11/12">
+            {profiles.map((p) => (
+              <article key={p.id} className="flex w-full flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
+                {/* Every card: the same 3:2 frame, portrait and work side by side at 3:4 each. */}
+                <div className="grid grid-cols-2">
+                  <img src={asset(`art/samples/cards/${p.img}-portrait.jpg`)} alt={`Illustrative portrait of ${p.name}`} width={480} height={640} loading="lazy" decoding="async" className="aspect-3/4 h-auto w-full object-cover" />
+                  <img src={asset(`art/samples/cards/${p.img}-work.jpg`)} alt={`Sample work: ${p.portfolio.toLowerCase()}`} width={480} height={640} loading="lazy" decoding="async" className="aspect-3/4 h-auto w-full object-cover" />
+                </div>
+                <div className="flex flex-1 flex-col gap-3 p-5">
+                  <div>
+                    <h3 className="font-display text-heading-lg text-ink">{p.name}</h3>
+                    <p className="text-label-md text-ink-brand">{p.title}</p>
                   </div>
-                </Reveal>
-              </li>
+                  <dl className="grid gap-x-4 gap-y-2 text-body-sm sm:grid-cols-4">
+                    {[["Background", p.credits], ["Services", p.services], ["Pricing", p.pricing], ["Availability", p.availability]].map(([k, v]) => (
+                      <div key={k} className="contents"><dt className="text-label-sm text-ink-subtle">{k}</dt><dd className="text-ink-muted tabular-nums sm:col-span-3">{v}</dd></div>
+                    ))}
+                  </dl>
+                  <div className="mt-auto pt-2"><Button onClick={() => join(`profile-${p.id}`, p.category)}>Create a profile like this</Button></div>
+                </div>
+              </article>
             ))}
-          </ul>
+          </Carousel>
           <p className="mt-6 text-caption text-ink-subtle">Sample profiles, services and pricing shown for illustration.</p>
         </div>
       </section>
 
       {/* Your next chapter */}
-      <section id="next-chapter" aria-labelledby="next-chapter-h" className="mx-auto grid max-w-7xl scroll-mt-20 gap-10 px-4 py-20 sm:px-6 lg:grid-cols-12">
-        <SectionHeading id="next-chapter-h" title="Your next chapter" accent="starts here." className="lg:col-span-5" />
-        <Reveal effect="fade-up" delay={100} className="grid gap-4 lg:col-span-7">
-          <h3 className="font-display text-heading-lg text-ink">Extraordinary Talent. Everyday Solutions.</h3>
-          <p className="text-body-lg text-ink">Professional expertise. Available between productions.</p>
-          <p className="text-body-lg text-ink-muted">Between Gigs connects you with clients who value the creativity, craftsmanship, and expertise you've developed in entertainment.</p>
-          <p className="text-body-lg text-ink-muted">Bring your skills beyond the set to projects, tasks, and services for people and businesses. Choose work that fits your interests, set your rates, and make room for your next production.</p>
-          <p className="font-display text-heading-md text-ink">Your expertise. New clients. On your terms.</p>
-          <div data-theme="dark" className="relative isolate mt-2 overflow-hidden rounded-2xl bg-surface-brand phosphor-dots p-6">
-            <span aria-hidden="true" className="glow-horizon opacity-60" />
-            <div className="relative z-raised">
-              <p className="font-display text-heading-lg text-ink-brand">Launching in Los Angeles.</p>
-              <p className="mt-1 text-body-md text-ink-muted"><b className="text-ink">COMING SOON:</b> New York. Atlanta. Toronto. Vancouver.</p>
+      <section id="next-chapter" aria-labelledby="next-chapter-h" className="mx-auto grid max-w-7xl scroll-mt-20 gap-8 px-4 py-20 sm:px-6">
+        <SectionHeading id="next-chapter-h" title="Your next chapter" accent="starts here." />
+        <div className="grid gap-8 lg:grid-cols-12">
+          <Reveal effect="fade-up" delay={100} className="grid content-start gap-4 lg:col-span-7">
+            <h3 className="font-display text-heading-lg text-ink">Extraordinary Talent. Everyday Solutions.</h3>
+            <p className="text-body-lg text-ink">Professional expertise. Available between productions.</p>
+            <p className="text-body-lg text-ink-muted">Between Gigs connects you with clients who value the creativity, craftsmanship, and expertise you've developed in entertainment.</p>
+            <p className="text-body-lg text-ink-muted">Bring your skills beyond the set to projects, tasks, and services for people and businesses. Choose work that fits your interests, set your rates, and make room for your next production.</p>
+            <p className="font-display text-heading-md text-ink">Your expertise. New clients. On your terms.</p>
+          </Reveal>
+          <Reveal effect="fade-up" delay={160} className="grid content-start gap-4 lg:col-span-5">
+            <div data-theme="dark" className="relative isolate overflow-hidden rounded-2xl bg-surface-brand phosphor-dots p-6 pb-24 lg:p-8 lg:pb-28">
+              <Horizon />
+              <div className="relative z-raised">
+                <p className="font-display text-heading-lg text-ink-brand">Launching in Los Angeles.</p>
+                <p className="mt-1 text-body-md text-ink-muted"><b className="text-ink">COMING SOON:</b> New York. Atlanta. Toronto. Vancouver.</p>
+              </div>
             </div>
-          </div>
-          <p className="text-body-sm text-ink-muted">Review our <Link className="text-link underline underline-offset-2" href="/provider-standards/">provider standards</Link> and <Link className="text-link underline underline-offset-2" href="/licensing-insurance/">service qualifications</Link> as you plan your offer.</p>
-        </Reveal>
+            <p className="text-body-sm text-ink-muted">Review our <Link className="text-link underline underline-offset-2" href="/provider-standards/">provider standards</Link> and <Link className="text-link underline underline-offset-2" href="/licensing-insurance/">service qualifications</Link> as you plan your offer.</p>
+          </Reveal>
+        </div>
       </section>
 
       {/* FAQ */}
       <section id="faq" aria-labelledby="faq-h" className="mx-auto grid max-w-7xl scroll-mt-20 gap-10 px-4 pb-20 sm:px-6 lg:grid-cols-12">
-        <SectionHeading id="faq-h" eyebrow="Professional FAQ" title="Built around life" accent="between productions." className="lg:col-span-5" />
+        <SectionHeading id="faq-h" eyebrow="Professional FAQ" title="Built around life" accent="between productions." className="lg:sticky lg:top-24 lg:col-span-5 lg:self-start" />
         <div className="lg:col-span-7">
           <Accordion variant="framed" items={faqs.map(([q, a], i) => ({ id: `faq-${i}`, title: q, content: <div className="grid gap-3">{a.split("\n\n").map((para) => <p key={para}>{para}</p>)}</div> }))} />
         </div>
@@ -192,8 +195,8 @@ export function ProfessionalsLanding() {
 
       {/* Final call to action */}
       <section id="waitlist" aria-labelledby="final-h" data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
-        <span aria-hidden="true" className="glow-horizon opacity-60" />
-        <div className="relative z-raised mx-auto grid max-w-3xl justify-items-center gap-4 px-4 py-20 text-center sm:px-6">
+        <Horizon />
+        <div className="relative z-raised mx-auto grid max-w-3xl justify-items-center gap-4 px-4 pt-20 pb-32 text-center sm:px-6 lg:pb-20">
           <p className="text-eyebrow text-ink-brand uppercase">Bring your craft beyond the set</p>
           <h2 id="final-h" className="font-display text-display-sm text-balance text-ink sm:text-display-md">Join the Los Angeles professionals shaping Between Gigs.</h2>
           <CallSheetButton onClick={() => join("footer")} className="mt-2" />

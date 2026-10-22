@@ -1,16 +1,16 @@
 "use client";
-import { Badge, PageHeader, SegmentedControl, Select, Switch } from "@ds/components";
+import { Button, SegmentedControl, Select } from "@ds/components";
 import { startPageTransition } from "@ds/motion";
-import { Briefcase, Compass, User } from "lucide-react";
+import { Briefcase, Compass, Lightbulb, User } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { useSession } from "@/lib/session";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
-import { GigsterHome } from "./GigsterHome";
-import { OwnerHome } from "./OwnerHome";
-import { NotesContext } from "./ProposalNote";
-import { VisitorHome } from "./VisitorHome";
+import { GigsterHome, gigsterNotes } from "./GigsterHome";
+import { OwnerHome, ownerNotes } from "./OwnerHome";
+import { NotesContext, NotesDrawer, type Note } from "./ProposalNote";
+import { VisitorHome, visitorNotes } from "./VisitorHome";
 
 type View = "visitor" | "gigster" | "owner";
 const views: View[] = ["visitor", "gigster", "owner"];
@@ -29,9 +29,19 @@ const about: Record<View, { title: string; summary: string }> = {
   owner: { title: "Signed in · Owner", summary: "Is anyone waiting on us? The oldest review one click away, four plain numbers, and a hand-off to the dashboard." },
 };
 
+const principles: [string, string][] = [
+  ["One job per visitor", "Clients come to hire, Gigsters to manage their work, owners to review. Each home answers its visitor's first question before anything else."],
+  ["Same voice, new jobs", "Approved lines carry over (“Extraordinary talent. Everyday solutions.”, “Production comes first.”). Nothing is invented about the company."],
+  ["Built from what exists", "Every block reuses a page or a data seam from Milestones 2 to 4, so this is a short build, not a new product."],
+];
+
+const notesFor: Record<View, Note[]> = { visitor: visitorNotes, gigster: gigsterNotes, owner: ownerNotes };
+
 /**
  * /proposals/home (Milestone 5b): what the home page becomes once the platform opens, for each kind of
- * visitor, as designed proposals with the reasoning beside each section. Not live: "/" stays the call sheet.
+ * visitor. Each state renders clean, as it would ship; a compact bar switches state, and the reasoning sits
+ * behind "Show design notes" (numbered pins beside each section, all notes in a side drawer).
+ * Not live: "/" stays the call sheet.
  */
 export function HomeProposals() {
   const params = useSearchParams();
@@ -40,7 +50,8 @@ export function HomeProposals() {
   const { session } = useSession();
   const initial = (views as string[]).includes(params.get("view") ?? "") ? (params.get("view") as View) : "visitor";
   const [view, setView] = React.useState<View>(initial);
-  const [notes, setNotes] = React.useState(true);
+  const [notes, setNotes] = React.useState(false);
+  const [drawer, setDrawer] = React.useState<{ open: boolean; focus: number | null }>({ open: false, focus: null });
   const [gigster, setGigster] = React.useState(session?.role === "gigster" && session.personId ? session.personId : "maya");
   const stage = React.useRef<HTMLDivElement>(null);
 
@@ -49,44 +60,39 @@ export function HomeProposals() {
     startPageTransition(() => setView(next), { effect: "shift", direction: views.indexOf(next) < views.indexOf(view) ? "back" : "forward", target: stage.current });
     router.replace(`${pathname}?view=${next}`, { scroll: false });
   };
+  const ctx = React.useMemo(() => ({ on: notes, notes: notesFor[view], open: (n: number) => setDrawer({ open: true, focus: n }) }), [notes, view]);
 
   return (
-    <Page>
-      <PageHeader eyebrow="Milestone 5b · Proposal" title="The home page, once we open" size="studio"
-        description="Today's home is the call sheet: one message, one button. When clients can book, the front door has to serve three people. Here is a proposal for each, with the reasoning beside every section."
-        actions={<ButtonLink href="/">See today's home</ButtonLink>} />
-
-      <ul className="mt-8 grid gap-3 md:grid-cols-3">
-        {[
-          ["One job per visitor", "Clients come to hire, Gigsters to manage their work, owners to review. Each home answers its visitor's first question before anything else."],
-          ["Same voice, new jobs", "Approved lines carry over (“Extraordinary talent. Everyday solutions.”, “Production comes first.”). Nothing is invented about the company."],
-          ["Built from what exists", "Every block reuses a page or a data seam from Milestones 2 to 4, so this is a short build, not a new product."],
-        ].map(([t, d]) => (
-          <li key={t} className="rounded-xl border border-line bg-surface p-4"><b className="block text-label-md text-ink">{t}</b><span className="text-body-sm text-ink-muted">{d}</span></li>
-        ))}
-      </ul>
-
-      <div className="sticky top-16 z-sticky -mx-4 mt-8 flex flex-wrap items-center gap-3 border-b border-line bg-bg/90 px-4 py-3 backdrop-blur-md sm:mx-0 sm:rounded-xl sm:border sm:px-3">
-        <SegmentedControl label="View the home page as" value={view} onChange={choose}
-          options={[{ value: "visitor", label: "Signed out", icon: <Compass /> }, { value: "gigster", label: "Gigster", icon: <User /> }, { value: "owner", label: "Owner", icon: <Briefcase /> }]} />
-        {view === "gigster" && <Select aria-label="Sample Gigster" size="sm" className="w-60" value={gigster} onValueChange={setGigster} options={gigsters} />}
-        <span className="ml-auto"><Switch checked={notes} onChange={setNotes} label="Design notes" /></span>
+    <Page bare>
+      <div className="z-sticky border-b border-line bg-bg/90 backdrop-blur-md sm:sticky sm:top-16">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6">
+          <div className="grid min-w-0">
+            <span className="text-label-sm text-ink-brand">Proposal · not live</span>
+            <h1 id="proposal-h" className="truncate text-label-md text-ink">Home page, once we open: {about[view].title}</h1>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+            <SegmentedControl label="View the home page as" size="sm" value={view} onChange={choose}
+              options={[{ value: "visitor", label: "Signed out", icon: <Compass /> }, { value: "gigster", label: "Gigster", icon: <User /> }, { value: "owner", label: "Owner", icon: <Briefcase /> }]} />
+            {view === "gigster" && <Select aria-label="Sample Gigster" size="sm" className="w-56" value={gigster} onValueChange={setGigster} options={gigsters} />}
+            <Button size="sm" variant={notes ? "primary" : "secondary"} aria-pressed={notes} iconStart={<Lightbulb />} onClick={() => setNotes((x) => !x)}>
+              {notes ? "Hide design notes" : "Show design notes"}
+            </Button>
+            {notes && <Button size="sm" variant="ghost" onClick={() => setDrawer({ open: true, focus: null })}>All {notesFor[view].length} notes</Button>}
+            <span className="hidden md:contents"><ButtonLink href="/" size="sm" variant="ghost">See today's home</ButtonLink></span>
+          </div>
+        </div>
       </div>
 
-      <section aria-labelledby="proposal-h" className="mt-6">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <h2 id="proposal-h" className="font-display text-heading-lg text-ink">{about[view].title}</h2>
-          <Badge tone="info" size="sm">Proposal · not live</Badge>
+      <NotesContext.Provider value={ctx}>
+        <div ref={stage} className="vt-page mx-auto w-full max-w-7xl px-4 pt-6 pb-20 sm:px-6 sm:pt-8">
+          {view === "visitor" && <VisitorHome />}
+          {view === "gigster" && <GigsterHome key={gigster} personId={gigster} />}
+          {view === "owner" && <OwnerHome />}
         </div>
-        <p className="mb-6 max-w-prose text-body-md text-ink-muted">{about[view].summary}</p>
-        <NotesContext.Provider value={notes}>
-          <div ref={stage} className="vt-page rounded-2xl border border-line bg-bg p-3 sm:p-6">
-            {view === "visitor" && <VisitorHome />}
-            {view === "gigster" && <GigsterHome key={gigster} personId={gigster} />}
-            {view === "owner" && <OwnerHome />}
-          </div>
-        </NotesContext.Provider>
-      </section>
+      </NotesContext.Provider>
+
+      <NotesDrawer open={drawer.open} focus={drawer.focus} onClose={() => setDrawer((d) => ({ ...d, open: false }))}
+        title={about[view].title} summary={about[view].summary} principles={principles} notes={notesFor[view]} />
     </Page>
   );
 }
