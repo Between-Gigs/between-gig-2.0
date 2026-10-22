@@ -265,8 +265,29 @@ export interface ActivityEvent {
   at: string;
 }
 
+/**
+ * The waitlist-to-live funnel. Each stage counts everyone who ever reached it, so each is a subset of the one
+ * before: invited = every sign-up that got an invite; opened = opened the invite link or went further; and so on.
+ */
+export interface FunnelCounts {
+  /** Everyone on the call sheet. */
+  signups: number;
+  /** Ever invited (any invite status but not_invited). */
+  invited: number;
+  /** Opened their invite link, or created an account without a recorded open. */
+  opened: number;
+  /** Created an account (any person status after invited). */
+  accounts: number;
+  /** Submitted a profile at least once (submitted, changes requested or approved). */
+  submitted: number;
+  approved: number;
+}
+
 export interface DashboardSummary {
+  /** People by their current status (each person counted once, where they are now). */
   counts: Record<PersonStatus, number>;
+  /** Cumulative stages, for the funnel. */
+  funnel: FunnelCounts;
   waitlist: Record<InviteStatus, number> & { total: number };
   /** Submitted profiles, oldest first. */
   reviewQueue: PersonSummary[];
