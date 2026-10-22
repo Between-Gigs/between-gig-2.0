@@ -1,5 +1,5 @@
 "use client";
-import { Badge, Banner, Breadcrumbs, Button, PageHeader, SegmentedControl, Tab, TabList, TabPanel, Tabs, useToast } from "@ds/components";
+import { Badge, Banner, Breadcrumbs, Button, SegmentedControl, Tab, TabList, TabPanel, Tabs, useToast } from "@ds/components";
 import { Copy, Monitor, Moon, Smartphone, Sun } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -54,16 +54,20 @@ function Preview({ name }: { name: EmailTemplate }) {
 
   return (
     <AppPage>
-      <PageHeader
-        breadcrumbs={<Breadcrumbs items={[{ label: "Emails", href: `${basePath}/emails/` }, { label: t.label }]} />}
-        eyebrow="Email preview" title={t.label} description={t.when}
-        actions={email && <Button size="sm" iconStart={<Copy />} onClick={() => copy(email.html, "HTML")}>Copy HTML</Button>} />
+      {/* One compact bar, like the owner pages: where you are, what this email is, and its one action. */}
+      <Breadcrumbs items={[{ label: "Emails", href: `${basePath}/emails/` }, { label: t.label }]} />
+      <header className="mt-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-line pb-5">
+        <div className="grid min-w-0 gap-1">
+          <div className="flex items-center gap-3">
+            <h1 className="font-display text-heading-lg text-ink">{t.label}</h1>
+            <Badge tone="neutral" size="sm">Email preview</Badge>
+          </div>
+          <p className="text-body-md text-ink-muted">{t.when}{!queued && <span className="text-ink-subtle"> · Shown with fictional sample details.</span>}</p>
+        </div>
+        {email && <Button size="sm" iconStart={<Copy />} onClick={() => copy(email.html, "HTML")}>Copy HTML</Button>}
+      </header>
 
-      {queued ? (
-        <Banner tone="info" className="mt-6" title="From the sample outbox">Showing the email queued for {queued.to}. Nothing was sent.</Banner>
-      ) : (
-        <p className="mt-4 text-body-sm text-ink-subtle">Shown with fictional sample details.</p>
-      )}
+      {queued && <Banner tone="info" className="mt-6" title="From the sample outbox">Showing the email queued for {queued.to}. Nothing was sent.</Banner>}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-12">
         <aside className="grid content-start gap-4 lg:col-span-4">
