@@ -117,6 +117,24 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
     ["Availability", <span key="s" className={cx("inline-block -rotate-2 rounded-md border-2 px-2 text-label-md tracking-wider uppercase", stampTone[f.monthStatus])}>{stampWord[f.monthStatus]}</span>, f.dates || f.month],
   ];
 
+  const creditStrip = (className: string) => credits.length > 0 && (
+    <div className={className}>
+      <div className="flex items-baseline gap-3">
+        <h2 className="text-eyebrow text-ink-subtle uppercase">Credits</h2>
+        <span className="text-caption text-ink-subtle">As listed by {first}</span>
+      </div>
+      <ul className="mt-2 flex gap-2.5 overflow-x-auto pb-1">
+        {credits.map((c) => (
+          <li key={`${c.title}-${c.role}`} data-theme="dark" className="flex aspect-2/3 w-28 shrink-0 sm:w-32 flex-col justify-between gap-2 rounded-lg border border-line bg-surface-brand phosphor-dots p-3">
+            <span aria-hidden="true" className="border-t-2 border-dotted border-ink-brand" />
+            <span lang="en" className="font-display text-heading-sm text-balance hyphens-auto text-ink">{c.title}</span>
+            <span className="text-label-sm text-ink-brand">{c.role || "Crew"}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+
   return (
     <div ref={root} className="relative">
       {/* Ambient glow from the person's own work. */}
@@ -134,15 +152,15 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
             <span className="text-eyebrow text-ink-brand uppercase">Call sheet</span>
             <span className="truncate text-label-sm text-ink-muted tabular-nums">Between Gigs · {f.month}</span>
           </div>
-          <div className="grid gap-5 p-5 sm:grid-cols-12 sm:items-center sm:gap-6 sm:p-6">
-            <div className="relative w-40 sm:col-span-4 sm:w-full">
+          <div className="flex items-start gap-4 p-5 sm:grid sm:grid-cols-12 sm:gap-6 sm:p-6">
+            <div className="relative w-24 shrink-0 sm:col-span-4 sm:w-full">
               <PersonPhoto id={person.id} morph name={f.name} src={f.photo || undefined} alt={f.photo ? `Portrait of ${f.name}` : `${f.name} (no photo yet)`}
-                fallback="brand" department={f.position} skills={f.skills} iconClass="size-10 sm:size-12" textClass="text-heading-lg sm:text-display-sm"
+                fallback="brand" department={f.position} skills={f.skills} iconClass="size-6 sm:size-12" textClass="text-label-md sm:text-display-sm"
                 className="aspect-square w-full rounded-xl ring-1 ring-line" />
             </div>
             <div className="min-w-0 sm:col-span-8">
-              <Reveal effect="fade-up"><Name id={`${person.id}-name`} className="font-display text-display-md break-words text-ink sm:text-display-lg">{f.name}</Name></Reveal>
-              {extras?.tagline && <Reveal effect="fade-up" delay={80}><p className="mt-2 text-body-lg text-ink-muted">{extras.tagline}</p></Reveal>}
+              <Reveal effect="fade-up"><Name id={`${person.id}-name`} className="font-display text-display-sm break-words text-ink sm:text-display-lg">{f.name}</Name></Reveal>
+              {extras?.tagline && <Reveal effect="fade-up" delay={80}><p className="mt-2 text-body-md text-ink-muted sm:text-body-lg">{extras.tagline}</p></Reveal>}
               {(approved || showImdb) && (
                 <div className="mt-4 flex flex-wrap gap-2">
                   {approved && <Badge tone="success" icon={<BadgeCheck aria-hidden="true" />}>Reviewed by Between Gigs</Badge>}
@@ -153,6 +171,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
                   )}
                 </div>
               )}
+              {creditStrip("mt-5 hidden sm:block")}
             </div>
           </div>
           <dl className="grid grid-cols-2 border-t border-line md:grid-cols-4">
@@ -164,23 +183,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
               </div>
             ))}
           </dl>
-          {credits.length > 0 && (
-            <div className="border-t border-line px-5 py-4 sm:px-6">
-              <div className="flex items-baseline justify-between gap-3">
-                <h2 className="text-eyebrow text-ink-subtle uppercase">Credits</h2>
-                <span className="text-caption text-ink-subtle">As listed by {first}</span>
-              </div>
-              <ul className="-mx-1 mt-3 flex gap-3 overflow-x-auto px-1 pb-1">
-                {credits.map((c) => (
-                  <li key={`${c.title}-${c.role}`} data-theme="dark" className="flex aspect-2/3 w-32 shrink-0 flex-col justify-between rounded-lg border border-line bg-surface-brand phosphor-dots p-3 shadow-md">
-                    <span aria-hidden="true" className="h-1 rounded-full border-t-2 border-dotted border-ink-brand" />
-                    <span className="font-display text-heading-sm text-balance break-words text-ink">{c.title}</span>
-                    <span className="text-label-sm text-ink-brand">{c.role || "Crew"}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {creditStrip("border-t border-line px-5 py-4 sm:hidden")}
         </section>
 
         <aside aria-label={mode === "public" ? "Book and details" : "Booking card and details"} className="min-w-0 lg:col-span-4 lg:col-start-9 lg:row-span-2 lg:row-start-1">
@@ -270,9 +273,9 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
 
           {portfolio.length > 0 && (
             <Section name="portfolio" title="Portfolio" meta={`${portfolio.length} ${portfolio.length === 1 ? "image" : "images"}`}>
-              <ul className={cx("grid grid-cols-2 gap-3", portfolio.length === 4 ? "md:grid-cols-4" : "md:grid-cols-3")}>
+              <ul className={cx("grid grid-cols-2 gap-3", portfolio.length === 4 ? "md:grid-cols-4" : portfolio.length > 2 && "md:grid-cols-3")}>
                 {portfolio.map((it, i) => (
-                  <li key={it.src} className={cx(i === 0 ? "col-span-2 row-span-2" : "h-36 md:h-44", portfolio.length === 4 && i === 1 && "col-span-2", portfolio.length === 2 && i === 1 && "md:col-span-1")}>
+                  <li key={it.src} className={cx(portfolio.length <= 2 ? cx("h-48 md:h-64", portfolio.length === 1 && "col-span-2") : i === 0 ? "col-span-2 row-span-2" : "h-36 md:h-44", portfolio.length === 4 && i === 1 && "col-span-2")}>
                     <button type="button" onClick={() => setLightbox(i)} aria-label={`Open image: ${it.caption}`} className="group relative block size-full min-h-36 overflow-hidden rounded-xl">
                       <img src={asset(it.src)} alt="" className="size-full object-cover transition-transform duration-slow group-hover:scale-105 motion-reduce:transition-none" />
                       <span data-theme="dark" className="absolute inset-x-0 bottom-0 bg-linear-to-t from-surface-brand to-transparent p-3 pt-8 text-left text-label-md text-ink opacity-0 transition duration-base group-hover:opacity-100 group-focus-visible:opacity-100">{it.caption}</span>
@@ -300,12 +303,12 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
               <ul className="mt-5 grid gap-4 sm:grid-cols-3">
                 {similar.map(({ person: o, profile }) => (
                   <li key={o.id}>
-                    <Link href={`/p/${o.slug}/`} className="group block overflow-hidden rounded-2xl border border-line bg-surface transition duration-base hover:-translate-y-0.5 hover:shadow-lg motion-reduce:hover:translate-y-0">
-                      <div className="aspect-video overflow-hidden">
+                    <Link href={`/p/${o.slug}/`} className="group flex overflow-hidden sm:block rounded-2xl border border-line bg-surface transition duration-base hover:-translate-y-0.5 hover:shadow-lg motion-reduce:hover:translate-y-0">
+                      <div className="w-24 shrink-0 overflow-hidden sm:aspect-video sm:w-auto">
                         <PersonPhoto id={o.id} name={o.name} src={profile.fields.photo || undefined} alt="" fallback="brand" department={profile.fields.position} skills={profile.fields.skills}
                           textClass="text-heading-md" className="size-full transition-transform duration-slow group-hover:scale-105 motion-reduce:transition-none" />
                       </div>
-                      <div className="flex items-center justify-between gap-2 p-4">
+                      <div className="flex min-w-0 flex-1 items-center justify-between gap-2 p-4">
                         <span className="min-w-0"><b className="block truncate font-display text-heading-md text-ink">{o.name}</b><span className="text-body-sm text-ink-muted">{profile.fields.services[0]}</span></span>
                         <ArrowUpRight className="size-5 shrink-0 text-ink-brand" aria-hidden="true" />
                       </div>
@@ -321,9 +324,8 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
       {/* Phones: the price and the request button stay in reach. */}
       {mode === "public" && (
         <>
-          <div aria-hidden="true" className="h-20 lg:hidden" />
-          <div className="fixed inset-x-0 bottom-0 z-sticky border-t border-line bg-surface/95 px-4 py-3 shadow-lg backdrop-blur-md lg:hidden">
-            <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
+          <div className="sticky bottom-0 z-sticky -mx-4 mt-10 border-t border-line bg-surface/95 px-4 py-3 shadow-lg backdrop-blur-md sm:-mx-6 sm:px-6 lg:hidden">
+            <div className="flex items-center justify-between gap-3">
               <p className="min-w-0">
                 {f.rate
                   ? <><b className="font-display text-heading-lg text-ink tabular-nums">${f.rate}</b><span className="text-body-sm text-ink-muted">/{basisShort[f.basis]}</span></>
