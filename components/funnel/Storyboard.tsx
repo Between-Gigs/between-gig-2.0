@@ -124,8 +124,11 @@ function spans(fields: PlanField[]) {
   return full;
 }
 
-/** The talent and buyer forms. Also used by /crew-call, which opens the buyer form with the chosen service filled in. */
-export function Planner({ kind, onClose, onBrowse, initial }: { kind: Kind | null; onClose: () => void; onBrowse: () => void; initial?: Record<string, string> }) {
+/** What the visitor picked before opening the form (a Crew Call service): shown at the top, saved with the request. */
+export interface PlannerTopic { title: string; media: React.ReactNode; note: string }
+
+/** The talent and buyer forms. Also used by /crew-call, which opens the buyer form for the service they picked. */
+export function Planner({ kind, onClose, onBrowse, initial, topic }: { kind: Kind | null; onClose: () => void; onBrowse: () => void; initial?: Record<string, string>; topic?: PlannerTopic }) {
   const [values, setValues] = React.useState<Record<string, string>>(initial ?? {});
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [state, setState] = React.useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -147,7 +150,7 @@ export function Planner({ kind, onClose, onBrowse, initial }: { kind: Kind | nul
     setErrors(next);
     if (Object.keys(next).length) { document.getElementById(`plan-${Object.keys(next)[0]}`)?.focus(); return; }
     setState("saving");
-    try { await data.funnel.submitSketch(kind, values); setState("saved"); }
+    try { await data.funnel.submitSketch(kind, topic ? { ...values, service: topic.title } : values); setState("saved"); }
     catch { setState("error"); }
   };
 
@@ -176,13 +179,24 @@ export function Planner({ kind, onClose, onBrowse, initial }: { kind: Kind | nul
       ) : plan && (
         <form noValidate onSubmit={submit} aria-busy={state === "saving" || undefined} className="grid gap-4 sm:grid-cols-2">
           {state === "error" && <Banner tone="danger" className="sm:col-span-2" title="We could not save that yet">Your entries are still here—please try again.</Banner>}
+          {topic && (
+            <div className="flex items-center gap-4 rounded-xl border border-line bg-surface-sunken p-3 sm:col-span-2">
+              <span className="shrink-0">{topic.media}</span>
+              <span className="grid min-w-0 flex-1 gap-0.5">
+                <span className="text-label-sm text-ink-muted">You picked</span>
+                <span className="font-display text-heading-sm text-ink">{topic.title}</span>
+                <span className="text-body-sm text-ink-muted">{topic.note}</span>
+              </span>
+              <Button type="button" size="sm" variant="ghost" onClick={onClose}>Change</Button>
+            </div>
+          )}
           {plan.fields.map((f) => {
             const fullRow = f.wide || layout.has(f.name);
             const v = values[f.name] ?? "";
             const set = (x: string) => { setValues((o) => ({ ...o, [f.name]: x })); setErrors((o) => { const c = { ...o }; delete c[f.name]; return c; }); };
             return (
               <Field key={f.name} label={f.label} optional={f.optional} error={errors[f.name]} className={fullRow ? "sm:col-span-2" : undefined}>
-                {f.control === "textarea" ? <Textarea id={`plan-${f.name}`} rows={3} maxLength={f.max} placeholder={f.placeholder} value={v} onChange={(e) => set(e.target.value)} />
+                {f.control === "textarea" ? <Textarea id={`plan-${f.name}`} rows={3} maxLength={f.max} placeholder={topic && f.name === "project" ? `Tell us about the ${topic.title.toLowerCase()} job: what, where and how big.` : f.placeholder} value={v} onChange={(e) => set(e.target.value)} />
                   : f.control === "select" ? <Select id={`plan-${f.name}`} placeholder="Choose one" value={v || undefined} onValueChange={set} options={(f.options ?? []).map((o) => ({ value: o, label: o }))} />
                   : <Input id={`plan-${f.name}`} type={f.type ?? "text"} autoComplete={f.autocomplete} maxLength={f.max} placeholder={f.placeholder} value={v} onChange={(e) => set(e.target.value)} />}
               </Field>

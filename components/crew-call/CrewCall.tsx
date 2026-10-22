@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { comingSoon, hero, services, testimonials, type CrewIcon } from "@/lib/crew-call";
 import { asset } from "@/lib/site";
-import { Planner } from "@/components/funnel/Storyboard";
+import { Planner, type PlannerTopic } from "@/components/funnel/Storyboard";
 import { Page } from "@/components/site/Page";
 
 const icons: Record<CrewIcon, LucideIcon> = {
@@ -30,11 +30,15 @@ const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matc
 export function CrewCall() {
   const router = useRouter();
   const [q, setQ] = React.useState("");
-  const [ask, setAsk] = React.useState<Record<string, string> | null>(null);
+  const [ask, setAsk] = React.useState<{ initial: Record<string, string>; topic?: PlannerTopic } | null>(null);
   const crew = React.useRef<HTMLElement>(null);
   const shown = services.filter((s) => matches(q, s.title, s.line));
   const soon = comingSoon.filter((s) => matches(q, s.title));
-  const open = (project: string) => setAsk({ project });
+  const open = (project: string) => setAsk({ initial: { project } });
+  const pick = (title: string, media: React.ReactNode, soon: boolean) => setAsk({
+    initial: {},
+    topic: { title, media, note: soon ? "Coming soon. Tell us what you need and we'll find someone now." : "Tell us about the job, and we'll match you with the right person." },
+  });
   const toCrew = () => crew.current?.scrollIntoView({ behavior: reduced() ? "auto" : "smooth", block: "start" });
 
   return (
@@ -98,7 +102,7 @@ export function CrewCall() {
             <ul className="mt-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               {shown.map((s) => (
                 <li key={s.id} className="flex">
-                  <ServiceCard title={s.title} line={s.line} badge={s.badge} icon={icons[s.icon]} image={s.image} onOpen={() => open(`${s.title}: `)} />
+                  <ServiceCard title={s.title} line={s.line} badge={s.badge} icon={icons[s.icon]} image={s.image} onOpen={() => pick(s.title, <img src={asset(s.badge)} alt="" width={192} height={192} className="size-14" />, false)} />
                 </li>
               ))}
             </ul>
@@ -119,21 +123,25 @@ export function CrewCall() {
 
           {soon.length > 0 && (
             <div className="mt-6 border-t border-line pt-6">
-              <h3 className="sr-only">Coming soon</h3>
-              <Strip label="Coming soon services" itemClass="w-36" progress>
+                            <div className="flex flex-wrap items-end justify-between gap-2">
+                <h3 className="font-serif text-heading-lg text-ink">Coming soon</h3>
+                <p className="text-body-sm text-ink-muted">Need one now? Tap it and tell us. We&apos;ll find someone.</p>
+              </div>
+              <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-5">
                 {soon.map((s) => (
-                  <button key={s.id} type="button" onClick={() => open(`${s.title}: `)} aria-label={`${s.title}, coming soon. Tell us you need it.`}
-                    className="group grid w-full justify-items-center gap-3 rounded-xl px-1 pt-2 pb-3 text-center transition-colors duration-fast hover:bg-surface-hover">
-                    <span className="relative grid justify-items-center">
-                      <SoonPatch icon={icons[s.icon]} />
-                      {/* A notched ribbon across the patch, never wider than it. */}
-                      <span aria-hidden="true" className="absolute -bottom-2.5 w-28 -rotate-2 bg-forest-800 py-0.5 text-center text-label-sm tracking-wide text-surface uppercase shadow-sm"
-                        style={{ clipPath: "polygon(0 0, 100% 0, 94% 50%, 100% 100%, 0 100%, 6% 50%)" }}>Coming soon</span>
-                    </span>
-                    <span className="mt-1 font-serif text-body-md whitespace-nowrap text-ink group-hover:text-forest-700">{s.title}</span>
-                  </button>
+                  <li key={s.id}>
+                    <button type="button" onClick={() => pick(s.title, <SoonPatch icon={icons[s.icon]} small />, true)} aria-label={`${s.title}, coming soon. Tell us you need it.`}
+                      className="group grid w-full justify-items-center gap-4 rounded-xl px-2 pt-3 pb-3 text-center transition-colors duration-fast hover:bg-surface-hover">
+                      <span className="relative grid justify-items-center">
+                        <SoonPatch icon={icons[s.icon]} />
+                        <span aria-hidden="true" className="absolute -bottom-3 w-28 bg-forest-800 py-0.5 text-center text-label-sm tracking-wide text-surface uppercase shadow-sm"
+                          style={{ clipPath: "polygon(0 0, 100% 0, 93% 50%, 100% 100%, 0 100%, 7% 50%)" }}>Coming soon</span>
+                      </span>
+                      <span className="font-serif text-body-md text-ink group-hover:text-forest-700">{s.title}</span>
+                    </button>
+                  </li>
                 ))}
-              </Strip>
+              </ul>
             </div>
           )}
           <p className="mt-10 text-center text-body-sm text-ink-muted">Private design preview · Featured services are provisional until Gigster profiles are reviewed.</p>
@@ -141,7 +149,7 @@ export function CrewCall() {
         <p className="border-t border-line px-4 py-6 text-body-sm text-ink-muted sm:text-center">Sample quotes, generated photos, names, ratings and production-credit claims are unverified mockup content. Real testimonials require review before publication.</p>
       </div>
 
-      {ask && <Planner kind="buyer" initial={ask} onClose={() => setAsk(null)} onBrowse={() => { setAsk(null); router.push("/storyboard/#plates"); }} />}
+      {ask && <Planner kind="buyer" initial={ask.initial} topic={ask.topic} onClose={() => setAsk(null)} onBrowse={() => { setAsk(null); router.push("/storyboard/#plates"); }} />}
     </Page>
   );
 }
@@ -189,12 +197,13 @@ function Strip({ label, children, className, itemClass, progress = false }: { la
   );
 }
 
-/** Coming-soon patch until the client's own art arrives: a duotone icon on cream inside the patches' ring colours. */
-function SoonPatch({ icon: Icon }: { icon: LucideIcon }) {
+/** Coming-soon patch until the client's own art arrives: a duotone icon on cream inside the patches' gold ring. */
+function SoonPatch({ icon: Icon, small = false }: { icon: LucideIcon; small?: boolean }) {
   return (
-    <span aria-hidden="true" className="grid size-20 place-items-center rounded-full border-4 border-amber-700 bg-amber-100 shadow-sm transition-transform duration-fast group-hover:-translate-y-0.5">
-      <span className="grid size-16 place-items-center rounded-full border border-dashed border-amber-700/50 bg-surface">
-        <Icon className="size-9 fill-amber-300/70 text-forest-800" strokeWidth={1.6} />
+    <span aria-hidden="true" className={cx("grid place-items-center rounded-full border-4 border-amber-700 bg-amber-100 shadow-md transition-transform duration-fast group-hover:-translate-y-1",
+      small ? "size-14" : "size-24")}>
+      <span className={cx("grid place-items-center rounded-full border-2 border-dashed border-amber-700/40 bg-surface", small ? "size-10" : "size-18")}>
+        <Icon className={cx("fill-amber-300/70 text-forest-800", small ? "size-6" : "size-10")} strokeWidth={1.6} />
       </span>
     </span>
   );
