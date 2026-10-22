@@ -34,7 +34,7 @@ The existing `leads` table holds the waitlist (email, ZIP `zip_code`, `category`
 
 | Method | Route (proposal) | Backend |
 | --- | --- | --- |
-| `list(query)` | `GET /api/people?text&status&service&area&availability&sort` | `people` left join `profiles` / `profile_drafts`; owner role required. Filtering by service / area reads the JSON `fields` (`json_each`) or denormalised columns. `completeness` is computed with `lib/profile/validate.ts` (share it with the Worker). |
+| `list(query)` | `GET /api/people?text&status&service&area&availability&craft&profile&sort` | `people` left join `profiles` / `profile_drafts`; owner role required. Filtering by service / area reads the JSON `fields` (`json_each`) or denormalised columns. `craft` matches `fields.position` / `skills` with the patterns in `lib/profile/department.ts` (`craftOf`); `profile` is `complete` (completeness 1), `missing` (below 1) or `no-photo`. `completeness` is computed with `lib/profile/validate.ts` (share it with the Worker). |
 | `get(id)` | `GET /api/people/:id` | Owner, or the person themself. |
 | `getPublic(slug)` | `GET /api/p/:slug` | Public. Returns `profile: null` unless `status = 'approved'`. Never return email. |
 | `similar(id)` | `GET /api/p/:slug/similar` | Approved people, prefer ones with photos. |
