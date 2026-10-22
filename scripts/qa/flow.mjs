@@ -196,18 +196,19 @@ export async function flow({ browser, base, outDir }) {
     && await step("owner-approve", async () => {
       await page.goto(`${base}/owners/people/imani-carter/`);
       await page.getByRole("checkbox", { name: /photo shows their face/ }).check();
-      await page.getByRole("button", { name: "Approve profile" }).click();
-      await page.getByRole("dialog").getByRole("button", { name: "Approve profile" }).click();
-      await expectText("Approved · now live");
+      await page.getByRole("button", { name: "Approve & next" }).click();
+      await expectText("Imani Carter approved · now live");
+      await page.waitForURL(/\/owners\/people\/(?!imani-carter)[^/]+\/\?from=review$/);
       await page.goto(`${base}/p/imani-carter/`);
       await page.getByRole("heading", { name: "Imani Carter", level: 1 }).waitFor();
     })
     && await step("owner-suggest-edits", async () => {
       await page.goto(`${base}/owners/people/theo-nakamura/`);
       await page.getByRole("button", { name: "Suggest edits" }).click();
+      await page.getByRole("textbox", { name: /^Photo/ }).fill("");
       await page.getByRole("button", { name: "Send to Theo" }).click();
       await expectText("Add a note to at least one section.");
-      await page.getByLabel("Your story").fill("Tell clients what a portrait session with you feels like.");
+      await page.getByRole("textbox", { name: /^Your story/ }).fill("Tell clients what a portrait session with you feels like.");
       await page.getByRole("button", { name: "Send to Theo" }).click();
       await expectText("Edits sent");
       await page.evaluate(() => window.bgSample.signInAs("gigster", "theo-nakamura"));
@@ -222,7 +223,7 @@ export async function flow({ browser, base, outDir }) {
       for (let i = 0; i < 3; i++) await boxes.nth(i).check();
       await page.getByRole("button", { name: "Invite 3 people" }).click();
       await page.getByRole("dialog").getByRole("button", { name: "Send 3 invites" }).click();
-      await expectText("3 invites sent");
+      await expectText("3 invites queued");
     })
     && await step("owner-emails", async () => {
       await page.goto(`${base}/emails/`);

@@ -1,22 +1,24 @@
 "use client";
-import { Badge, Button, Checkbox, ConfirmDialog, Input, PageHeader, Pager, Select, Table, type BadgeTone, type Column, useToast } from "@ds/components";
-import { Search, Send, X } from "lucide-react";
+import { Badge, Button, Checkbox, Drawer, Input, Modal, PageHeader, Pager, Select, cx, type BadgeTone, useToast } from "@ds/components";
+import { Eye, Mail, Search, Send, SlidersHorizontal, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
+import { renderEmail } from "@/emails";
 import { data, inviteStatuses, type InviteStatus, type WaitlistQuery, type WaitlistRow } from "@/lib/data";
 import { waitlistCategories, waitlistCategoryLabel } from "@/lib/data/taxonomy";
 import { OwnerShell } from "./OwnerShell";
 import { OwnerGate } from "./OwnerGate";
+import { shortDate } from "./format";
 
 const PAGE = 25;
+/** Where each sign-up is with their invite now. "Account created" matches the dashboard funnel's wording. */
 const statusMeta: Record<InviteStatus, { label: string; tone: BadgeTone }> = {
   not_invited: { label: "Not invited", tone: "neutral" },
-  invited: { label: "Invited", tone: "info" },
+  invited: { label: "Invite sent", tone: "info" },
   opened: { label: "Opened", tone: "warning" },
-  registered: { label: "Registered", tone: "success" },
+  registered: { label: "Account created", tone: "success" },
 };
-const date = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
 /** /owners/waitlist: the call-sheet sign-ups (~500) and where each one is with their invite. Select, then invite in bulk. */
 export function OwnerWaitlist() {
@@ -34,6 +36,8 @@ function Waitlist() {
   const [page, setPage] = React.useState(1);
   const [selected, setSelected] = React.useState<string[]>([]);
   const [confirm, setConfirm] = React.useState(false);
+  const [preview, setPreview] = React.useState(false);
+  const [filters, setFilters] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
 
   const refresh = React.useCallback(async (q: WaitlistQuery) => {
@@ -52,14 +56,21 @@ function Waitlist() {
   const visible = (rows ?? []).slice((page - 1) * PAGE, page * PAGE);
   const invitable = visible.filter((r) => r.inviteStatus === "not_invited").map((r) => r.signup.id);
   const allOnPage = invitable.length > 0 && invitable.every((id) => selected.includes(id));
+  const someOnPage = invitable.some((id) => selected.includes(id));
   const toggle = (id: string, on: boolean) => setSelected((s) => (on ? [...s, id] : s.filter((x) => x !== id)));
+  const togglePage = (on: boolean) => setSelected((s) => (on ? Array.from(new Set([...s, ...invitable])) : s.filter((x) => !invitable.includes(x))));
   const allNotInvited = (rows ?? []).filter((r) => r.inviteStatus === "not_invited").map((r) => r.signup.id);
+  const total = counts ? Object.values(counts).reduce((a, b) => a + b, 0) : 0;
+  const active = [query.inviteStatus, query.category].filter((v) => v !== "all").length;
+  const n = selected.length;
+  const people = (k: number) => `${k} ${k === 1 ? "person" : "people"}`;
+  const invites = (k: number) => `${k} ${k === 1 ? "invite" : "invites"}`;
 
   const invite = async () => {
     setBusy(true);
     try {
       const r = await data.owners.invite(selected);
-      toast({ message: `${r.invited} ${r.invited === 1 ? "invite" : "invites"} sent`, tone: "success" });
+      toast({ message: `${invites(r.invited)} queued${r.skipped ? ` · ${r.skipped} already invited` : ""}`, tone: "success" });
       setSelected([]);
       setConfirm(false);
       await refresh(query);
@@ -67,75 +78,158 @@ function Waitlist() {
     finally { setBusy(false); }
   };
 
-  const columns: Column<WaitlistRow>[] = [
-    {
-      key: "select", width: "w-12",
-      header: <Checkbox aria-label="Select everyone on this page who isn't invited" checked={allOnPage} disabled={!invitable.length}
-        onChange={(e) => setSelected((s) => (e.target.checked ? Array.from(new Set([...s, ...invitable])) : s.filter((x) => !invitable.includes(x))))} />,
-      cell: (r) => r.inviteStatus === "not_invited"
-        ? <Checkbox aria-label={`Select ${r.signup.email}`} checked={selected.includes(r.signup.id)} onChange={(e) => toggle(r.signup.id, e.target.checked)} />
-        : <span className="sr-only">Already invited</span>,
-    },
-    { key: "email", header: "Email", cell: (r) => r.personId ? <Link href={`/owners/people/${r.personId}/`} className="text-ink hover:text-ink-brand hover:underline">{r.signup.email}</Link> : <span className="text-ink">{r.signup.email}</span> },
-    { key: "zip", header: "ZIP", cell: (r) => <span className="font-mono text-data-sm">{r.signup.zip}</span> },
-    { key: "category", header: "Interested in", cell: (r) => <span className="text-ink-muted">{r.signup.category ? waitlistCategoryLabel(r.signup.category) : "—"}</span> },
-    { key: "joined", header: "Joined", cell: (r) => <span className="font-mono text-data-sm text-ink-muted">{date(r.signup.createdAt)}</span> },
-    { key: "status", header: "Invite", cell: (r) => <Badge tone={statusMeta[r.inviteStatus].tone} size="sm">{statusMeta[r.inviteStatus].label}</Badge> },
-  ];
+  const emails = (rows ?? []).filter((r) => selected.includes(r.signup.id)).map((r) => r.signup.email);
+  const email = React.useMemo(() => renderEmail("invite", emails[0] ? { email: emails[0] } : {}), [emails[0]]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const selects = (
+    <>
+      <Select aria-label="Invite status" value={query.inviteStatus} onValueChange={set("inviteStatus")}
+        options={[{ value: "all", label: "Any status" }, ...inviteStatuses.map((s) => ({ value: s, label: statusMeta[s].label }))]} />
+      <Select aria-label="Interested in" value={query.category} onValueChange={set("category")}
+        options={[{ value: "all", label: "Any interest" }, ...waitlistCategories.map(([value, label]) => ({ value, label }))]} />
+      <Select aria-label="Sort" value={query.sort} onValueChange={set("sort")}
+        options={[{ value: "joined-new", label: "Newest first" }, { value: "joined-old", label: "Oldest first" }, { value: "email", label: "Email, A to Z" }, { value: "zip", label: "ZIP" }]} />
+    </>
+  );
 
   return (
     <OwnerShell>
-      <PageHeader eyebrow="Owners" title="Waitlist" meta={counts ? String(Object.values(counts).reduce((a, b) => a + b, 0)) : undefined}
+      <PageHeader eyebrow="Owners" title="Waitlist" meta={counts ? String(total) : undefined}
         description="Everyone who got on the call sheet, and where they are with their invite. Pick people and send their personal “Create your profile” link." />
 
-      <div role="group" aria-label="Filter by invite status" className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div role="group" aria-label="Filter by invite status" className="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:mt-6 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0 sm:pb-0">
         {inviteStatuses.map((s) => {
           const on = query.inviteStatus === s;
           return (
             <button key={s} type="button" aria-pressed={on} onClick={() => set("inviteStatus")(on ? "all" : s)}
-              className={`grid gap-1 rounded-xl border p-3 text-left transition duration-base ${on ? "border-ink-brand bg-surface-selected shadow-sm" : "border-line bg-surface hover:border-line-strong"}`}>
-              <span className="text-label-sm text-ink-muted">{statusMeta[s].label}</span>
-              <span className="font-display text-heading-lg text-ink tabular-nums">{counts ? counts[s] : "–"}</span>
+              className={cx("flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-left transition duration-base sm:grid sm:gap-1 sm:rounded-xl sm:p-3",
+                on ? "border-ink-brand bg-surface-selected shadow-sm" : "border-line bg-surface hover:border-line-strong")}>
+              <span className="text-label-sm whitespace-nowrap text-ink-muted">{statusMeta[s].label}</span>
+              <span className="text-label-md text-ink tabular-nums sm:font-display sm:text-heading-lg">{counts ? counts[s] : "–"}</span>
             </button>
           );
         })}
       </div>
 
-      <div className="mt-6 grid gap-3 md:grid-cols-12 md:items-center">
-        <div className="md:col-span-5"><Input type="search" aria-label="Search the waitlist" placeholder="Email or ZIP" value={text} onChange={(e) => setText(e.target.value)} start={<Search />} /></div>
-        <Select aria-label="Invite status" className="md:col-span-2" value={query.inviteStatus} onValueChange={set("inviteStatus")}
-          options={[{ value: "all", label: "Any status" }, ...inviteStatuses.map((s) => ({ value: s, label: statusMeta[s].label }))]} />
-        <Select aria-label="Interested in" className="md:col-span-3" value={query.category} onValueChange={set("category")}
-          options={[{ value: "all", label: "Any interest" }, ...waitlistCategories.map(([value, label]) => ({ value, label }))]} />
-        <Select aria-label="Sort" className="md:col-span-2" value={query.sort} onValueChange={set("sort")}
-          options={[{ value: "joined-new", label: "Newest first" }, { value: "joined-old", label: "Oldest first" }, { value: "email", label: "Email, A to Z" }, { value: "zip", label: "ZIP" }]} />
+      <div className="mt-4 flex gap-2 sm:mt-6 md:grid md:grid-cols-12 md:items-center md:gap-3">
+        <div className="min-w-0 flex-1 md:col-span-5"><Input type="search" aria-label="Search the waitlist" placeholder="Email or ZIP" value={text} onChange={(e) => setText(e.target.value)} start={<Search />} /></div>
+        <div className="hidden gap-3 md:col-span-7 md:grid md:grid-cols-3">{selects}</div>
+        <Button type="button" variant="secondary" className="shrink-0 md:hidden" iconStart={<SlidersHorizontal />} onClick={() => setFilters(true)}
+          aria-label={active ? `Filters, ${active} on` : "Filters"}>
+          Filters{active > 0 && <span aria-hidden="true" className="ml-1 inline-grid size-5 place-items-center rounded-full bg-action text-label-sm text-on-action tabular-nums">{active}</span>}
+        </Button>
       </div>
+      <Drawer open={filters} onClose={() => setFilters(false)} title="Filters"
+        footer={<><Button variant="ghost" onClick={() => { setQuery((q) => ({ ...q, inviteStatus: "all", category: "all", sort: "joined-new" })); setPage(1); }}>Clear</Button><Button variant="primary" onClick={() => setFilters(false)}>Show {rows?.length ?? 0}</Button></>}>
+        <div className="grid gap-3">{selects}</div>
+      </Drawer>
 
-      {/* Bulk action bar: appears with a selection. */}
-      <div aria-live="polite" className="sticky top-16 z-sticky mt-4">
-        {selected.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-ink-brand bg-surface-selected p-3 shadow-md">
-            <p className="text-label-md text-ink"><span className="tabular-nums">{selected.length}</span> selected</p>
-            <Button size="sm" variant="ghost" iconStart={<X />} onClick={() => setSelected([])}>Clear</Button>
-            <Button size="sm" variant="primary" className="ml-auto" iconStart={<Send />} onClick={() => setConfirm(true)}>Invite {selected.length} {selected.length === 1 ? "person" : "people"}</Button>
-          </div>
-        ) : allNotInvited.length > 0 && (
-          <p className="text-body-sm text-ink-muted">
-            Select people below, or <button type="button" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2" onClick={() => setSelected(allNotInvited)}>select all {allNotInvited.length} not invited{query.text || query.category !== "all" ? " in this view" : ""}</button>.
-          </p>
-        )}
-      </div>
+      <p className="mt-4 text-body-sm text-ink-muted">
+        <span className="tabular-nums">{rows?.length ?? 0}</span> shown
+        {allNotInvited.length > 0 && n < allNotInvited.length && <>{" · "}<button type="button" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2" onClick={() => setSelected(allNotInvited)}>Select all {allNotInvited.length} not invited{query.text || query.category !== "all" ? " in this view" : ""}</button></>}
+      </p>
 
-      <div data-results={rows ? "" : undefined} className="mt-4">
-        <Table caption="Waitlist sign-ups" columns={columns} rows={visible} rowKey={(r) => r.signup.id} density="compact"
-          empty={<p className="p-6 text-center text-body-md text-ink-muted">No one matches. Try fewer filters.</p>} />
+      <div data-results={rows ? "" : undefined} className="mt-3">
+        {/* Tablet and up: a table. Selected rows are tinted and marked, so a selection is easy to see while scrolling. */}
+        <div className="hidden overflow-x-auto rounded-lg border border-line bg-surface md:block">
+          <table className="w-full border-collapse text-left text-body-md">
+            <caption className="sr-only">Waitlist sign-ups</caption>
+            <thead className="bg-surface-sunken">
+              <tr className="text-label-sm text-ink-muted">
+                <th scope="col" className="h-10 w-12 border-b border-line px-3">
+                  <Checkbox aria-label="Select everyone on this page who isn't invited" checked={allOnPage} disabled={!invitable.length}
+                    ref={(el) => { if (el) el.indeterminate = someOnPage && !allOnPage; }} onChange={(e) => togglePage(e.target.checked)} />
+                </th>
+                <th scope="col" className="border-b border-line px-3 font-semibold">Email</th>
+                <th scope="col" className="border-b border-line px-3 font-semibold">ZIP</th>
+                <th scope="col" className="border-b border-line px-3 font-semibold">Interested in</th>
+                <th scope="col" className="border-b border-line px-3 font-semibold">Joined</th>
+                <th scope="col" className="border-b border-line px-3 font-semibold">Invite</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-body-md text-ink-muted">No one matches. Try fewer filters.</td></tr>}
+              {visible.map((r) => {
+                const on = selected.includes(r.signup.id);
+                return (
+                  <tr key={r.signup.id}
+                    className={cx("border-b border-line transition-colors duration-fast last:border-b-0", on ? "bg-surface-selected" : "hover:bg-surface-hover")}>
+                    <td className={cx("h-10 border-l-4 px-3", on ? "border-l-ink-brand" : "border-l-transparent")}>
+                      {r.inviteStatus === "not_invited"
+                        ? <Checkbox aria-label={`Select ${r.signup.email}`} checked={on} onChange={(e) => toggle(r.signup.id, e.target.checked)} />
+                        : <span className="sr-only">Already invited</span>}
+                    </td>
+                    <td className="px-3">{r.personId ? <Link href={`/owners/people/${r.personId}/`} className="text-ink hover:text-ink-brand hover:underline">{r.signup.email}</Link> : <span className="text-ink">{r.signup.email}</span>}</td>
+                    <td className="px-3 text-ink-muted tabular-nums">{r.signup.zip}</td>
+                    <td className="px-3 text-ink-muted">{r.signup.category ? waitlistCategoryLabel(r.signup.category) : "—"}</td>
+                    <td className="px-3 whitespace-nowrap text-ink-muted tabular-nums">{shortDate(r.signup.createdAt)}</td>
+                    <td className="px-3"><Badge tone={statusMeta[r.inviteStatus].tone} size="sm">{statusMeta[r.inviteStatus].label}</Badge></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Phones: compact rows. */}
+        <ul aria-label="Waitlist sign-ups" className="grid grid-cols-1 overflow-hidden rounded-xl border border-line bg-surface md:hidden">
+          {visible.length === 0 && <li className="p-6 text-center text-body-md text-ink-muted">No one matches. Try fewer filters.</li>}
+          {visible.map((r) => {
+            const on = selected.includes(r.signup.id);
+            return (
+              <li key={r.signup.id} className={cx("flex min-w-0 items-center gap-3 border-t border-l-4 border-t-line px-3 py-2.5 first:border-t-0", on ? "border-l-ink-brand bg-surface-selected" : "border-l-transparent")}>
+                {r.inviteStatus === "not_invited"
+                  ? <Checkbox aria-label={`Select ${r.signup.email}`} checked={on} onChange={(e) => toggle(r.signup.id, e.target.checked)} />
+                  : <span className="grid size-5 shrink-0 place-items-center text-ink-subtle"><Mail className="size-4" aria-hidden="true" /><span className="sr-only">Already invited</span></span>}
+                <div className="grid min-w-0 flex-1">
+                  {r.personId
+                    ? <Link href={`/owners/people/${r.personId}/`} className="truncate text-label-md text-ink hover:text-ink-brand">{r.signup.email}</Link>
+                    : <span className="truncate text-label-md text-ink">{r.signup.email}</span>}
+                  <span className="truncate text-body-sm text-ink-muted tabular-nums">{r.signup.zip} · {shortDate(r.signup.createdAt)}{r.signup.category ? ` · ${waitlistCategoryLabel(r.signup.category)}` : ""}</span>
+                </div>
+                <Badge tone={statusMeta[r.inviteStatus].tone} size="sm" className="shrink-0">{statusMeta[r.inviteStatus].label}</Badge>
+              </li>
+            );
+          })}
+        </ul>
       </div>
       {pageCount > 1 && <Pager className="mt-4" page={page} pageCount={pageCount} onChange={setPage} itemLabel="page of sign-ups" />}
       <p className="mt-6 text-caption text-ink-subtle">Sample waitlist: 500 fictional sign-ups at example.com.</p>
 
-      <ConfirmDialog open={confirm} busy={busy} onCancel={() => setConfirm(false)} onConfirm={invite}
-        title={`Invite ${selected.length} ${selected.length === 1 ? "person" : "people"}?`} confirmLabel={`Send ${selected.length} ${selected.length === 1 ? "invite" : "invites"}`}
-        description={<>Each gets the invite email with their own “Create your profile” link, valid for 30 days. <Link href="/emails/invite/" className="text-link underline underline-offset-2">Preview the email</Link>.</>} />
+      {/* The bulk action bar: pinned to the bottom of the view while anyone is selected. */}
+      <div aria-live="polite" className="sticky bottom-4 z-sticky mt-4">
+        {n > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-ink-brand bg-surface-raised p-2 pl-4 shadow-lg">
+            <p className="text-label-md text-ink"><span className="tabular-nums">{n}</span> selected</p>
+            <Button size="sm" variant="ghost" iconStart={<X />} onClick={() => setSelected([])}>Clear</Button>
+            <div className="ml-auto flex gap-2">
+              <Button size="sm" variant="secondary" iconStart={<Eye />} onClick={() => setPreview(true)}>Preview email</Button>
+              <Button size="sm" variant="primary" iconStart={<Send />} onClick={() => setConfirm(true)}>Invite {people(n)}</Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <Modal open={preview} onClose={() => setPreview(false)} size="lg" title="The invite email"
+        description={`What ${n === 1 ? "they get" : `each of the ${n} gets`}, with their own “Create your profile” link. Shown for ${emails[0] ?? "the first person"}.`}
+        footer={<><Button variant="ghost" onClick={() => setPreview(false)}>Close</Button><Button variant="primary" iconStart={<Send />} onClick={() => { setPreview(false); setConfirm(true); }}>Invite {people(n)}</Button></>}>
+        <iframe title="Invite email preview" srcDoc={email.html} className="block h-120 w-full rounded-lg border border-line bg-surface" />
+      </Modal>
+
+      <Modal open={confirm} onClose={() => setConfirm(false)} size="sm" title={`Invite ${people(n)}?`}
+        description={<>We queue {invites(n)}, one to each address, with a personal link that&apos;s valid for 30 days.</>}
+        footer={<><Button variant="ghost" onClick={() => setConfirm(false)}>Cancel</Button><Button variant="primary" loading={busy} iconStart={<Send />} onClick={invite}>Send {invites(n)}</Button></>}>
+        <div className="grid gap-3">
+          <div className="grid gap-1 rounded-lg border border-line bg-surface-sunken p-3">
+            <p className="text-label-sm text-ink-subtle">Subject</p>
+            <p className="text-label-md text-ink">{email.subject}</p>
+            <p className="text-body-sm text-ink-muted">To {emails.slice(0, 2).join(", ")}{emails.length > 2 ? ` and ${emails.length - 2} more` : ""}</p>
+          </div>
+          <button type="button" onClick={() => { setConfirm(false); setPreview(true); }} className="inline-flex min-h-6 w-fit items-center gap-1 text-label-md text-link underline underline-offset-2">
+            <Eye className="size-4" aria-hidden="true" />Preview the email
+          </button>
+        </div>
+      </Modal>
     </OwnerShell>
   );
 }

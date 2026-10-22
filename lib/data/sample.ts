@@ -434,7 +434,16 @@ export const sampleSource: DataSource = {
       const waitlist = Object.fromEntries(inviteStatuses.map((st) => [st, 0])) as Record<InviteStatus, number> & { total: number };
       for (const w of state.waitlist ?? []) waitlist[inviteStatusOf(state, w.email).status]++;
       waitlist.total = state.waitlist?.length ?? 0;
-      return { counts, waitlist, reviewQueue: await sampleSource.owners.reviewQueue(), activity: clone((state.activity ?? []).slice(0, 12)) };
+      const sent = ["submitted", "changes_requested", "approved"];
+      const funnel = {
+        signups: waitlist.total,
+        invited: waitlist.total - waitlist.not_invited,
+        opened: waitlist.opened + waitlist.registered,
+        accounts: waitlist.registered,
+        submitted: state.people.filter((p) => p.status !== "invited" && (sent.includes(p.status) || !!p.submittedAt)).length,
+        approved: counts.approved,
+      };
+      return { counts, funnel, waitlist, reviewQueue: await sampleSource.owners.reviewQueue(), activity: clone((state.activity ?? []).slice(0, 12)) };
     },
     async activity(limit = 50) {
       await latency(0);
@@ -478,6 +487,21 @@ export const sampleSource: DataSource = {
         notes: clean.map((n) => `${n.section}|${n.note.replace(/\n/g, " ")}`).join("\n"),
         editUrl: absoluteUrl("/profile/edit/?step=review"),
       });
+      save(state);
+      return clone(person);
+    },
+    async undoReview(personId) {
+      await latency(150);
+      const state = load();
+      const person = state.people.find((p) => p.id === personId);
+      if (!person || (person.status !== "approved" && person.status !== "changes_requested")) throw new Error("Nothing to undo");
+      const kind: ActivityKind = person.status === "approved" ? "approved" : "changes_requested";
+      const template: EmailTemplate = person.status === "approved" ? "approved" : "changes-requested";
+      Object.assign(person, { status: "submitted", approvedAt: undefined, reviewNotes: undefined, updatedAt: person.submittedAt ?? now() });
+      const event = state.activity?.findIndex((e) => e.personId === personId && e.kind === kind) ?? -1;
+      if (event >= 0) state.activity!.splice(event, 1);
+      const email = state.outbox.findIndex((e) => e.to === person.email && e.template === template && e.status === "queued");
+      if (email >= 0) state.outbox.splice(email, 1);
       save(state);
       return clone(person);
     },
