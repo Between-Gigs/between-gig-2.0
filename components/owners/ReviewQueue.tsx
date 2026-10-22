@@ -1,101 +1,113 @@
 "use client";
-import { Badge, PageHeader, Skeleton } from "@ds/components";
+import { Badge, cx } from "@ds/components";
 import { ArrowRight, CircleCheck, MessageSquareWarning, PartyPopper, Users } from "lucide-react";
-import Link from "next/link";
-import { Reveal } from "@ds/motion";
 import * as React from "react";
 import { data, type ActivityEvent, type PersonSummary, type ProfileFields } from "@/lib/data";
 import { fieldLabel, validateAll } from "@/lib/profile/validate";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
-import { OwnerShell } from "./OwnerShell";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { ago } from "./activity";
+import { HeaderSkeleton, Meter, OwnerPage, Panel, Row, RowSkeletons } from "./kit";
 import { OwnerGate } from "./OwnerGate";
+import { OwnerShell } from "./OwnerShell";
 import { reviewHref } from "./ReviewPanel";
 
 const missing = (f: ProfileFields) => Object.values(validateAll(f)).flatMap((e) => Object.keys(e)).map((k) => fieldLabel[k as keyof ProfileFields] ?? k);
 const isToday = (iso: string) => new Date(iso).toDateString() === new Date().toDateString();
 
-/** /owners/review: every submitted profile, oldest first, so nobody waits longest. */
+/** /owners/review: every submitted profile, oldest first, so nobody waits longest; then what was decided lately. */
 export function ReviewQueue() {
   return <OwnerGate>{() => <Queue />}</OwnerGate>;
 }
 
 function Queue() {
   const [rows, setRows] = React.useState<PersonSummary[] | null>(null);
-  const [today, setToday] = React.useState<ActivityEvent[]>([]);
+  const [decided, setDecided] = React.useState<ActivityEvent[]>([]);
   React.useEffect(() => {
     void Promise.all([data.owners.reviewQueue(), data.owners.activity(200)]).then(([q, a]) => {
       setRows(q);
-      setToday(a.filter((e) => (e.kind === "approved" || e.kind === "changes_requested") && isToday(e.at)));
+      setDecided(a.filter((e) => e.kind === "approved" || e.kind === "changes_requested"));
     });
   }, []);
+
+  if (!rows) {
+    return (
+      <OwnerShell>
+        <div aria-busy="true" aria-label="Loading queue">
+          <HeaderSkeleton />
+          <div aria-hidden="true" className="mt-8 overflow-hidden rounded-lg border border-line bg-surface"><div className="h-14 border-b border-line" /><RowSkeletons count={4} /></div>
+        </div>
+      </OwnerShell>
+    );
+  }
+
+  // One summary instead of the same warning on every row.
+  const gaps = rows.map((r) => (r.fields ? missing(r.fields) : []));
+  const counts = new Map<string, number>();
+  gaps.flat().forEach((g) => counts.set(g, (counts.get(g) ?? 0) + 1));
+  const common = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+
   return (
     <OwnerShell>
-      <PageHeader eyebrow="Owners" title="Review queue" meta={rows ? String(rows.length) : undefined}
+      <OwnerPage title="Review queue" meta={rows.length}
         description="Submitted profiles, oldest first. Open one to approve it or suggest edits, then move straight to the next."
-        actions={rows?.length ? <ButtonLink href={reviewHref(rows[0].person.id)} variant="strong" iconEnd={<ArrowRight />}>Start with the oldest</ButtonLink> : undefined} />
-      <div className="mt-6">
-        {!rows ? <div aria-busy="true" aria-label="Loading queue" className="grid gap-3"><Skeleton shape="block" className="h-20" /><Skeleton shape="block" className="h-20" /></div>
-          : rows.length === 0 ? <Wrap today={today} />
-          : (
-            <ol className="grid grid-cols-1 overflow-hidden rounded-2xl border border-line bg-surface">
-              {rows.map(({ person: p, fields }, i) => {
-                const gaps = fields ? missing(fields) : [];
+        actions={rows.length > 0 && <ButtonLink href={reviewHref(rows[0].person.id)} variant="primary" iconEnd={<ArrowRight />}>Start with the oldest</ButtonLink>}>
+        {rows.length === 0 ? <Wrap today={decided.filter((e) => isToday(e.at))} /> : (
+          <Panel title="Waiting for review" flush
+            aside={common && <span className="inline-flex items-center gap-1.5"><MessageSquareWarning className="size-4 text-warning" aria-hidden="true" /><span className="tabular-nums">{common[1]} of {rows.length}</span> missing {common[0].toLowerCase()}</span>}>
+            <ol>
+              {rows.map(({ person: p, fields, completeness }, i) => (
+                <Row key={p.id} href={reviewHref(p.id)} title={p.name}
+                  leading={<PersonPhoto id={p.id} name={p.name} src={fields?.photo || undefined} alt="" className="size-10 rounded-md" textClass="text-label-md" />}
+                  badge={i === 0 ? <Badge tone="neutral" size="sm">Oldest</Badge> : undefined}
+                  subtitle={[fields?.position, fields?.services.join(", ")].filter(Boolean).join(" · ")}
+                  meta={<><Meter value={completeness * 100} label="Profile complete" /><span className="w-28 text-right">Sent {p.submittedAt ? ago(p.submittedAt).toLowerCase() : ""}</span></>} />
+              ))}
+            </ol>
+          </Panel>
+        )}
+
+        <Panel title="Decided recently" flush aside={decided.length > 0 && <span>Undo is in the toast right after each decision</span>}>
+          {decided.length === 0 ? <p className="px-5 py-4 text-body-sm text-ink-muted">Nothing decided yet. Approvals and suggested edits show up here.</p> : (
+            <ul>
+              {decided.slice(0, 5).map((e) => {
+                const approved = e.kind === "approved";
                 return (
-                  <li key={p.id} className="group relative flex min-w-0 items-center gap-3 border-t border-line p-3 transition-colors duration-fast first:border-0 hover:bg-surface-hover sm:gap-4 sm:p-4">
-                    <span aria-hidden="true" className="hidden w-6 shrink-0 text-label-md text-ink-subtle tabular-nums sm:block">{i + 1}</span>
-                    <PersonPhoto id={p.id} name={p.name} src={fields?.photo || undefined} alt="" className="size-11 shrink-0 rounded-lg sm:size-12" textClass="text-label-md" />
-                    <div className="grid min-w-0 flex-1 gap-0.5">
-                      <h2 className="truncate text-label-md text-ink"><Link href={reviewHref(p.id)} className="after:absolute after:inset-0 group-hover:text-ink-brand">{p.name}</Link></h2>
-                      <p className="truncate text-body-sm text-ink-muted">
-                        <span className="tabular-nums">{p.submittedAt ? ago(p.submittedAt) : ""}</span>
-                        <span className="max-sm:hidden">{[fields?.position, fields?.services.join(", ")].filter(Boolean).map((x) => ` · ${x}`).join("")}</span>
-                      </p>
-                    </div>
-                    {gaps.length > 0
-                      ? <Badge tone="warning" size="sm" className="shrink-0">Missing: {gaps.length === 1 ? gaps[0] : `${gaps.length} answers`}</Badge>
-                      : <Badge tone="success" size="sm" className="shrink-0">Complete</Badge>}
-                    <ArrowRight className="size-4 shrink-0 text-ink-brand" aria-hidden="true" />
-                  </li>
+                  <Row key={e.id} href={e.personId ? `/owners/people/${e.personId}/` : "/owners/people/"} title={e.who}
+                    leading={<span className={cx("grid size-10 place-items-center rounded-md", approved ? "bg-success-soft text-success" : "bg-warning-soft text-warning")}>
+                      {approved ? <CircleCheck className="size-5" aria-hidden="true" /> : <MessageSquareWarning className="size-5" aria-hidden="true" />}
+                    </span>}
+                    subtitle={approved ? "Approved · live on the site" : "Sent suggested edits"}
+                    meta={<span className="w-28 text-right">{ago(e.at)}</span>} />
                 );
               })}
-            </ol>
+            </ul>
           )}
-      </div>
+        </Panel>
+      </OwnerPage>
     </OwnerShell>
   );
 }
 
-/** The end of the queue: a small celebration with what got done today, instead of a plain empty state. */
+/** The end of the queue: what got done today, instead of a plain empty state. */
 function Wrap({ today }: { today: ActivityEvent[] }) {
   const approved = today.filter((e) => e.kind === "approved").length;
   const edits = today.length - approved;
   return (
-    <section aria-labelledby="wrap-h" data-theme="dark" className="relative isolate overflow-hidden rounded-2xl bg-surface-brand phosphor-dots px-6 py-12 text-center sm:py-16">
-      <span aria-hidden="true" className="glow-horizon opacity-60" />
-      <div className="relative z-raised mx-auto grid max-w-xl justify-items-center gap-3">
-        <Reveal effect="pop"><span className="grid size-14 place-items-center rounded-full bg-surface-selected text-ink-brand"><PartyPopper className="size-7" aria-hidden="true" /></span></Reveal>
-        <p className="text-eyebrow text-ink-brand uppercase">Queue clear</p>
-        <h2 id="wrap-h" className="font-display text-display-sm text-ink">That&apos;s a wrap.</h2>
-        <p className="text-body-md text-ink-muted">{today.length ? "Nobody is waiting on you. Here's today:" : "Nobody is waiting on you. New submissions appear here as soon as a Gigster sends their profile."}</p>
-        {today.length > 0 && (
-          <dl className="mt-2 grid grid-cols-2 gap-3">
-            <div className="grid justify-items-center gap-1 rounded-xl border border-line bg-surface/40 px-6 py-4">
-              <dt className="inline-flex items-center gap-1.5 text-label-sm text-ink-muted"><CircleCheck className="size-4 text-success" aria-hidden="true" />Approved</dt>
-              <dd className="font-display text-display-sm text-ink tabular-nums">{approved}</dd>
-            </div>
-            <div className="grid justify-items-center gap-1 rounded-xl border border-line bg-surface/40 px-6 py-4">
-              <dt className="inline-flex items-center gap-1.5 text-label-sm text-ink-muted"><MessageSquareWarning className="size-4 text-warning" aria-hidden="true" />Edits suggested</dt>
-              <dd className="font-display text-display-sm text-ink tabular-nums">{edits}</dd>
-            </div>
-          </dl>
-        )}
-        <div className="mt-3 flex flex-wrap justify-center gap-2">
+    <Panel>
+      <div className="mx-auto grid max-w-xl justify-items-center gap-3 py-8 text-center">
+        <span className="grid size-12 place-items-center rounded-md bg-surface-selected text-ink-brand"><PartyPopper className="size-6" aria-hidden="true" /></span>
+        <h2 className="font-display text-heading-lg text-ink">That&apos;s a wrap.</h2>
+        <p className="text-body-md text-ink-muted">
+          {today.length
+            ? <>Nobody is waiting on you. Today you approved <b className="text-ink tabular-nums">{approved}</b> and suggested edits to <b className="text-ink tabular-nums">{edits}</b>.</>
+            : "Nobody is waiting on you. New submissions appear here as soon as a Gigster sends their profile."}
+        </p>
+        <div className="mt-2 flex flex-wrap justify-center gap-2">
           <ButtonLink href="/owners/" variant="primary" iconEnd={<ArrowRight />}>Back to the dashboard</ButtonLink>
-          <ButtonLink href="/owners/people/" iconStart={<Users />}>See everyone</ButtonLink>
+          <ButtonLink href="/owners/people/" variant="secondary" iconStart={<Users />}>See everyone</ButtonLink>
         </div>
       </div>
-    </section>
+    </Panel>
   );
 }

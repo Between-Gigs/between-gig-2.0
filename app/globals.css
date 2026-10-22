@@ -6,6 +6,9 @@
 /* Tailwind scans the vendored components for the classes they use. */
 @source "../packages/design-system/src";
 
+/* The owner sidebar collapsed to a rail: <html data-owner-nav="collapsed">, set before first paint. */
+@custom-variant nav-collapsed (&:where([data-owner-nav=collapsed] *));
+
 @layer base {
   body { min-height: 100dvh; }
   /* Focus and scroll-into-view (e.g. Clerk focusing its email field) stop below the sticky header, not under it. */

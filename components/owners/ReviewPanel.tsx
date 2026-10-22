@@ -1,11 +1,12 @@
 "use client";
-import { Banner, Button, Checkbox, Field, IconButton, Kbd, Modal, Tag, Textarea, cx, useToast } from "@ds/components";
-import { ArrowRight, ChevronLeft, ChevronRight, CircleCheck, ClipboardCheck, MessageSquareWarning } from "lucide-react";
+import { Banner, Button, Checkbox, Field, IconButton, Kbd, Modal, Tag, Textarea, Tooltip, cx, useToast } from "@ds/components";
+import { ArrowRight, ChevronLeft, ChevronRight, CircleCheck, Keyboard, MessageSquareWarning } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
 import { SECTIONS, fieldLabel, sectionLabel, validateAll } from "@/lib/profile/validate";
 import { typingOrDialog } from "./format";
+import { Panel } from "./kit";
 
 const checks = [
   { id: "photo", label: "The photo shows their face clearly", hint: "Friendly, well lit, no group shots." },
@@ -95,7 +96,7 @@ export function ReviewWorkspace({ person, fields, queue, header, children }: {
 
   return (
     <>
-      <div className="sticky top-0 z-sticky -mx-4 mt-2 flex h-16 items-center gap-2 border-b border-line bg-bg/90 px-4 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+      <div className="sticky top-0 z-sticky -mx-4 mt-2 flex h-16 items-center gap-2 border-b border-line bg-bg/90 px-4 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
         <nav aria-label="Review queue" className="flex min-w-0 items-center gap-1">
           <IconButton variant="ghost" size="sm" label={prev ? `Previous in queue: ${prev.name} (K)` : "Previous in queue"} icon={<ChevronLeft />} disabled={!prev} onClick={() => go(prev)} />
           <p className="px-1 text-label-md whitespace-nowrap text-ink tabular-nums">
@@ -103,16 +104,16 @@ export function ReviewWorkspace({ person, fields, queue, header, children }: {
           </p>
           <IconButton variant="ghost" size="sm" label={next ? `Next in queue: ${next.name} (J)` : "Next in queue"} icon={<ChevronRight />} disabled={!next} onClick={() => go(next)} />
         </nav>
-        <p aria-hidden="true" className="ml-3 hidden items-center gap-3 text-caption text-ink-subtle xl:flex">
-          <span className="inline-flex items-center gap-1"><Kbd keys={["J"]} /><Kbd keys={["K"]} />move</span>
-          <span className="inline-flex items-center gap-1"><Kbd keys={["A"]} />approve</span>
-          <span className="inline-flex items-center gap-1"><Kbd keys={["E"]} />suggest edits</span>
-        </p>
+        <span className="ml-1 hidden md:inline-flex">
+          <Tooltip side="bottom" content={<span className="inline-flex items-center gap-3"><span className="inline-flex items-center gap-1"><Kbd keys={["J"]} /><Kbd keys={["K"]} />next / previous</span><span className="inline-flex items-center gap-1"><Kbd keys={["A"]} />approve</span><span className="inline-flex items-center gap-1"><Kbd keys={["E"]} />edits</span></span>}>
+            <IconButton variant="ghost" size="sm" label="Keyboard shortcuts" icon={<Keyboard />} />
+          </Tooltip>
+        </span>
         <div className="ml-auto flex shrink-0 items-center gap-2">
           <Button variant="secondary" size="sm" iconStart={<MessageSquareWarning />} onClick={() => setSuggest(true)} aria-keyshortcuts="E">
             <span className="max-sm:sr-only">Suggest edits</span>
           </Button>
-          <Button variant="strong" size="sm" iconStart={<CircleCheck />} loading={busy} onClick={() => void approve()} aria-keyshortcuts="A">
+          <Button variant="primary" size="sm" iconStart={<CircleCheck />} loading={busy} onClick={() => void approve()} aria-keyshortcuts="A">
             <span>Approve{after && <span className="max-sm:sr-only"> &amp; next</span>}</span>
           </Button>
         </div>
@@ -120,18 +121,13 @@ export function ReviewWorkspace({ person, fields, queue, header, children }: {
 
       {header}
 
-      <section aria-labelledby="review-h" className="mt-4 rounded-2xl border border-line bg-surface p-4 sm:p-5">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <ClipboardCheck className="size-5 text-ink-brand" aria-hidden="true" />
-          <h2 id="review-h" className="font-display text-heading-md text-ink">Review checklist</h2>
-          <p className="text-body-sm text-ink-subtle tabular-nums">{ticked.length} of {checks.length} checked</p>
-          <p className="text-body-sm text-ink-subtle sm:ml-auto">A guide: nothing is saved until you approve or send notes.</p>
-        </div>
-        <p className={cx("mt-3 flex items-start gap-2 rounded-md p-2.5 text-body-sm text-ink", missing.length ? "bg-warning-soft" : "bg-success-soft")}>
+      <Panel className="mt-6" id="review-h" title="Review checklist"
+        aside={<span className="tabular-nums">{ticked.length} of {checks.length} checked · a guide, nothing is saved until you decide</span>}>
+        <p className={cx("flex items-start gap-2 rounded-md p-3 text-body-sm text-ink", missing.length ? "bg-warning-soft" : "bg-success-soft")}>
           {missing.length ? <MessageSquareWarning className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" /> : <CircleCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />}
           <span>{missing.length ? <>Missing: {missing.map((m) => m.label).join(", ")}. Suggest edits to ask {first} for it; the note is filled in for you.</> : "Every required answer is filled in."}</span>
         </p>
-        <ul className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {checks.map((c) => (
             <li key={c.id}>
               <Checkbox label={c.label} description={c.hint} checked={ticked.includes(c.id)}
@@ -139,7 +135,7 @@ export function ReviewWorkspace({ person, fields, queue, header, children }: {
             </li>
           ))}
         </ul>
-      </section>
+      </Panel>
 
       {children}
 

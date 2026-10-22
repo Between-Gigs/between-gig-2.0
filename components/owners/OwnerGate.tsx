@@ -1,11 +1,12 @@
 "use client";
-import { Button, EmptyState, Skeleton } from "@ds/components";
+import { Button, EmptyState } from "@ds/components";
 import { LockKeyhole, Users } from "lucide-react";
 import * as React from "react";
 import { data, type Session } from "@/lib/data";
 import { useSession } from "@/lib/session";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
+import { HeaderSkeleton } from "./kit";
 import { OwnerShell } from "./OwnerShell";
 
 /**
@@ -14,7 +15,7 @@ import { OwnerShell } from "./OwnerShell";
  */
 export function OwnerGate({ children }: { children: (session: Session) => React.ReactNode }) {
   const { session, loading } = useSession();
-  if (loading) return <OwnerShell><div aria-busy="true" aria-label="Loading" className="grid gap-4"><Skeleton className="h-10 w-1/4" /><Skeleton shape="block" className="h-64" /></div></OwnerShell>;
+  if (loading) return <OwnerShell><div aria-busy="true" aria-label="Loading"><HeaderSkeleton /></div></OwnerShell>;
   if (session?.role === "owner") return <>{children(session)}</>;
   return (
     <Page>

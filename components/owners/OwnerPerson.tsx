@@ -1,5 +1,5 @@
 "use client";
-import { Banner, Breadcrumbs, EmptyState, Progress, Skeleton } from "@ds/components";
+import { Banner, Breadcrumbs, EmptyState, cx } from "@ds/components";
 import { Eye, Mail, SearchX, Sparkles } from "lucide-react";
 import * as React from "react";
 import { data, type PersonSummary, type Profile } from "@/lib/data";
@@ -13,6 +13,7 @@ import { ProfileView } from "@/components/profile/ProfileView";
 import { OwnerShell } from "./OwnerShell";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { OwnerGate } from "./OwnerGate";
+import { HeaderSkeleton, Panel } from "./kit";
 import { ReviewWorkspace, type QueueItem } from "./ReviewPanel";
 import { shortDate } from "./format";
 
@@ -44,7 +45,7 @@ function Person({ id }: { id: string }) {
       reviewing ? { label: "Review queue", href: `${basePath}/owners/review/` } : { label: "People", href: `${basePath}/owners/people/` }, { label }]} />
   );
 
-  if (s === undefined) return <OwnerShell section={section}><div aria-busy="true" aria-label="Loading" className="grid gap-4"><Skeleton className="h-4 w-40" /><Skeleton shape="block" className="h-40" /></div></OwnerShell>;
+  if (s === undefined) return <OwnerShell section={section}><div aria-busy="true" aria-label="Loading"><HeaderSkeleton /></div></OwnerShell>;
   if (s === null) {
     return (
       <OwnerShell>
@@ -61,40 +62,49 @@ function Person({ id }: { id: string }) {
     ["Invited", shortDate(p.invitedAt)], ["Registered", shortDate(p.registeredAt)], ["Submitted", shortDate(p.submittedAt)], ["Approved", shortDate(p.approvedAt)],
   ];
 
+  // A slim header: who, where they are, and the four steps so far as a timeline.
   const header = (
-    <header className="mt-4 grid gap-5 rounded-2xl border border-line bg-surface p-4 shadow-sm sm:p-5 md:grid-cols-12 md:items-center">
-      <div className="flex min-w-0 items-center gap-4 md:col-span-7">
-        {!fields && <PersonPhoto id={p.id} morph name={p.name || "?"} alt="" className="size-16 shrink-0 rounded-xl" textClass="text-heading-lg" />}
-        {fields && <PersonPhoto id={p.id} morph={false} name={p.name} src={fields.photo || undefined} alt="" className="size-16 shrink-0 rounded-xl" textClass="text-heading-lg" />}
+    <header className="mt-2 grid gap-5 rounded-lg border border-line bg-surface p-5 lg:grid-cols-12 lg:items-center">
+      <div className="flex min-w-0 items-center gap-4 lg:col-span-6">
+        <PersonPhoto id={p.id} name={p.name || "?"} src={fields?.photo || undefined} alt="" className="size-14 shrink-0 rounded-md" textClass="text-heading-md" />
         <div className="grid min-w-0 gap-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="min-w-0 truncate font-display text-display-sm text-ink">{name}</h1>
-            <PersonStatusBadge status={p.status} />
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h1 className="min-w-0 truncate font-display text-heading-lg text-ink">{name}</h1>
+            <PersonStatusBadge status={p.status} size="sm" />
           </div>
-          <p className="flex flex-wrap gap-x-3 text-body-sm text-ink-muted">
-            <a className="inline-flex min-h-6 min-w-0 items-center gap-1 text-link underline underline-offset-2" href={`mailto:${p.email}`}><Mail className="size-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{p.email}</span></a>
-            <span className="inline-flex min-h-6 items-center">Waitlist · ZIP {p.waitlistZip}{p.waitlistCategory && ` · ${waitlistCategoryLabel(p.waitlistCategory)}`}</span>
+          <p className="flex min-w-0 flex-wrap gap-x-3 text-body-sm text-ink-muted">
+            <a className="inline-flex min-h-6 min-w-0 items-center gap-1 hover:text-ink" href={`mailto:${p.email}`}><Mail className="size-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{p.email}</span></a>
+            <span className="inline-flex min-h-6 items-center tabular-nums">ZIP {p.waitlistZip}{p.waitlistCategory && ` · ${waitlistCategoryLabel(p.waitlistCategory)}`}</span>
+            {fields && <span className="inline-flex min-h-6 items-center tabular-nums">{Math.round(completeness * 100)}% complete{fromDraft ? " (draft)" : ""}</span>}
           </p>
         </div>
       </div>
-      <dl className="grid grid-cols-4 gap-3 md:col-span-5">
-        {timeline.map(([k, v]) => (
-          <div key={k} className="grid min-w-0 gap-0.5"><dt className="text-label-sm text-ink-subtle">{k}</dt><dd className="text-body-sm whitespace-nowrap text-ink tabular-nums">{v ?? "—"}</dd></div>
+      <ol aria-label="Timeline" className="grid grid-cols-4 lg:col-span-6">
+        {timeline.map(([k, v], i) => (
+          <li key={k} className="relative grid gap-1.5 pr-2">
+            <span aria-hidden="true" className="flex items-center">
+              <span className={cx("size-2.5 shrink-0 rounded-full", v ? "bg-action" : "border-2 border-line-strong")} />
+              {i < timeline.length - 1 && <span className={cx("h-0.5 flex-1", timeline[i + 1][1] ? "bg-action" : "bg-line")} />}
+            </span>
+            <span className="text-label-sm text-ink-muted">{k}</span>
+            <span className="text-body-sm whitespace-nowrap text-ink tabular-nums">{v ?? <span className="text-ink-subtle">Not yet</span>}</span>
+          </li>
         ))}
-      </dl>
-      {fields && <Progress className="md:col-span-12" value={Math.round(completeness * 100)} label={fromDraft ? "Questionnaire (draft)" : "Questionnaire"} />}
+      </ol>
     </header>
   );
 
+  // The profile as clients would see it, framed so it doesn't read as part of this page.
   const preview = fields ? (
-    <div className="mt-6">
-      {fromDraft && <p className="mb-6 text-body-sm text-ink-muted">Unsubmitted draft, shown as it stands. It may change before they submit.</p>}
+    <Panel className="mt-6" landmark={false} title="What clients see" aside={fromDraft ? "Unsubmitted draft, shown as it stands" : p.status === "approved" ? "Live on the site" : "Not public yet"} bodyClassName="p-4 sm:p-6">
       <ProfileView person={p} fields={fields} extras={profile?.extras} mode="owner" />
-    </div>
+    </Panel>
   ) : (
-    <EmptyState className="mt-8 rounded-2xl border border-dashed border-line-dashed py-16" icon={<Sparkles />} title={p.status === "invited" ? "Hasn't joined yet" : "Hasn't started their profile"} headingLevel={2}>
-      {p.status === "invited" ? "They've been invited but haven't created an account yet." : "They've created an account. Their answers appear here as they fill in the questionnaire."}
-    </EmptyState>
+    <Panel className="mt-6">
+      <EmptyState className="py-12" icon={<Sparkles />} title={p.status === "invited" ? "Hasn't joined yet" : "Hasn't started their profile"} headingLevel={2}>
+        {p.status === "invited" ? "They've been invited but haven't created an account yet." : "They've created an account. Their answers appear here as they fill in the questionnaire."}
+      </EmptyState>
+    </Panel>
   );
 
   if (p.status === "submitted" && fields) {
@@ -111,12 +121,12 @@ function Person({ id }: { id: string }) {
       {crumbs(name)}
       {header}
       {p.status === "changes_requested" && (
-        <Banner tone="warning" className="mt-4" title="Changes requested">
+        <Banner tone="warning" className="mt-6" title="Changes requested">
           <ul className="grid gap-1">{(p.reviewNotes ?? []).map((n) => <li key={n.note}><b>{sectionLabel[n.section]}:</b> {n.note}</li>)}</ul>
         </Banner>
       )}
       {p.status === "approved" && (
-        <Banner tone="success" className="mt-4" title="Live" action={<ButtonLink href={`/p/${p.slug}/`} size="sm" iconStart={<Eye />}>Public page</ButtonLink>}>Clients can find this profile.</Banner>
+        <Banner tone="success" className="mt-6" title="Live" action={<ButtonLink href={`/p/${p.slug}/`} size="sm" iconStart={<Eye />}>Public page</ButtonLink>}>Clients can find this profile.</Banner>
       )}
       {preview}
     </OwnerShell>

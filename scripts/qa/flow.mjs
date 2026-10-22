@@ -189,7 +189,7 @@ export async function flow({ browser, base, outDir }) {
       await page.evaluate(() => window.bgSample.signInAs("owner"));
       await page.goto(`${base}/owners/`);
       await expectText("waiting for your review");
-      await page.getByRole("link", { name: "See the queue" }).click();
+      await page.getByRole("link", { name: "Open the review queue" }).click();
       await page.waitForURL(/\/owners\/review\/?$/);
       await page.getByRole("link", { name: "Imani Carter" }).waitFor();
     })
