@@ -101,5 +101,10 @@ export interface DataSource {
     /** Makes the pending code expire now, to show the expired state. */
     expireCode(email: string): Promise<void>;
     tokens(): Promise<{ valid: string; used: string; expired: string; unknown: string }>;
+    /**
+     * The client demo (/demo): invites this email as a fresh Gigster, starting over if it was invited before, and
+     * queues the invite email. Signs out first, so the demo always starts at the invite.
+     */
+    inviteMe(email: string): Promise<{ inviteToken: string; outboxId: string; personId: string }>;
   };
 }

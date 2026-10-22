@@ -120,15 +120,17 @@ export function CrewCall() {
           {soon.length > 0 && (
             <div className="mt-6 border-t border-line pt-6">
               <h3 className="sr-only">Coming soon</h3>
-              <Strip label="Coming soon services" itemClass="w-1/3 sm:w-1/5 lg:w-auto lg:min-w-0 lg:flex-1 lg:shrink">
+              <Strip label="Coming soon services" itemClass="w-36" progress>
                 {soon.map((s) => (
                   <button key={s.id} type="button" onClick={() => open(`${s.title}: `)} aria-label={`${s.title}, coming soon. Tell us you need it.`}
-                    className="group grid w-full justify-items-center gap-1 rounded-xl p-1 text-center hover:bg-surface-hover">
-                    <span className="relative">
+                    className="group grid w-full justify-items-center gap-3 rounded-xl px-1 pt-2 pb-3 text-center transition-colors duration-fast hover:bg-surface-hover">
+                    <span className="relative grid justify-items-center">
                       <SoonPatch icon={icons[s.icon]} />
-                      <span aria-hidden="true" className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-sm bg-forest-800 px-2 py-0.5 text-label-sm whitespace-nowrap text-surface uppercase">Coming soon</span>
+                      {/* A notched ribbon across the patch, never wider than it. */}
+                      <span aria-hidden="true" className="absolute -bottom-2.5 w-28 -rotate-2 bg-forest-800 py-0.5 text-center text-label-sm tracking-wide text-surface uppercase shadow-sm"
+                        style={{ clipPath: "polygon(0 0, 100% 0, 94% 50%, 100% 100%, 0 100%, 6% 50%)" }}>Coming soon</span>
                     </span>
-                    <span className="mt-2 font-serif text-body-md text-ink">{s.title}</span>
+                    <span className="mt-1 font-serif text-body-md whitespace-nowrap text-ink group-hover:text-forest-700">{s.title}</span>
                   </button>
                 ))}
               </Strip>
@@ -145,13 +147,14 @@ export function CrewCall() {
 }
 
 /** A row with round arrows on either side; swipes on touch. */
-function Strip({ label, children, className, itemClass }: { label: string; children: React.ReactNode; className?: string; itemClass: string }) {
+function Strip({ label, children, className, itemClass, progress = false }: { label: string; children: React.ReactNode; className?: string; itemClass: string; progress?: boolean }) {
   const ref = React.useRef<HTMLUListElement>(null);
-  const [edge, setEdge] = React.useState({ start: true, end: false });
+  const [edge, setEdge] = React.useState({ start: true, end: false, at: 0, shown: 1 });
   const measure = React.useCallback(() => {
     const el = ref.current;
     if (!el) return;
-    setEdge({ start: el.scrollLeft < 4, end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 });
+    const max = Math.max(el.scrollWidth - el.clientWidth, 1);
+    setEdge({ start: el.scrollLeft < 4, end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 4, at: el.scrollLeft / max, shown: el.clientWidth / el.scrollWidth });
   }, []);
   React.useEffect(() => {
     measure();
@@ -162,8 +165,8 @@ function Strip({ label, children, className, itemClass }: { label: string; child
   const go = (d: 1 | -1) => ref.current?.scrollBy({ left: d * ref.current.clientWidth * 0.8, behavior: reduced() ? "auto" : "smooth" });
   const items = React.Children.toArray(children);
   const arrow = "shrink-0 rounded-full border border-line bg-surface shadow-sm max-sm:hidden";
-  return (
-    <div className={cx("flex items-center gap-2", className)}>
+  const row = (
+    <div className={cx("flex items-center gap-2", !progress && className)}>
       <IconButton label={`Previous: ${label}`} variant="ghost" icon={<ChevronLeft />} disabled={edge.start} onClick={() => go(-1)} className={arrow} />
       <ul ref={ref} aria-label={label} tabIndex={0} onScroll={measure} className="no-scrollbar flex min-w-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto">
         {items.map((c, i) => <li key={i} className={cx("flex shrink-0 snap-start", itemClass)}>{c}</li>)}
@@ -171,13 +174,28 @@ function Strip({ label, children, className, itemClass }: { label: string; child
       <IconButton label={`Next: ${label}`} variant="ghost" icon={<ChevronRight />} disabled={edge.end} onClick={() => go(1)} className={arrow} />
     </div>
   );
+  if (!progress) return row;
+  // How far along the row you are: a slim line, not a scroll bar, and only when there's more to see.
+  return (
+    <div className={cx("grid gap-4", className)}>
+      {row}
+      {edge.shown < 0.99 && (
+        <span aria-hidden="true" className="mx-auto block h-1 w-full max-w-md overflow-hidden rounded-full bg-surface-sunken">
+          <span className="block h-full rounded-full bg-forest-600 transition-transform duration-fast"
+            style={{ width: `${edge.shown * 100}%`, transform: `translateX(${(edge.at * (1 - edge.shown) / edge.shown) * 100}%)` }} />
+        </span>
+      )}
+    </div>
+  );
 }
 
-/** Coming-soon patch until the client's own patches for these arrive: the icon on cream inside a gold and red ring. */
+/** Coming-soon patch until the client's own art arrives: a duotone icon on cream inside the patches' ring colours. */
 function SoonPatch({ icon: Icon }: { icon: LucideIcon }) {
   return (
-    <span aria-hidden="true" className="grid size-16 place-items-center rounded-full border-4 border-amber-300 bg-surface ring-2 ring-amber-700">
-      <Icon className="size-8 text-forest-800" strokeWidth={1.75} />
+    <span aria-hidden="true" className="grid size-20 place-items-center rounded-full border-4 border-amber-700 bg-amber-100 shadow-sm transition-transform duration-fast group-hover:-translate-y-0.5">
+      <span className="grid size-16 place-items-center rounded-full border border-dashed border-amber-700/50 bg-surface">
+        <Icon className="size-9 fill-amber-300/70 text-forest-800" strokeWidth={1.6} />
+      </span>
     </span>
   );
 }

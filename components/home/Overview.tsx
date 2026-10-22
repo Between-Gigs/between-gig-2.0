@@ -25,6 +25,7 @@ const gigsters = [
 const pages = [
   { href: "/", thumb: "home", title: "Home today", body: "The Los Angeles call sheet: coming soon." },
   { href: "/proposals/home/", thumb: "proposals", title: "Home once we open", body: "Three proposals: visitor, Gigster, owner." },
+  { href: "/demo/", thumb: "invite-email", title: "Try it: invite to profile", body: "The hands-on demo: invite email, sign up, build and see a profile." },
   { href: "/crew-call/", thumb: "crew-call", title: "Crew Call", body: "Hollywood talent at your service: the client-side call sheet (V15)." },
   { href: "/professionals/", thumb: "professionals", title: "For professionals", body: "Why join, and get on the call sheet." },
   { href: "/storyboard/", thumb: "storyboard", title: "The Storyboard", body: "The interactive sketchbook and its forms." },
