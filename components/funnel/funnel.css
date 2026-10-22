@@ -4,9 +4,8 @@
  */
 
 /* Carousel: a thin visible scrollbar and soft edges that hint there is more to either side. */
-.bg-carousel { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; overscroll-behavior-x: contain; }
-.bg-carousel::-webkit-scrollbar { height: 6px; }
-.bg-carousel::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 999px; }
+.bg-carousel { scrollbar-width: none; overscroll-behavior-x: contain; }
+.bg-carousel::-webkit-scrollbar { display: none; }
 .bg-carousel:where([data-more-end]) { mask-image: linear-gradient(90deg, black 0 88%, transparent 100%); }
 .bg-carousel:where([data-more-start]) { mask-image: linear-gradient(90deg, transparent 0, black 12%); }
 .bg-carousel:where([data-more-start][data-more-end]) { mask-image: linear-gradient(90deg, transparent 0, black 10%, black 90%, transparent 100%); }
@@ -21,7 +20,8 @@
 .bg-marquee:hover .bg-marquee-track, .bg-marquee:focus-within .bg-marquee-track { animation-play-state: paused; }
 @keyframes bg-marquee { to { transform: translateX(-100%); } }
 @media (prefers-reduced-motion: reduce) {
-  .bg-marquee { overflow-x: auto; }
+  .bg-marquee { overflow-x: auto; scrollbar-width: none; }
+  .bg-marquee::-webkit-scrollbar { display: none; }
   .bg-marquee-track { animation: none; }
   .bg-marquee-track[aria-hidden="true"] { display: none; }
 }

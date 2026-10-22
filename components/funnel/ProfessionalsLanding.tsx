@@ -1,7 +1,7 @@
 "use client";
 import { Accordion, Button, cx } from "@ds/components";
 import { Reveal } from "@ds/motion";
-import { Brush, CalendarCheck, Camera, Drama, Film, Hammer, MapPinned, Scissors, Shirt, Sofa } from "lucide-react";
+import { Brush, CalendarCheck, CalendarClock, Camera, Clapperboard, Drama, Film, Hammer, MapPinned, Scissors, Shirt, Sofa, Sparkles, Tag } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { asset } from "@/lib/site";
@@ -130,29 +130,45 @@ export function ProfessionalsLanding() {
       <section id="profiles" aria-labelledby="profiles-h" className="scroll-mt-20 bg-surface-sunken py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <SectionHeading id="profiles-h" eyebrow="Sample professional profiles" title="Here's how your skills" accent="could translate." />
-          <Carousel label="Sample professional profiles" className="mt-10" gridFrom="md" itemClassName="w-11/12">
-            {profiles.map((p) => (
-              <article key={p.id} className="flex w-full flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
-                {/* Every card: the same 3:2 frame, portrait and work side by side at 3:4 each. */}
-                <div className="grid grid-cols-2">
-                  <img src={asset(`art/samples/cards/${p.img}-portrait.jpg`)} alt={`Illustrative portrait of ${p.name}`} width={480} height={640} loading="lazy" decoding="async" className="aspect-3/4 h-auto w-full object-cover" />
-                  <img src={asset(`art/samples/cards/${p.img}-work.jpg`)} alt={`Sample work: ${p.portfolio.toLowerCase()}`} width={480} height={640} loading="lazy" decoding="async" className="aspect-3/4 h-auto w-full object-cover" />
-                </div>
-                <div className="flex flex-1 flex-col gap-3 p-5">
-                  <div>
-                    <h3 className="font-display text-heading-lg text-ink">{p.name}</h3>
-                    <p className="text-label-md text-ink-brand">{p.title}</p>
+          {/* Profile cards a client would scan: who, what they did before, what they offer now, rate and when. */}
+          <Carousel label="Sample professional profiles" className="mt-10" gridFrom="lg" itemClassName="w-10/12 sm:w-5/12">
+            {profiles.map((p) => {
+              const [was, now] = p.title.split(" → ");
+              return (
+                <article key={p.id} data-tilt className="lift flex w-full flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
+                  <div className="relative">
+                    <img src={asset(`art/samples/cards/${p.img}-portrait.jpg`)} alt={`Illustrative portrait of ${p.name}`} width={480} height={640} loading="lazy" decoding="async" className="aspect-4/5 h-auto w-full object-cover" />
+                    <div data-theme="dark" className="absolute inset-x-0 bottom-0 bg-linear-to-t from-forest-950/90 via-forest-950/50 to-transparent px-4 pt-20 pb-4">
+                      <h3 className="font-display text-heading-lg text-ink">{p.name}</h3>
+                      <p className="text-body-sm text-ink-muted">Was: {was}</p>
+                    </div>
                   </div>
-                  <dl className="grid gap-x-4 gap-y-2 text-body-sm sm:grid-cols-4">
-                    {[["Background", p.credits], ["Services", p.services], ["Pricing", p.pricing], ["Availability", p.availability]].map(([k, v]) => (
-                      <div key={k} className="contents"><dt className="text-label-sm text-ink-subtle">{k}</dt><dd className="text-ink-muted tabular-nums sm:col-span-3">{v}</dd></div>
-                    ))}
-                  </dl>
-                  <div className="mt-auto pt-2"><Button onClick={() => join(`profile-${p.id}`, p.category)}>Create a profile like this</Button></div>
-                </div>
-              </article>
-            ))}
+                  <div className="flex flex-1 flex-col gap-3 p-4">
+                    <p className="inline-flex items-center gap-1.5 self-start rounded-full bg-surface-selected px-3 py-1 text-label-sm text-ink-brand"><Sparkles className="size-3.5" aria-hidden="true" />{now}</p>
+                    <p className="text-body-sm text-ink">{p.services}</p>
+                    <p className="inline-flex gap-2 text-body-sm text-ink-muted"><Clapperboard className="mt-0.5 size-4 shrink-0 text-ink-subtle" aria-label="Background" />{p.credits}</p>
+                    <dl className="mt-auto grid gap-2 border-t border-line pt-3 text-body-sm">
+                      <div className="flex gap-2"><dt><Tag className="mt-0.5 size-4 text-ink-subtle" aria-label="Pricing" /></dt><dd className="text-label-md text-ink tabular-nums">{p.pricing}</dd></div>
+                      <div className="flex gap-2"><dt><CalendarClock className="mt-0.5 size-4 text-ink-subtle" aria-label="Availability" /></dt><dd className="text-ink-muted">{p.availability}</dd></div>
+                    </dl>
+                  </div>
+                </article>
+              );
+            })}
           </Carousel>
+          {/* One clear ask after the examples, instead of the same button on every card. */}
+          <div data-theme="dark" className="relative isolate mt-10 grid items-center gap-6 overflow-hidden rounded-2xl bg-surface-brand phosphor-dots p-6 sm:p-8 md:grid-cols-12">
+            <div className="flex -space-x-3 md:col-span-3" aria-hidden="true">
+              {profiles.map((p) => <img key={p.id} src={asset(`art/samples/cards/${p.img}-portrait.jpg`)} alt="" width={480} height={640} loading="lazy" className="size-14 rounded-full border-2 border-surface-brand object-cover sm:size-16" />)}
+            </div>
+            <div className="grid gap-1 md:col-span-6">
+              <p className="font-display text-heading-lg text-ink">Your craft could be the next profile here.</p>
+              <p className="text-body-md text-ink-muted">Tell us what you do on set. We'll help you shape it into services, rates and availability like these.</p>
+            </div>
+            <div className="md:col-span-3 md:justify-self-end">
+              <CallSheetButton onClick={() => join("profiles")} label="Create your profile" />
+            </div>
+          </div>
           <p className="mt-6 text-body-sm text-ink-subtle">Sample profiles, services and pricing shown for illustration.</p>
         </div>
       </section>

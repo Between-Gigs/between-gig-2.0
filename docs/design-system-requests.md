@@ -48,3 +48,14 @@ adopt these (or tuned equivalents) in the system's dark tokens.
 Body text should be 16px with ~1.5 line height (both reference books agree), secondary text no smaller than 14px.
 The app overrides `--text-body-lg` (18/28), `--text-body-md` (16/24), `--text-body-sm` (14/21) and the caption line
 height (12/18) in `app/globals.css`. Request: adopt this scale in the system.
+
+## Lettering (hand-drawn phrases)
+
+The client likes Peter's handwritten "Your next chapter starts here." (Storyboard hero, welcome email). It is
+**lettering**, not a font: one phrase drawn once and kept as an image, so it can't set new words. The app keeps a
+registry in `lib/lettering.ts` (text for alt, web PNG, email PNG, source) and renders it with
+`components/ui/Lettering.tsx`, which inverts the black ink in dark mode (`.lettering` in `app/globals.css`).
+Request: a "Lettering" section in the system beside Typography, with the asset, its alt text, light/dark and email
+treatments, and when to use it (one short phrase, a hero headline at most once per page). If more phrases are
+wanted, the options are more drawn phrases from Peter, or a script typeface chosen to sit close to his hand (a
+real font, which can set any words but won't be his handwriting).

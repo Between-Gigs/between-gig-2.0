@@ -1,7 +1,8 @@
 "use client";
 import { Button, useToast } from "@ds/components";
 import { Reveal } from "@ds/motion";
-import { ArrowRight, Mail, RotateCcw, Search, UserRound, UserRoundPlus, Users } from "lucide-react";
+import { ArrowRight, Mail, RotateCcw, Search, UserRoundPlus } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { data } from "@/lib/data";
 import { BrandBand, Page } from "@/components/site/Page";
@@ -10,14 +11,52 @@ import { asset } from "@/lib/site";
 
 const faces = ["maya", "jordan", "alex", "priya", "sam", "morgan"];
 
-/** One sample Gigster per status, so every screen a Gigster sees is one click away. */
+/** One sample Gigster per status, so every screen a Gigster sees is one click away. `thumb` is in public/thumbs. */
 const gigsters = [
-  { id: "grace-liu", name: "Grace", state: "Account created, profile not started", go: "/profile/" },
-  { id: "elena-petrova", name: "Elena", state: "Profile in draft", go: "/profile/edit/" },
-  { id: "imani-carter", name: "Imani", state: "Submitted, waiting for review", go: "/profile/" },
-  { id: "hana-kim", name: "Hana", state: "Changes requested by the team", go: "/profile/" },
-  { id: "maya", name: "Maya", state: "Approved and live", go: "/profile/" },
+  { id: "grace-liu", name: "Grace", state: "Account created, profile not started", go: "/profile/", thumb: "grace" },
+  { id: "elena-petrova", name: "Elena", state: "Profile in draft", go: "/profile/edit/", thumb: "elena" },
+  { id: "imani-carter", name: "Imani", state: "Submitted, waiting for review", go: "/profile/", thumb: "imani" },
+  { id: "hana-kim", name: "Hana", state: "Changes requested by the team", go: "/profile/", thumb: "hana" },
+  { id: "maya", name: "Maya", state: "Approved and live", go: "/profile/", thumb: "maya" },
 ];
+
+/** Every page the guide links to, with a thumbnail of where it goes (scripts/preview-thumbs.mjs makes them). */
+const pages = [
+  { href: "/", thumb: "home", title: "Home today", body: "The Los Angeles call sheet: coming soon." },
+  { href: "/proposals/home/", thumb: "proposals", title: "Home once we open", body: "Three proposals: visitor, Gigster, owner." },
+  { href: "/professionals/", thumb: "professionals", title: "For professionals", body: "Why join, and get on the call sheet." },
+  { href: "/storyboard/", thumb: "storyboard", title: "The Storyboard", body: "The interactive sketchbook and its forms." },
+  { href: "/login/", thumb: "login", title: "Sign in", body: "Email code sign-in." },
+  { href: "/p/maya/", thumb: "public-profile", title: "A public profile", body: "Maya Chen, approved and live." },
+  { href: "/emails/", thumb: "emails", title: "Emails", body: "Every email, and the sample outbox." },
+];
+
+/**
+ * A guide card: a thumbnail of where it goes, a title and one line. The whole card is the link (or button),
+ * and it lifts toward the pointer like the rest of the app's cards.
+ */
+function GuideCard({ thumb, title, body, href, onClick, tag }: { thumb: string; title: React.ReactNode; body: string; href?: string; onClick?: () => void; tag?: string }) {
+  const inner = (
+    <>
+      <span className="relative block overflow-hidden rounded-md border border-line bg-surface-sunken">
+        <img src={asset(`thumbs/${thumb}.jpg`)} alt="" width={640} height={400} loading="lazy" decoding="async"
+          className="aspect-video w-full object-cover object-top transition-transform duration-slow ease-standard group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100" />
+        {tag && <span className="absolute top-2 left-2 rounded-full bg-surface/85 px-2 py-0.5 text-label-sm text-ink backdrop-blur-sm">{tag}</span>}
+      </span>
+      <span className="flex items-start justify-between gap-3 px-1">
+        <span className="grid gap-0.5">
+          <span className="text-label-md text-ink">{title}</span>
+          <span className="text-body-sm text-ink-muted">{body}</span>
+        </span>
+        <ArrowRight className="mt-0.5 size-4 shrink-0 text-ink-subtle transition-transform duration-fast group-hover:translate-x-0.5 group-hover:text-ink-brand" aria-hidden="true" />
+      </span>
+    </>
+  );
+  const cls = "lift group grid h-full content-start gap-3 rounded-lg border border-line bg-surface p-3 text-left";
+  return href
+    ? <Link href={href} data-tilt="" className={cls}>{inner}</Link>
+    : <button type="button" data-tilt="" onClick={onClick} className={cls}>{inner}</button>;
+}
 
 /**
  * "/" for Milestone 2: a guide to the preview for Justin and the client. The real home page is
@@ -39,9 +78,9 @@ export function Overview() {
   };
 
   const steps = [
-    { n: "01", icon: <Mail />, title: "The invite", body: "What the 500 waitlist sign-ups receive: professional onboarding is open, with a personal link.", action: <ButtonLink href="/emails/invite/" size="sm" iconEnd={<ArrowRight />}>Open the invite email</ButtonLink> },
-    { n: "02", icon: <UserRoundPlus />, title: "Join and build a profile", body: "Register from the invite, sign in with an email code, answer the questionnaire and submit for review.", action: <Button size="sm" variant="primary" iconEnd={<ArrowRight />} onClick={startInvite}>Start as an invited Gigster</Button> },
-    { n: "03", icon: <Search />, title: "Owners review and invite", body: "A calm dashboard: who's waiting for review, approve or suggest edits, and invite the waitlist in bulk.", action: <Button size="sm" iconEnd={<ArrowRight />} onClick={startOwner}>Open the owner dashboard</Button> },
+    { n: "01", thumb: "invite-email", icon: <Mail />, title: "The invite", body: "What the 500 waitlist sign-ups receive: professional onboarding is open, with a personal link.", action: <ButtonLink href="/emails/invite/" size="sm" iconEnd={<ArrowRight />}>Open the invite email</ButtonLink> },
+    { n: "02", thumb: "invite", icon: <UserRoundPlus />, title: "Join and build a profile", body: "Register from the invite, sign in with an email code, answer the questionnaire and submit for review.", action: <Button size="sm" variant="primary" iconEnd={<ArrowRight />} onClick={startInvite}>Start as an invited Gigster</Button> },
+    { n: "03", thumb: "owner", icon: <Search />, title: "Owners review and invite", body: "A calm dashboard: who's waiting for review, approve or suggest edits, and invite the waitlist in bulk.", action: <Button size="sm" iconEnd={<ArrowRight />} onClick={startOwner}>Open the owner dashboard</Button> },
   ];
 
   return (
@@ -59,6 +98,7 @@ export function Overview() {
           {steps.map((s, i) => (
             <li key={s.n}>
               <Reveal effect="fade-up" delay={i * 70} className="flex h-full flex-col gap-3 rounded-2xl border border-line bg-surface p-6 shadow-lg">
+                <img src={asset(`thumbs/${s.thumb}.jpg`)} alt="" width={640} height={400} loading="lazy" decoding="async" className="-mx-2 -mt-2 aspect-video w-auto rounded-lg border border-line object-cover object-top" />
                 <div className="flex items-center justify-between">
                   <span className="grid size-10 place-items-center rounded-full bg-surface-selected text-ink-brand [&_svg]:size-5">{s.icon}</span>
                   <span className="text-label-md text-ink-subtle tabular-nums">{s.n}</span>
@@ -79,44 +119,21 @@ export function Overview() {
               </div>
               <Button size="sm" variant="ghost" iconStart={<RotateCcw />} onClick={reset}>Reset sample data</Button>
             </div>
-            <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <li className="flex flex-col gap-2 rounded-xl border border-line p-4">
-                <span className="text-label-md text-ink">Owner</span>
-                <span className="text-body-sm text-ink-muted">Dashboard, review queue, people, waitlist</span>
-                <Button size="sm" variant="primary" iconStart={<Users />} className="mt-auto self-start" onClick={startOwner}>Open as owner</Button>
-              </li>
-              <li className="flex flex-col gap-2 rounded-xl border border-line p-4">
-                <span className="text-label-md text-ink">Invited Gigster</span>
-                <span className="text-body-sm text-ink-muted">Opens the invite link: create the account and build a profile</span>
-                <Button size="sm" iconStart={<UserRoundPlus />} className="mt-auto self-start" onClick={startInvite}>Open the invite</Button>
-              </li>
+            <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <li><GuideCard thumb="owner" tag="Owner" title="Open as owner" body="Dashboard, review queue, people, waitlist." onClick={startOwner} /></li>
+              <li><GuideCard thumb="invite" tag="Invited" title="Open the invite" body="Create the account, then build a profile." onClick={startInvite} /></li>
               {gigsters.map((g) => (
-                <li key={g.id} className="flex flex-col gap-2 rounded-xl border border-line p-4">
-                  <span className="text-label-md text-ink">{g.name} <span className="font-normal text-ink-subtle">· Gigster</span></span>
-                  <span className="text-body-sm text-ink-muted">{g.state}</span>
-                  <Button size="sm" iconStart={<UserRound />} className="mt-auto self-start" onClick={() => asGigster(g.id, g.go)}>Sign in as {g.name}</Button>
-                </li>
+                <li key={g.id}><GuideCard thumb={g.thumb} tag="Gigster" title={`Sign in as ${g.name}`} body={g.state} onClick={() => asGigster(g.id, g.go)} /></li>
               ))}
-              <li className="flex flex-col gap-2 rounded-xl border border-line p-4">
-                <span className="text-label-md text-ink">Visitor</span>
-                <span className="text-body-sm text-ink-muted">Signed out, as the public sees the site</span>
-                <Button size="sm" variant="ghost" iconStart={<UserRound />} className="mt-auto self-start" onClick={asVisitor}>Sign out</Button>
-              </li>
+              <li><GuideCard thumb="home" tag="Visitor" title="Sign out" body="See the site as the public does." onClick={asVisitor} /></li>
             </ul>
           </section>
         )}
-        <section aria-labelledby="more-h" className="mt-6 grid gap-4 rounded-2xl border border-line bg-surface p-6 md:grid-cols-2">
-          <div>
-            <h2 id="more-h" className="font-display text-heading-lg text-ink">Every page</h2>
-            <p className="mt-2 text-body-md text-ink-muted">The public pages, the sign-in, a live profile and every email.</p>
-          </div>
-          <ul className="grid gap-2 text-body-md">
-            {[["/", "Home: the call sheet (today)"], ["/proposals/home/", "Home once we open: three proposals"], ["/professionals/", "For professionals: get on the call sheet"], ["/storyboard/", "The interactive Storyboard and its forms"], ["/login/", "Sign in"], ["/p/maya/", "A public profile (approved)"], ["/emails/", "All emails and the sample outbox"]].map(([href, label]) => (
-              <li key={href} className="flex items-center justify-between gap-3 border-b border-line pb-2 last:border-0">
-                <span className="text-ink">{label}</span>
-                <ButtonLink href={href} size="sm" variant="ghost" iconEnd={<ArrowRight />} aria-label={`Open: ${label}`}>Open</ButtonLink>
-              </li>
-            ))}
+        <section aria-labelledby="more-h" className="mt-6 rounded-2xl border border-line bg-surface p-6">
+          <h2 id="more-h" className="font-display text-heading-lg text-ink">Every page</h2>
+          <p className="mt-1 text-body-md text-ink-muted">The public pages, sign-in, a live profile and every email. Pick one to open it.</p>
+          <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {pages.map((pg) => <li key={pg.href}><GuideCard thumb={pg.thumb} title={pg.title} body={pg.body} href={pg.href} /></li>)}
           </ul>
         </section>
         <p className="mt-6 text-body-sm text-ink-subtle">Names shown are illustrative samples for this draft.</p>

@@ -11,8 +11,8 @@ interface NavLink { href: string; label: string }
 
 /**
  * The public site's top bar: logo, the links for whoever is signed in, theme, account. In the owners'
- * workspace (`app`) it spans the full width and the sidebar takes over the links; below lg a menu button
- * opens the sidebar drawer.
+ * workspace (`app`) it spans the full width, holds only the theme switch, and the sidebar takes over the
+ * links and the account; below lg a menu button opens the sidebar drawer.
  */
 export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNav?: () => void } = {}) {
   const pathname = usePathname();
@@ -65,7 +65,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
         )}
         <div className="ml-auto flex items-center gap-3">
           <ThemeToggle size="sm" showLabel={false} />
-          {loading ? <span className="h-8 w-20" aria-hidden="true" /> : session ? (
+          {app ? null : loading ? <span className="h-8 w-20" aria-hidden="true" /> : session ? (
             <Menu align="end" items={menu}
               header={<div className="px-3 pt-1 pb-2"><p className="truncate text-label-md text-ink">{session.name || "Gigster"}</p><p className="truncate text-body-sm text-ink-muted">{session.email}</p></div>}
               trigger={

@@ -107,6 +107,16 @@
  * with data-tilt, lean a few degrees toward the pointer while a soft light follows it (TiltCards sets
  * --tilt-x / --tilt-y / --mx / --my). Transforms only, so nothing around them moves. Off with reduced motion.
  */
+/* Hand lettering (components/ui/Lettering.tsx) is black ink; in dark mode it turns to soft white. */
+:where([data-theme=dark]) .lettering { filter: invert(1) brightness(.92); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme=light]) .lettering { filter: invert(1) brightness(.92); } }
+
+/* Horizontal scrollers swipe and scroll without showing a bar; their edges or buttons say there is more. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
 @utility lift {
   position: relative; isolation: isolate; transform-style: preserve-3d;
   transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateY(var(--lift-y, 0px));

@@ -104,9 +104,7 @@
 @keyframes sb-cap-in { 0% { opacity: 0; } }
 
 /* Peter's handwritten "Your next chapter starts here." is black ink on transparent: lift it to light ink in dark mode. */
-.sb-script { display: block; width: min(300px, 70vw); height: auto; }
-:where([data-theme=dark]) .sb-script { filter: invert(1) brightness(.92); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme=light]) .sb-script { filter: invert(1) brightness(.92); } }
+.sb-script { width: min(300px, 70vw); }
 
 @media (prefers-reduced-motion: reduce) {
   .sb-book.cover-leave, .sb-book.cover-enter, .sb-caption { animation: none; }

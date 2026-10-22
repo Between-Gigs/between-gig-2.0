@@ -1,7 +1,7 @@
 "use client";
 import { Accordion, Badge, Button, Field, IconButton, Input, Modal, Select, Textarea, cx } from "@ds/components";
 import { Reveal } from "@ds/motion";
-import { ArrowRight, ArrowUpRight, BadgeCheck, Check, ChevronLeft, ChevronRight, Info, MapPin, MessageSquare, Star } from "lucide-react";
+import { ArrowRight, ArrowUpRight, BadgeCheck, Check, ChevronLeft, ChevronRight, Clapperboard, Film, Info, MapPin, MessageSquare, Star, Tv, Video } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import type { Person, Profile, ProfileFields } from "@/lib/data";
@@ -33,6 +33,43 @@ const faqs = (first: string) => [
 const norm = (s: string) => s.toLowerCase().split(/[^a-z]+/).filter((w) => w && w !== "and").sort().join(" ");
 
 /** "Production · Role (sample credit)" → title and role. The sample marker is covered by the page's one sample note. */
+/** Poster placeholders: a dark tint per production (stable for the same title) and an icon for the medium. */
+const posterTints = [
+  "from-forest-600 via-forest-800 to-forest-950",
+  "from-blue-700 via-forest-900 to-forest-950",
+  "from-amber-700 via-forest-900 to-forest-950",
+  "from-sage-600 via-sage-800 to-sage-900",
+  "from-red-700 via-forest-900 to-forest-950",
+];
+function posterFor(title: string) {
+  const hash = [...title].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
+  const t = title.toLowerCase();
+  const Icon = /series|show|tv/.test(t) ? Tv : /documentary|doc\b/.test(t) ? Video : /feature|film|movie/.test(t) ? Film : Clapperboard;
+  return { tint: posterTints[hash % posterTints.length], Icon };
+}
+
+/**
+ * A credit as an IMDb-style "Known for" card: a poster, then the title and the role under it. There are no
+ * real posters yet, so the poster is a placeholder: a tinted gradient with the medium's icon and the title.
+ */
+function CreditCard({ title, role }: { title: string; role: string }) {
+  const { tint, Icon } = posterFor(title);
+  return (
+    <figure className="grid w-32 shrink-0 gap-2 sm:w-36">
+      <div data-theme="dark" aria-hidden="true"
+        className={cx("relative flex aspect-2/3 flex-col justify-end overflow-hidden rounded-md border border-line bg-linear-to-b p-3 shadow-md", tint)}>
+        <Icon className="absolute top-1/2 left-1/2 size-14 -translate-x-1/2 -translate-y-2/3 text-ink opacity-15" strokeWidth={1.25} />
+        <span className="absolute inset-x-0 top-0 h-1/3 bg-linear-to-b from-surface-embed/10 to-transparent" />
+        <span lang="en" className="relative font-display text-heading-sm text-balance hyphens-auto text-ink">{title}</span>
+      </div>
+      <figcaption className="grid gap-0.5 px-0.5">
+        <span className="line-clamp-2 text-label-md text-ink">{title}</span>
+        <span className="text-body-sm text-ink-muted">{role || "Crew"}</span>
+      </figcaption>
+    </figure>
+  );
+}
+
 function splitCredit(c: string, sample: boolean) {
   const clean = sample ? c.replace(/\s*\(sample credit\)\s*$/i, "") : c;
   const [title, ...rest] = clean.split(" · ");
@@ -120,17 +157,11 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
   const creditStrip = (className: string) => credits.length > 0 && (
     <div className={className}>
       <div className="flex items-baseline gap-3">
-        <h2 className="text-eyebrow text-ink-subtle uppercase">Credits</h2>
-        <span className="text-caption text-ink-subtle">As listed by {first}</span>
+        <h2 className="font-display text-heading-sm text-ink">Known for</h2>
+        <span className="text-body-sm text-ink-subtle">Credits as listed by {first}</span>
       </div>
-      <ul className="mt-2 flex gap-2.5 overflow-x-auto pb-1">
-        {credits.map((c) => (
-          <li key={`${c.title}-${c.role}`} data-theme="dark" className="flex aspect-2/3 w-28 shrink-0 sm:w-32 flex-col justify-between gap-2 rounded-lg border border-line bg-surface-brand phosphor-dots p-3">
-            <span aria-hidden="true" className="border-t-2 border-dotted border-ink-brand" />
-            <span lang="en" className="font-display text-heading-sm text-balance hyphens-auto text-ink">{c.title}</span>
-            <span className="text-label-sm text-ink-brand">{c.role || "Crew"}</span>
-          </li>
-        ))}
+      <ul className="no-scrollbar mt-3 flex gap-3 overflow-x-auto pb-1">
+        {credits.map((c) => <li key={`${c.title}-${c.role}`}><CreditCard title={c.title} role={c.role} /></li>)}
       </ul>
     </div>
   );
@@ -167,7 +198,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
                   {showImdb && (
                     // The chip looks small; the link around it is a full-size target on phones.
                     <a href={f.imdb} target="_blank" rel="noreferrer" className="group inline-flex min-h-11 items-center sm:min-h-6">
-                      <span className="inline-flex h-6 items-center gap-1 rounded-full border border-line-strong px-2.5 text-label-sm text-ink transition-colors duration-fast group-hover:bg-surface-hover">
+                      <span className="inline-flex h-6 items-center gap-1 rounded-sm bg-amber-300 px-2 text-label-sm font-bold tracking-tight text-forest-950 transition-[filter] duration-fast group-hover:brightness-95">
                         IMDb<ArrowUpRight className="size-3.5" aria-hidden="true" /><span className="sr-only"> page for {f.name} (opens in a new tab)</span>
                       </span>
                     </a>
@@ -223,7 +254,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
 
         <div className="min-w-0 lg:col-span-8 lg:row-start-2">
           <nav aria-label="Profile sections" className="sticky top-16 z-sticky -mx-4 mt-2 border-b border-line bg-bg/90 backdrop-blur-md sm:mx-0">
-            <ul ref={tabs} className="relative flex gap-1 overflow-x-auto px-4 sm:px-0">
+            <ul ref={tabs} className="no-scrollbar relative flex gap-1 overflow-x-auto px-4 sm:px-0">
               {sections.map(([id, label]) => (
                 <li key={id} className="last:pr-8 sm:last:pr-0">
                   <button type="button" data-tab={id} onClick={() => jump(id)} aria-current={active === id ? "true" : undefined}

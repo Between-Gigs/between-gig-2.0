@@ -6,7 +6,7 @@ import "./funnel.css";
 
 /**
  * A horizontal, scroll-snapping row of cards: a real list in a labelled, keyboard-scrollable region, with soft
- * edges and a thin scrollbar as the affordance, and previous/next buttons from sm up. `gridFrom` turns it
+ * edges and previous/next buttons (from sm up) as the affordance; the scrollbar itself is hidden. `gridFrom` turns it
  * back into a plain grid from that breakpoint (two columns from md, four from lg).
  */
 export function Carousel({ label, children, itemClassName, gridFrom, className }: {

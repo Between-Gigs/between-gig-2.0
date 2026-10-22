@@ -1,10 +1,12 @@
 "use client";
-import { Count, Drawer, IconButton, Input, cx } from "@ds/components";
-import { ClipboardCheck, Compass, Globe, LayoutDashboard, ListPlus, Mail, PanelLeftClose, PanelLeftOpen, Search, Users } from "lucide-react";
+import { Avatar, Count, Drawer, IconButton, Input, cx } from "@ds/components";
+import { ClipboardCheck, LayoutDashboard, ListPlus, LogOut, Mail, PanelLeftClose, PanelLeftOpen, Search, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import { data, type DashboardSummary } from "@/lib/data";
+import { useAuthActions } from "@/lib/auth/context";
+import { useSession } from "@/lib/session";
 import { SiteHeader } from "@/components/site/SiteHeader";
 
 /** The collapsed rail is remembered here; app/layout.tsx restores it onto <html data-owner-nav> before first paint. */
@@ -174,10 +176,31 @@ function OwnerNav({ counts, section, toggle, searchRef, onOpenSearch, onNavigate
         ))}
       </div>
 
-      <div className={cx("grid gap-0.5 border-t border-line pt-3", !drawer && "px-3", rail("nav-collapsed:justify-items-center"))}>
-        <NavLink item={{ href: "/", label: "Public site", icon: <Globe /> }} active={false} onNavigate={onNavigate} rail={rail} attention={false} />
-        {data.demo && <NavLink item={{ href: "/preview/", label: "Preview guide", icon: <Compass /> }} active={false} onNavigate={onNavigate} rail={rail} attention={false} />}
+      <Account drawer={drawer} rail={rail} />
+    </div>
+  );
+}
+
+/** Who is signed in, and signing out: the foot of the sidebar (collapsed, the avatar and the sign-out button). */
+function Account({ drawer, rail }: { drawer: boolean; rail: (cls: string) => string }) {
+  const { session } = useSession();
+  const auth = useAuthActions();
+  const router = useRouter();
+  if (!session) return null;
+  const name = (session.name || session.email).replace(/\s*\(.*\)$/, "");
+  const signOut = async () => {
+    await auth.signOut();
+    // Clerk's sign-out navigates by itself (to /login/?signedOut=1).
+    if (auth.provider === "sample") router.push("/login/?signedOut=1");
+  };
+  return (
+    <div className={cx("flex items-center gap-3 border-t border-line pt-3", !drawer && "px-3", rail("nav-collapsed:flex-col nav-collapsed:gap-2 nav-collapsed:px-0"))}>
+      <span title={`${name} · ${session.email}`} className="inline-flex"><Avatar name={name} size="md" /></span>
+      <div className={cx("grid min-w-0 flex-1", rail("nav-collapsed:hidden"))}>
+        <span className="truncate text-label-md text-ink">{name}</span>
+        <span className="truncate text-caption text-ink-subtle">{session.email}</span>
       </div>
+      <IconButton variant="ghost" size="sm" label="Sign out" icon={<LogOut />} onClick={() => void signOut()} />
     </div>
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 import { Button, IconButton, cx } from "@ds/components";
-import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import * as React from "react";
 import { asset } from "@/lib/site";
+import { Lettering } from "@/components/ui/Lettering";
 import { scenePages } from "@/lib/storyboard";
 import { createBook, type BookState } from "./engine";
 import "./book.css";
@@ -11,8 +12,8 @@ export interface StoryBookHandle { goTo: (index: number) => void; prefetch: (ind
 
 /**
  * The Storyboard hero, as approved: one centered column. Peter's handwritten "Your next chapter starts
- * here.", the sketchbook (drag a page, tap a half, or use the arrows / arrow keys), the caption, zoom, the
- * hint, then the two ways in.
+ * here.", the sketchbook (drag a page, tap a half, or use the arrows / arrow keys), the caption, the page
+ * count, the hint, then the two ways in.
  */
 export const StoryBook = React.forwardRef<StoryBookHandle, { onPlan: (kind: "buyer" | "talent") => void; onScrollOn: () => void }>(
   function StoryBook({ onPlan, onScrollOn }, ref) {
@@ -53,7 +54,7 @@ export const StoryBook = React.forwardRef<StoryBookHandle, { onPlan: (kind: "buy
     return (
       <section aria-labelledby="sb-h" className="relative mx-auto grid w-full max-w-5xl justify-items-center gap-5 px-4 pt-10 pb-6 sm:px-6 sm:pt-14">
         <h1 id="sb-h" className="m-0">
-          <img src={asset("art/your-next-chapter-transparent.png")} width={300} height={100} alt="Your next chapter starts here." className="sb-script" />
+          <Lettering name="next-chapter" className="sb-script" />
         </h1>
 
         <div ref={stage} className="sb-stage" role="group" aria-roledescription="book" aria-label="The Storyboard: a sketchbook of what Between Gigs talent can do">
@@ -80,11 +81,6 @@ export const StoryBook = React.forwardRef<StoryBookHandle, { onPlan: (kind: "buy
 
         <div className="flex flex-wrap items-center justify-center gap-3">
           <span className="contents sm:hidden"><TurnButton dir="prev" disabled={!state.canPrev} onClick={() => engine.current?.step("prev")} /></span>
-          <div role="group" aria-label="Zoom" className="flex items-center gap-1 rounded-full border border-line bg-surface/70 px-1.5 py-1 backdrop-blur-sm">
-            <IconButton label="Zoom out" variant="ghost" size="sm" icon={<Minus />} disabled={state.zoom <= 0.901} onClick={() => engine.current?.zoom(1 / 1.16)} />
-            <span className="min-w-10 text-center text-label-sm text-ink-subtle tabular-nums">{Math.round(state.zoom * 100)}%</span>
-            <IconButton label="Zoom in" variant="ghost" size="sm" icon={<Plus />} disabled={state.zoom >= 1.499} onClick={() => engine.current?.zoom(1.16)} />
-          </div>
           <span className="text-label-sm text-ink-subtle tabular-nums">{state.index + 1} / {scenePages.length}</span>
           <span className="contents sm:hidden"><TurnButton dir="next" disabled={!state.canNext} onClick={() => engine.current?.step("next")} /></span>
         </div>

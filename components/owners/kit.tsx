@@ -154,7 +154,7 @@ export interface ChipOption { value: string; label: string; count?: number | nul
 /** Filter chips: "All" plus one per status, each with its count. Scrolls sideways on phones. */
 export function FilterChips({ label, options, value, onChange }: { label: string; options: ChipOption[]; value: string; onChange: (v: string) => void }) {
   return (
-    <div role="group" aria-label={label} className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+    <div role="group" aria-label={label} className="-mx-4 no-scrollbar flex gap-2 overflow-x-auto px-4 pb-0.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
       {options.map((o) => {
         const on = o.value === value;
         return (
