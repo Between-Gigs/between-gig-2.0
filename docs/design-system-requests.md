@@ -39,3 +39,6 @@ adopt these (or tuned equivalents) in the system's dark tokens.
 - **Cumulative funnel**: a Funnel / StageStats variant for cumulative stages (owners dashboard `components/owners/Funnel.tsx`).
 - **Tag wrapping**: a Tag variant that wraps long chip text (review reason chips).
 - **"Value updated" flash** utility for live previews (the builder uses a colour transition on `data-flash`).
+- **Carousel** (scroll-snap list with scroll affordance and previous/next buttons) and **Marquee** (credits-roll strip, pauses on hover/focus, static with reduced motion): app versions in `components/funnel/Carousel.tsx` and `Marquee.tsx`.
+- **Bottom-anchored `glow-horizon`**: a variant that keeps the arc a fixed distance above the panel's bottom edge on small screens, so text never sits on it (app version: `Horizon` in `components/funnel/parts.tsx`).
+- **Image thumbnails**: a convention for smaller derived images (the Storyboard catalog uses `public/art/storyboard/thumbs/`, 800px).
