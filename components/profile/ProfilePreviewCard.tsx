@@ -12,7 +12,7 @@ export function ProfilePreviewCard({ fields: d, personId }: { fields: ProfileFie
   const tags = d.services.slice(0, 2);
   return (
     <article aria-label="Live preview of your profile card" className="overflow-hidden rounded-2xl border border-line bg-surface shadow-lg">
-      <div data-theme="dark" className="relative isolate h-32 overflow-hidden bg-surface-brand">
+      <div data-theme="dark" className="relative isolate h-32 overflow-hidden bg-surface-brand phosphor-dots">
         <span aria-hidden="true" className="glow-horizon opacity-70" />
         <Badge tone="brand" size="sm" className="absolute top-3 left-3 shadow-sm">Live preview</Badge>
       </div>

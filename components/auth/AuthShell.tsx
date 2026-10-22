@@ -15,7 +15,7 @@ export function AuthShell({ eyebrow, title, accent, lead, children, className }:
   return (
     <Page className="max-w-6xl">
       <div className="grid overflow-hidden rounded-2xl border border-line bg-surface shadow-lg lg:grid-cols-12">
-        <section data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand px-6 py-10 sm:px-10 lg:col-span-5 lg:py-14">
+        <section data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots px-6 py-10 sm:px-10 lg:col-span-5 lg:py-14">
           <span aria-hidden="true" className="glow-horizon opacity-60" />
           <div className="relative z-raised flex h-full flex-col">
             <p className="text-eyebrow text-ink-brand uppercase">{eyebrow}</p>

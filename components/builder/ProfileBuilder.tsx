@@ -37,7 +37,7 @@ export function ProfileBuilder() {
 
 function Intro() {
   return (
-    <section data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand">
+    <section data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
       <span aria-hidden="true" className="glow-horizon opacity-50" />
       <div className="relative z-raised mx-auto max-w-7xl px-4 pt-10 pb-24 sm:px-6 sm:pt-12">
         <Reveal effect="fade-up"><p className="text-eyebrow text-ink-brand uppercase">Good work. Great people. Your next chapter.</p></Reveal>

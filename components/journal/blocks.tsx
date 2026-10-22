@@ -61,7 +61,7 @@ export function ProductionKit() {
     ["The venue walk-through", "Guest routes, access, restrooms, power, load-in, weather alternatives and any animal decision."],
   ];
   return (
-    <section aria-labelledby="kit-h" data-theme="dark" className="relative isolate overflow-hidden rounded-2xl bg-surface-brand p-5 sm:p-6">
+    <section aria-labelledby="kit-h" data-theme="dark" className="relative isolate overflow-hidden rounded-2xl bg-surface-brand phosphor-dots p-5 sm:p-6">
       <span aria-hidden="true" className="glow-horizon opacity-50" />
       <div className="relative z-raised">
         <p className="font-mono text-data-sm tracking-wider text-ink-brand uppercase">Pin this to the production wall</p>

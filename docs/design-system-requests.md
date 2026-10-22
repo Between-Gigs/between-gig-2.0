@@ -14,3 +14,11 @@ Things Between Gigs 2.0 needed that the design system (v1.6.2, fc658c8) doesn't 
 | 8 | Logo as PNG for email clients. | `scripts/build-email-assets.mjs` renders `public/email/between-gigs-wide-on-{light,dark}.png` (2x). | Add PNG exports to `logos/`. |
 | 9 | Route-level view transitions (morph across a Next.js route change). | `lib/motion.ts` (`useMorphNavigate`, `useSettleWhen`). | A router-agnostic `startRouteTransition(navigate, ready)` in `src/motion`. |
 | 10 | React 19 peer range. | Works as is with React 19.2. | Widen `peerDependencies` to `^18.2 \|\| ^19`. |
+
+## Europium dots on every brand panel (app utility for now)
+
+The client wants the dotted phosphor grain from `backdrop-europium` on all forest-green brand surfaces, not only
+the Coming soon page. The app adds `phosphor-dots` (`app/globals.css`): the same dot layers, sizes and strengths,
+painted over the panel's own `surface-brand` instead of repainting it `forest-950`. Request: a system utility (or a
+`backdrop-europium` variant that keeps the ground) so this lives in the design system, and an update to
+MATERIALS.md's "one per page" note.

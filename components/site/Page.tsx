@@ -18,7 +18,7 @@ export function Page({ children, className, bare = false }: { children: React.Re
 /** The brand band that opens a page: forest in both themes, so it is a dark-theme island. */
 export function BrandBand({ eyebrow, title, accent, children, className }: { eyebrow?: string; title: React.ReactNode; accent?: React.ReactNode; children?: React.ReactNode; className?: string }) {
   return (
-    <section data-theme="dark" className={cx("relative isolate overflow-hidden bg-surface-brand", className)}>
+    <section data-theme="dark" className={cx("relative isolate overflow-hidden bg-surface-brand phosphor-dots", className)}>
       <span aria-hidden="true" className="glow-horizon opacity-50" />
       <div className="relative z-raised mx-auto max-w-7xl px-4 pt-12 pb-24 sm:px-6">
         {eyebrow && <p className="text-eyebrow text-ink-brand uppercase">{eyebrow}</p>}

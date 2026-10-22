@@ -38,8 +38,8 @@ export const clerkAppearance = {
   elements: {
     // Sit flush inside our brand frame: no second card, shadow or Clerk footer box.
     rootBox: "w-full",
-    cardBox: "w-full shadow-none border-0 rounded-none",
-    card: "bg-transparent shadow-none p-0 gap-6",
+    cardBox: "w-full shadow-none border-0 rounded-none overflow-visible",
+    card: "bg-transparent shadow-none px-0 pt-1 pb-0 gap-6",
     headerTitle: "font-display text-display-sm text-ink",
     headerSubtitle: "text-body-md text-ink-muted",
     formFieldLabel: "text-label-md text-ink",

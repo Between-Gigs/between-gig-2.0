@@ -34,7 +34,7 @@ export function VisitorHome() {
   return (
     <div>
       {/* Hero with the search front and centre */}
-      <section data-theme="dark" aria-labelledby="v-hero" className="relative isolate overflow-hidden rounded-2xl bg-surface-brand">
+      <section data-theme="dark" aria-labelledby="v-hero" className="relative isolate overflow-hidden rounded-2xl bg-surface-brand phosphor-dots">
         <span aria-hidden="true" className="glow-horizon opacity-60" />
         <div className="relative z-raised grid gap-8 px-5 pt-12 pb-10 sm:px-10 lg:grid-cols-12 lg:pt-16">
           <div className="lg:col-span-8">
@@ -133,7 +133,7 @@ export function VisitorHome() {
       </ProposalNote>
 
       {/* How it works + trust */}
-      <section aria-labelledby="v-how" data-theme="dark" className="relative isolate mt-14 overflow-hidden rounded-2xl bg-surface-brand p-6 sm:p-10">
+      <section aria-labelledby="v-how" data-theme="dark" className="relative isolate mt-14 overflow-hidden rounded-2xl bg-surface-brand phosphor-dots p-6 sm:p-10">
         <span aria-hidden="true" className="glow-horizon opacity-50" />
         <div className="relative z-raised grid gap-8 lg:grid-cols-12">
           <h2 id="v-how" className="font-display text-display-sm text-ink lg:col-span-4">How it works</h2>

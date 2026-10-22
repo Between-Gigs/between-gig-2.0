@@ -53,7 +53,7 @@ export function ProfessionalsLanding() {
   return (
     <Page bare>
       {/* Hero */}
-      <section data-theme="dark" aria-labelledby="hero-h" className="relative isolate overflow-hidden bg-surface-brand">
+      <section data-theme="dark" aria-labelledby="hero-h" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
         <span aria-hidden="true" className="glow-horizon opacity-60" />
         <div className="relative z-raised mx-auto grid max-w-7xl items-center gap-12 px-4 pt-14 pb-24 sm:px-6 lg:grid-cols-12 lg:pt-20 lg:pb-28">
           <div className="lg:col-span-7">
@@ -167,7 +167,7 @@ export function ProfessionalsLanding() {
           <p className="text-body-lg text-ink-muted">Between Gigs connects you with clients who value the creativity, craftsmanship, and expertise you've developed in entertainment.</p>
           <p className="text-body-lg text-ink-muted">Bring your skills beyond the set to projects, tasks, and services for people and businesses. Choose work that fits your interests, set your rates, and make room for your next production.</p>
           <p className="font-display text-heading-md text-ink">Your expertise. New clients. On your terms.</p>
-          <div data-theme="dark" className="relative isolate mt-2 overflow-hidden rounded-2xl bg-surface-brand p-6">
+          <div data-theme="dark" className="relative isolate mt-2 overflow-hidden rounded-2xl bg-surface-brand phosphor-dots p-6">
             <span aria-hidden="true" className="glow-horizon opacity-60" />
             <div className="relative z-raised">
               <p className="font-display text-heading-lg text-ink-brand">Launching in Los Angeles.</p>
@@ -191,7 +191,7 @@ export function ProfessionalsLanding() {
       </div>
 
       {/* Final call to action */}
-      <section id="waitlist" aria-labelledby="final-h" data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand">
+      <section id="waitlist" aria-labelledby="final-h" data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
         <span aria-hidden="true" className="glow-horizon opacity-60" />
         <div className="relative z-raised mx-auto grid max-w-3xl justify-items-center gap-4 px-4 py-20 text-center sm:px-6">
           <p className="text-eyebrow text-ink-brand uppercase">Bring your craft beyond the set</p>

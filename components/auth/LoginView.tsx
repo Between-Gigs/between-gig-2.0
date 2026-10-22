@@ -66,6 +66,8 @@ function ClerkLogin() {
         )}
         <ClerkSlot label="Loading sign-in">
           <SignIn routing="hash" signUpUrl={`${basePath}/join/`} withSignUp={false}
+            // Joining is by invite (the line below says so), so Clerk's "Don't have an account? Sign up" goes.
+            appearance={{ elements: { footerAction: "hidden" } }}
             initialValues={{ emailAddress: params.get("email") ?? undefined }}
             fallbackRedirectUrl={`${basePath}/login/${params.get("next") ? `?next=${encodeURIComponent(params.get("next")!)}` : ""}`} />
         </ClerkSlot>

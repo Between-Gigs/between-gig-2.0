@@ -19,7 +19,7 @@ export function OwnerHome() {
 
   return (
     <div className="grid gap-10">
-      <section aria-labelledby="o-today" data-theme="dark" className="relative isolate overflow-hidden rounded-2xl bg-surface-brand p-6 sm:p-10">
+      <section aria-labelledby="o-today" data-theme="dark" className="relative isolate overflow-hidden rounded-2xl bg-surface-brand phosphor-dots p-6 sm:p-10">
         <span aria-hidden="true" className="glow-horizon opacity-60" />
         <div className="relative z-raised grid gap-6 lg:grid-cols-12 lg:items-end">
           <div className="lg:col-span-8">

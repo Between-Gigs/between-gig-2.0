@@ -42,7 +42,7 @@ export function GigsterHome({ personId }: { personId: string }) {
             <PersonStatusBadge status={p.status} audience="gigster" className="w-fit" />
           </div>
         </div>
-        <div data-theme="dark" className="relative isolate overflow-hidden rounded-2xl bg-surface-brand p-5 lg:col-span-5">
+        <div data-theme="dark" className="relative isolate overflow-hidden rounded-2xl bg-surface-brand phosphor-dots p-5 lg:col-span-5">
           <span aria-hidden="true" className="glow-horizon opacity-60" />
           <div className="relative z-raised grid gap-2">
             <p className="text-label-sm text-ink-brand">Next step</p>
