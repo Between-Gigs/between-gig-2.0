@@ -1,9 +1,10 @@
 "use client";
-import { Button, useToast } from "@ds/components";
+import { Button, SegmentedControl, cx, useToast } from "@ds/components";
 import { Reveal } from "@ds/motion";
-import { ArrowRight, Mail, RotateCcw, Search, UserRoundPlus } from "lucide-react";
+import { ArrowRight, LayoutGrid, List, Mail, RotateCcw, Search, UserRoundPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import * as React from "react";
 import { data } from "@/lib/data";
 import { BrandBand, Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
@@ -35,28 +36,39 @@ const pages = [
  * A guide card: a thumbnail of where it goes, a title and one line. The whole card is the link (or button),
  * and it lifts toward the pointer like the rest of the app's cards.
  */
-function GuideCard({ thumb, title, body, href, onClick, tag }: { thumb: string; title: React.ReactNode; body: string; href?: string; onClick?: () => void; tag?: string }) {
+type GuideView = "grid" | "list";
+const VIEW_KEY = "bg2-guide-view";
+
+function GuideCard({ thumb, title, body, href, onClick, tag, view }: { thumb: string; title: React.ReactNode; body: string; href?: string; onClick?: () => void; tag?: string; view: GuideView }) {
+  const list = view === "list";
   const inner = (
     <>
-      <span className="relative block overflow-hidden rounded-md border border-line bg-surface-sunken">
+      <span className={cx("relative block shrink-0 overflow-hidden rounded-md border border-line bg-surface-sunken", list && "w-28 sm:w-40")}>
         <img src={asset(`thumbs/${thumb}.jpg`)} alt="" width={640} height={400} loading="lazy" decoding="async"
           className="aspect-video w-full object-cover object-top transition-transform duration-slow ease-standard group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100" />
-        {tag && <span className="absolute top-2 left-2 rounded-full bg-surface/85 px-2 py-0.5 text-label-sm text-ink backdrop-blur-sm">{tag}</span>}
+        {tag && !list && <span className="absolute top-2 left-2 rounded-full bg-surface/85 px-2 py-0.5 text-label-sm text-ink backdrop-blur-sm">{tag}</span>}
       </span>
-      <span className="flex items-start justify-between gap-3 px-1">
-        <span className="grid gap-0.5">
+      <span className={cx("flex min-w-0 flex-1 items-start justify-between gap-3", !list && "px-1")}>
+        <span className="grid min-w-0 gap-0.5">
+          {tag && list && <span className="text-label-sm text-ink-brand">{tag}</span>}
           <span className="text-label-md text-ink">{title}</span>
           <span className="text-body-sm text-ink-muted">{body}</span>
         </span>
-        <ArrowRight className="mt-0.5 size-4 shrink-0 text-ink-subtle transition-transform duration-fast group-hover:translate-x-0.5 group-hover:text-ink-brand" aria-hidden="true" />
+        <ArrowRight className={cx("size-4 shrink-0 text-ink-subtle transition-transform duration-fast group-hover:translate-x-0.5 group-hover:text-ink-brand", list ? "self-center" : "mt-0.5")} aria-hidden="true" />
       </span>
     </>
   );
-  const cls = "lift group grid h-full content-start gap-3 rounded-lg border border-line bg-surface p-3 text-left";
+  const cls = list
+    ? "row-lift group flex w-full items-center gap-4 rounded-lg border border-line bg-surface p-2.5 pr-4 text-left hover:bg-surface-hover"
+    : "lift group grid h-full content-start gap-3 rounded-lg border border-line bg-surface p-3 text-left";
+  const tilt = list ? undefined : "";
   return href
-    ? <Link href={href} data-tilt="" className={cls}>{inner}</Link>
-    : <button type="button" data-tilt="" onClick={onClick} className={cls}>{inner}</button>;
+    ? <Link href={href} data-tilt={tilt} className={cls}>{inner}</Link>
+    : <button type="button" data-tilt={tilt} onClick={onClick} className={cls}>{inner}</button>;
 }
+
+/** The two guide lists share one layout: thumbnails in a grid, or rows you can scan top to bottom. */
+const listClass = (view: GuideView) => (view === "list" ? "mt-5 grid gap-2 lg:grid-cols-2" : "mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4");
 
 /**
  * "/" for Milestone 2: a guide to the preview for Justin and the client. The real home page is
@@ -64,6 +76,15 @@ function GuideCard({ thumb, title, body, href, onClick, tag }: { thumb: string; 
  */
 export function Overview() {
   const router = useRouter();
+  const [view, setView] = React.useState<GuideView>("grid");
+  React.useEffect(() => {
+    try { const v = localStorage.getItem(VIEW_KEY); if (v === "grid" || v === "list") setView(v); } catch { /* ignore */ } // eslint-disable-line react-hooks/set-state-in-effect
+  }, []);
+  const changeView = (v: string) => { setView(v as GuideView); try { localStorage.setItem(VIEW_KEY, v); } catch { /* ignore */ } };
+  const viewSwitch = (
+    <SegmentedControl label="View" size="sm" value={view} onChange={changeView}
+      options={[{ value: "grid", label: "Grid", icon: <LayoutGrid /> }, { value: "list", label: "List", icon: <List /> }]} />
+  );
   const toast = useToast();
   const asGigster = async (id: string, go: string) => { await data.demo?.signInAs("gigster", id); router.push(go); };
   const asVisitor = async () => { await data.auth.signOut(); router.push("/"); };
@@ -117,23 +138,31 @@ export function Overview() {
                 <h2 id="roles-h" className="font-display text-heading-lg text-ink">Try every role</h2>
                 <p className="mt-1 max-w-2xl text-body-md text-ink-muted">Step into the sample as anyone. No sign-in needed: it uses the fictional sample accounts, kept in this browser.</p>
               </div>
-              <Button size="sm" variant="ghost" iconStart={<RotateCcw />} onClick={reset}>Reset sample data</Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" variant="ghost" iconStart={<RotateCcw />} onClick={reset}>Reset sample data</Button>
+                {viewSwitch}
+              </div>
             </div>
-            <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <li><GuideCard thumb="owner" tag="Owner" title="Open as owner" body="Dashboard, review queue, people, waitlist." onClick={startOwner} /></li>
-              <li><GuideCard thumb="invite" tag="Invited" title="Open the invite" body="Create the account, then build a profile." onClick={startInvite} /></li>
+            <ul className={listClass(view)}>
+              <li><GuideCard view={view} thumb="owner" tag="Owner" title="Open as owner" body="Dashboard, review queue, people, waitlist." onClick={startOwner} /></li>
+              <li><GuideCard view={view} thumb="invite" tag="Invited" title="Open the invite" body="Create the account, then build a profile." onClick={startInvite} /></li>
               {gigsters.map((g) => (
-                <li key={g.id}><GuideCard thumb={g.thumb} tag="Gigster" title={`Sign in as ${g.name}`} body={g.state} onClick={() => asGigster(g.id, g.go)} /></li>
+                <li key={g.id}><GuideCard view={view} thumb={g.thumb} tag="Gigster" title={`Sign in as ${g.name}`} body={g.state} onClick={() => asGigster(g.id, g.go)} /></li>
               ))}
-              <li><GuideCard thumb="home" tag="Visitor" title="Sign out" body="See the site as the public does." onClick={asVisitor} /></li>
+              <li><GuideCard view={view} thumb="home" tag="Visitor" title="Sign out" body="See the site as the public does." onClick={asVisitor} /></li>
             </ul>
           </section>
         )}
         <section aria-labelledby="more-h" className="mt-6 rounded-2xl border border-line bg-surface p-6">
-          <h2 id="more-h" className="font-display text-heading-lg text-ink">Every page</h2>
-          <p className="mt-1 text-body-md text-ink-muted">The public pages, sign-in, a live profile and every email. Pick one to open it.</p>
-          <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {pages.map((pg) => <li key={pg.href}><GuideCard thumb={pg.thumb} title={pg.title} body={pg.body} href={pg.href} /></li>)}
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 id="more-h" className="font-display text-heading-lg text-ink">Every page</h2>
+              <p className="mt-1 text-body-md text-ink-muted">The public pages, sign-in, a live profile and every email. Pick one to open it.</p>
+            </div>
+            {!data.demo && viewSwitch}
+          </div>
+          <ul className={listClass(view)}>
+            {pages.map((pg) => <li key={pg.href}><GuideCard view={view} thumb={pg.thumb} title={pg.title} body={pg.body} href={pg.href} /></li>)}
           </ul>
         </section>
         <p className="mt-6 text-body-sm text-ink-subtle">Names shown are illustrative samples for this draft.</p>

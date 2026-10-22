@@ -4,6 +4,7 @@
  * Nothing leaves the browser: "sent" emails land in a local outbox you can open at /emails.
  */
 import { renderEmail } from "@/emails";
+import { craftOf } from "@/lib/profile/department";
 import { completeness, validateAll } from "@/lib/profile/validate";
 import { absoluteUrl } from "@/lib/site";
 import { blankFields, buildActivity, buildSeed, buildWaitlist, DEMO_TOKENS, SAMPLE_OWNER, type SeedState } from "./seed";
@@ -110,6 +111,10 @@ function matches(s: PersonSummary, q: PeopleQuery) {
   if (q.service && q.service !== "all" && !f?.services.includes(q.service)) return false;
   if (q.area && q.area !== "all" && !f?.areas.includes(q.area)) return false;
   if (q.availability && q.availability !== "all" && f?.monthStatus !== q.availability) return false;
+  if (q.craft && q.craft !== "all" && craftOf(f?.position, f?.skills) !== q.craft) return false;
+  if (q.profile === "complete" && s.completeness < 1) return false;
+  if (q.profile === "missing" && s.completeness >= 1) return false;
+  if (q.profile === "no-photo" && f?.photo) return false;
   const text = q.text?.trim().toLowerCase();
   if (text) {
     const hay = [s.person.name, s.person.email, s.person.waitlistZip, f?.position, f?.about, ...(f?.services ?? []), ...(f?.skills ?? []), ...(f?.areas ?? [])]

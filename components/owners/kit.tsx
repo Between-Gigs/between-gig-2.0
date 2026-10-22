@@ -65,24 +65,50 @@ export function OwnerPage({ title, description, meta, actions, breadcrumbs, fit 
 }
 
 /** The one card. A header bar (title, optional note or link on the right), a body, an optional footer. */
-export function Panel({ title, id, aside, footer, flush = false, landmark = true, className, bodyClassName, children }: {
+export function Panel({ title, id, aside, footer, flush = false, landmark = true, collapsible, className, bodyClassName, children }: {
   title?: React.ReactNode; id?: string; aside?: React.ReactNode; footer?: React.ReactNode; flush?: boolean;
   /** false when the panel holds content with its own landmarks (a profile's aside), which can't nest in a region. */
-  landmark?: boolean; className?: string; bodyClassName?: string; children: React.ReactNode;
+  landmark?: boolean;
+  /**
+   * On pages with more than one table: a key, and the panel gets a minimise / expand button in its header.
+   * The choice is remembered per browser, so a table you folded away stays folded.
+   */
+  collapsible?: string;
+  className?: string; bodyClassName?: string; children: React.ReactNode;
 }) {
   const auto = React.useId();
   const hid = id ?? `panel-${auto}`;
+  const body = `${hid}-body`;
   const Tag = landmark ? "section" : "div";
+  const [open, setOpen] = React.useState(true);
+  React.useEffect(() => {
+    if (!collapsible) return;
+    try { if (localStorage.getItem(`bg2-panel-${collapsible}`) === "closed") setOpen(false); } catch { /* ignore */ } // eslint-disable-line react-hooks/set-state-in-effect
+  }, [collapsible]);
+  const toggle = () => {
+    setOpen((o) => {
+      try { localStorage.setItem(`bg2-panel-${collapsible}`, o ? "closed" : "open"); } catch { /* ignore */ }
+      return !o;
+    });
+  };
   return (
     <Tag aria-labelledby={title && landmark ? hid : undefined} className={cx("flex min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-surface", className)}>
       {title && (
-        <header className="flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line px-5 py-3">
-          <h2 id={hid} className="font-display text-heading-sm text-ink">{title}</h2>
-          {aside && <div className="flex items-center gap-3 text-body-sm text-ink-muted">{aside}</div>}
+        <header className={cx("flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 py-3", open && "border-b border-line")}>
+          {collapsible ? (
+            <h2 id={hid} className="font-display text-heading-sm text-ink">
+              <button type="button" onClick={toggle} aria-expanded={open} aria-controls={body}
+                className="group -ml-2 inline-flex min-h-10 items-center gap-1.5 rounded-md px-2 hover:bg-surface-hover">
+                <ChevronRight aria-hidden="true" className={cx("size-4 text-ink-subtle transition-transform duration-fast", open && "rotate-90")} />
+                {title}
+              </button>
+            </h2>
+          ) : <h2 id={hid} className="font-display text-heading-sm text-ink">{title}</h2>}
+          {aside && open && <div className="flex items-center gap-3 text-body-sm text-ink-muted">{aside}</div>}
         </header>
       )}
-      <div className={cx("min-w-0 flex-1", !flush && "p-5", bodyClassName)}>{children}</div>
-      {footer && <footer className="border-t border-line px-5 py-3">{footer}</footer>}
+      <div id={body} hidden={!open} className={cx("min-w-0 flex-1", !flush && "p-5", bodyClassName)}>{children}</div>
+      {footer && open && <footer className="border-t border-line px-5 py-3">{footer}</footer>}
     </Tag>
   );
 }

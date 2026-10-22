@@ -124,7 +124,7 @@ function Person({ id }: { id: string }) {
 
   // The profile as clients would see it, framed so it doesn't read as part of this page.
   const preview = fields ? (
-    <Panel className="mt-6" landmark={false} title="What clients see" aside={fromDraft ? "Unsubmitted draft, shown as it stands" : p.status === "approved" ? "Live on the site" : "Not public yet"} bodyClassName="p-4 sm:p-6">
+    <Panel className="mt-6" landmark={false} collapsible="person-preview" title="What clients see" aside={fromDraft ? "Unsubmitted draft, shown as it stands" : p.status === "approved" ? "Live on the site" : "Not public yet"} bodyClassName="p-4 sm:p-6">
       <ProfileView person={p} fields={fields} extras={profile?.extras} mode="owner" />
     </Panel>
   ) : (
@@ -139,7 +139,7 @@ function Person({ id }: { id: string }) {
     return (
       <OwnerShell section={section}>
         {crumbs(name)}
-        <ReviewWorkspace person={p} fields={fields} queue={queue} header={<>{condensed(true)}{header}{heroMark}</>}>{preview}</ReviewWorkspace>
+        <ReviewWorkspace person={p} fields={fields} queue={queue} header={<>{header}{heroMark}</>}>{preview}</ReviewWorkspace>
       </OwnerShell>
     );
   }

@@ -1,4 +1,5 @@
 "use client";
+import { cx } from "@ds/components";
 import Link from "next/link";
 import type { DashboardSummary } from "@/lib/data";
 import { Panel } from "./kit";
@@ -74,21 +75,27 @@ export function FunnelCompact({ d, onSelect, selected, bare = false }: { d: Dash
     { label: "Approved", value: f.approved, view: "approved" },
   ];
   const scale = f.invited || 1;
+  // Every percentage is a share of the invited, so the column only ever falls from 100% to the share now live.
   const rows = (
     <ol className="grid py-1.5">
-      {stages.map((s, i) => (
-        <li key={s.label} data-fit="">
-          <button type="button" onClick={() => onSelect(s.view)} aria-pressed={selected === s.view && i !== 1}
-            className="grid min-h-11 w-full grid-cols-12 items-center gap-3 px-5 py-1 text-left transition-colors duration-fast hover:bg-surface-hover">
-            <span className="col-span-5 truncate text-body-sm text-ink-muted">{s.label}</span>
-            <span aria-hidden="true" className="col-span-4 h-1.5 overflow-hidden rounded-full bg-surface-sunken">
-              <span className="block h-full rounded-full bg-action" style={{ width: `${Math.max((s.value / scale) * 100, s.value ? 2 : 0)}%` }} />
-            </span>
-            <span className="col-span-1 text-right text-label-md text-ink tabular-nums">{s.value}</span>
-            <span className="col-span-2 text-right text-caption text-ink-subtle tabular-nums">{i === 0 ? "" : `${pct(s.value, stages[i - 1].value)}%`}</span>
-          </button>
-        </li>
-      ))}
+      {stages.map((s, i) => {
+        // "Opened" has no list of its own (it shares the invited list), so only the other stages show as chosen.
+        const on = selected === s.view && i !== 1;
+        return (
+          <li key={s.label} data-fit="">
+            <button type="button" onClick={() => onSelect(s.view)} aria-pressed={on}
+              className={cx("grid min-h-11 w-full grid-cols-12 items-center gap-3 px-5 py-1 text-left transition-colors duration-fast",
+                on ? "bg-surface-selected" : "hover:bg-surface-hover")}>
+              <span className={cx("col-span-5 truncate text-body-sm", on ? "text-ink" : "text-ink-muted")}>{s.label}</span>
+              <span aria-hidden="true" className="col-span-4 h-1.5 overflow-hidden rounded-full bg-surface-sunken">
+                <span className="block h-full rounded-full bg-action" style={{ width: `${Math.max((s.value / scale) * 100, s.value ? 2 : 0)}%` }} />
+              </span>
+              <span className="col-span-1 text-right text-label-md text-ink tabular-nums">{s.value}</span>
+              <span className="col-span-2 text-right text-caption text-ink-subtle tabular-nums">{pct(s.value, f.invited)}%</span>
+            </button>
+          </li>
+        );
+      })}
     </ol>
   );
   if (bare) return rows;

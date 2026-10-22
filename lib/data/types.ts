@@ -180,8 +180,14 @@ export interface PeopleQuery {
   service?: string | "all";
   area?: string | "all";
   availability?: MonthStatus | "all";
+  /** A craft from lib/profile/department.ts `crafts`, matched on position and skills. */
+  craft?: string | "all";
+  /** How far the profile has got: every required answer in, something missing, or no photo yet. */
+  profile?: ProfileFilter;
   sort?: PeopleSort;
 }
+
+export type ProfileFilter = "all" | "complete" | "missing" | "no-photo";
 
 /** One row in the owner's people list: the person plus the parts of their profile worth searching. */
 export interface PersonSummary {

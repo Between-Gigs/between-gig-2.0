@@ -4,7 +4,8 @@ import { ChevronRight, LayoutGrid, List, Mail, MapPin, Search, SearchX, SlidersH
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
-import { data, personStatuses, type PeopleQuery, type PeopleSort, type PersonStatus, type PersonSummary } from "@/lib/data";
+import { data, personStatuses, type PeopleQuery, type PeopleSort, type PersonStatus, type PersonSummary, type ProfileFilter } from "@/lib/data";
+import { crafts } from "@/lib/profile/department";
 import { laServiceAreas, monthStatusLabel, offSetServices } from "@/lib/data/taxonomy";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { PersonStatusBadge, personStatusMeta } from "@/components/people/PersonStatusBadge";
@@ -13,7 +14,8 @@ import { OwnerShell } from "./OwnerShell";
 import { OwnerGate } from "./OwnerGate";
 
 const VIEW_KEY = "bg2-people-view";
-const blank: Required<PeopleQuery> = { text: "", status: "all", service: "all", area: "all", availability: "all", sort: "updated" };
+const blank: Required<PeopleQuery> = { text: "", status: "all", service: "all", area: "all", availability: "all", craft: "all", profile: "all", sort: "updated" };
+const profileFilterLabel: Record<Exclude<ProfileFilter, "all">, string> = { complete: "Profile complete", missing: "Something missing", "no-photo": "No photo yet" };
 
 const ago = (iso: string) => {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
@@ -64,18 +66,34 @@ function People() {
   }, [query]);
 
   const set = <K extends keyof PeopleQuery>(k: K) => (v: string) => setQuery((q) => ({ ...q, [k]: v }));
-  const filtered = query.status !== "all" || query.service !== "all" || query.area !== "all" || query.availability !== "all" || !!query.text;
-  const active = [query.service, query.area, query.availability].filter((v) => v !== "all").length;
-  const selects = (
-    <>
-      <Select aria-label="Service" value={query.service} onValueChange={set("service")}
-        options={[{ value: "all", label: "Any service" }, ...offSetServices.map((s) => ({ value: s, label: s }))]} />
-      <Select aria-label="Area" value={query.area} onValueChange={set("area")}
-        options={[{ value: "all", label: "Any area" }, ...laServiceAreas.map((s) => ({ value: s, label: s }))]} />
-      <Select aria-label="Availability" value={query.availability} onValueChange={set("availability")}
-        options={[{ value: "all", label: "Any availability" }, ...Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))]} />
-    </>
-  );
+  const filtered = query.status !== "all" || query.service !== "all" || query.area !== "all" || query.availability !== "all" || query.craft !== "all" || query.profile !== "all" || !!query.text;
+  // The filters besides status, with how each reads as a chip.
+  const extra = ([
+    ["craft", query.craft, query.craft],
+    ["service", query.service, query.service],
+    ["area", query.area, query.area],
+    ["availability", query.availability, monthStatusLabel[query.availability as keyof typeof monthStatusLabel]],
+    ["profile", query.profile, profileFilterLabel[query.profile as keyof typeof profileFilterLabel]],
+  ] as const).filter(([, v]) => v !== "all");
+  const active = extra.length;
+  const clearExtra = () => setQuery((q) => ({ ...blank, text: q.text, status: q.status, sort: q.sort }));
+  const selects = (inline: boolean) => {
+    const w = inline ? "w-auto min-w-40" : undefined;
+    return (
+      <>
+        <Select aria-label="Craft" size={inline ? "sm" : undefined} className={w} value={query.craft} onValueChange={set("craft")}
+          options={[{ value: "all", label: "Any craft" }, ...crafts.map((c) => ({ value: c.label, label: c.label }))]} />
+        <Select aria-label="Service" size={inline ? "sm" : undefined} className={w} value={query.service} onValueChange={set("service")}
+          options={[{ value: "all", label: "Any service" }, ...offSetServices.map((x) => ({ value: x, label: x }))]} />
+        <Select aria-label="Area" size={inline ? "sm" : undefined} className={w} value={query.area} onValueChange={set("area")}
+          options={[{ value: "all", label: "Any area" }, ...laServiceAreas.map((x) => ({ value: x, label: x }))]} />
+        <Select aria-label="Availability" size={inline ? "sm" : undefined} className={w} value={query.availability} onValueChange={set("availability")}
+          options={[{ value: "all", label: "Any availability" }, ...Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))]} />
+        <Select aria-label="Profile" size={inline ? "sm" : undefined} className={w} value={query.profile} onValueChange={set("profile")}
+          options={[{ value: "all", label: "Any profile" }, ...Object.entries(profileFilterLabel).map(([value, label]) => ({ value, label }))]} />
+      </>
+    );
+  };
   const reset = () => { setText(""); setQuery(blank); };
   const changeView = (v: string) => { setView(v); try { localStorage.setItem(VIEW_KEY, v); } catch { /* ignore */ } };
   const total = counts ? Object.values(counts).reduce((a, b) => a + b, 0) : 0;
@@ -84,7 +102,7 @@ function People() {
     <OwnerShell>
       <OwnerPage title="People" meta={counts ? total : "–"}
         description="Everyone from the waitlist on: who has joined, how far along their profile is, and who is waiting for review.">
-        {/* One line: search, status (with counts), and the rest behind Filters. Active filters show as chips. */}
+        {/* Search and status on one line; from md the other filters sit in a row beneath, on phones behind Filters. */}
         <div className="grid gap-3">
           <form role="search" onSubmit={(e) => { e.preventDefault(); setQuery((q) => ({ ...q, text })); }} className="flex flex-wrap items-center gap-2">
             <div className="min-w-0 flex-1 basis-60">
@@ -92,18 +110,23 @@ function People() {
             </div>
             <Select aria-label="Status" value={query.status} onValueChange={set("status")} className="w-full sm:w-60"
               options={[{ value: "all", label: `Everyone${counts ? ` · ${total}` : ""}` }, ...personStatuses.map((st) => ({ value: st, label: `${personStatusMeta[st].label}${counts ? ` · ${counts[st]}` : ""}` }))]} />
-            <Button type="button" variant="secondary" className="shrink-0" iconStart={<SlidersHorizontal />} onClick={() => setFilters(true)}
+            <Button type="button" variant="secondary" className="shrink-0 md:hidden" iconStart={<SlidersHorizontal />} onClick={() => setFilters(true)}
               aria-label={active ? `More filters, ${active} on` : "More filters"}>
               Filters{active > 0 && <span aria-hidden="true" className="ml-1 inline-grid size-5 place-items-center rounded-full bg-action text-label-sm text-on-action tabular-nums">{active}</span>}
             </Button>
           </form>
+          <div role="group" aria-label="Filters" className="hidden flex-wrap items-center gap-2 md:flex">
+            <SlidersHorizontal className="size-4 text-ink-subtle" aria-hidden="true" />
+            {selects(true)}
+            {active > 0 && <Button size="sm" variant="ghost" iconStart={<X />} onClick={clearExtra}>Clear {active} {active === 1 ? "filter" : "filters"}</Button>}
+          </div>
           {active > 0 && (
-            <ul aria-label="Active filters" className="flex flex-wrap gap-2">
-              {([["service", query.service], ["area", query.area], ["availability", query.availability]] as const).filter(([, val]) => val !== "all").map(([k, val]) => (
+            <ul aria-label="Active filters" className="flex flex-wrap gap-2 md:hidden">
+              {extra.map(([k, , label]) => (
                 <li key={k}>
-                  <button type="button" onClick={() => set(k)("all")} aria-label={`Remove filter: ${k === "availability" ? monthStatusLabel[val as keyof typeof monthStatusLabel] : val}`}
+                  <button type="button" onClick={() => set(k)("all")} aria-label={`Remove filter: ${label}`}
                     className="inline-flex h-8 items-center gap-1.5 rounded-full border border-ink-brand bg-surface-selected pr-2 pl-3 text-label-sm text-ink hover:bg-surface-hover">
-                    {k === "availability" ? monthStatusLabel[val as keyof typeof monthStatusLabel] : val}<X className="size-3.5" aria-hidden="true" />
+                    {label}<X className="size-3.5" aria-hidden="true" />
                   </button>
                 </li>
               ))}
@@ -111,8 +134,8 @@ function People() {
           )}
         </div>
         <Drawer open={filters} onClose={() => setFilters(false)} title="More filters" side="right"
-          footer={<><Button variant="ghost" onClick={() => { setQuery((q) => ({ ...blank, text: q.text, sort: q.sort })); }}>Clear</Button><Button variant="primary" onClick={() => setFilters(false)}>Show {rows?.length ?? 0} {rows?.length === 1 ? "person" : "people"}</Button></>}>
-          <div className="grid gap-3">{selects}</div>
+          footer={<><Button variant="ghost" onClick={clearExtra}>Clear</Button><Button variant="primary" onClick={() => setFilters(false)}>Show {rows?.length ?? 0} {rows?.length === 1 ? "person" : "people"}</Button></>}>
+          <div className="grid gap-3">{selects(false)}</div>
         </Drawer>
 
         <Panel flush title={<span aria-live="polite">{rows ? <><span className="tabular-nums">{rows.length}</span> {rows.length === 1 ? "person" : "people"}{filtered && " match"}</> : "People"}</span>}

@@ -53,7 +53,7 @@ function Queue() {
         description="Submitted profiles, oldest first. Open one to approve it or suggest edits, then move straight to the next."
         actions={rows.length > 0 && <ButtonLink href={reviewHref(rows[0].person.id)} variant="primary" iconEnd={<ArrowRight />}>Start with the oldest</ButtonLink>}>
         {rows.length === 0 ? <Wrap today={decided.filter((e) => isToday(e.at))} /> : (
-          <Panel title="Waiting for review" flush
+          <Panel title="Waiting for review" flush collapsible="queue-waiting"
             aside={common && <span className="inline-flex items-center gap-1.5"><MessageSquareWarning className="size-4 text-warning" aria-hidden="true" /><span className="tabular-nums">{common[1]} of {rows.length}</span> missing {common[0].toLowerCase()}</span>}>
             <ol>
               {rows.map(({ person: p, fields, completeness }, i) => (
@@ -67,7 +67,7 @@ function Queue() {
           </Panel>
         )}
 
-        <Panel title="Decided recently" flush aside={decided.length > 0 && <span>Undo is in the toast right after each decision</span>}>
+        <Panel title="Decided recently" flush collapsible="queue-decided" aside={decided.length > 0 && <span>Undo is in the toast right after each decision</span>}>
           {decided.length === 0 ? <p className="px-5 py-4 text-body-sm text-ink-muted">Nothing decided yet. Approvals and suggested edits show up here.</p> : (
             <ul>
               {decided.slice(0, 5).map((e) => {

@@ -1,6 +1,6 @@
 "use client";
-import { Banner, Button, Checkbox, Field, IconButton, Kbd, Modal, Tag, Textarea, Tooltip, cx, useToast } from "@ds/components";
-import { ArrowRight, ChevronLeft, ChevronRight, CircleCheck, Keyboard, MessageSquareWarning } from "lucide-react";
+import { Banner, Button, Checkbox, Field, IconButton, Kbd, Modal, Popover, Tag, Textarea, Tooltip, cx, useToast } from "@ds/components";
+import { ArrowRight, ChevronLeft, ChevronRight, CircleCheck, Keyboard, ListChecks, MessageSquareWarning } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
@@ -94,6 +94,25 @@ export function ReviewWorkspace({ person, fields, queue, header, children }: {
     return () => removeEventListener("keydown", onKey);
   }, [approve, busy, go, next, prev]);
 
+  // The same checklist in two places: the panel on the page, and a popover from the pinned bar, so it's in
+  // reach wherever you've scrolled to. Both share one set of ticks.
+  const checklist = (where: "page" | "bar") => (
+    <>
+      <p className={cx("flex items-start gap-2 rounded-md p-3 text-body-sm text-ink", missing.length ? "bg-warning-soft" : "bg-success-soft")}>
+        {missing.length ? <MessageSquareWarning className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" /> : <CircleCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />}
+        <span>{missing.length ? <>Missing: {missing.map((m) => m.label).join(", ")}. Suggest edits to ask {first} for it; the note is filled in for you.</> : "Every required answer is filled in."}</span>
+      </p>
+      <ul className={cx("mt-4 grid gap-4", where === "page" && "sm:grid-cols-2 xl:grid-cols-4")}>
+        {checks.map((c) => (
+          <li key={c.id}>
+            <Checkbox id={`${where}-${c.id}`} label={c.label} description={c.hint} checked={ticked.includes(c.id)}
+              onChange={(e) => setTicked((t) => (e.target.checked ? [...t, c.id] : t.filter((x) => x !== c.id)))} />
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+
   return (
     <>
       <div className="sticky top-0 z-sticky -mx-4 mt-2 flex h-16 items-center gap-2 border-b border-line bg-bg/90 px-4 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
@@ -110,6 +129,14 @@ export function ReviewWorkspace({ person, fields, queue, header, children }: {
           </Tooltip>
         </span>
         <div className="ml-auto flex shrink-0 items-center gap-2">
+          <Popover label="Review checklist" title="Review checklist" align="end" width="lg"
+            trigger={
+              <Button variant="ghost" size="sm" iconStart={<ListChecks />} aria-label={`Review checklist, ${ticked.length} of ${checks.length} checked`}>
+                <span className="max-sm:sr-only">Checklist</span><span className="tabular-nums text-ink-muted">{ticked.length}/{checks.length}</span>
+              </Button>
+            }>
+            {checklist("bar")}
+          </Popover>
           <Button variant="secondary" size="sm" iconStart={<MessageSquareWarning />} onClick={() => setSuggest(true)} aria-keyshortcuts="E">
             <span className="max-sm:sr-only">Suggest edits</span>
           </Button>
@@ -121,20 +148,9 @@ export function ReviewWorkspace({ person, fields, queue, header, children }: {
 
       {header}
 
-      <Panel className="mt-6" id="review-h" title="Review checklist"
+      <Panel className="mt-6" id="review-h" title="Review checklist" collapsible="review-checklist"
         aside={<span className="tabular-nums">{ticked.length} of {checks.length} checked · a guide, nothing is saved until you decide</span>}>
-        <p className={cx("flex items-start gap-2 rounded-md p-3 text-body-sm text-ink", missing.length ? "bg-warning-soft" : "bg-success-soft")}>
-          {missing.length ? <MessageSquareWarning className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" /> : <CircleCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />}
-          <span>{missing.length ? <>Missing: {missing.map((m) => m.label).join(", ")}. Suggest edits to ask {first} for it; the note is filled in for you.</> : "Every required answer is filled in."}</span>
-        </p>
-        <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {checks.map((c) => (
-            <li key={c.id}>
-              <Checkbox label={c.label} description={c.hint} checked={ticked.includes(c.id)}
-                onChange={(e) => setTicked((t) => (e.target.checked ? [...t, c.id] : t.filter((x) => x !== c.id)))} />
-            </li>
-          ))}
-        </ul>
+        {checklist("page")}
       </Panel>
 
       {children}

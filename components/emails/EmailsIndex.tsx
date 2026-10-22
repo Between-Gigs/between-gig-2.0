@@ -36,7 +36,7 @@ export function EmailsIndex() {
             options={[{ value: "templates", label: "All emails", icon: <Mail /> }, { value: "outbox", label: `Sample outbox${outbox?.length ? ` (${outbox.length})` : ""}`, icon: <Send /> }]} />
         }>
           {tab === "templates" ? (
-            <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <ul className="grid items-start gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {emailNames.map((n) => {
                 const t = emailTemplates[n];
                 const sample = renderPreview(n, undefined, "light");
@@ -83,12 +83,13 @@ export function EmailsIndex() {
 }
 
 /**
- * A live miniature of an email: drawn at its real 600px width and scaled to fill the card, with no scroll bar
- * (the frame never scrolls; the card opens the full preview).
+ * A live miniature of the whole email: drawn at its real 600px width, measured once it loads, and scaled so the
+ * full height fits the card. The frame never scrolls; the card opens the full preview.
  */
 function EmailThumb({ html }: { html?: string }) {
   const box = React.useRef<HTMLDivElement>(null);
   const [scale, setScale] = React.useState(0.5);
+  const [height, setHeight] = React.useState(900);
   React.useEffect(() => {
     const el = box.current;
     if (!el) return;
@@ -96,15 +97,22 @@ function EmailThumb({ html }: { html?: string }) {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  const measure = (e: React.SyntheticEvent<HTMLIFrameElement>) => {
+    const d = e.currentTarget.contentDocument;
+    if (!d) return;
+    const fit = () => setHeight(Math.max(d.documentElement.scrollHeight, d.body?.scrollHeight ?? 0));
+    fit();
+    // Images inside the email can arrive after load and make it taller.
+    for (const img of Array.from(d.images)) if (!img.complete) img.addEventListener("load", fit, { once: true });
+  };
   const doc = html?.replace("</head>", "<style>html,body{overflow:hidden!important;scrollbar-width:none}::-webkit-scrollbar{display:none}</style></head>");
   return (
-    <div ref={box} aria-hidden="true" className="relative h-56 overflow-hidden border-b border-line bg-surface-embed">
+    <div ref={box} aria-hidden="true" className="relative overflow-hidden border-b border-line bg-surface-embed" style={{ height: `${Math.ceil(height * scale)}px` }}>
       {doc && (
-        <iframe title="" tabIndex={-1} srcDoc={doc} scrolling="no"
+        <iframe title="" tabIndex={-1} srcDoc={doc} scrolling="no" onLoad={measure}
           className="pointer-events-none absolute top-0 left-0 w-150 origin-top-left"
-          style={{ transform: `scale(${scale})`, height: `${Math.ceil(224 / scale)}px` }} />
+          style={{ transform: `scale(${scale})`, height: `${height}px` }} />
       )}
-      <span className="absolute inset-x-0 bottom-0 h-10 bg-linear-to-t from-surface to-transparent" />
     </div>
   );
 }
