@@ -54,9 +54,9 @@ session token on every request (`@clerk/backend` `verifyToken`, with `CLERK_SECR
 | Method | Route | Backend |
 | --- | --- | --- |
 | `session()` | `GET /api/session` | Verify the Clerk session token (`Authorization: Bearer`, from `getToken()`) → `people.auth_user_id` → `{ personId, email, role, name }`. Owners: Clerk `publicMetadata.role === "owner"`. |
-| `syncExternal({ email, name, role, inviteToken, acceptedTerms })` | `POST /api/session/sync` | Called right after Clerk signs someone in. Never trust the body's email or role: read both from the verified token / Clerk user. Look up `people` by email; if `invited`, check the invite token, then set `name`, `slug`, `status = 'registered'`, `invites.used_at`, `auth_user_id`, and record the terms version. Unknown email → `unknown-email` (joining stays invite-only). |
+| `syncExternal({ email, name, role, inviteToken, acceptedTerms })` | `POST /api/session/sync` | Called right after Clerk signs someone in. Never trust the body's email or role: read both from the verified token / Clerk user. Look up `people` by verified email; create an ordinary Gigster if absent. If `invited`, set `name`, `slug`, `status = 'registered'`, `auth_user_id`, and record the terms version. Consume an optional invite only when valid and matched to the verified email. Preserve existing profiles. Missing or stale invitation metadata must not reject a verified identity. |
 | `register({ token, name, acceptTerms })` | – | Sample login only. With Clerk, `syncExternal` does this. |
-| `requestCode(email)` / `verifyCode(email, code)` | – | Sample login only. Clerk sends and checks the code. Restrict sign-ups to invited emails with a Clerk allowlist or a `user.created` webhook check. |
+| `requestCode(email)` / `verifyCode(email, code)` | – | Sample login only. Clerk sends and checks the code. Signup is open; do not add an invitation allowlist or an invitation-based `user.created` rejection. Keep Clerk verification and security protections. |
 | `signOut()` | – | `clerk.signOut()` in the browser (ClerkLayer also clears the app session). |
 | `onChange(listener)` | – | Unchanged: fires when the app session changes. |
 

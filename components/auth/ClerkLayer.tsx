@@ -46,8 +46,8 @@ function Bridge({ children }: { children: React.ReactNode }) {
         acceptedTerms: meta.acceptedTerms,
       });
       if (cancelled) return;
-      // Clerk proved the email, but it isn't on the call sheet: end the Clerk session and say why on /login.
-      if (!r.ok) await clerk.signOut({ redirectUrl: `${basePath}/login/?notInvited=${encodeURIComponent(email)}` });
+      // Keep a failure recoverable; open signup does not depend on call-sheet membership.
+      if (!r.ok) await clerk.signOut({ redirectUrl: `${basePath}/login/` });
     })();
     return () => { cancelled = true; };
   }, [isLoaded, isSignedIn, email, user, clerk]);

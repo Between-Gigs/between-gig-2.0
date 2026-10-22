@@ -156,7 +156,7 @@ export type RequestCodeResult =
 
 export type RegisterResult =
   | { ok: true; person: Person }
-  | { ok: false; error: InviteState | "terms" | "name" };
+  | { ok: false; error: InviteState | "terms" | "name" | "email" | "existing-account" };
 
 export type EmailTemplate = "invite" | "sign-in-code" | "profile-submitted" | "welcome" | "coming-soon" | "approved" | "changes-requested";
 

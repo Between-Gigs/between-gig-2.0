@@ -1,0 +1,32 @@
+name: Signup checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  signup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck && pnpm lint && pnpm lint:values
+      - run: node scripts/qa/auth-data.mjs
+      - run: pnpm build
+      - run: pnpm exec playwright-core install --with-deps chromium
+      - name: Test signup and existing product flow (sample mode, no real accounts)
+        run: |
+          export CHROMIUM_PATH=$(node --input-type=module -e 'import { chromium } from "playwright-core"; console.log(chromium.executablePath())')
+          node scripts/qa/auth-flow.mjs
+          pnpm qa:flow
+      - name: Build Pages configuration with Clerk
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_BASE_PATH: /between-gig-2.0
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Z2xhZC1tb25rZXktNjkwOC5jbGVyay5hY2NvdW50cy5kZXYk

@@ -208,21 +208,31 @@ export const sampleSource: DataSource = {
     async session() {
       return clone(load().session);
     },
-    async register({ token, name, acceptTerms }) {
+    async register({ token, email, name, acceptTerms }) {
       await latency(200);
       const state = load();
-      const found = lookupInvite(state, token);
-      if (found.state !== "valid" || !found.invite) return { ok: false, error: found.state };
+      const found = token ? lookupInvite(state, token) : undefined;
+      if (found && found.state !== "valid") return { ok: false, error: found.state };
+      const address = (email ?? found?.invite?.email ?? "").trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) return { ok: false, error: "email" };
       if (!name.trim()) return { ok: false, error: "name" };
       if (!acceptTerms) return { ok: false, error: "terms" };
-      const person = state.people.find((p) => p.id === found.invite!.personId)!;
+      let person = state.people.find((p) => p.email.toLowerCase() === address);
+      if (person && person.status !== "invited") return { ok: false, error: "existing-account" };
       const t = now();
+      if (!person) {
+        person = { id: uid(), email: address, name: "", slug: "", status: "invited",
+          waitlistZip: "", waitlistCategory: "", invitedAt: "", updatedAt: t };
+        state.people.push(person);
+      }
       person.name = name.trim().replace(/\s+/g, " ");
       person.slug = uniqueSlug(state, person.name, person.id);
       person.status = "registered";
       person.registeredAt = t;
       person.updatedAt = t;
-      state.invites.find((i) => i.token === token)!.usedAt = t;
+      // An optional invite belongs to its original address, even if the form's email was edited.
+      const invite = state.invites.find((i) => i.token === token && i.email.toLowerCase() === address && i.personId === person.id);
+      if (invite) invite.usedAt = t;
       log(state, "registered", { personId: person.id, name: person.name, email: person.email });
       state.session = sessionFor(person);
       save(state, true);
@@ -272,18 +282,20 @@ export const sampleSource: DataSource = {
         save(state, true);
         return { ok: true, session: clone(state.session), created: false };
       }
-      const person = state.people.find((p) => p.email.toLowerCase() === address);
-      if (!person) return { ok: false, error: "unknown-email" };
+      let person = state.people.find((p) => p.email.toLowerCase() === address);
+      if (!person) {
+        person = { id: uid(), email: address, name: "", slug: "", status: "invited",
+          waitlistZip: "", waitlistCategory: "", invitedAt: "", updatedAt: now() };
+        state.people.push(person);
+      }
       let created = false;
       if (person.status === "invited") {
-        // First sign-in after a Clerk sign-up: use the invite, the same as register() does.
-        const invite = state.invites.find((i) => i.personId === person.id && !i.usedAt);
-        if (identity.inviteToken && invite && invite.token !== identity.inviteToken) return { ok: false, error: "invite-mismatch" };
+        // Clerk has verified this email. A missing or stale optional invite never blocks the identity.
+        const invite = state.invites.find((i) => i.token === identity.inviteToken && i.personId === person.id
+          && i.email.toLowerCase() === address && !i.usedAt && new Date(i.expiresAt).getTime() >= Date.now());
         const t = now();
-        if (identity.name?.trim()) {
-          person.name = identity.name.trim().replace(/\s+/g, " ");
-          person.slug = uniqueSlug(state, person.name, person.id);
-        }
+        person.name = identity.name?.trim().replace(/\s+/g, " ") || address.split("@")[0];
+        person.slug = uniqueSlug(state, person.name, person.id);
         person.status = "registered";
         person.registeredAt = t;
         person.updatedAt = t;

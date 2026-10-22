@@ -18,8 +18,8 @@ const RESEND_SECONDS = 30;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const requestError: Record<Exclude<RequestCodeResult, { ok: true }>["error"], string> = {
-  "unknown-email": "We couldn't find an account for that email. Check the spelling, or use the link in your invite to create one.",
-  "not-registered": "You haven't created your account yet. Use the “Create your profile” link in your invite email first.",
+  "unknown-email": "We couldn't find an account for that email. Check the spelling, or create an account.",
+  "not-registered": "You haven't created your account yet. Create an account first.",
   "rate-limited": "We just sent you a code. You can ask for another in a few seconds.",
 };
 
@@ -48,7 +48,6 @@ function ClerkLogin() {
   const params = useSearchParams();
   const router = useRouter();
   const { session } = useSession();
-  const notInvited = params.get("notInvited");
 
   React.useEffect(() => {
     if (session?.via === "clerk") router.replace(destination(params.get("next"), session.role));
@@ -56,22 +55,15 @@ function ClerkLogin() {
 
   return (
     <AuthShell eyebrow="Welcome back" title="Sign in to" accent="Between Gigs."
-      lead={<p>We'll email you a 6-digit code. No password to remember.</p>}>
+      lead={<p>Use your email and your existing sign-in method.</p>}>
       <div className="grid gap-6">
         {params.get("signedOut") && <Banner tone="success" title="You're signed out">See you next time.</Banner>}
-        {notInvited && (
-          <Banner tone="warning" title="That email isn't on the call sheet yet">
-            Joining is by invite, and we don't have {notInvited} on the list. Use the email your invite was sent to, or <Link href="/professionals/" className="text-link underline underline-offset-2">ask to join</Link>.
-          </Banner>
-        )}
         <ClerkSlot label="Loading sign-in">
-          <SignIn routing="hash" signUpUrl={`${basePath}/join/`} withSignUp={false}
-            // Joining is by invite (the line below says so), so Clerk's "Don't have an account? Sign up" goes.
-            appearance={{ elements: { footerAction: "hidden" } }}
+          <SignIn routing="hash" signUpUrl={`${basePath}/join/`}
             initialValues={{ emailAddress: params.get("email") ?? undefined }}
             fallbackRedirectUrl={`${basePath}/login/${params.get("next") ? `?next=${encodeURIComponent(params.get("next")!)}` : ""}`} />
         </ClerkSlot>
-        <p className="text-center text-body-sm text-ink-muted">New here? Joining is by invite: use the link in your invite email.</p>
+        <p className="text-center text-body-sm text-ink-muted">New here? <Link href="/join/" className="text-link underline underline-offset-2">Create an account</Link>.</p>
       </div>
     </AuthShell>
   );
@@ -151,14 +143,14 @@ function SampleLogin() {
           <form noValidate onSubmit={send} className="grid gap-5">
             <div>
               <h2 className="font-display text-display-sm text-ink">Sign in</h2>
-              <p className="mt-2 text-body-md text-ink-muted">Use the email your invite was sent to.</p>
+              <p className="mt-2 text-body-md text-ink-muted">Use the email you signed up with.</p>
             </div>
             <Field label="Email" error={error}>
               <Input type="email" inputMode="email" autoComplete="email" value={email} start={<Mail />} autoFocus
                 onChange={(e) => { setEmail(e.target.value); setError(undefined); }} />
             </Field>
             <Button type="submit" variant="primary" size="lg" fullWidth loading={busy} iconEnd={<ArrowRight />}>Email me a code</Button>
-            <p className="text-center text-body-sm text-ink-muted">New here? Joining is by invite: use the link in your invite email.</p>
+            <p className="text-center text-body-sm text-ink-muted">New here? <Link href="/join/" className="text-link underline underline-offset-2">Create an account</Link>.</p>
             {data.kind === "sample" && (
               <p className="rounded-lg border border-dashed border-line-dashed p-3 text-body-sm text-ink-subtle">
                 Sample accounts: <button type="button" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2" onClick={() => setEmail("maya.chen@example.com")}>maya.chen@example.com</button> (Gigster) or{" "}

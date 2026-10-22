@@ -8,6 +8,7 @@ import { clerkEnabled } from "@/lib/auth/clerk";
 import { setDemoActive } from "@/lib/demo-flow";
 import { basePath } from "@/lib/site";
 import { renderPreview } from "@/components/emails/preview";
+import { ButtonLink } from "@/components/ui/ButtonLink";
 import { Page } from "@/components/site/Page";
 
 const SAMPLE = "you@example.com";
@@ -74,8 +75,9 @@ export function DemoStart() {
           <div>
             <p className="text-label-md text-ink-brand">Try it yourself · Step 1 of 4</p>
             <h1 className="mt-2 font-display text-display-sm text-balance text-ink">You&apos;ve got an invite.</h1>
-            <p className="mt-3 text-body-md text-ink-muted">This is the email a Gigster gets from the waitlist. Press <b className="text-ink">Create your profile</b> in it to sign up, build a profile and see how it looks.</p>
+            <p className="mt-3 text-body-md text-ink-muted">No invite is required to join. This is the optional email a Gigster gets from the waitlist. Press <b className="text-ink">Create your profile</b> in it to sign up, build a profile and see how it looks.</p>
           </div>
+          <ButtonLink href="/join/" variant="primary" iconEnd={<ArrowRight />}>Sign up without an invite</ButtonLink>
           <form onSubmit={resend} className="grid gap-3 rounded-xl border border-line bg-surface p-4">
             <Field label="Send the invite to" error={error}
               hint={clerkEnabled ? "Use your real email to get the real sign-in code. Keep the sample, and you can skip sign-in on the next page." : "Any email works. Nothing is sent."}>
