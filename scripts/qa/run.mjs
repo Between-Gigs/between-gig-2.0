@@ -1,8 +1,9 @@
 // QA for the static build in out/ (run `pnpm build` first). Uses the preinstalled Chromium.
-//   node scripts/qa/run.mjs            screens + axe + flow
+//   node scripts/qa/run.mjs            rules + screens + axe + flow
 //   node scripts/qa/run.mjs screens    every route, light and dark, 1440 and 390 → qa/output/screens/
 //   node scripts/qa/run.mjs axe        axe-core on every route, light and dark
 //   node scripts/qa/run.mjs flow       invite → join → login → builder → submit → my profile → owner search
+//   node scripts/qa/run.mjs rules      the measurable rules in docs/ui-rules.md, every route at 1440 and 390
 // Set ONLY=name,name to limit routes. Fails (exit 1) on axe violations, horizontal scroll or a broken flow.
 import fs from "node:fs";
 import path from "node:path";
@@ -11,6 +12,7 @@ import { chromium } from "playwright-core";
 import { serve } from "./serve.mjs";
 import { routes } from "./routes.mjs";
 import { flow } from "./flow.mjs";
+import { checkRules } from "./rules.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const OUT = path.join(ROOT, "qa/output");
@@ -88,7 +90,25 @@ async function axe() {
   fs.writeFileSync(path.join(OUT, "axe.json"), JSON.stringify(report, null, 2));
 }
 
+/** docs/ui-rules.md, measured. Light theme only: the rules don't depend on the theme (axe covers contrast in both). */
+async function rules() {
+  const report = [];
+  for (const route of list) {
+    for (const width of [1440, 390]) {
+      const { context, page } = await open(route, { theme: "light", width });
+      const found = await checkRules(page, { width });
+      for (const f of found) problems.push(`rules ${route.name} ${width}: ${f.rule} ${f.detail}`);
+      report.push({ route: route.name, width, found });
+      await context.close();
+    }
+    process.stdout.write(`rules ${route.name} ✓\n`);
+  }
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, "rules.json"), JSON.stringify(report, null, 2));
+}
+
 try {
+  if (mode === "all" || mode === "rules") await rules();
   if (mode === "all" || mode === "screens") await screens();
   if (mode === "all" || mode === "axe") await axe();
   if (mode === "all" || mode === "flow") {

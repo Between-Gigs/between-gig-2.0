@@ -18,6 +18,7 @@
     "qa:screens": "node scripts/qa/run.mjs screens",
     "qa:axe": "node scripts/qa/run.mjs axe",
     "qa:flow": "node scripts/qa/run.mjs flow",
+    "qa:rules": "node scripts/qa/run.mjs rules",
     "check": "pnpm typecheck && pnpm lint && pnpm lint:values && pnpm build && pnpm qa",
     "sync:ds": "scripts/sync-design-system.sh"
   },

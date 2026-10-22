@@ -56,7 +56,7 @@ export function Founders({ peterBio }: { peterBio: string }) {
                 <h3 className="font-display text-heading-lg text-ink">{p.name}</h3>
                 <p className="text-label-md text-ink-brand">Co-founder</p>
                 <p className="text-body-md text-ink-muted">{p.bio}</p>
-                <a href={p.link} target="_blank" rel="noreferrer" className="inline-flex min-h-6 w-fit items-center gap-1 text-label-md text-link underline underline-offset-4">
+                <a href={p.link} target="_blank" rel="noreferrer" className="inline-flex min-h-11 w-fit items-center gap-1 text-label-md text-link underline underline-offset-4 sm:min-h-6">
                   {p.linkLabel}<ArrowUpRight className="size-4" aria-hidden="true" /><span className="sr-only"> (opens in a new tab)</span>
                 </a>
               </div>

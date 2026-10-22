@@ -1,5 +1,5 @@
 "use client";
-import { Badge, Banner, Button, Drawer, Field, IconButton, Input, Select, Skeleton, Stepper, Textarea, cx, useToast } from "@ds/components";
+import { Badge, Banner, Button, Drawer, Field, IconButton, Input, RadioGroup, Skeleton, Stepper, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
 import { AlertCircle, ArrowLeft, ArrowRight, Check, CloudCheck, Eye, Film, Inbox, Link2, LoaderCircle, MapPin, MessageSquareWarning, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import Link from "next/link";
@@ -55,7 +55,7 @@ function Intro({ compact = false }: { compact?: boolean }) {
     <section data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
       <span aria-hidden="true" className="glow-horizon hidden opacity-50 sm:block" />
       <div className="relative z-raised mx-auto max-w-7xl px-4 pt-8 pb-20 sm:px-6 sm:pt-12 sm:pb-24">
-        <Reveal effect="fade-up"><p className="text-eyebrow text-ink-brand uppercase">Good work. Great people. Your next chapter.</p></Reveal>
+        <Reveal effect="fade-up"><p className="text-label-md text-ink-brand">Good work. Great people. Your next chapter.</p></Reveal>
         <Reveal effect="fade-up" delay={60}><h1 className="mt-3 max-w-3xl font-display text-display-sm text-balance text-ink sm:text-display-lg">Let's meet the person <span className="glow-text text-ink-brand">behind the experience.</span></h1></Reveal>
         <Reveal effect="fade-up" delay={120}><p className="mt-4 max-w-xl text-body-md text-ink-muted sm:text-body-lg">Bring your on-set know-how to everyday life. Build a profile that feels like you.</p></Reveal>
       </div>
@@ -287,7 +287,7 @@ function Builder({ personId }: { personId: string }) {
                   {step === 2 && (
                     <div className="grid gap-5">
                       <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
-                        <Field label="Home market"><Select id="f-market" value={d.market} onValueChange={(v) => set("market")(v as ProfileFields["market"])} options={[{ value: "la", label: "Los Angeles" }, { value: "other", label: "Another market" }]} /></Field>
+                        <RadioGroup name="f-market" label="Home market" orientation="horizontal" value={d.market} onChange={(v) => set("market")(v as ProfileFields["market"])} options={[{ value: "la", label: "Los Angeles" }, { value: "other", label: "Another market" }]} />
                         <Field label="Home ZIP code" error={err("zip")}><Input id="f-zip" inputMode="numeric" autoComplete="postal-code" value={d.zip} start={<MapPin />} placeholder="90026" onChange={(e) => set("zip")(e.target.value.replace(/\D/g, "").slice(0, 5))} /></Field>
                       </div>
                       {d.market === "other" ? (
@@ -305,13 +305,13 @@ function Builder({ personId }: { personId: string }) {
                       <Field label="Travel notes" optional hint="Only a limit or exception. No need to repeat the areas above."><Input id="f-travel" value={d.travel} onChange={(e) => set("travel")(e.target.value)} /></Field>
                       <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
                         <Field label="Availability month"><Input id="f-month" value={d.month} readOnly /></Field>
-                        <Field label="This month"><Select id="f-monthStatus" value={d.monthStatus} onValueChange={(v) => set("monthStatus")(v as ProfileFields["monthStatus"])} options={Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))} /></Field>
+                        <RadioGroup name="f-monthStatus" label="This month" value={d.monthStatus} onChange={(v) => set("monthStatus")(v as ProfileFields["monthStatus"])} options={Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))} />
                       </div>
                       <Field label="Dates or times this month" error={err("dates")} hint="Exact project dates are agreed with each client."><Input id="f-dates" value={d.dates} placeholder="e.g. Weekday mornings" onChange={(e) => set("dates")(e.target.value)} /></Field>
                       <Banner tone="success" title="Keep availability fresh">Confirm it each month. Production comes first: pause it when the call comes.</Banner>
                       <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
                         <Field label="Rate" optional hint="Final scope and rate are agreed with the client."><Input id="f-rate" inputMode="numeric" value={d.rate} start={<span className="text-label-md">$</span>} end={<span className="text-label-sm text-ink-subtle">USD</span>} onChange={(e) => set("rate")(e.target.value.replace(/\D/g, "").slice(0, 4))} /></Field>
-                        <Field label="Rate basis" optional><Select id="f-basis" value={d.basis} onValueChange={(v) => set("basis")(v as ProfileFields["basis"])} options={Object.entries(basisLabel).map(([value, label]) => ({ value, label }))} /></Field>
+                        <RadioGroup name="f-basis" label="Rate basis" orientation="horizontal" value={d.basis} onChange={(v) => set("basis")(v as ProfileFields["basis"])} options={Object.entries(basisLabel).map(([value, label]) => ({ value, label }))} />
                       </div>
                     </div>
                   )}
@@ -323,8 +323,8 @@ function Builder({ personId }: { personId: string }) {
                       </Field>
                       <Field label="Languages" optional><Input id="f-languages" value={d.languages} placeholder="e.g. English, Spanish" onChange={(e) => set("languages")(e.target.value)} /></Field>
                       <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
-                        <Field label="Insurance" optional hint="Self-reported; not verified."><Select id="f-insurance" value={d.insurance} onValueChange={(v) => set("insurance")(v as ProfileFields["insurance"])} options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance" }]} /></Field>
-                        <Field label="Work mode" optional><Select id="f-mode" value={d.mode} onValueChange={(v) => set("mode")(v as ProfileFields["mode"])} options={[{ value: "on-site", label: "On site" }, { value: "studio", label: "At my studio" }, { value: "both", label: "Both" }]} /></Field>
+                        <RadioGroup name="f-insurance" label={<>Insurance <span className="font-normal text-ink-subtle">· optional, self-reported</span></>} value={d.insurance} onChange={(v) => set("insurance")(v as ProfileFields["insurance"])} options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance" }]} />
+                        <RadioGroup name="f-mode" label="Work mode" value={d.mode} onChange={(v) => set("mode")(v as ProfileFields["mode"])} options={[{ value: "on-site", label: "On site" }, { value: "studio", label: "At my studio" }, { value: "both", label: "Both" }]} />
                       </div>
                       <Field label="Tools / equipment" optional><Input id="f-tools" value={d.tools} onChange={(e) => set("tools")(e.target.value)} /></Field>
                       <Field label="Transport" optional><Input id="f-transport" value={d.transport} onChange={(e) => set("transport")(e.target.value)} /></Field>
@@ -334,9 +334,10 @@ function Builder({ personId }: { personId: string }) {
                   {step === 4 && <Review d={d} notes={notes} onEdit={go} />}
 
                   <div className="mt-8 flex items-center justify-between gap-3 border-t border-line pt-5">
-                    {step > 0 ? <Button variant="secondary" iconStart={<ArrowLeft />} onClick={(e) => go(step - 1, e.currentTarget)}>Back</Button> : <span />}
+                    {step > 0 ? <Button variant="secondary" iconStart={<ArrowLeft />} onClick={(e) => go(step - 1, e.currentTarget)}>Back<span className="max-sm:sr-only">: {STEPS[step - 1]}</span></Button> : <span />}
                     <Button variant="primary" className="glow-hover" loading={submitting} iconEnd={step === 4 ? <Sparkles /> : <ArrowRight />} onClick={next}>
-                      {step === 4 ? (resubmitting || notes.length ? "Submit again" : "Submit for review") : "Continue"}
+                      {/* Says where it goes next, not just "Continue". */}
+                      {step === 4 ? (resubmitting || notes.length ? "Submit again" : "Submit for review") : <>Next<span className="max-sm:sr-only">: {STEPS[step + 1]}</span></>}
                     </Button>
                   </div>
                 </>
@@ -349,7 +350,7 @@ function Builder({ personId }: { personId: string }) {
           <div className="grid gap-4 lg:sticky lg:top-24">
             {!done && <ProfileStrength fields={d} />}
             <ProfilePreviewCard fields={d} personId={personId} />
-            <p className="text-caption text-ink-subtle">This is your card as clients will see it in search. It updates as you type.</p>
+            <p className="text-body-sm text-ink-subtle">This is your card as clients will see it in search. It updates as you type.</p>
           </div>
         </aside>
       </div>
@@ -411,7 +412,7 @@ function Review({ d, notes, onEdit }: { d: ProfileFields; notes: { section: Prof
             {missing && <ul className="mb-3 grid gap-1 text-body-sm text-warning">{Object.entries(missing).map(([k, m]) => <li key={k}>{fieldLabel[k as keyof ProfileFields]}: {m}</li>)}</ul>}
             <dl className="grid gap-2">
               {rows[i].map(([k, v]) => (
-                <div key={k} className="grid gap-1 sm:grid-cols-4"><dt className="text-label-sm text-ink-subtle">{k}</dt><dd className="text-body-sm break-words text-ink sm:col-span-3">{v}</dd></div>
+                <div key={k} className="grid gap-1 sm:grid-cols-4"><dt className="text-label-sm text-ink-subtle">{k}</dt><dd className="text-body-md break-words text-ink sm:col-span-3">{v}</dd></div>
               ))}
             </dl>
           </section>
@@ -434,7 +435,7 @@ function Finished({ first, outboxId }: { first: string; outboxId?: string }) {
         <ButtonLink href="/profile/" variant="primary" iconStart={<Eye />}>See my profile</ButtonLink>
         {outboxId && <ButtonLink href={`/emails/profile-submitted/?outbox=${outboxId}`} iconStart={<Inbox />}>See the confirmation email</ButtonLink>}
       </div>
-      {outboxId && <p className="text-caption text-ink-subtle">Sample mode: the email is in the <Link href="/emails/" className="text-link underline underline-offset-2">sample outbox</Link>, not your inbox.</p>}
+      {outboxId && <p className="text-body-sm text-ink-subtle">Sample mode: the email is in the <Link href="/emails/" className="text-link underline underline-offset-2">sample outbox</Link>, not your inbox.</p>}
     </div>
   );
 }

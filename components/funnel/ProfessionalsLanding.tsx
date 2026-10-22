@@ -153,7 +153,7 @@ export function ProfessionalsLanding() {
               </article>
             ))}
           </Carousel>
-          <p className="mt-6 text-caption text-ink-subtle">Sample profiles, services and pricing shown for illustration.</p>
+          <p className="mt-6 text-body-sm text-ink-subtle">Sample profiles, services and pricing shown for illustration.</p>
         </div>
       </section>
 
@@ -197,7 +197,7 @@ export function ProfessionalsLanding() {
       <section id="waitlist" aria-labelledby="final-h" data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
         <Horizon />
         <div className="relative z-raised mx-auto grid max-w-3xl justify-items-center gap-4 px-4 pt-20 pb-32 text-center sm:px-6 lg:pb-20">
-          <p className="text-eyebrow text-ink-brand uppercase">Bring your craft beyond the set</p>
+          <p className="text-label-md text-ink-brand">Bring your craft beyond the set</p>
           <h2 id="final-h" className="font-display text-display-sm text-balance text-ink sm:text-display-md">Join the Los Angeles professionals shaping Between Gigs.</h2>
           <CallSheetButton onClick={() => join("footer")} className="mt-2" />
         </div>

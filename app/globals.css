@@ -6,6 +6,21 @@
 /* Tailwind scans the vendored components for the classes they use. */
 @source "../packages/design-system/src";
 
+/*
+ * Type scale, per docs/ui-rules.md: body text 16px (17 → 18 for lead text, 13 → 14 for secondary), and
+ * about 1.5 line height for anything people read, captions included. Overrides the system's scale until it
+ * adopts this (docs/design-system-requests.md).
+ */
+@theme {
+  --text-body-lg: 1.125rem;
+  --text-body-lg--line-height: 28px;
+  --text-body-md: 1rem;
+  --text-body-md--line-height: 24px;
+  --text-body-sm: 0.875rem;
+  --text-body-sm--line-height: 21px;
+  --text-caption--line-height: 18px;
+}
+
 /* The owner sidebar collapsed to a rail: <html data-owner-nav="collapsed">, set before first paint. */
 @custom-variant nav-collapsed (&:where([data-owner-nav=collapsed] *));
 
@@ -71,4 +86,14 @@
   --warning-soft: color-mix(in oklab, var(--warning) 7%, var(--surface-raised));
   --info-soft: color-mix(in oklab, var(--info) 7%, var(--surface-raised));
   --danger-soft: color-mix(in oklab, var(--danger) 9%, var(--surface-raised));
+}
+
+/*
+ * Touch targets on phones (docs/ui-rules.md): every button, tab and summary is at least 44px tall, and icon-only
+ * buttons 44px wide. Buttons inside sentences (they carry min-h-6), switches and checkboxes keep their own size. Widths up to 639px.
+ */
+@media (max-width: 639px) {
+  :where(button, [role=tab], summary):not(.min-h-6, [role=switch], [role=checkbox]) { min-height: 2.75rem; }
+  :where(button[aria-label], [role=tab][aria-label]):not(.min-h-6, [role=switch], [role=checkbox]) { min-width: 2.75rem; }
+  :where(nav[aria-label=Breadcrumb] a) { min-height: 2.75rem; }
 }

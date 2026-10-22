@@ -1,7 +1,7 @@
 import { Logo } from "@ds/components/Logo";
 import Link from "next/link";
 
-const linkClass = "inline-flex min-h-6 items-center text-body-sm text-ink-muted hover:text-ink-brand";
+const linkClass = "inline-flex min-h-11 items-center text-body-sm text-ink-muted hover:text-ink-brand sm:min-h-8";
 
 /** Footer from the live site's Storyboard: brand line, support, explore, legal. */
 export function SiteFooter() {
@@ -9,7 +9,7 @@ export function SiteFooter() {
     <footer className="border-t border-line">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
         <div className="grid content-start gap-3">
-          <Link href="/" aria-label="Between Gigs home" className="w-fit rounded-md"><Logo height={28} /></Link>
+          <Link href="/" aria-label="Between Gigs home" className="inline-flex min-h-11 w-fit items-center rounded-md"><Logo height={28} /></Link>
           <p className="font-display text-heading-sm text-ink">Extraordinary Talent.<br />Everyday Solutions.</p>
         </div>
         <div className="grid content-start gap-1.5">
@@ -31,7 +31,7 @@ export function SiteFooter() {
         </nav>
       </div>
       <div className="border-t border-line">
-        <p className="mx-auto max-w-7xl px-4 py-5 text-caption text-ink-subtle sm:px-6">© 2026 Between Gigs. All rights reserved. BETWEEN GIGS™ is a trademark of Between Gigs. · Preview build: people in the sample data are fictional. <Link href="/preview/" className="underline underline-offset-2 hover:text-ink-brand">Preview guide</Link></p>
+        <p className="mx-auto max-w-7xl px-4 py-5 text-body-sm text-ink-subtle sm:px-6">© 2026 Between Gigs. All rights reserved. BETWEEN GIGS™ is a trademark of Between Gigs. · Preview build: people in the sample data are fictional. <Link href="/preview/" className="underline underline-offset-2 hover:text-ink-brand">Preview guide</Link></p>
       </div>
     </footer>
   );

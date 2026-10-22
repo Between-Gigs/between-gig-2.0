@@ -24,9 +24,9 @@ export function CallSheetHome() {
         <span aria-hidden="true" className="glow-horizon" />
 
         <header className="relative z-raised flex items-center justify-between gap-4 px-6 py-6 sm:px-10">
-          <Link href="/" aria-label="Between Gigs home" className="rounded-md"><Logo height={30} /></Link>
+          <Link href="/" aria-label="Between Gigs home" className="inline-flex min-h-11 items-center rounded-md"><Logo height={30} /></Link>
           <div className="flex items-center gap-3">
-            <Link href="/login/" className="inline-flex min-h-8 items-center rounded-md px-2 text-label-md text-ink-muted transition-colors duration-fast hover:text-ink">Sign in</Link>
+            <Link href="/login/" className="inline-flex min-h-11 items-center rounded-md px-2 text-label-md text-ink-muted transition-colors duration-fast hover:text-ink">Sign in</Link>
             <ThemeToggle size="sm" showLabel={false} />
           </div>
         </header>
@@ -53,9 +53,9 @@ export function CallSheetHome() {
           <span>© 2026 Between Gigs</span>
           <nav aria-label="Footer" className="flex flex-wrap gap-x-5 gap-y-2">
             {links.map((l) => (
-              <Link key={l.href} href={l.href} className="inline-flex min-h-6 items-center rounded-xs text-ink-muted underline-offset-4 transition-colors duration-fast hover:text-ink-brand hover:underline">{l.label}</Link>
+              <Link key={l.href} href={l.href} className="inline-flex min-h-11 items-center rounded-xs text-ink-muted underline-offset-4 sm:min-h-6 transition-colors duration-fast hover:text-ink-brand hover:underline">{l.label}</Link>
             ))}
-            <a href="mailto:hello@between-gigs.com" className="inline-flex min-h-6 items-center rounded-xs text-ink-muted underline-offset-4 transition-colors duration-fast hover:text-ink-brand hover:underline">hello@between-gigs.com</a>
+            <a href="mailto:hello@between-gigs.com" className="inline-flex min-h-11 items-center rounded-xs text-ink-muted underline-offset-4 sm:min-h-6 transition-colors duration-fast hover:text-ink-brand hover:underline">hello@between-gigs.com</a>
           </nav>
         </footer>
       </div>

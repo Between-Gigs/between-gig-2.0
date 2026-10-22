@@ -44,7 +44,7 @@ export function Storyboard() {
       {/* The credits keep rolling */}
       <section id="credits" aria-labelledby="credits-h" className="mx-auto grid max-w-3xl scroll-mt-20 gap-5 border-t border-line px-4 py-20 text-center sm:px-6">
         <h2 id="credits-h" className="text-eyebrow text-ink-brand uppercase">The credits keep rolling</h2>
-        <p className="text-body-lg text-pretty text-ink sm:text-editorial-lg">Between Gigs gives everyday people and businesses access to the remarkable range of entertainment professionals between productions. A family can hire a scenic carpenter to reinvent a room. A bakery can bring in a food stylist and editor. A school can build a fundraiser with a producer and sound crew. Production designers, grips, writers, actors, builders, assistants and animal handlers can be booked for one afternoon or an entire season. You describe the outcome; we help cast one person or the right crew.</p>
+        <p className="text-left text-body-lg text-pretty text-ink sm:text-editorial-lg">Between Gigs gives everyday people and businesses access to the remarkable range of entertainment professionals between productions. A family can hire a scenic carpenter to reinvent a room. A bakery can bring in a food stylist and editor. A school can build a fundraiser with a producer and sound crew. Production designers, grips, writers, actors, builders, assistants and animal handlers can be booked for one afternoon or an entire season. You describe the outcome; we help cast one person or the right crew.</p>
         <p className="text-body-lg text-ink-muted italic">Your next useful skill may be the one nobody has thought to cast yet.</p>
       </section>
 
@@ -166,7 +166,7 @@ function Planner({ kind, onClose, onBrowse }: { kind: Kind | null; onClose: () =
             <span className="text-label-sm text-ink-brand">What happens next</span>
             <span className="text-body-sm text-ink">{kind === "talent" ? "Browse the book for more ideas of what your craft could offer people and businesses." : "Browse the book for more ideas of who could help, one person or a whole crew."}</span>
           </div>
-          {data.kind === "sample" && <p className="text-caption text-ink-subtle">Sample mode: the confirmation is in the <Link href="/emails/" className="inline-flex items-center gap-1 text-link underline underline-offset-2"><Inbox className="size-3.5" aria-hidden="true" />sample outbox</Link>.</p>}
+          {data.kind === "sample" && <p className="text-body-sm text-ink-subtle">Sample mode: the confirmation is in the <Link href="/emails/" className="inline-flex items-center gap-1 text-link underline underline-offset-2"><Inbox className="size-3.5" aria-hidden="true" />sample outbox</Link>.</p>}
           <div className="flex flex-wrap justify-center gap-3">
             <Button variant="primary" onClick={onBrowse}>Browse every page in the book</Button>
             <Button onClick={onClose}>Close</Button>

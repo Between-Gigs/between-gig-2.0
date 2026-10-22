@@ -46,7 +46,7 @@ export function BudgetPlanner() {
           <div key={k as string} className="grid gap-0.5"><dt className="text-label-sm text-ink-subtle">{k}</dt><dd className={cx("font-display tabular-nums text-ink", i === 2 ? "text-display-sm" : "text-heading-lg")}>{usd(v as number)}</dd></div>
         ))}
       </dl>
-      <p className="text-caption text-ink-subtle">Planning exercise only · edits last while this page is open. Excludes unconfirmed venue, taxes, gratuities, permits, insurance and animal services. This is not a supplier quote.</p>
+      <p className="text-body-sm text-ink-subtle">Planning exercise only · edits last while this page is open. Excludes unconfirmed venue, taxes, gratuities, permits, insurance and animal services. This is not a supplier quote.</p>
     </section>
   );
 }

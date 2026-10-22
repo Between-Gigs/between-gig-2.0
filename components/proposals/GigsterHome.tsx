@@ -88,16 +88,16 @@ export function GigsterHome({ personId }: { personId: string }) {
             <Badge tone="info" size="sm">Coming with booking</Badge>
           </div>
           <EmptyState className="py-8" icon={<Inbox />} title="No requests yet" headingLevel={3}>
-            When clients can book, their requests arrive here: what, where, when and a budget. You reply to agree scope and the final rate, or decline.
+            Client requests arrive here once booking opens.
           </EmptyState>
         </section>
         <section aria-labelledby="g-profile" className="grid content-start gap-4 rounded-2xl border border-line bg-surface p-5 lg:col-span-5">
           <h2 id="g-profile" className="font-display text-heading-lg text-ink">Your profile</h2>
           <Progress value={Math.round(completeness * 100)} label="Complete" size="md" />
           <ul className="grid gap-2 text-body-sm">
-            <li><Link href="/profile/" className="inline-flex min-h-6 items-center gap-2 text-ink hover:text-ink-brand"><Eye className="size-4 text-ink-brand" aria-hidden="true" />See it as clients will</Link></li>
-            <li><Link href="/profile/edit/" className="inline-flex min-h-6 items-center gap-2 text-ink hover:text-ink-brand"><PencilLine className="size-4 text-ink-brand" aria-hidden="true" />Edit your answers</Link></li>
-            {p.status === "approved" && <li><Link href={`/p/${p.slug}/`} className="inline-flex min-h-6 items-center gap-2 text-ink hover:text-ink-brand"><Link2 className="size-4 text-ink-brand" aria-hidden="true" />Your public page to share</Link></li>}
+            <li><Link href="/profile/" className="inline-flex min-h-11 items-center gap-2 text-ink hover:text-ink-brand sm:min-h-8"><Eye className="size-4 text-ink-brand" aria-hidden="true" />See it as clients will</Link></li>
+            <li><Link href="/profile/edit/" className="inline-flex min-h-11 items-center gap-2 text-ink hover:text-ink-brand sm:min-h-8"><PencilLine className="size-4 text-ink-brand" aria-hidden="true" />Edit your answers</Link></li>
+            {p.status === "approved" && <li><Link href={`/p/${p.slug}/`} className="inline-flex min-h-11 items-center gap-2 text-ink hover:text-ink-brand sm:min-h-8"><Link2 className="size-4 text-ink-brand" aria-hidden="true" />Your public page to share</Link></li>}
           </ul>
           {p.status === "approved" && <Banner tone="success" title="You're live">Clients across Los Angeles can find you.</Banner>}
         </section>

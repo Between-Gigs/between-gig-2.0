@@ -91,7 +91,7 @@ export function VisitorHome() {
           <Badge tone="brand" size="sm" className="w-fit">For clients</Badge>
           <h2 className="font-display text-heading-lg text-ink">Tell us the project. We'll cast the crew.</h2>
           <p className="text-body-md text-ink-muted">One person for an afternoon, or a whole team for an event. Agree scope, timing and the final rate together.</p>
-          <div><ButtonLink href="/storyboard/" variant="primary" iconEnd={<ArrowRight />}>Find talent for a project</ButtonLink></div>
+          <div><ButtonLink href="/storyboard/" variant="secondary" iconEnd={<ArrowRight />}>Find talent for a project</ButtonLink></div>
         </div>
         <div className="grid content-start gap-3 rounded-2xl border border-line bg-surface p-6 shadow-sm">
           <Badge tone="neutral" size="sm" className="w-fit">For entertainment professionals</Badge>
@@ -136,7 +136,7 @@ export function VisitorHome() {
             </li>
           ))}
         </ul>
-        <p className="mt-3 text-caption text-ink-subtle">Fictional sample profiles.</p>
+        <p className="mt-3 text-body-sm text-ink-subtle">Fictional sample profiles.</p>
       </section>
       <ProposalNote n={4} />
 
@@ -144,7 +144,7 @@ export function VisitorHome() {
       <section aria-labelledby="v-stories" className="mt-14 rounded-2xl bg-surface-sunken p-5 sm:p-8">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 id="v-stories" className="font-display text-display-sm text-ink">The credits keep rolling</h2>
-          <Link href="/storyboard/" className="text-label-md text-link underline underline-offset-2">Open the Storyboard</Link>
+          <Link href="/storyboard/" className="inline-flex min-h-11 items-center text-label-md text-link underline underline-offset-2">Open the Storyboard</Link>
         </div>
         <Carousel label="Storyboard scenes" className="mt-5" gridFrom="lg" itemClassName="w-3/4 sm:w-5/12">
           {scenes.map((s) => (
@@ -170,7 +170,7 @@ export function VisitorHome() {
               </li>
             ))}
           </ol>
-          <p className="text-body-sm text-ink-muted lg:col-span-8 lg:col-start-5">Every profile is reviewed by the Between Gigs team before it goes live. Credits are self-reported; regulated work needs the right license (<Link className="text-link underline underline-offset-2" href="/licensing-insurance/">what we check, and what we don't</Link>).</p>
+          <p className="text-body-md text-ink-muted lg:col-span-8 lg:col-start-5">Every profile is reviewed by the Between Gigs team before it goes live. Credits are self-reported; regulated work needs the right license (<Link className="text-link underline underline-offset-2" href="/licensing-insurance/">what we check, and what we don't</Link>).</p>
         </div>
       </section>
       <ProposalNote n={6} />

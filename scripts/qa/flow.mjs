@@ -76,20 +76,20 @@ export async function flow({ browser, base, outDir }) {
     && await step("builder-about", async () => {
       await page.getByRole("link", { name: "Start your profile" }).click();
       await page.locator("[data-step='0']").waitFor();
-      await page.getByRole("button", { name: "Continue" }).click();
+      await page.getByRole("button", { name: /^Next/ }).click();
       await expectText("to continue");
       await page.locator("#f-photo").setInputFiles(path.join(ROOT, "public/img/people/jordan-2.jpg"));
       await page.getByLabel("Years in the business").fill("8");
       await page.getByLabel("Industry position / department").fill("Set decoration");
       await page.getByLabel("IMDb profile link").fill("https://www.imdb.com/name/nm0000001/");
       await page.getByLabel("Credit 1").fill("Fictional series · Set dresser (sample credit)");
-      await page.getByRole("button", { name: "Continue" }).click();
+      await page.getByRole("button", { name: /^Next/ }).click();
       await page.locator("[data-step='1']").waitFor();
     })
     && await step("builder-skills", async () => {
       await page.getByRole("button", { name: "Set decoration" }).click();
       await page.getByRole("button", { name: "Interior Styling" }).click();
-      await page.getByRole("button", { name: "Continue" }).click();
+      await page.getByRole("button", { name: /^Next/ }).click();
       await page.locator("[data-step='2']").waitFor();
     })
     && await step("builder-resume", async () => {
@@ -101,12 +101,12 @@ export async function flow({ browser, base, outDir }) {
       await page.reload();
       await page.locator("[data-step='2']").waitFor();
       if ((await page.getByLabel("Home ZIP code").inputValue()) !== "90029") throw new Error("autosave did not keep the ZIP after reload");
-      await page.getByRole("button", { name: "Continue" }).click();
+      await page.getByRole("button", { name: /^Next/ }).click();
       await page.locator("[data-step='3']").waitFor();
     })
     && await step("builder-story", async () => {
       await page.getByLabel("About me").fill("Fifteen years dressing sets taught me how a room should feel. I help with room styling, sourcing and seasonal refreshes, planned around your space and your timing.");
-      await page.getByRole("button", { name: "Continue" }).click();
+      await page.getByRole("button", { name: /^Next/ }).click();
       await page.locator("[data-step='4']").waitFor();
       await expectText("Ready for review");
     })

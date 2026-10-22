@@ -165,8 +165,9 @@ function Waitlist() {
             const on = selected.includes(r.signup.id);
             return (
               <li key={r.signup.id} className={cx("flex min-w-0 items-center gap-3 border-t border-l-4 border-t-line px-3 py-2.5 first:border-t-0", on ? "border-l-ink-brand bg-surface-selected" : "border-l-transparent")}>
+                {/* The label makes the tap area 44px around the box. */}
                 {r.inviteStatus === "not_invited"
-                  ? <Checkbox aria-label={`Select ${r.signup.email}`} checked={on} onChange={(e) => toggle(r.signup.id, e.target.checked)} />
+                  ? <label className="-m-3 grid size-11 shrink-0 cursor-pointer place-items-center"><Checkbox aria-label={`Select ${r.signup.email}`} checked={on} onChange={(e) => toggle(r.signup.id, e.target.checked)} /></label>
                   : <span className="grid size-5 shrink-0 place-items-center text-ink-subtle"><Mail className="size-4" aria-hidden="true" /><span className="sr-only">Already invited</span></span>}
                 <div className="grid min-w-0 flex-1">
                   {r.personId

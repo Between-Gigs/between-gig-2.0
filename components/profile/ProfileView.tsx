@@ -165,8 +165,11 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
                 <div className="mt-4 flex flex-wrap gap-2">
                   {approved && <Badge tone="success" icon={<BadgeCheck aria-hidden="true" />}>Reviewed by Between Gigs</Badge>}
                   {showImdb && (
-                    <a href={f.imdb} target="_blank" rel="noreferrer" className="inline-flex h-6 items-center gap-1 rounded-full border border-line-strong px-2.5 text-label-sm text-ink transition-colors duration-fast hover:bg-surface-hover">
-                      IMDb<ArrowUpRight className="size-3.5" aria-hidden="true" /><span className="sr-only"> page for {f.name} (opens in a new tab)</span>
+                    // The chip looks small; the link around it is a full-size target on phones.
+                    <a href={f.imdb} target="_blank" rel="noreferrer" className="group inline-flex min-h-11 items-center sm:min-h-6">
+                      <span className="inline-flex h-6 items-center gap-1 rounded-full border border-line-strong px-2.5 text-label-sm text-ink transition-colors duration-fast group-hover:bg-surface-hover">
+                        IMDb<ArrowUpRight className="size-3.5" aria-hidden="true" /><span className="sr-only"> page for {f.name} (opens in a new tab)</span>
+                      </span>
                     </a>
                   )}
                 </div>
@@ -202,7 +205,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
                   ? <Button variant="primary" size="lg" fullWidth className="glow-hover" iconEnd={<ArrowRight />} onClick={() => setRequest(true)}>Request {first}</Button>
                   : <RequestOff first={first} mode={mode} />}
               </div>
-              {mode === "public" && <p className="mt-3 text-center text-caption text-ink-subtle">Preview: requests open in a later milestone.</p>}
+              {mode === "public" && <p className="mt-3 text-center text-body-sm text-ink-subtle">Preview: requests open in a later milestone.</p>}
             </div>
             <section aria-labelledby={`${person.id}-glance`} className="rounded-2xl border border-line bg-surface p-5">
               <h2 id={`${person.id}-glance`} className="font-display text-heading-lg text-ink">At a glance</h2>
@@ -236,7 +239,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
           </nav>
 
           <Section name="overview" title="About me">
-            <p className="text-body-lg whitespace-pre-line text-ink">{f.about}</p>
+            <p className="max-w-xl text-body-lg whitespace-pre-line text-ink">{f.about}</p>
             {alsoOnSet.length > 0 && (
               <p className="mt-4 text-body-md text-ink-muted"><b className="font-semibold text-ink">Also on set:</b> {alsoOnSet.join(" · ")}</p>
             )}
@@ -291,7 +294,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
           </Section>
 
           {sample && (
-            <p className="mt-12 flex items-start gap-2 border-t border-line pt-4 text-caption text-ink-subtle">
+            <p className="mt-12 flex items-start gap-2 border-t border-line pt-4 text-body-sm text-ink-subtle">
               <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
               <span>Sample profile: {f.name} is a fictional Gigster used to preview Between Gigs. The biography, credits and images are illustrative.</span>
             </p>
@@ -349,7 +352,7 @@ function RequestOff({ first, mode }: { first: string; mode: ProfileMode }) {
   return (
     <div className="grid gap-2">
       <div aria-hidden="true" className="grid h-12 place-items-center rounded-lg border border-dashed border-line-strong text-label-md text-ink-muted">Request {first}</div>
-      <p className="text-center text-caption text-ink-subtle">
+      <p className="text-center text-body-sm text-ink-subtle">
         {mode === "own" ? "Clients use this button to send you a request. It's off in your preview." : "Clients see a request button here. It's off in the owner view."}
       </p>
     </div>

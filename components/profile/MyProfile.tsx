@@ -120,7 +120,7 @@ function NotStarted({ person }: { person: Person }) {
       <div className="lg:col-span-5">
         <p className="mb-3 text-label-md text-ink-muted">What clients will see</p>
         <ProfilePreviewCard fields={blankFields(person.name)} personId={person.id} badge="Your card" />
-        <p className="mt-3 text-caption text-ink-subtle">It fills in as you answer each step.</p>
+        <p className="mt-3 text-body-sm text-ink-subtle">It fills in as you answer each step.</p>
       </div>
     </section>
   );

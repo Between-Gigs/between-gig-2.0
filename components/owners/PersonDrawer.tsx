@@ -78,7 +78,7 @@ export function PersonDrawer({ rows, index, onIndex, onClose, onChanged }: {
             <div className="flex items-center gap-4">
               <PersonPhoto id={p.id} name={p.name || "?"} src={f?.photo || undefined} alt="" className="size-14 shrink-0 rounded-md" textClass="text-heading-md" />
               <div className="grid min-w-0 gap-0.5 text-body-sm text-ink-muted">
-                <a href={`mailto:${p.email}`} className="truncate hover:text-ink">{p.email}</a>
+                <a href={`mailto:${p.email}`} className="inline-flex min-h-11 items-center truncate hover:text-ink sm:min-h-6">{p.email}</a>
                 <span className="tabular-nums">ZIP {p.waitlistZip} · invited {shortDate(p.invitedAt) ?? "—"}{p.submittedAt && ` · submitted ${shortDate(p.submittedAt)}`}</span>
                 {f && <Meter value={row!.completeness * 100} label="Profile complete" />}
               </div>

@@ -37,7 +37,7 @@ export function OwnerHome() {
         <Horizon />
         <div className="relative z-raised grid gap-6 lg:grid-cols-12 lg:items-end">
           <div className="lg:col-span-8">
-            <p className="text-eyebrow text-ink-brand uppercase">Today on the call sheet</p>
+            <p className="text-label-md text-ink-brand">Today on the call sheet</p>
             <h2 id="o-today" className="mt-2 font-display text-display-md text-balance text-ink">
               {queue.length ? <>{queue.length} {queue.length === 1 ? "Gigster is" : "Gigsters are"} <span className="glow-text text-ink-brand">waiting on you.</span></> : <>Nobody is waiting. <span className="glow-text text-ink-brand">Enjoy your day.</span></>}
             </h2>

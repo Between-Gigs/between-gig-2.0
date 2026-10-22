@@ -88,7 +88,7 @@ export const StoryBook = React.forwardRef<StoryBookHandle, { onPlan: (kind: "buy
           <span className="text-label-sm text-ink-subtle tabular-nums">{state.index + 1} / {scenePages.length}</span>
           <span className="contents sm:hidden"><TurnButton dir="next" disabled={!state.canNext} onClick={() => engine.current?.step("next")} /></span>
         </div>
-        <p className={cx("text-caption tracking-widest text-ink-subtle uppercase transition-opacity duration-slow", hinted && "opacity-0")}>Drag the page or use the arrows to turn</p>
+        <p className={cx("text-body-sm text-ink-subtle transition-opacity duration-slow", hinted && "opacity-0")}>Drag the page or use the arrows to turn</p>
 
         <div className="flex flex-wrap justify-center gap-3">
           <Button variant="primary" size="lg" className="glow-hover" iconEnd={<ArrowRight />} onClick={() => onPlan("buyer")}>Find talent for a project</Button>

@@ -62,7 +62,7 @@ function Preview({ name }: { name: EmailTemplate }) {
       {queued ? (
         <Banner tone="info" className="mt-6" title="From the sample outbox">Showing the email queued for {queued.to}. Nothing was sent.</Banner>
       ) : (
-        <p className="mt-4 text-caption text-ink-subtle">Shown with fictional sample details.</p>
+        <p className="mt-4 text-body-sm text-ink-subtle">Shown with fictional sample details.</p>
       )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-12">
@@ -89,7 +89,7 @@ function Preview({ name }: { name: EmailTemplate }) {
               options={[{ value: "light", label: "Light", icon: <Sun /> }, { value: "dark", label: "Dark", icon: <Moon /> }]} />
             <SegmentedControl label="Screen width" value={width} onChange={(v) => setWidth(v as keyof typeof widths)}
               options={[{ value: "desktop", label: "Desktop", icon: <Monitor /> }, { value: "mobile", label: "Phone", icon: <Smartphone /> }]} />
-            <p className="text-caption text-ink-subtle">Dark is what Apple Mail and Outlook.com show in dark mode. Gmail keeps the light version.</p>
+            <p className="text-body-sm text-ink-subtle">Dark is what Apple Mail and Outlook.com show in dark mode. Gmail keeps the light version.</p>
           </section>
           <section aria-labelledby="notes-h" className="rounded-2xl border border-line bg-surface p-5">
             <h2 id="notes-h" className="font-display text-heading-md text-ink">Built for every inbox</h2>

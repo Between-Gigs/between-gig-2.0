@@ -42,3 +42,9 @@ adopt these (or tuned equivalents) in the system's dark tokens.
 - **Carousel** (scroll-snap list with scroll affordance and previous/next buttons) and **Marquee** (credits-roll strip, pauses on hover/focus, static with reduced motion): app versions in `components/funnel/Carousel.tsx` and `Marquee.tsx`.
 - **Bottom-anchored `glow-horizon`**: a variant that keeps the arc a fixed distance above the panel's bottom edge on small screens, so text never sits on it (app version: `Horizon` in `components/funnel/parts.tsx`).
 - **Image thumbnails**: a convention for smaller derived images (the Storyboard catalog uses `public/art/storyboard/thumbs/`, 800px).
+
+## Type scale for reading (docs/ui-rules.md)
+
+Body text should be 16px with ~1.5 line height (both reference books agree), secondary text no smaller than 14px.
+The app overrides `--text-body-lg` (18/28), `--text-body-md` (16/24), `--text-body-sm` (14/21) and the caption line
+height (12/18) in `app/globals.css`. Request: adopt this scale in the system.

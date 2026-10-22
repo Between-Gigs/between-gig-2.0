@@ -119,7 +119,7 @@ export function Overview() {
             ))}
           </ul>
         </section>
-        <p className="mt-6 text-caption text-ink-subtle">Names shown are illustrative samples for this draft.</p>
+        <p className="mt-6 text-body-sm text-ink-subtle">Names shown are illustrative samples for this draft.</p>
       </div>
     </Page>
   );

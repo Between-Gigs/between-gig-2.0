@@ -54,12 +54,12 @@ export function EmailsIndex() {
       <section aria-labelledby="outbox-h" className="mt-14">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 id="outbox-h" className="font-display text-display-sm text-ink">Sample outbox</h2>
-          <p className="text-caption text-ink-subtle">Emails the sample would have sent. Nothing leaves this browser.</p>
+          <p className="text-body-sm text-ink-subtle">Emails the sample would have sent. Nothing leaves this browser.</p>
         </div>
         {outbox === null ? null : outbox.length === 0 ? (
           <EmptyState className="mt-4" icon={<Inbox />} title="Nothing sent yet" headingLevel={3}
             action={<ButtonLink href="/login/" size="sm" iconEnd={<ArrowRight />}>Try a sign-in</ButtonLink>}>
-            Sign in with a sample account, submit a profile or invite from the waitlist, and each email lands here as it's sent.
+            Sign in, submit a profile or send an invite, and each email lands here.
           </EmptyState>
         ) : (
           <ul className="mt-4 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">

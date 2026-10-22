@@ -119,7 +119,7 @@ export function CallSheetDialog({ open, onClose, category: initialCategory, plac
               <span className="text-label-sm text-ink-brand">While you wait</span>
               <span className="text-body-sm text-ink">Flip through the Storyboard to see the kinds of work clients could bring to you.</span>
             </div>
-            {data.kind === "sample" && <p className="text-caption text-ink-subtle">Sample mode: the welcome email is in the <Link href="/emails/" className="inline-flex items-center gap-1 text-link underline underline-offset-2"><Inbox className="size-3.5" aria-hidden="true" />sample outbox</Link>.</p>}
+            {data.kind === "sample" && <p className="text-body-sm text-ink-subtle">Sample mode: the welcome email is in the <Link href="/emails/" className="inline-flex items-center gap-1 text-link underline underline-offset-2"><Inbox className="size-3.5" aria-hidden="true" />sample outbox</Link>.</p>}
             <div className="flex flex-wrap justify-center gap-3">
               <ButtonLink href="/storyboard/" variant="primary" iconEnd={<ArrowRight />}>Open the Storyboard</ButtonLink>
               <Button onClick={onClose}>Done</Button>
