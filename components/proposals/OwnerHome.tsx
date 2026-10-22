@@ -7,7 +7,21 @@ import { data, type DashboardSummary } from "@/lib/data";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { ActivityList, ago } from "@/components/owners/activity";
-import { ProposalNote } from "./ProposalNote";
+import { Horizon } from "@/components/funnel/parts";
+import { ProposalNote, type Note } from "./ProposalNote";
+
+/** The reasoning beside each section, shown with "Show design notes". */
+export const ownerNotes: Note[] = [
+  { title: "Lead with the one decision only owners can make", body: <>
+        <p>Patti and Peter asked for something "nice and clean and simple". The only thing that stalls the platform is a profile waiting for review, so it's the headline, with the oldest one a single click away.</p>
+  </> },
+  { title: "Four numbers, in words", body: <>
+        <p>The full status breakdown lives on the dashboard. Home keeps four plain-language numbers that answer "how are we doing?" without a chart.</p>
+  </> },
+  { title: "Home, not a second dashboard", body: <>
+        <p>Owners sign in to the same front door as everyone else. Their home is a short summary that hands off to /owners for the real work, so there's one admin place to learn, not two.</p>
+  </> },
+];
 
 /** Proposal: home for Patti and Peter. One question answered first: is anyone waiting on us? */
 export function OwnerHome() {
@@ -19,8 +33,8 @@ export function OwnerHome() {
 
   return (
     <div className="grid gap-10">
-      <section aria-labelledby="o-today" data-theme="dark" className="relative isolate overflow-hidden rounded-2xl bg-surface-brand phosphor-dots p-6 sm:p-10">
-        <span aria-hidden="true" className="glow-horizon opacity-60" />
+      <section aria-labelledby="o-today" data-theme="dark" className="relative isolate overflow-hidden rounded-2xl bg-surface-brand phosphor-dots p-6 pb-28 sm:p-10 sm:pb-28 lg:pb-10">
+        <Horizon />
         <div className="relative z-raised grid gap-6 lg:grid-cols-12 lg:items-end">
           <div className="lg:col-span-8">
             <p className="text-eyebrow text-ink-brand uppercase">Today on the call sheet</p>
@@ -33,9 +47,7 @@ export function OwnerHome() {
           </div>
         </div>
       </section>
-      <ProposalNote n={1} title="Lead with the one decision only owners can make" >
-        <p>Patti and Peter asked for something "nice and clean and simple". The only thing that stalls the platform is a profile waiting for review, so it's the headline, with the oldest one a single click away.</p>
-      </ProposalNote>
+      <ProposalNote n={1} />
 
       <section aria-label="At a glance" className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {[["Live profiles", live], ["Waiting for review", queue.length], ["Building a profile", d.counts.registered + d.counts.draft + d.counts.changes_requested], ["Not invited yet", d.waitlist.not_invited]].map(([k, v]) => (
@@ -45,9 +57,7 @@ export function OwnerHome() {
           </div>
         ))}
       </section>
-      <ProposalNote n={2} title="Four numbers, in words" >
-        <p>The full status breakdown lives on the dashboard. Home keeps four plain-language numbers that answer "how are we doing?" without a chart.</p>
-      </ProposalNote>
+      <ProposalNote n={2} />
 
       <div className="grid gap-6 lg:grid-cols-12">
         <section aria-labelledby="o-queue" className="rounded-2xl border border-line bg-surface p-5 lg:col-span-7">
@@ -72,9 +82,7 @@ export function OwnerHome() {
           <ActivityList events={d.activity.slice(0, 5)} />
         </section>
       </div>
-      <ProposalNote n={3} title="Home, not a second dashboard" >
-        <p>Owners sign in to the same front door as everyone else. Their home is a short summary that hands off to /owners for the real work, so there's one admin place to learn, not two.</p>
-      </ProposalNote>
+      <ProposalNote n={3} />
     </div>
   );
 }
