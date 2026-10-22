@@ -1,7 +1,7 @@
 "use client";
 import { Badge, Banner, Button, Drawer, Field, IconButton, Input, RadioGroup, Skeleton, Stepper, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
-import { AlertCircle, ArrowLeft, ArrowRight, Check, CloudCheck, Eye, Film, Inbox, Link2, LoaderCircle, MapPin, MessageSquareWarning, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, Check, CloudCheck, Eye, Film, Inbox, Link2, LoaderCircle, MapPin, MessageSquareWarning, Pencil, PenLine, Plus, Sparkles, Trash2, UserRound, Wrench } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -63,6 +63,56 @@ function Intro({ compact = false }: { compact?: boolean }) {
   );
 }
 
+/** What they'll need, in the invite email's words, so the site and the email say the same thing. */
+const NEED: { icon: React.ReactNode; title: string; body: string }[] = [
+  { icon: <UserRound />, title: "About you", body: "A clear photo, your years in the business, your IMDb page and a credit or two." },
+  { icon: <Wrench />, title: "Skills & services", body: "What you do on set, and what you'd offer between gigs." },
+  { icon: <MapPin />, title: "Where & when", body: "The parts of Los Angeles you'll work in, and when you're free this month." },
+  { icon: <PenLine />, title: "Your story", body: "A few lines in your own words. This is what clients read first." },
+];
+const NEXT = ["You submit your profile.", "We review every profile before it goes live.", "Once it's approved, clients can find you."];
+
+/**
+ * Shown once, right after the account is created: what they'll need, how long it takes, and what happens after.
+ * It disappears for good once they've saved anything.
+ */
+function Welcome({ first, onStart }: { first: string; onStart: () => void }) {
+  return (
+    <section data-step="welcome" aria-labelledby="welcome-h" className="grid gap-8 rounded-2xl border border-line bg-surface p-6 shadow-lg sm:p-8 lg:grid-cols-12">
+      <div className="grid content-start gap-4 lg:col-span-7">
+        <p className="inline-flex items-center gap-2 text-label-md text-ink-brand"><Check className="size-4" aria-hidden="true" />You're in. Your account is ready.</p>
+        <h2 id="welcome-h" className="font-display text-display-sm text-balance text-ink">Welcome, {first}. Let's build your profile.</h2>
+        <p className="max-w-prose text-body-lg text-ink-muted">It takes about 10 minutes. Everything saves as you go, so you can stop and come back any time.</p>
+        <h3 className="mt-2 font-display text-heading-sm text-ink">What you'll need</h3>
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {NEED.map((n) => (
+            <li key={n.title} className="flex gap-3 rounded-lg border border-line bg-surface-raised p-4">
+              <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-md bg-surface-selected text-ink-brand [&_svg]:size-4">{n.icon}</span>
+              <span className="grid gap-0.5"><span className="text-label-md text-ink">{n.title}</span><span className="text-body-sm text-ink-muted">{n.body}</span></span>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <Button variant="primary" size="lg" className="glow-hover" iconEnd={<ArrowRight />} onClick={onStart}>Start my profile</Button>
+          <ButtonLink href="/profile/" variant="ghost">I'll do it later</ButtonLink>
+        </div>
+      </div>
+      <div className="grid content-start gap-4 self-start rounded-xl bg-surface-sunken p-5 lg:col-span-5">
+        <h3 id="next-h" className="font-display text-heading-sm text-ink">What happens next</h3>
+        <ol className="grid gap-3">
+          {NEXT.map((t, i) => (
+            <li key={t} className="flex items-start gap-3">
+              <span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-full bg-surface text-label-sm text-ink-brand tabular-nums">{i + 1}</span>
+              <span className="pt-0.5 text-body-md text-ink">{t}</span>
+            </li>
+          ))}
+        </ol>
+        <p className="text-body-sm text-ink-muted">Production comes first. You can pause your availability any time.</p>
+      </div>
+    </section>
+  );
+}
+
 function BuilderSkeleton() {
   return (
     <div className="relative z-raised mx-auto -mt-14 grid max-w-7xl gap-8 px-4 pb-20 sm:px-6 lg:grid-cols-12">
@@ -84,6 +134,8 @@ function Builder({ personId }: { personId: string }) {
   const [submitting, setSubmitting] = React.useState(false);
   const [done, setDone] = React.useState<{ outboxId?: string } | null>(null);
   const [preview, setPreview] = React.useState(false);
+  // A first-time welcome: only for a brand-new account that hasn't saved anything yet.
+  const [welcome, setWelcome] = React.useState(false);
   const top = React.useRef<HTMLDivElement>(null);
   const stage = React.useRef<HTMLDivElement>(null);
   const dirty = React.useRef(false);
@@ -99,6 +151,7 @@ function Builder({ personId }: { personId: string }) {
       setD({ ...draft.fields, name: draft.fields.name || s.person.name, month: draft.fields.month || thisMonth() });
       setStep(startAtReview ? 4 : Math.min(Math.max(draft.step, 0), 4));
       if (draft.savedAt) setSave({ status: "saved", at: draft.savedAt });
+      setWelcome(s.person.status === "registered" && !draft.savedAt && !startAtReview);
     });
     return () => { live = false; };
   }, [personId, startAtReview]);
@@ -186,6 +239,18 @@ function Builder({ personId }: { personId: string }) {
   const noteFor = (section: ProfileSection) => notes.filter((n) => n.section === section);
   const errorCount = Object.keys(errors).length;
   const resubmitting = person.status === "submitted" || person.status === "approved";
+
+  if (welcome) {
+    return (
+      <Page bare>
+        <Intro />
+        <div className="relative z-raised mx-auto -mt-14 max-w-7xl px-4 pb-20 sm:px-6">
+          <Welcome first={d.name.split(" ")[0] || person.name.split(" ")[0] || "there"}
+            onStart={() => { setWelcome(false); window.scrollTo({ top: 0 }); }} />
+        </div>
+      </Page>
+    );
+  }
 
   const full = step === 0 && !done;
   return (

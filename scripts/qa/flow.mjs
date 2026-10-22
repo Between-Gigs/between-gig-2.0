@@ -49,7 +49,9 @@ export async function flow({ browser, base, outDir }) {
       await page.getByRole("checkbox").check();
       await page.getByRole("button", { name: "Create my profile" }).click();
       await page.waitForURL(/\/profile\/edit\/?$/);
-      await page.locator("[data-step='0']").waitFor();
+      // A brand-new account gets the one-time welcome before the first step.
+      await page.locator("[data-step='welcome']").waitFor();
+      await expectText("Welcome, Riley");
     })
     && await step("used-invite", async () => {
       await page.goto(`${base}/join/?invite=riley-7q2m`);
@@ -76,6 +78,7 @@ export async function flow({ browser, base, outDir }) {
     })
     && await step("builder-about", async () => {
       await page.getByRole("link", { name: "Start your profile" }).click();
+      await page.getByRole("button", { name: "Start my profile" }).click();
       await page.locator("[data-step='0']").waitFor();
       await page.getByRole("button", { name: /^Next/ }).click();
       await expectText("to continue");
