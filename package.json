@@ -5,7 +5,9 @@
   "description": "Between Gigs 2.0: the client-facing product on the Between Gigs Design System.",
   "type": "module",
   "packageManager": "pnpm@10.28.0",
-  "engines": { "node": ">=22.13" },
+  "engines": {
+    "node": ">=22.13"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -20,6 +22,7 @@
     "sync:ds": "scripts/sync-design-system.sh"
   },
   "dependencies": {
+    "@clerk/react": "6.18.0",
     "lucide-react": "1.31.0",
     "next": "16.3.8",
     "react": "19.2.6",

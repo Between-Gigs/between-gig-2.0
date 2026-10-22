@@ -1,6 +1,6 @@
 import type {
-  EmailTemplate, InviteLookup, OutboxEmail, PeopleQuery, Person, PersonSummary, PrivacyRequest, Profile, ProfileDraft,
-  ProfileFields, RegisterResult, RequestCodeResult, Role, Session, SignInResult, SketchKind, SketchSubmission,
+  EmailTemplate, ExternalIdentity, InviteLookup, OutboxEmail, PeopleQuery, Person, PersonSummary, PrivacyRequest, Profile, ProfileDraft,
+  ProfileFields, RegisterResult, RequestCodeResult, Role, Session, SignInResult, SyncExternalResult, SketchKind, SketchSubmission,
   WaitlistResult, WaitlistSignup, ActivityEvent, DashboardSummary, ReviewNoteInput, WaitlistQuery, WaitlistRow,
 } from "./types";
 
@@ -36,6 +36,11 @@ export interface DataSource {
     /** Sends a 6-digit sign-in code by email (queues a "sign-in-code" email). */
     requestCode(email: string): Promise<RequestCodeResult>;
     verifyCode(email: string, code: string): Promise<SignInResult>;
+    /**
+     * Opens a session for an identity Clerk has verified. Joining stays invite-only: the email must belong
+     * to someone on the call sheet (or be an owner). An invited person becomes registered here.
+     */
+    syncExternal(identity: ExternalIdentity): Promise<SyncExternalResult>;
     signOut(): Promise<void>;
     /** Subscribes to session changes (sign in / out, demo role switches). Returns an unsubscribe. */
     onChange(listener: () => void): () => void;

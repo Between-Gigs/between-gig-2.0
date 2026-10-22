@@ -2,12 +2,17 @@
 import { Banner, Button, Field, Input, useToast } from "@ds/components";
 import { startPageTransition } from "@ds/motion";
 import { ArrowLeft, ArrowRight, Clock, Inbox, Mail, RotateCcw } from "lucide-react";
+import { SignIn } from "@clerk/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { data, type RequestCodeResult, type SignInResult } from "@/lib/data";
 import { SAMPLE_OWNER } from "@/lib/data/seed";
+import { clerkEnabled } from "@/lib/auth/clerk";
+import { useSession } from "@/lib/session";
+import { basePath } from "@/lib/site";
 import { AuthShell } from "./AuthShell";
+import { ClerkSlot } from "./ClerkSlot";
 
 const RESEND_SECONDS = 30;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -25,8 +30,53 @@ const verifyError: Record<Exclude<SignInResult, { ok: true }>["error"], string> 
   "no-code": "There's no active code for this email. Send a new one.",
 };
 
-/** /login: email → 6-digit code → in. No passwords in this milestone (see the handoff's open questions). */
+/** /login: email → 6-digit code → in. Clerk runs it when configured; otherwise the sample login below. */
 export function LoginView() {
+  return clerkEnabled ? <ClerkLogin /> : <SampleLogin />;
+}
+
+/** Where to go once signed in: a safe ?next=, else the role's home. */
+function destination(next: string | null, role: "owner" | "gigster") {
+  return next && next.startsWith("/") && !next.startsWith("//") ? next : role === "owner" ? "/owners/" : "/profile/";
+}
+
+/**
+ * Clerk's sign-in (email code, as configured in the Clerk dashboard), themed with our tokens and sitting in
+ * the same brand frame. Once Clerk signs someone in, ClerkLayer opens their Between Gigs session and we route.
+ */
+function ClerkLogin() {
+  const params = useSearchParams();
+  const router = useRouter();
+  const { session } = useSession();
+  const notInvited = params.get("notInvited");
+
+  React.useEffect(() => {
+    if (session?.via === "clerk") router.replace(destination(params.get("next"), session.role));
+  }, [session, params, router]);
+
+  return (
+    <AuthShell eyebrow="Welcome back" title="Sign in to" accent="Between Gigs."
+      lead={<p>We'll email you a 6-digit code. No password to remember.</p>}>
+      <div className="grid gap-6">
+        {params.get("signedOut") && <Banner tone="success" title="You're signed out">See you next time.</Banner>}
+        {notInvited && (
+          <Banner tone="warning" title="That email isn't on the call sheet yet">
+            Joining is by invite, and we don't have {notInvited} on the list. Use the email your invite was sent to, or <Link href="/professionals/" className="text-link underline underline-offset-2">ask to join</Link>.
+          </Banner>
+        )}
+        <ClerkSlot label="Loading sign-in">
+          <SignIn routing="hash" signUpUrl={`${basePath}/join/`} withSignUp={false}
+            initialValues={{ emailAddress: params.get("email") ?? undefined }}
+            fallbackRedirectUrl={`${basePath}/login/${params.get("next") ? `?next=${encodeURIComponent(params.get("next")!)}` : ""}`} />
+        </ClerkSlot>
+        <p className="text-center text-body-sm text-ink-muted">New here? Joining is by invite: use the link in your invite email.</p>
+      </div>
+    </AuthShell>
+  );
+}
+
+/** The sample login: email → 6-digit code, with the code shown on screen and in the outbox. */
+function SampleLogin() {
   const params = useSearchParams();
   const router = useRouter();
   const toast = useToast();
@@ -83,8 +133,7 @@ export function LoginView() {
       return;
     }
     toast({ message: `Signed in as ${r.session.email}`, tone: "success" });
-    const next = params.get("next");
-    router.push(next && next.startsWith("/") && !next.startsWith("//") ? next : r.session.role === "owner" ? "/owners/" : "/profile/");
+    router.push(destination(params.get("next"), r.session.role));
   };
 
   const back = () => startPageTransition(() => { setStep("email"); setCodeError(undefined); setCode(""); }, { effect: "shift", direction: "back", target: stage.current });

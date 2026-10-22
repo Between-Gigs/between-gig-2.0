@@ -1,3 +1,5 @@
+/* Clerk's styles sit in their own layer, below utilities, so our token classes can restyle its components. */
+@layer theme, base, clerk, components, utilities;
 @import "tailwindcss";
 @import "../packages/design-system/styles/between-gigs.css";
 

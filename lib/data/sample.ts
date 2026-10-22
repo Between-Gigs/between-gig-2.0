@@ -11,7 +11,7 @@ import type { DataSource } from "./source";
 import type {
   EmailTemplate, Invite, InviteLookup, OutboxEmail, PeopleQuery, Person, PersonStatus, PersonSummary, Profile,
   PrivacyRequest, ProfileDraft, Role, Session, SketchSubmission, WaitlistSignup,
-  ActivityEvent, ActivityKind, InviteStatus, WaitlistRow,
+  ActivityEvent, ActivityKind, InviteStatus, WaitlistRow, ExternalIdentity, SyncExternalResult,
 } from "./types";
 import { inviteStatuses } from "./types";
 import { personStatuses } from "./types";
@@ -258,6 +258,37 @@ export const sampleSource: DataSource = {
       state.session = person ? sessionFor(person) : ownerSession();
       save(state, true);
       return { ok: true, session: clone(state.session) };
+    },
+    async syncExternal(identity: ExternalIdentity): Promise<SyncExternalResult> {
+      const state = load();
+      const address = identity.email.trim().toLowerCase();
+      if (identity.role === "owner") {
+        state.session = { ...ownerSession(), email: address, name: identity.name || SAMPLE_OWNER.name, via: "clerk" };
+        save(state, true);
+        return { ok: true, session: clone(state.session), created: false };
+      }
+      const person = state.people.find((p) => p.email.toLowerCase() === address);
+      if (!person) return { ok: false, error: "unknown-email" };
+      let created = false;
+      if (person.status === "invited") {
+        // First sign-in after a Clerk sign-up: use the invite, the same as register() does.
+        const invite = state.invites.find((i) => i.personId === person.id && !i.usedAt);
+        if (identity.inviteToken && invite && invite.token !== identity.inviteToken) return { ok: false, error: "invite-mismatch" };
+        const t = now();
+        if (identity.name?.trim()) {
+          person.name = identity.name.trim().replace(/\s+/g, " ");
+          person.slug = uniqueSlug(state, person.name, person.id);
+        }
+        person.status = "registered";
+        person.registeredAt = t;
+        person.updatedAt = t;
+        if (invite) invite.usedAt = t;
+        log(state, "registered", { personId: person.id, name: person.name, email: person.email });
+        created = true;
+      }
+      state.session = { ...sessionFor(person), via: "clerk" };
+      save(state, true);
+      return { ok: true, session: clone(state.session), created };
     },
     async signOut() {
       const state = load();

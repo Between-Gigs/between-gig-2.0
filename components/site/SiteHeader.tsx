@@ -3,7 +3,7 @@ import { Avatar, Button, IconButton, Logo, Menu, ThemeToggle, cx, type MenuEntry
 import { ChevronDown, LogOut, Menu as MenuIcon, PencilLine, UserRound, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { data } from "@/lib/data";
+import { useAuthActions } from "@/lib/auth/context";
 import { useSession } from "@/lib/session";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 
@@ -14,6 +14,7 @@ export function SiteHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const { session, loading } = useSession();
+  const auth = useAuthActions();
 
   const links: NavLink[] = session?.role === "owner"
     ? [{ href: "/owners/", label: "Dashboard" }, { href: "/owners/review/", label: "Review" }, { href: "/owners/people/", label: "People" }, { href: "/owners/waitlist/", label: "Waitlist" }, { href: "/emails/", label: "Emails" }]
@@ -28,8 +29,9 @@ export function SiteHeader() {
   };
 
   const signOut = async () => {
-    await data.auth.signOut();
-    router.push("/login/?signedOut=1");
+    await auth.signOut();
+    // Clerk's sign-out navigates by itself (to /login/?signedOut=1).
+    if (auth.provider === "sample") router.push("/login/?signedOut=1");
   };
 
   const menu: MenuEntry[] = session ? [

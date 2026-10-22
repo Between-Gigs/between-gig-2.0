@@ -1,6 +1,6 @@
 /*
  * Email templates as pure functions: props in, { subject, preheader, html, text } out. No React, no
- * DOM, so they run unchanged in the Worker / Supabase Edge Function that sends through Resend.
+ * DOM, so they run unchanged in the Worker that sends through Resend.
  * Previews: /emails and /emails/[name].
  */
 import { invite, type InviteProps } from "./invite";

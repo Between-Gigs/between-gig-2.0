@@ -6,3 +6,7 @@ qa/output/
 next-env.d.ts
 .DS_Store
 deliverables/
+
+# Local env files (keep .env.example)
+.env
+.env*.local

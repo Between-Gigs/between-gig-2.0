@@ -9,7 +9,7 @@ Every method is async and returns plain JSON-able objects, so each maps to one A
 | | Sample (now) | Production (Anu) |
 | --- | --- | --- |
 | Storage | One localStorage key `bg2-sample-v1`, seeded from `lib/data/seed.ts` | Cloudflare D1 |
-| Auth | Session object in the same key | Supabase auth (email OTP), session cookie |
+| Auth | Session object in the same key; with a Clerk key, Clerk signs in and the session mirrors it | Clerk (email code), verified in the Worker |
 | Email | Rendered and pushed to a local outbox, visible at `/emails` | Rendered by the same `emails/*.ts` functions and queued in the Resend outbox |
 | Photos | Resized to 480px JPEG data URL | Upload to storage (R2 or Supabase Storage), keep the URL |
 | Authorization | Client-side guard only (`lib/guard.ts`) | Checked in the API on every call |
@@ -20,7 +20,7 @@ The existing `leads` table holds the waitlist (email, ZIP `zip_code`, `category`
 
 | Table | Columns | Notes |
 | --- | --- | --- |
-| `people` | `id`, `lead_id` → `leads.id`, `email`, `name`, `slug` (unique), `status`, `invited_at`, `registered_at`, `submitted_at`, `approved_at`, `updated_at`, `auth_user_id` (Supabase) | One row per invited waitlist sign-up. `status` is one of `invited · registered · draft · submitted · changes_requested · approved`. |
+| `people` | `id`, `lead_id` → `leads.id`, `email`, `name`, `slug` (unique), `status`, `invited_at`, `registered_at`, `submitted_at`, `approved_at`, `updated_at`, `auth_user_id` (Clerk user id) | One row per invited waitlist sign-up. `status` is one of `invited · registered · draft · submitted · changes_requested · approved`. |
 | `invites` | `token_hash` (unique), `person_id`, `email`, `created_at`, `expires_at`, `used_at` | Store a hash of the token, never the token. 30-day expiry in the copy. |
 | `profile_drafts` | `person_id` (pk), `fields` (JSON), `step`, `saved_at` | The autosaved working copy. |
 | `profiles` | `person_id` (pk), `fields` (JSON), `submitted_at` | Frozen copy at submit. The public page reads only this, and only when `people.status = 'approved'`. |
@@ -45,16 +45,20 @@ The existing `leads` table holds the waitlist (email, ZIP `zip_code`, `category`
 | --- | --- | --- |
 | `lookup(token)` | `GET /api/invites/:token` | Hash the token, look up `invites`. `state`: `valid`, `used` (`used_at` set), `expired` (`expires_at` past), `unknown`. Return only the email and state, not the person. |
 
-### auth (Supabase)
+### auth (Clerk)
+
+Sign-in is Clerk (see [clerk.md](clerk.md)). In the browser, Clerk's own components do the email code; the
+front end then calls `syncExternal` so the rest of the app sees a normal `Session`. The Worker verifies Clerk's
+session token on every request (`@clerk/backend` `verifyToken`, with `CLERK_SECRET_KEY` as a Worker secret).
 
 | Method | Route | Backend |
 | --- | --- | --- |
-| `session()` | `GET /api/session` | Supabase session → `people` row → `{ personId, email, role, name }`. Owners are the existing `hub_memberships` (`super_admin`) or a new `owner` role. |
-| `register({ token, name, acceptTerms })` | `POST /api/register` | Validate the invite, create the Supabase user for the invite's email (or link on first OTP), set `people.name`, `slug`, `status = 'registered'`, `invites.used_at`. Record the terms version (like `leads.consent_version`). |
-| `requestCode(email)` | `POST /api/auth/code` | `supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } })`, with the `sign-in-code` template as the Supabase email template, or generate the code yourself and queue `emails/sign-in-code.ts`. Errors: `unknown-email`, `not-registered`, `rate-limited` (30 s between sends). |
-| `verifyCode(email, code)` | `POST /api/auth/verify` | `supabase.auth.verifyOtp({ email, token, type: 'email' })`. Map Supabase errors to `wrong-code`, `expired-code`, `too-many-attempts`. 10-minute expiry, 5 tries. |
-| `signOut()` | `POST /api/auth/signout` | `supabase.auth.signOut()`. |
-| `onChange(listener)` | – | Supabase `onAuthStateChange`. |
+| `session()` | `GET /api/session` | Verify the Clerk session token (`Authorization: Bearer`, from `getToken()`) → `people.auth_user_id` → `{ personId, email, role, name }`. Owners: Clerk `publicMetadata.role === "owner"`. |
+| `syncExternal({ email, name, role, inviteToken, acceptedTerms })` | `POST /api/session/sync` | Called right after Clerk signs someone in. Never trust the body's email or role: read both from the verified token / Clerk user. Look up `people` by email; if `invited`, check the invite token, then set `name`, `slug`, `status = 'registered'`, `invites.used_at`, `auth_user_id`, and record the terms version. Unknown email → `unknown-email` (joining stays invite-only). |
+| `register({ token, name, acceptTerms })` | – | Sample login only. With Clerk, `syncExternal` does this. |
+| `requestCode(email)` / `verifyCode(email, code)` | – | Sample login only. Clerk sends and checks the code. Restrict sign-ups to invited emails with a Clerk allowlist or a `user.created` webhook check. |
+| `signOut()` | – | `clerk.signOut()` in the browser (ClerkLayer also clears the app session). |
+| `onChange(listener)` | – | Unchanged: fires when the app session changes. |
 
 ### profiles
 

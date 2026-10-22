@@ -1,12 +1,17 @@
 "use client";
 import { Banner, Button, Checkbox, EmptyState, Field, Input, Skeleton, useToast } from "@ds/components";
-import { ArrowRight, Clock, Lock, Mail, SearchX, UserCheck } from "lucide-react";
+import { SignUp } from "@clerk/react";
+import { ArrowLeft, ArrowRight, Clock, Lock, Mail, SearchX, UserCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { data, type InviteLookup } from "@/lib/data";
 import { ButtonLink } from "@/components/ui/ButtonLink";
+import { clerkEnabled } from "@/lib/auth/clerk";
+import { useSession } from "@/lib/session";
+import { basePath } from "@/lib/site";
 import { AuthShell } from "./AuthShell";
+import { ClerkSlot } from "./ClerkSlot";
 
 /**
  * /join?invite=<token>: register from the invite email. The email comes from the invite and can't be
@@ -39,6 +44,7 @@ function JoinForm({ token, email }: { token: string; email: string }) {
   const [terms, setTerms] = React.useState(false);
   const [errors, setErrors] = React.useState<{ name?: string; terms?: string; form?: string }>({});
   const [busy, setBusy] = React.useState(false);
+  const [verify, setVerify] = React.useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +53,7 @@ function JoinForm({ token, email }: { token: string; email: string }) {
     if (!terms) next.terms = "Agree to the Terms of Use and Privacy Policy to continue.";
     setErrors(next);
     if (Object.keys(next).length) return;
+    if (clerkEnabled) { setVerify(true); return; } // Clerk confirms the email next; ClerkLayer then registers them.
     setBusy(true);
     const r = await data.auth.register({ token, name, acceptTerms: terms });
     if (!r.ok) {
@@ -57,6 +64,8 @@ function JoinForm({ token, email }: { token: string; email: string }) {
     toast({ message: "Account created", tone: "success" });
     router.push("/profile/edit/");
   };
+
+  if (verify) return <ClerkVerify token={token} email={email} name={name.trim()} onBack={() => setVerify(false)} />;
 
   return (
     <AuthShell eyebrow="Professional onboarding" title="Your next chapter" accent="starts here."
@@ -81,6 +90,31 @@ function JoinForm({ token, email }: { token: string; email: string }) {
         <Button type="submit" variant="strong" size="lg" fullWidth loading={busy} iconEnd={<ArrowRight />}>Create my profile</Button>
         <p className="text-center text-body-sm text-ink-muted">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2">Sign in</Link></p>
       </form>
+    </AuthShell>
+  );
+}
+
+/**
+ * Clerk mode, step 1b: Clerk's sign-up confirms the invite email with a code. The invite token, name and
+ * terms ride along in unsafeMetadata; ClerkLayer reads them and registers the person, then we head to step 2.
+ */
+function ClerkVerify({ token, email, name, onBack }: { token: string; email: string; name: string; onBack: () => void }) {
+  const router = useRouter();
+  const { session } = useSession();
+  React.useEffect(() => { if (session?.via === "clerk") router.replace("/profile/edit/"); }, [session, router]);
+  const [firstName, ...rest] = name.split(" ");
+  return (
+    <AuthShell eyebrow="Professional onboarding" title="Your next chapter" accent="starts here."
+      lead={<p>One quick check: we'll email {email} a code to confirm it's you.</p>}>
+      <div className="grid gap-6">
+        <ClerkSlot label="Loading sign-up">
+          <SignUp routing="hash" signInUrl={`${basePath}/login/`}
+            initialValues={{ emailAddress: email, firstName, lastName: rest.join(" ") || undefined }}
+            unsafeMetadata={{ inviteToken: token, name, acceptedTerms: true }}
+            fallbackRedirectUrl={`${basePath}/join/?invite=${encodeURIComponent(token)}`} />
+        </ClerkSlot>
+        <Button variant="ghost" size="sm" iconStart={<ArrowLeft />} onClick={onBack} className="justify-self-start">Back</Button>
+      </div>
     </AuthShell>
   );
 }

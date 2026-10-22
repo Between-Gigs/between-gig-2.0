@@ -6,7 +6,7 @@ Source of the priorities: Justin's voice note of 21 Oct 2026 (`docs/voice-note-2
 
 **What the client needs, in their words:** beautiful emails; an invite to the ~500 waitlist sign-ups; register, log in, the questionnaire, see their profile; owners search everyone and open profiles; owners see each person's status and approve or suggest edits. Keep the admin "nice and clean and simple". Rich annotation and commenting are out of scope for now.
 
-**Delivery model:** each milestone ships as a working Next.js front end built only from the design system, with a typed data layer (sample data now) whose interfaces match what Anu wires to the real backend (Cloudflare D1 + Supabase auth + Resend). Every milestone ends with a handoff note for Anu.
+**Delivery model:** each milestone ships as a working Next.js front end built only from the design system, with a typed data layer (sample data now) whose interfaces match what Anu wires to the real backend (Cloudflare D1 + Clerk sign-in + Resend). Every milestone ends with a handoff note for Anu.
 
 ---
 

@@ -1,7 +1,7 @@
 /*
  * Between Gigs 2.0 data model. These types are the contract between the UI and the backend.
  * The sample implementation (./sample.ts) keeps them in localStorage; Anu's implementation maps them
- * to Cloudflare D1, Supabase auth and the Resend outbox. See docs/handoff/data-layer.md.
+ * to Cloudflare D1, Clerk sign-in and the Resend outbox. See docs/handoff/data-layer.md.
  */
 
 /** Where a Gigster is on the way from waitlist to a public profile. Order matters: it is the funnel. */
@@ -127,7 +127,24 @@ export interface Session {
   role: Role;
   name: string;
   startedAt: string;
+  /** Set when an external sign-in provider (Clerk) opened this session, so its sign-out closes it too. */
+  via?: "clerk";
 }
+
+/** A verified identity handed over by Clerk: the email is already proven by Clerk's email code. */
+export interface ExternalIdentity {
+  email: string;
+  name?: string;
+  /** From Clerk publicMetadata.role, which only the dashboard or a server can set. */
+  role?: "owner";
+  /** The invite the person signed up from (Clerk unsafeMetadata), if any. */
+  inviteToken?: string;
+  acceptedTerms?: boolean;
+}
+
+export type SyncExternalResult =
+  | { ok: true; session: Session; created: boolean }
+  | { ok: false; error: "unknown-email" | "invite-mismatch" };
 
 export type SignInResult =
   | { ok: true; session: Session }

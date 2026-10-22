@@ -31,6 +31,9 @@ jobs:
       - run: pnpm build
         env:
           NEXT_PUBLIC_BASE_PATH: /between-gig-2.0
+          # Clerk sign-in. The publishable key is public by design (it only names the Clerk app); a repo
+          # variable of the same name overrides it. The secret key never goes here: Pages has no server.
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_Z2xhZC1tb25rZXktNjkwOC5jbGVyay5hY2NvdW50cy5kZXYk' }}
       - run: touch out/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
