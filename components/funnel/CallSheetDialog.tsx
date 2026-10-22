@@ -1,11 +1,14 @@
 "use client";
 import { Banner, Button, Field, Input, Modal, Select, Textarea } from "@ds/components";
 import { startPageTransition } from "@ds/motion";
-import { ArrowUpRight, Check, Inbox, Mail, MapPin } from "lucide-react";
+import { Reveal } from "@ds/motion";
+import { ArrowRight, Check, Inbox, Mail, MapPin } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { data, type WaitlistSignup } from "@/lib/data";
 import { waitlistCategories, waitlistCategoryLabel } from "@/lib/data/taxonomy";
+import { asset } from "@/lib/site";
+import { ButtonLink } from "@/components/ui/ButtonLink";
 
 type Step = "signup" | "details" | "done";
 
@@ -77,7 +80,7 @@ export function CallSheetDialog({ open, onClose, category: initialCategory, plac
           <form noValidate onSubmit={join} className="grid gap-4">
             {category && <p className="rounded-md bg-surface-selected px-3 py-2 text-body-sm text-ink">Interested in offering: <b>{waitlistCategoryLabel(category)}</b></p>}
             <Field label="Email" error={errors.email}>
-              <Input type="email" autoComplete="email" maxLength={254} value={email} start={<Mail />} autoFocus
+              <Input type="email" autoComplete="email" maxLength={254} placeholder="you@example.com" value={email} start={<Mail />} autoFocus
                 onChange={(e) => { setEmail(e.target.value); setErrors((x) => ({ ...x, email: undefined })); }} />
             </Field>
             <Field label="ZIP code" error={errors.zip}>
@@ -88,7 +91,7 @@ export function CallSheetDialog({ open, onClose, category: initialCategory, plac
               By joining, you agree to receive Between Gigs launch updates and accept the <Link className="text-link underline underline-offset-2" href="/terms/" target="_blank">Terms of Use</Link>.
               See our <Link className="text-link underline underline-offset-2" href="/privacy/" target="_blank">Privacy Policy</Link>. You can ask to leave at any time.
             </p>
-            <Button type="submit" variant="primary" size="lg" fullWidth loading={busy} iconEnd={<ArrowUpRight />}>Get on the call sheet</Button>
+            <Button type="submit" variant="primary" size="lg" fullWidth loading={busy}>Get on the call sheet</Button>
           </form>
         )}
         {step === "details" && (
@@ -105,10 +108,22 @@ export function CallSheetDialog({ open, onClose, category: initialCategory, plac
           </form>
         )}
         {step === "done" && (
-          <div className="grid justify-items-center gap-4 py-4 text-center">
-            <span className="grid size-16 place-items-center rounded-full bg-action text-on-action shadow-md"><Check className="size-8" aria-hidden="true" /></span>
+          <div className="grid justify-items-center gap-5 py-2 text-center">
+            {/* The Storyboard's cover as a keepsake, with the check that says it worked. */}
+            <Reveal effect="pop" className="relative w-52">
+              <img src={asset("art/storyboard/thumbs/front-cover.jpg")} alt="" width={800} height={533} decoding="async"
+                className="aspect-3/2 h-auto w-full rotate-2 rounded-xl border-4 border-surface object-cover shadow-lg" />
+              <span className="absolute -bottom-3 -left-3 grid size-12 place-items-center rounded-full bg-action text-on-action shadow-md"><Check className="size-6" aria-hidden="true" /></span>
+            </Reveal>
+            <div className="grid w-full gap-1 rounded-xl bg-surface-selected px-4 py-3 text-left">
+              <span className="text-label-sm text-ink-brand">While you wait</span>
+              <span className="text-body-sm text-ink">Flip through the Storyboard to see the kinds of work clients could bring to you.</span>
+            </div>
             {data.kind === "sample" && <p className="text-caption text-ink-subtle">Sample mode: the welcome email is in the <Link href="/emails/" className="inline-flex items-center gap-1 text-link underline underline-offset-2"><Inbox className="size-3.5" aria-hidden="true" />sample outbox</Link>.</p>}
-            <Button variant="primary" onClick={onClose}>Done</Button>
+            <div className="flex flex-wrap justify-center gap-3">
+              <ButtonLink href="/storyboard/" variant="primary" iconEnd={<ArrowRight />}>Open the Storyboard</ButtonLink>
+              <Button onClick={onClose}>Done</Button>
+            </div>
           </div>
         )}
       </div>
