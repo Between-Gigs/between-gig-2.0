@@ -1,6 +1,7 @@
 /*
  * The approved Storyboard (imagine-os/between-gigs public/design-locks/approved-2026-09-27/storyboard.html):
- * its pages, in book order, and its two forms. Artwork is unchanged, served from public/art/storyboard/.
+ * its pages, in book order, and its two forms. Artwork is unchanged, served from public/art/storyboard/
+ * (covers from storyboard-covers-v2-59, the corrected green cover). Cover copy is the live "version 2" wording.
  */
 
 export type ScenePageType = "cover" | "solo" | "crew";
@@ -15,7 +16,7 @@ export const scenePages: ScenePage[] = [
    "place": "Open the book",
    "type": "cover",
    "customer": "cover",
-   "story": "Real production talent, ready for everyday life and business."
+   "story": "Extraordinary Talent. Everyday Solutions."
   },
   {
    "file": "solo-editor.jpg",
@@ -163,11 +164,11 @@ export const scenePages: ScenePage[] = [
   },
   {
    "file": "back-cover.jpg",
-   "title": "The next page is yours",
+   "title": "Glad you’re here.",
    "place": "Close the book",
    "type": "cover",
    "customer": "cover",
-   "story": "Sketch the need. We will help cast the right person or crew."
+   "story": "Patti & Peter"
   }
 ] as ScenePage[];
 

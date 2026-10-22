@@ -1,7 +1,6 @@
 "use client";
-import { Banner, Button, Field, IconButton, Input, Modal, SegmentedControl, Select, Textarea, cx } from "@ds/components";
-import { Reveal, startPageTransition } from "@ds/motion";
-import { ArrowRight, ChevronLeft, ChevronRight, Inbox, LayoutGrid, List, Sparkles } from "lucide-react";
+import { Banner, Button, Field, Input, Modal, SegmentedControl, Select, Textarea, cx } from "@ds/components";
+import { Inbox, LayoutGrid, List, Sparkles } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { flushSync } from "react-dom";
@@ -9,6 +8,7 @@ import { data } from "@/lib/data";
 import { asset } from "@/lib/site";
 import { plans, scenePages, type PlanField } from "@/lib/storyboard";
 import { Page } from "@/components/site/Page";
+import { StoryBook, type StoryBookHandle } from "@/components/storyboard/StoryBook";
 
 type Kind = keyof typeof plans;
 
@@ -20,81 +20,29 @@ function reflow(update: () => void) {
 }
 
 /**
- * /storyboard. The approved Storyboard artwork and copy, set in a design-system wrapper: the book (turn
- * the pages), the catalog of commissions, and the two forms (offer your skills / find talent).
+ * /storyboard. The approved Storyboard, rebuilt on the design system: the sketchbook with its curling page
+ * turn (components/storyboard), the credits, the catalog of commissions, and the two forms.
  */
 export function Storyboard() {
-  const [page, setPage] = React.useState(0);
   const [planner, setPlanner] = React.useState<Kind | null>(null);
-  const book = React.useRef<HTMLDivElement>(null);
-  const bookTop = React.useRef<HTMLElement>(null);
-  const n = scenePages.length;
-  const p = scenePages[page];
-
-  const turn = React.useCallback((to: number) => {
-    const next = (to + n) % n;
-    startPageTransition(() => setPage(next), { effect: "slide", direction: next < page ? "back" : "forward", target: book.current });
-  }, [n, page]);
+  const bookRef = React.useRef<StoryBookHandle>(null);
+  const top = React.useRef<HTMLDivElement>(null);
 
   const openScene = (index: number) => {
-    bookTop.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
-    window.setTimeout(() => turn(index), 250);
+    top.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    window.setTimeout(() => bookRef.current?.goTo(index), 350);
   };
 
   return (
     <Page bare>
-      <section data-theme="dark" aria-labelledby="sb-h" className="relative isolate overflow-hidden bg-surface-brand">
-        <span aria-hidden="true" className="glow-horizon opacity-60" />
-        <div className="relative z-raised mx-auto grid max-w-7xl gap-6 px-4 pt-12 pb-10 sm:px-6 lg:grid-cols-12 lg:items-end lg:pt-16">
-          <div className="lg:col-span-7">
-            <Reveal effect="fade-up"><p className="text-eyebrow text-ink-brand uppercase">The interactive Storyboard</p></Reveal>
-            <Reveal effect="fade-up" delay={80}><h1 id="sb-h" className="mt-3 font-display text-display-md text-balance text-ink sm:text-display-lg">Your next chapter <span className="glow-text text-ink-brand">begins here…</span></h1></Reveal>
-          </div>
-          <Reveal effect="fade-up" delay={160} className="flex flex-wrap gap-3 lg:col-span-5 lg:justify-end">
-            <Button variant="primary" size="lg" className="glow-hover" iconEnd={<ArrowRight />} onClick={() => setPlanner("buyer")}>Find talent for a project</Button>
-            <Button variant="secondary" size="lg" onClick={() => setPlanner("talent")}>Offer your skills</Button>
-          </Reveal>
-        </div>
-
-        {/* The book */}
-        <section ref={bookTop} aria-label="The Storyboard book" aria-roledescription="carousel" className="relative z-raised mx-auto max-w-7xl scroll-mt-20 px-4 pb-16 sm:px-6"
-          onKeyDown={(e) => { if (e.key === "ArrowRight") { e.preventDefault(); turn(page + 1); } if (e.key === "ArrowLeft") { e.preventDefault(); turn(page - 1); } }}>
-          <div className="grid gap-6 lg:grid-cols-12 lg:items-center">
-            <div className="relative lg:col-span-8">
-              <div ref={book} className="vt-page overflow-hidden rounded-2xl border border-line shadow-lg">
-                <img key={p.file} src={asset(`art/storyboard/${p.file}`)} alt={`Storyboard page: ${p.title}. ${p.story}`} className="aspect-3/2 w-full object-cover" />
-              </div>
-              <IconButton label="Previous page" variant="secondary" icon={<ChevronLeft />} onClick={() => turn(page - 1)} className="absolute top-1/2 left-3 -translate-y-1/2 bg-surface shadow-md" />
-              <IconButton label="Next page" variant="secondary" icon={<ChevronRight />} onClick={() => turn(page + 1)} className="absolute top-1/2 right-3 -translate-y-1/2 bg-surface shadow-md" />
-            </div>
-            <div aria-live="polite" className="grid content-center gap-3 lg:col-span-4">
-              <p className="font-mono text-data-sm text-ink-subtle">Page {page + 1} of {n}</p>
-              <p className="text-eyebrow text-ink-brand uppercase">{p.place}</p>
-              <h2 className="font-display text-display-sm text-balance text-ink">{p.title}</h2>
-              <p className="font-serif text-editorial-lg text-ink-muted">{p.story}</p>
-              <p className="text-caption text-ink-subtle">Use the arrows, or the arrow keys, to turn the page.</p>
-            </div>
-          </div>
-          <ol aria-label="Pages" className="mt-6 flex gap-2 overflow-x-auto pb-2">
-            {scenePages.map((s, i) => (
-              <li key={s.file} className="shrink-0">
-                <button type="button" onClick={() => turn(i)} aria-label={`Page ${i + 1}: ${s.title}`} aria-current={i === page ? "true" : undefined}
-                  className={cx("block overflow-hidden rounded-md border-2 transition duration-fast", i === page ? "border-action" : "border-transparent opacity-70 hover:opacity-100")}>
-                  <img src={asset(`art/storyboard/${s.file}`)} alt="" loading="lazy" className="h-12 w-18 object-cover" />
-                </button>
-              </li>
-            ))}
-          </ol>
-        </section>
-      </section>
+      <div ref={top} className="scroll-mt-16" />
+      <StoryBook ref={bookRef} onPlan={setPlanner} onScrollOn={() => document.getElementById("credits")?.scrollIntoView({ behavior: "smooth", block: "start" })} />
 
       {/* The credits keep rolling */}
-      <section aria-labelledby="credits-h" className="mx-auto grid max-w-7xl gap-8 px-4 py-20 sm:px-6 lg:grid-cols-12">
-        <h2 id="credits-h" className="font-display text-display-sm text-ink sm:text-display-md lg:col-span-4">The credits keep rolling</h2>
-        <div className="grid gap-4 lg:col-span-8">
-          <p className="font-serif text-editorial-lg text-ink">Between Gigs gives everyday people and businesses access to the remarkable range of entertainment professionals between productions. A family can hire a scenic carpenter to reinvent a room. A bakery can bring in a food stylist and editor. A school can build a fundraiser with a producer and sound crew. Production designers, grips, writers, actors, builders, assistants and animal handlers can be booked for one afternoon or an entire season. You describe the outcome; we help cast one person or the right crew.</p>
-          <p className="border-l-2 border-action pl-4 text-body-lg text-ink-muted italic">Your next useful skill may be the one nobody has thought to cast yet.</p>
-        </div>
+      <section id="credits" aria-labelledby="credits-h" className="mx-auto grid max-w-3xl scroll-mt-20 gap-5 border-t border-line px-4 py-20 text-center sm:px-6">
+        <h2 id="credits-h" className="text-eyebrow text-ink-brand uppercase">The credits keep rolling</h2>
+        <p className="font-serif text-editorial-lg text-ink">Between Gigs gives everyday people and businesses access to the remarkable range of entertainment professionals between productions. A family can hire a scenic carpenter to reinvent a room. A bakery can bring in a food stylist and editor. A school can build a fundraiser with a producer and sound crew. Production designers, grips, writers, actors, builders, assistants and animal handlers can be booked for one afternoon or an entire season. You describe the outcome; we help cast one person or the right crew.</p>
+        <p className="text-body-lg text-ink-muted italic">Your next useful skill may be the one nobody has thought to cast yet.</p>
       </section>
 
       <Catalog onOpen={openScene} />

@@ -13,7 +13,7 @@ The live funnel, rebuilt:
 | --- | --- | --- |
 | `/professionals` | Hero, benefits, 10 crafts (with "Explore service ideas" and "I offer this service"), 4 sample profiles, "Your next chapter", FAQ, founders, final call to action | `app/professionals/current.tsx`, `components/current-founders.tsx` (approved by Patti Lenkov, 27 Sep 2026) |
 | ↳ dialog | "Get on the call sheet" in three steps: (1) email + ZIP, with the category of the card that opened it; (2) optional service category and "What would you offer?"; (3) thanks | same file |
-| `/storyboard` | The approved artwork as a book you can page through (arrows, keys, thumbnails), "The credits keep rolling", and the catalog of 18 commissions (filter by talent and customer, sort, list or gallery). Opening a commission turns the book to that page. | `public/design-locks/approved-2026-09-27/storyboard.html` |
+| `/storyboard` | Rebuilt to match the approved page (22 Oct 2026): one centered column with Peter's handwritten "Your next chapter starts here." (the approved graphic), then the sketchbook with the original **page turn**. Drag a page or tap either half, and it curls over the spine as a curved leaf with shading. The arrows and arrow keys work too, the book tilts gently toward the pointer and zooms (90–150%), and covers fade instead of curling. Then the caption, the hint, the two buttons, "The credits keep rolling", and the catalog of 18 commissions (opening one turns the book to it). Covers are the approved green ones (`storyboard-covers-v2-59`). The turn is a TypeScript port of the original engine (`components/storyboard/engine.ts`), with the same geometry and spring settings. | `public/design-locks/approved-2026-09-27/storyboard.html` |
 | ↳ forms | "Offer your skills" (talent) and "Find talent for a project" (buyer). Same fields, labels, buttons and success message | same file (`PLANS`) |
 | `/privacy` (+ request form), `/terms`, `/provider-standards`, `/licensing-insurance` | Policy pages with a contents rail; effective date unchanged | `app/privacy`, `app/terms`, … |
 | `/journal`, `/journal/[slug]`, `/journal/authors/[slug]` | Featured story plus a grid with a filter by kind. The reader has a contents rail with scrollspy, a reading-progress bar, sources and more stories. The interactive blocks are rebuilt: the budget planner, the production kit and the FilmLA chart (with a numbers table) | `lib/journal/seeds.ts`, `new-articles.ts`, `components/journal/reader.tsx`, `industry-chart.tsx` |
@@ -40,7 +40,7 @@ Public pages get the site nav (For professionals · Storyboard · Journal, with 
 
 | Template | Subject | Notes |
 | --- | --- | --- |
-| Welcome | Your next chapter starts here. | Same copy. The image-of-text headline ("your-next-chapter.png") is now live text, so it reads with images off and in dark mode. The Storyboard opening image is kept, linked, with alt text. I added one line, "Thank you for getting on the call sheet. We'll send your invitation when professional onboarding opens." **This line is a proposal; remove it if Patti and Peter want the email word-for-word.** |
+| Welcome | Your next chapter starts here. | Same copy. The headline is Peter's handwritten "Your next chapter starts here." graphic (`public/email/your-next-chapter.png`), on a white panel that stays white in dark-mode mail clients; its alt text carries the words when images are off. The Storyboard opening image is kept, linked, with alt text. I added one line, "Thank you for getting on the call sheet. We'll send your invitation when professional onboarding opens." **This line is a proposal; remove it if Patti and Peter want the email word-for-word.** |
 | Coming soon | Thank you. The next chapter is coming. | Same copy and signature (Patti & Peter), with the "assemble the crew" artwork. |
 
 Images used by the emails are in `public/email/` (deploy them to `https://between-gigs.com/email/`).
@@ -58,12 +58,11 @@ The approved artwork was copied from the old repo and recompressed for the web. 
 
 - Design-system type, color, components and motion throughout, in light and dark.
 - Service cards use line icons in place of the unicode symbols (⚒ ✦ ✂ …).
-- The Storyboard's page-curl sketchbook (a canvas effect in the locked HTML) is now a slide between pages with thumbnails. The artwork, page order, titles and stories are unchanged. If the client wants the page curl back, it can be ported as its own component.
+- The Storyboard keeps the original page curl and layout. Only its colors come from design tokens: the leaf's shading is near-black instead of warm brown, and Peter's graphic flips to light ink in dark mode.
 - Policy pages gained a contents rail and cross-links between policies.
 
 ## Open questions
 
-1. **Storyboard page curl.** Keep the simpler book, or port the curl effect?
 2. **Welcome email.** Keep the added invitation line, or match the live email exactly?
 3. **Privacy policy hosting line.** It names "OpenAI Sites and Cloudflare" as hosting. Update it when hosting moves.
 4. **Journal source.** Should 2.0 keep reading from the OS Journal studio (D1), or move articles to files in this repo?
