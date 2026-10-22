@@ -56,6 +56,7 @@ export const routes = [
   { name: "licensing-insurance", path: "/licensing-insurance/", ready: "h1" },
   // Milestone 4: the owners' tools.
   { name: "owner-dashboard", path: "/owners/", setup: as("owner"), ready: "h1" },
+  { name: "owner-dashboard-person", path: "/owners/", setup: as("owner"), ready: "h1", act: async (page) => { await page.getByRole("button", { name: "Ben Okafor" }).click(); await page.getByRole("dialog").waitFor(); } },
   { name: "owner-review-queue", path: "/owners/review/", setup: as("owner"), ready: "h1" },
   { name: "owner-review", path: "/owners/people/imani-carter/", setup: as("owner"), ready: "#review-h" },
   {

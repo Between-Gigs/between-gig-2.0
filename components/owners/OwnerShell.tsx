@@ -33,23 +33,26 @@ function countsFrom(d: DashboardSummary): Record<CountKey, number> {
 /** Last known counts, so a remounted sidebar shows numbers straight away instead of blank pills. */
 let lastCounts: Record<CountKey, number> | null = null;
 
-const FrameContext = React.createContext<{ setSection: (s?: string) => void } | null>(null);
+const FrameContext = React.createContext<{ setSection: (s?: string) => void; setFit: (fit: boolean) => void } | null>(null);
 
 /**
  * Owner pages call this. Inside the persistent owner frame (app/owners/layout.tsx) it only passes the page
  * through, so moving between owner pages never re-mounts the sidebar or header: nothing blinks or jumps.
  * Outside it (the emails pages, a profile resolved by the 404 page) it draws the frame itself.
  * `section` highlights a sidebar entry other than the one the path is in (a profile opened from the queue).
+ * `fit` makes the page exactly the height of the screen from the lg breakpoint (the dashboard): the page itself
+ * doesn't scroll, its panels do.
  */
-export function OwnerShell({ children, section }: { children: React.ReactNode; section?: "/owners/review/" }) {
+export function OwnerShell({ children, section, fit = false }: { children: React.ReactNode; section?: "/owners/review/"; fit?: boolean }) {
   const frame = React.useContext(FrameContext);
   React.useEffect(() => {
     if (!frame) return;
     frame.setSection(section);
-    return () => frame.setSection(undefined);
-  }, [frame, section]);
+    frame.setFit(fit);
+    return () => { frame.setSection(undefined); frame.setFit(false); };
+  }, [frame, section, fit]);
   if (frame) return <>{children}</>;
-  return <OwnerFrame section={section}>{children}</OwnerFrame>;
+  return <OwnerFrame section={section} fit={fit}>{children}</OwnerFrame>;
 }
 
 /**
@@ -57,14 +60,15 @@ export function OwnerShell({ children, section }: { children: React.ReactNode; s
  * The rail's collapsed state lives on <html data-owner-nav> and is styled with the `nav-collapsed:` variant,
  * so it's right from the first paint; `[` toggles it.
  */
-export function OwnerFrame({ children, section: fixed }: { children: React.ReactNode; section?: string }) {
+export function OwnerFrame({ children, section: fixed, fit: fixedFit = false }: { children: React.ReactNode; section?: string; fit?: boolean }) {
   const pathname = usePathname();
   const [drawer, setDrawer] = React.useState(false);
   const [section, setSection] = React.useState<string | undefined>(fixed);
+  const [fit, setFit] = React.useState(fixedFit);
   const [counts, setCounts] = React.useState(lastCounts);
   const main = React.useRef<HTMLElement>(null);
   const search = React.useRef<HTMLInputElement>(null);
-  const ctx = React.useMemo(() => ({ setSection }), []);
+  const ctx = React.useMemo(() => ({ setSection, setFit }), []);
 
   // Counts follow the page (approving, inviting and reviewing change them); each page starts at the top.
   React.useEffect(() => {
@@ -111,9 +115,9 @@ export function OwnerFrame({ children, section: fixed }: { children: React.React
           <Drawer side="left" open={drawer} onClose={() => setDrawer(false)} title="Owner workspace">
             <OwnerNav counts={counts} section={section} drawer onNavigate={() => setDrawer(false)} />
           </Drawer>
-          <main ref={main} id="main" tabIndex={-1} className="flex min-w-0 flex-1 flex-col overflow-y-auto outline-none">
-            <div className="mx-auto w-full max-w-7xl flex-1 px-4 pt-8 pb-16 sm:px-6 lg:px-10">{children}</div>
-            <p className="mx-auto w-full max-w-7xl px-4 pb-6 text-caption text-ink-subtle sm:px-6 lg:px-10">Sample data: everyone shown here is fictional.</p>
+          <main ref={main} id="main" tabIndex={-1} className={cx("flex min-w-0 flex-1 flex-col overflow-y-auto outline-none", fit && "lg:overflow-hidden")}>
+            <div className={cx("mx-auto w-full max-w-7xl flex-1 px-4 pt-8 sm:px-6 lg:px-10", fit ? "pb-8 lg:flex lg:min-h-0 lg:flex-col lg:pt-6 lg:pb-4" : "pb-16")}>{children}</div>
+            <p className={cx("mx-auto w-full max-w-7xl shrink-0 px-4 text-caption text-ink-subtle sm:px-6 lg:px-10", fit ? "pb-6 lg:pb-3" : "pb-6")}>Sample data: everyone shown here is fictional.</p>
           </main>
         </div>
       </div>

@@ -21,7 +21,7 @@ export interface QueueItem { id: string; name: string }
 export const reviewHref = (id: string) => `/owners/people/${id}/?from=review`;
 
 /** Every required answer that's missing, as [field, label] pairs with the profile section it belongs to. */
-function missingFields(fields: ProfileFields) {
+export function missingFields(fields: ProfileFields) {
   return Object.entries(validateAll(fields)).flatMap(([step, errors]) =>
     Object.keys(errors).map((k) => ({ field: k as keyof ProfileFields, label: fieldLabel[k as keyof ProfileFields] ?? k, section: SECTIONS[Number(step)] })));
 }
@@ -175,7 +175,7 @@ function prefill(fields: ProfileFields): Record<NoteKey, string> {
   return out;
 }
 
-function SuggestEdits({ open, person, fields, onClose, onSent }: { open: boolean; person: Person; fields: ProfileFields; onClose: () => void; onSent: (p: Person) => void }) {
+export function SuggestEdits({ open, person, fields, onClose, onSent }: { open: boolean; person: Person; fields: ProfileFields; onClose: () => void; onSent: (p: Person) => void }) {
   const toast = useToast();
   const [notes, setNotes] = React.useState<Record<NoteKey, string>>(() => prefill(fields));
   const [error, setError] = React.useState<string>();

@@ -57,3 +57,40 @@ export function Funnel({ d }: { d: DashboardSummary }) {
     </Panel>
   );
 }
+
+export type FunnelView = "invited" | "building" | "submitted" | "approved";
+
+/**
+ * The same funnel, compact, for the one-screen dashboard: one tight row per stage. Selecting a stage shows
+ * who is at that stage now in the dashboard's list, in place.
+ */
+export function FunnelCompact({ d, onSelect, selected }: { d: DashboardSummary; onSelect: (v: FunnelView) => void; selected?: string }) {
+  const f = d.funnel;
+  const stages: { label: string; value: number; view: FunnelView }[] = [
+    { label: "Invited", value: f.invited, view: "invited" },
+    { label: "Opened the invite", value: f.opened, view: "invited" },
+    { label: "Created an account", value: f.accounts, view: "building" },
+    { label: "Submitted a profile", value: f.submitted, view: "submitted" },
+    { label: "Approved", value: f.approved, view: "approved" },
+  ];
+  const scale = f.invited || 1;
+  return (
+    <Panel title="From invite to live" aside={<span className="tabular-nums">Out of {f.invited} invited</span>} flush className="shrink-0">
+      <ol className="grid py-1.5">
+        {stages.map((s, i) => (
+          <li key={s.label}>
+            <button type="button" onClick={() => onSelect(s.view)} aria-pressed={selected === s.view && i !== 1}
+              className="grid min-h-9 w-full grid-cols-12 items-center gap-3 px-5 py-1 text-left transition-colors duration-fast hover:bg-surface-hover">
+              <span className="col-span-5 truncate text-body-sm text-ink-muted">{s.label}</span>
+              <span aria-hidden="true" className="col-span-4 h-1.5 overflow-hidden rounded-full bg-surface-sunken">
+                <span className="block h-full rounded-full bg-action" style={{ width: `${Math.max((s.value / scale) * 100, s.value ? 2 : 0)}%` }} />
+              </span>
+              <span className="col-span-1 text-right text-label-md text-ink tabular-nums">{s.value}</span>
+              <span className="col-span-2 text-right text-caption text-ink-subtle tabular-nums">{i === 0 ? "" : `${pct(s.value, stages[i - 1].value)}%`}</span>
+            </button>
+          </li>
+        ))}
+      </ol>
+    </Panel>
+  );
+}

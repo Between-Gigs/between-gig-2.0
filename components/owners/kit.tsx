@@ -13,10 +13,24 @@ import * as React from "react";
  */
 
 /** The page header: title (with an optional count), one line of description, actions on the right. */
-export function OwnerPage({ title, description, meta, actions, breadcrumbs, children }: {
+export function OwnerPage({ title, description, meta, actions, breadcrumbs, fit = false, children }: {
   title: React.ReactNode; description?: React.ReactNode; meta?: React.ReactNode; actions?: React.ReactNode;
-  breadcrumbs?: React.ReactNode; children: React.ReactNode;
+  breadcrumbs?: React.ReactNode; /** Fill the screen height (with OwnerShell fit): children share what's left. */ fit?: boolean; children: React.ReactNode;
 }) {
+  if (fit) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <header className="flex shrink-0 flex-wrap items-end justify-between gap-x-6 gap-y-3">
+          <div className="grid min-w-0 gap-1">
+            <h1 className="font-display text-display-sm text-balance text-ink">{title}</h1>
+            {description && <p className="max-w-2xl text-body-md text-ink-muted">{description}</p>}
+          </div>
+          {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+        </header>
+        <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col gap-5">{children}</div>
+      </div>
+    );
+  }
   return (
     <>
       {breadcrumbs && <div className="mb-4">{breadcrumbs}</div>}
@@ -91,15 +105,17 @@ export function StatCard({ href, label, value, hint, icon, attention = false }: 
 }
 
 /** The list row every owner list uses: leading avatar, title and subtitle, right-hand meta, a chevron. */
-export function Row({ href, leading, title, subtitle, meta, badge }: {
-  href: string; leading: React.ReactNode; title: React.ReactNode; subtitle?: React.ReactNode; meta?: React.ReactNode; badge?: React.ReactNode;
+export function Row({ href, onOpen, leading, title, subtitle, meta, badge, className }: {
+  /** A link to a page, or (with onOpen) a button that opens the person in place. */
+  href?: string; onOpen?: () => void; leading: React.ReactNode; title: React.ReactNode; subtitle?: React.ReactNode; meta?: React.ReactNode; badge?: React.ReactNode; className?: string;
 }) {
+  const target = "min-w-0 truncate text-left text-label-md text-ink after:absolute after:inset-0";
   return (
-    <li className="group relative flex min-h-16 min-w-0 items-center gap-4 border-t border-line px-5 py-3 transition-colors duration-fast first:border-t-0 hover:bg-surface-hover">
+    <li className={cx("group relative flex min-h-16 min-w-0 items-center gap-4 border-t border-line px-5 py-3 transition-colors duration-fast first:border-t-0 hover:bg-surface-hover", className)}>
       <span className="shrink-0">{leading}</span>
       <span className="grid min-w-0 flex-1 gap-0.5">
         <span className="flex min-w-0 items-center gap-2">
-          <Link href={href} className="min-w-0 truncate text-label-md text-ink after:absolute after:inset-0">{title}</Link>
+          {onOpen ? <button type="button" onClick={onOpen} className={target}>{title}</button> : <Link href={href ?? "#"} className={target}>{title}</Link>}
           {badge}
         </span>
         {subtitle && <span className="truncate text-body-sm text-ink-muted">{subtitle}</span>}
@@ -164,5 +180,28 @@ export function HeaderSkeleton() {
     <div aria-hidden="true" className="flex min-h-20 items-end">
       <div className="grid gap-2"><Skeleton className="h-9 w-72" /><Skeleton className="h-4 w-96 max-w-full" /></div>
     </div>
+  );
+}
+
+/**
+ * A headline number that is also a tab: selecting it swaps the list below it in place (no new page).
+ * `attention` marks the one that needs doing today.
+ */
+export function StatTab({ label, value, hint, icon, selected, attention = false, onSelect, controls }: {
+  label: string; value: number | null; hint: string; icon: React.ReactNode; selected: boolean; attention?: boolean; onSelect: () => void; controls: string;
+}) {
+  return (
+    <button type="button" role="tab" aria-selected={selected} aria-controls={controls} onClick={onSelect}
+      className={cx("group grid h-full min-w-0 gap-2 rounded-lg border p-4 text-left transition-colors duration-fast",
+        selected ? "border-ink-brand bg-surface-selected" : "border-line bg-surface hover:border-line-strong hover:bg-surface-hover")}>
+      <span className="flex min-w-0 items-center gap-2.5 text-label-md text-ink-muted">
+        <span className={cx("grid size-7 shrink-0 place-items-center rounded-md [&_svg]:size-4", attention ? "bg-action text-on-action" : selected ? "bg-surface text-ink-brand" : "bg-surface-sunken text-ink-muted")}>{icon}</span>
+        <span className="truncate">{label}</span>
+      </span>
+      <span className="flex items-baseline gap-2">
+        <span className="font-display text-heading-lg text-ink tabular-nums">{value ?? "—"}</span>
+        <span className="truncate text-body-sm text-ink-subtle max-sm:hidden">{hint}</span>
+      </span>
+    </button>
   );
 }

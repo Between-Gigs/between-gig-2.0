@@ -35,7 +35,7 @@ function dayLabel(iso: string) {
 const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
 /** "Recent activity": who did what, newest first, grouped under a heading per day with the time on each line. */
-export function ActivityList({ events, className }: { events: ActivityEvent[]; className?: string }) {
+export function ActivityList({ events, className, onOpen }: { events: ActivityEvent[]; className?: string; /** Opens the person in place instead of going to their page. */ onOpen?: (personId: string) => void }) {
   if (!events.length) return <p className="px-5 py-4 text-body-sm text-ink-muted">Nothing yet. Invites, sign-ups and reviews show up here.</p>;
   const days: [string, ActivityEvent[]][] = [];
   for (const e of events) {
@@ -55,7 +55,8 @@ export function ActivityList({ events, className }: { events: ActivityEvent[]; c
                 <li key={e.id} className="flex min-h-12 items-center gap-3 px-5 py-2">
                   <span className={cx("grid size-7 shrink-0 place-items-center rounded-md", m.tone)}><m.Icon className="size-3.5" aria-hidden="true" /></span>
                   <p className="min-w-0 flex-1 truncate text-body-sm text-ink-muted">
-                    {e.personId ? <Link href={`/owners/people/${e.personId}/`} className="font-semibold text-ink hover:text-ink-brand">{e.who}</Link> : <b className="font-semibold text-ink">{e.who}</b>}{" "}
+                    {e.personId && onOpen ? <button type="button" onClick={() => onOpen(e.personId!)} className="inline-flex min-h-6 items-center font-semibold text-ink hover:text-ink-brand">{e.who}</button>
+                      : e.personId ? <Link href={`/owners/people/${e.personId}/`} className="font-semibold text-ink hover:text-ink-brand">{e.who}</Link> : <b className="font-semibold text-ink">{e.who}</b>}{" "}
                     {m.verb}{e.by && <span className="text-ink-subtle"> · {e.by.replace(/\s*\(sample\)$/, "")}</span>}
                   </p>
                   <time dateTime={e.at} className="shrink-0 text-body-sm whitespace-nowrap text-ink-subtle tabular-nums">{clock(e.at)}</time>
