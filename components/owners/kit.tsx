@@ -3,6 +3,7 @@ import { Skeleton, cx } from "@ds/components";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { useInOwnerFrame } from "./OwnerShell";
 
 /*
  * The owner pages' kit. Every owner page is built from these few pieces so they all look and behave the same:
@@ -18,15 +19,19 @@ import * as React from "react";
  * screen; `description` is kept for screen readers.
  */
 function PageBar({ title, description, meta, actions, sticky = false }: { title: React.ReactNode; description?: React.ReactNode; meta?: React.ReactNode; actions?: React.ReactNode; sticky?: boolean }) {
-  // Pinned on scrolling pages: once the page moves, it gains a frosted surface and a hairline, keeping its
+  // Pinned on scrolling pages: once the page moves, it gains a solid surface and a shadow, keeping its
   // actions in reach. Its height never changes, so nothing below it jumps.
   const [mark, past] = useScrolledPast<HTMLSpanElement>();
+  // In the owner frame the page scrolls under the header; on a public page (emails for visitors) the window
+  // scrolls, so the bar pins below the 64px site header.
+  const framed = useInOwnerFrame();
   return (
     <>
     {sticky && <span ref={mark} aria-hidden="true" className="block h-0" />}
     <header className={cx("flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2",
-      sticky && "sticky top-0 z-sticky -mx-4 px-4 py-2 transition-[background-color,box-shadow] duration-fast sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10",
-      sticky && past && "bg-bg/85 shadow-sm backdrop-blur-md")}>
+      sticky && (framed ? "top-0" : "top-16"),
+      sticky && "sticky z-sticky -mx-4 px-4 py-2 transition-[background-color,box-shadow] duration-fast sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10",
+      sticky && past && "bg-bg shadow-sm")}>
       <div className="flex min-w-0 items-center gap-3">
         <h1 className="truncate font-display text-heading-lg text-ink">{title}</h1>
         {meta !== undefined && <span className="inline-flex h-6 min-w-8 items-center justify-center rounded-full bg-surface-sunken px-2 text-label-sm text-ink-muted tabular-nums">{meta}</span>}

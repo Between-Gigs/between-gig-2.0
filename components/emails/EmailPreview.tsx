@@ -6,6 +6,7 @@ import * as React from "react";
 import { emailTemplates } from "@/emails";
 import { data, type EmailTemplate, type OutboxEmail } from "@/lib/data";
 import { AppPage } from "@/components/site/AppPage";
+import { OwnerPage } from "@/components/owners/kit";
 import { renderPreview, type PreviewScheme } from "./preview";
 import { basePath } from "@/lib/site";
 
@@ -54,27 +55,19 @@ function Preview({ name }: { name: EmailTemplate }) {
 
   return (
     <AppPage>
-      {/* One compact bar, like the owner pages: where you are, what this email is, and its one action. */}
-      <Breadcrumbs items={[{ label: "Emails", href: `${basePath}/emails/` }, { label: t.label }]} />
-      <header className="mt-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-line pb-5">
-        <div className="grid min-w-0 gap-1">
-          <div className="flex items-center gap-3">
-            <h1 className="font-display text-heading-lg text-ink">{t.label}</h1>
-            <Badge tone="neutral" size="sm">Email preview</Badge>
-          </div>
-          <p className="text-body-md text-ink-muted">{t.when}{!queued && <span className="text-ink-subtle"> · Shown with fictional sample details.</span>}</p>
-        </div>
-        {email && <Button size="sm" iconStart={<Copy />} onClick={() => copy(email.html, "HTML")}>Copy HTML</Button>}
-      </header>
+      {/* The owner pages' slim bar: pinned while you scroll, with its one action in reach. */}
+      <OwnerPage title={t.label} description={t.when}
+        breadcrumbs={<Breadcrumbs items={[{ label: "Emails", href: `${basePath}/emails/` }, { label: t.label }]} />}
+        actions={email && <Button size="sm" iconStart={<Copy />} onClick={() => copy(email.html, "HTML")}>Copy HTML</Button>}>
+      {queued && <Banner tone="info" title="From the sample outbox">Showing the email queued for {queued.to}. Nothing was sent.</Banner>}
 
-      {queued && <Banner tone="info" className="mt-6" title="From the sample outbox">Showing the email queued for {queued.to}. Nothing was sent.</Banner>}
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-12">
+      <div className="grid gap-6 lg:grid-cols-12">
         <aside className="grid content-start gap-4 lg:col-span-4">
-          <section aria-labelledby="env-h" className="rounded-2xl border border-line bg-surface p-5">
+          <section aria-labelledby="env-h" className="rounded-lg border border-line bg-surface p-5">
             <h2 id="env-h" className="font-display text-heading-md text-ink">In the inbox</h2>
             <dl className="mt-3 grid gap-3 text-body-sm">
               {[
+                ["When", t.when],
                 ["From", "Between Gigs <hello@between-gigs.com>"],
                 ["To", queued?.to ?? (t.sample as Record<string, string>).email ?? "riley.park@example.com"],
                 ["Subject", email?.subject],
@@ -86,8 +79,9 @@ function Preview({ name }: { name: EmailTemplate }) {
                 </div>
               ))}
             </dl>
+            {!queued && <p className="mt-3 border-t border-line pt-3 text-body-sm text-ink-subtle">Shown with fictional sample details.</p>}
           </section>
-          <section aria-labelledby="view-h" className="grid gap-3 rounded-2xl border border-line bg-surface p-5">
+          <section aria-labelledby="view-h" className="grid gap-3 rounded-lg border border-line bg-surface p-5">
             <h2 id="view-h" className="font-display text-heading-md text-ink">View</h2>
             <SegmentedControl label="Mail client theme" value={scheme} onChange={(v) => setScheme(v as PreviewScheme)}
               options={[{ value: "light", label: "Light", icon: <Sun /> }, { value: "dark", label: "Dark", icon: <Moon /> }]} />
@@ -95,7 +89,7 @@ function Preview({ name }: { name: EmailTemplate }) {
               options={[{ value: "desktop", label: "Desktop", icon: <Monitor /> }, { value: "mobile", label: "Phone", icon: <Smartphone /> }]} />
             <p className="text-body-sm text-ink-subtle">Dark is what Apple Mail and Outlook.com show in dark mode. Gmail keeps the light version.</p>
           </section>
-          <section aria-labelledby="notes-h" className="rounded-2xl border border-line bg-surface p-5">
+          <section aria-labelledby="notes-h" className="rounded-lg border border-line bg-surface p-5">
             <h2 id="notes-h" className="font-display text-heading-md text-ink">Built for every inbox</h2>
             <ul className="mt-2 grid gap-1.5 text-body-sm text-ink-muted">
               <li>Tables and inline styles, 600px wide</li>
@@ -115,14 +109,14 @@ function Preview({ name }: { name: EmailTemplate }) {
               <Tab value="text">Plain text</Tab>
             </TabList>
             <TabPanel value="html" className="pt-4">
-              <div className="grid justify-items-center rounded-2xl border border-line bg-surface-sunken p-3 sm:p-6">
+              <div className="grid justify-items-center rounded-lg border border-line bg-surface-sunken p-3 sm:p-6">
                 <div className={`${widths[width]} overflow-hidden rounded-xl border border-line bg-surface-embed shadow-md transition-all duration-slow`}>
                   {email && <iframe ref={frame} title={`${t.label} email, ${scheme} theme`} srcDoc={email.html} onLoad={fit} className="block h-240 w-full" />}
                 </div>
               </div>
             </TabPanel>
             <TabPanel value="text" className="pt-4">
-              <div className="relative rounded-2xl border border-line bg-surface p-5">
+              <div className="relative rounded-lg border border-line bg-surface p-5">
                 <Button size="sm" variant="ghost" iconStart={<Copy />} className="absolute top-3 right-3" onClick={() => email && copy(email.text, "Plain text")}>Copy</Button>
                 <pre className="overflow-x-auto pt-8 font-mono text-data-sm whitespace-pre-wrap text-ink">{email?.text}</pre>
               </div>
@@ -130,6 +124,7 @@ function Preview({ name }: { name: EmailTemplate }) {
           </Tabs>
         </div>
       </div>
+      </OwnerPage>
     </AppPage>
   );
 }

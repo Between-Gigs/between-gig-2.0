@@ -37,6 +37,9 @@ let lastCounts: Record<CountKey, number> | null = null;
 
 const FrameContext = React.createContext<{ setSection: (s?: string) => void; setFit: (fit: boolean) => void } | null>(null);
 
+/** True inside the owner frame, whose own scroller starts under the header; false on a public page. */
+export const useInOwnerFrame = () => React.useContext(FrameContext) !== null;
+
 /**
  * Owner pages call this. Inside the persistent owner frame (app/owners/layout.tsx) it only passes the page
  * through, so moving between owner pages never re-mounts the sidebar or header: nothing blinks or jumps.

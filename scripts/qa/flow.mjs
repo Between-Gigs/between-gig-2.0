@@ -32,6 +32,7 @@ export async function flow({ browser, base, outDir }) {
       await page.evaluate(() => window.bgSample.reset());
       await page.evaluate(() => window.bgSample.signInAs("invited"));
       await page.goto(`${base}/emails/`);
+      await page.getByRole("radio", { name: /Sample outbox/ }).click();
       await page.getByRole("link", { name: "Professional onboarding is open" }).click();
       await page.waitForURL(/\/emails\/invite\/\?outbox=/);
       await page.locator("iframe").waitFor();
@@ -122,6 +123,7 @@ export async function flow({ browser, base, outDir }) {
     })
     && await step("confirmation-email", async () => {
       await page.goto(`${base}/emails/`);
+      await page.getByRole("radio", { name: /Sample outbox/ }).click();
       await page.getByRole("link", { name: "We've got your profile, Riley" }).waitFor();
     })
     && await step("public-not-yet", async () => {
@@ -173,6 +175,7 @@ export async function flow({ browser, base, outDir }) {
     })
     && await step("funnel-emails", async () => {
       await page.goto(`${base}/emails/`);
+      await page.getByRole("radio", { name: /Sample outbox/ }).click();
       await page.getByRole("link", { name: "Your next chapter starts here." }).waitFor();
       await page.getByRole("link", { name: "Thank you. The next chapter is coming." }).waitFor();
     })
@@ -228,6 +231,7 @@ export async function flow({ browser, base, outDir }) {
     })
     && await step("owner-emails", async () => {
       await page.goto(`${base}/emails/`);
+      await page.getByRole("radio", { name: /Sample outbox/ }).click();
       await page.getByRole("link", { name: /Your profile is live/ }).first().waitFor();
       await page.getByRole("link", { name: /A few small changes to your profile, Theo/ }).waitFor();
     });
