@@ -163,8 +163,7 @@ function OwnerNav({ collapsed = false, counts, toggle, searchRef, onOpenSearch, 
         ))}
       </div>
 
-      {/* Room below for the floating demo switcher (sample mode only). */}
-      <div className={cx("grid gap-0.5 border-t border-line pt-3", collapsed ? "justify-items-center px-3" : !onNavigate && "px-3", data.demo && !onNavigate && "pb-14")}>
+      <div className={cx("grid gap-0.5 border-t border-line pt-3", collapsed ? "justify-items-center px-3" : !onNavigate && "px-3")}>
         <NavItem href="/" onClick={go("/")} label="Public site" icon={<Globe />} collapsed={collapsed} />
         {data.demo && <NavItem href="/preview/" onClick={go("/preview/")} label="Preview guide" icon={<Compass />} collapsed={collapsed} />}
         {!collapsed && !onNavigate && <p className="px-3 pt-2 text-caption text-ink-subtle">Press <Kbd keys={["["]} /> to collapse</p>}

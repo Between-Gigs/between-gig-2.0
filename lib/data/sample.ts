@@ -1,6 +1,6 @@
 /*
  * The sample DataSource: the whole backend, faked in the browser. State lives in localStorage under
- * one key, seeded from ./seed.ts, and survives reloads until the demo switcher resets it.
+ * one key, seeded from ./seed.ts, and survives reloads until it is reset (QA, or clearing site data).
  * Nothing leaves the browser: "sent" emails land in a local outbox you can open at /emails.
  */
 import { renderEmail } from "@/emails";

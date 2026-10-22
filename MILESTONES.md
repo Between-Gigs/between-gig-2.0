@@ -23,7 +23,7 @@ Done 21 Oct 2026. Handoff: [docs/handoff/milestone-2.md](docs/handoff/milestone-
 - [x] Profile builder (`/profile/edit`): five steps, autosave and resume, per-step validation with summary, live preview, submit → confirmation + queued email
 - [x] My profile (`/profile`) with status banner for every status; public profile (`/p/[slug]`, approved only)
 - [x] Owner people search (`/owners/people`) and person view, with the seams for Milestone 4
-- [x] Demo switcher, GitHub Pages workflow, QA (screens, axe, end-to-end flow) in `pnpm check`
+- [x] Demo switcher (removed later at the client's request; the Preview guide keeps role switching), GitHub Pages workflow, QA (screens, axe, end-to-end flow) in `pnpm check`
 
 The client's critical path for Gigsters, plus owner search.
 

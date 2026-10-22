@@ -1,5 +1,5 @@
-// Client deliverable: every page, light and dark, desktop (1440) and phone (390), with the demo switcher
-// hidden. Writes JPEGs to deliverables/screenshots/ (gitignored). Run after `pnpm build`.
+// Client deliverable: every page, light and dark, desktop (1440) and phone (390), titled and grouped.
+// Writes JPEGs to deliverables/screenshots/ (gitignored). Run after `pnpm build`.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -53,7 +53,6 @@ try {
             await Promise.all(Array.from(document.images).filter((im) => !im.complete).map((im) => new Promise((r) => { im.onload = im.onerror = r; setTimeout(r, 3000); })));
           });
           if (route.act) await route.act(page);
-          await page.addStyleTag({ content: "[data-demo-switcher]{display:none!important}" });
           await page.waitForTimeout(200);
           const file = `${String(i + 1).padStart(2, "0")} ${title} - ${theme} - ${width === 1440 ? "desktop" : "phone"}.jpg`;
           await page.screenshot({ path: path.join(dir, file), fullPage: true, type: "jpeg", quality: 82 });

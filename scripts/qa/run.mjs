@@ -74,7 +74,6 @@ async function axe() {
         const { context, page } = await open(route, { theme, width });
         await page.addScriptTag({ content: axeSource });
         const result = await page.evaluate(async () => {
-          // The demo switcher is a sample-only tool, not product UI, but it is still checked.
           const r = await window.axe.run(document, { resultTypes: ["violations"], runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"] } });
           return r.violations.map((v) => ({ id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.slice(0, 3).map((n) => n.target.join(" ")) }));
         });

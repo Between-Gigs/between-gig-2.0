@@ -6,7 +6,7 @@ Sign-in and joining run on Clerk, themed to Between Gigs. Clerk app: `app_3K6djW
 ## How it switches on
 
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` set at build time → Clerk. Unset → the sample email-code login
-  (`lib/data/sample.ts`), which local QA (`pnpm check`) and the demo switcher use.
+  (`lib/data/sample.ts`), which local QA (`pnpm check`) and the Preview guide use.
 - GitHub Pages builds with the key (`.github/workflows/pages.yml`; a repo variable of the same name overrides it).
   The publishable key is public by design.
 - `CLERK_SECRET_KEY` is **not** used by this app and must never be added to it: it's a static export with no server.
@@ -41,7 +41,7 @@ Sign-in and joining run on Clerk, themed to Between Gigs. Clerk app: `app_3K6djW
 
 The data is still the browser's sample store. A real Clerk sign-in maps onto it by email, so to try the whole
 invite flow with a real inbox on the Pages preview: join the waitlist at `/professionals/` with your email, sign in
-as the sample owner from the demo switcher, invite yourself from the waitlist, then open the invite link from the sample outbox (`/emails/`; no real invite email is sent yet) and sign up. Clerk sends the real code to your inbox.
+as the sample owner from the Preview guide (`/preview/`), invite yourself from the waitlist, then open the invite link from the sample outbox (`/emails/`; no real invite email is sent yet) and sign up. Clerk sends the real code to your inbox.
 
 Not verified from the build container: Clerk's servers are blocked there, so the Clerk forms were checked only up
 to loading (and the can't-load fallback). Test the sign-in on the Pages preview.

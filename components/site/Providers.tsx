@@ -1,10 +1,10 @@
 "use client";
 import { ToastProvider } from "@ds/components";
 import { ClerkLayer } from "@/components/auth/ClerkLayer";
-import { DemoSwitcher } from "@/components/demo/DemoSwitcher";
 import { clerkEnabled } from "@/lib/auth/clerk";
+import { SampleHook } from "./SampleHook";
 
-/** Client-side roots: Clerk (when a publishable key is set), the toast queue and the demo switcher. */
+/** Client-side roots: Clerk (when a publishable key is set), and the toast queue. */
 export function Providers({ children }: { children: React.ReactNode }) {
   const app = (
     <ToastProvider>
@@ -12,7 +12,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         Skip to content
       </a>
       {children}
-      {process.env.NEXT_PUBLIC_DEMO !== "off" && <DemoSwitcher />}
+      <SampleHook />
     </ToastProvider>
   );
   return clerkEnabled ? <ClerkLayer>{app}</ClerkLayer> : app;

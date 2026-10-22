@@ -17,7 +17,7 @@ QA uses the preinstalled Chromium at `/opt/pw-browsers/chromium` (set `CHROMIUM_
 
 Preview: GitHub Pages at `/between-gig-2.0` via `.github/workflows/pages.yml`. **One-time setting:** repo Settings → Pages → Source: **GitHub Actions**.
 
-Use the **Demo** button (bottom left) to switch roles (visitor, invited Gigster, a Gigster at each status, owner) or reset the sample data. `NEXT_PUBLIC_DEMO=off` hides it.
+Use the Preview guide (`/preview/`) to switch roles. (The floating **Demo** button that did this was removed at the client's request.)
 
 ## Stack
 

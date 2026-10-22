@@ -87,7 +87,7 @@ export interface DataSource {
     invite(signupIds: string[]): Promise<{ invited: number; skipped: number }>;
   };
 
-  /** Sample-only controls for the demo switcher. The live implementation omits them. */
+  /** Sample-only controls for the Preview guide and QA. The live implementation omits them. */
   demo?: {
     reset(): Promise<void>;
     signInAs(role: Role | "invited", personId?: string): Promise<{ inviteToken?: string }>;

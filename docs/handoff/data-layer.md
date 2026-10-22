@@ -1,6 +1,6 @@
 # Data layer: from sample to backend
 
-Everything the UI reads or writes goes through one interface, `DataSource` (`lib/data/source.ts`). Today `lib/data/index.ts` exports the localStorage sample (`lib/data/sample.ts`). To go live, write a second implementation that calls the Worker API and export it from `lib/data/index.ts` instead. No component imports the sample directly (the demo switcher and QA use the optional `demo` block, which the live implementation leaves out).
+Everything the UI reads or writes goes through one interface, `DataSource` (`lib/data/source.ts`). Today `lib/data/index.ts` exports the localStorage sample (`lib/data/sample.ts`). To go live, write a second implementation that calls the Worker API and export it from `lib/data/index.ts` instead. No component imports the sample directly (the Preview guide and QA use the optional `demo` block, which the live implementation leaves out).
 
 Every method is async and returns plain JSON-able objects, so each maps to one API route. Types live in `lib/data/types.ts`.
 
