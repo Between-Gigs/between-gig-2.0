@@ -69,6 +69,15 @@ session token on every request (`@clerk/backend` `verifyToken`, with `CLERK_SECR
 | `submit(personId)` | `POST /api/profile/submit` | Validate with `validateAll` server-side, copy draft → `profiles`, `status = 'submitted'`, clear `review_notes`, queue `profile-submitted`. |
 | `getProfile(personId)` | `GET /api/profile` | `profiles`. |
 
+### owners: additions from the UI/UX round
+
+The full owner method list is in `lib/data/source.ts` and docs/handoff/milestone-4.md. Two additions:
+
+| Method / field | Route | Backend |
+| --- | --- | --- |
+| `dashboard().funnel` | `GET /api/owners/dashboard` | Cumulative stage counts: `signups` (leads) → `invited` (leads with an invite) → `opened` (invite opened) → `accountCreated` (people registered or later) → `submitted` (ever submitted) → `approved`. Count everyone who ever reached a stage, so each is a subset of the one before; keep status history (or timestamps like `submitted_at`) so a profile sent back for edits still counts as submitted. |
+| `undoReview(personId)` | `POST /api/owners/people/:id/undo-review` | Undo for the toast right after approve / request changes: set `status = 'submitted'`, clear the review notes, delete that decision's activity row, and cancel its outbox email if still queued (never recall one already sent). Only allow it for the latest decision, within a short window. |
+
 ### emails (Resend outbox)
 
 | Method | Route | Backend |

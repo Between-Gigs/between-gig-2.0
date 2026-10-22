@@ -29,3 +29,13 @@ In dark mode `--warning-soft` (amber-900), `--info-soft` (blue-900) and `--dange
 brown, navy and maroon on the forest surfaces; the client review flagged the warning banners in particular. The app
 overrides them in `app/globals.css` as a hint of the status tone over `--surface-raised` (7% / 7% / 9% in oklab), letting the icon and title carry the tone. Request:
 adopt these (or tuned equivalents) in the system's dark tokens.
+
+## From the UI/UX round (owners and profiles)
+
+- **Button disabled state** is `bg-surface-sunken text-ink-disabled` for every variant, which is near-black on near-black in dark mode. Needs a readable disabled treatment; the profile pages now explain disabled actions with a dashed placeholder instead.
+- **Monospace numbers**: `Progress` values and `PageHeader` `meta` render in mono; user-facing numbers should be tabular-nums on the sans. The app built its own meter for profile strength.
+- **Drawer / Modal bottom-sheet placement** for phone filters (the app uses the left/right drawer for now).
+- **Table multi-select**: selected row keys and an indeterminate header checkbox. The waitlist uses a hand-built table to highlight several selected rows.
+- **Cumulative funnel**: a Funnel / StageStats variant for cumulative stages (owners dashboard `components/owners/Funnel.tsx`).
+- **Tag wrapping**: a Tag variant that wraps long chip text (review reason chips).
+- **"Value updated" flash** utility for live previews (the builder uses a colour transition on `data-flash`).
