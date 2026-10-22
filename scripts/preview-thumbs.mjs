@@ -19,6 +19,7 @@ export const thumbs = [
   { name: "proposals", path: "/proposals/home/" },
   { name: "professionals", path: "/professionals/" },
   { name: "storyboard", path: "/storyboard/" },
+  { name: "crew-call", path: "/crew-call/" },
   { name: "login", path: "/login/", setup: "window.bgSample.reset()" },
   { name: "public-profile", path: "/p/maya/" },
   { name: "emails", path: "/emails/" },

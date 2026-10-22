@@ -46,6 +46,11 @@ export const routes = [
     act: async (page) => { await page.getByRole("button", { name: "Get on the call sheet" }).first().click(); await page.getByRole("dialog").waitFor(); },
   },
   { name: "storyboard", path: "/storyboard/", ready: "h1" },
+  { name: "crew-call", path: "/crew-call/", ready: "h1" },
+  {
+    name: "crew-call-form", path: "/crew-call/", ready: "h1",
+    act: async (page) => { await page.getByRole("button", { name: "Carpentry & Custom Builds" }).click(); await page.getByRole("dialog").waitFor(); },
+  },
   {
     name: "storyboard-form", path: "/storyboard/", setup: reset, ready: "h1",
     act: async (page) => { await page.getByRole("button", { name: "Offer your skills" }).click(); await page.getByRole("dialog").waitFor(); },

@@ -124,8 +124,9 @@ function spans(fields: PlanField[]) {
   return full;
 }
 
-function Planner({ kind, onClose, onBrowse }: { kind: Kind | null; onClose: () => void; onBrowse: () => void }) {
-  const [values, setValues] = React.useState<Record<string, string>>({});
+/** The talent and buyer forms. Also used by /crew-call, which opens the buyer form with the chosen service filled in. */
+export function Planner({ kind, onClose, onBrowse, initial }: { kind: Kind | null; onClose: () => void; onBrowse: () => void; initial?: Record<string, string> }) {
+  const [values, setValues] = React.useState<Record<string, string>>(initial ?? {});
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [state, setState] = React.useState<"idle" | "saving" | "saved" | "error">("idle");
   const plan = kind ? plans[kind] : null;
