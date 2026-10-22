@@ -5,7 +5,7 @@ import Link from "next/link";
 import * as React from "react";
 import { emailNames, emailTemplates } from "@/emails";
 import { data, type OutboxEmail } from "@/lib/data";
-import { Page } from "@/components/site/Page";
+import { AppPage } from "@/components/site/AppPage";
 import { renderPreview } from "./preview";
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -21,7 +21,7 @@ export function EmailsIndex() {
   }, []);
 
   return (
-    <Page>
+    <AppPage>
       <PageHeader eyebrow="Milestone 2" title="Emails"
         description="Templates are plain functions that return a subject, preheader, HTML and a plain-text twin, ready for the Resend pipeline. Open one to check it in light and dark, desktop and phone." />
 
@@ -72,6 +72,6 @@ export function EmailsIndex() {
           </ul>
         )}
       </section>
-    </Page>
+    </AppPage>
   );
 }

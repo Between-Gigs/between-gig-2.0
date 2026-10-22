@@ -6,7 +6,7 @@ import * as React from "react";
 import { data, type PersonSummary, type ProfileFields } from "@/lib/data";
 import { fieldLabel, validateAll } from "@/lib/profile/validate";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
-import { Page } from "@/components/site/Page";
+import { OwnerShell } from "./OwnerShell";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { ago } from "./activity";
 import { OwnerGate } from "./OwnerGate";
@@ -20,7 +20,7 @@ function Queue() {
   const [rows, setRows] = React.useState<PersonSummary[] | null>(null);
   React.useEffect(() => { void data.owners.reviewQueue().then(setRows); }, []);
   return (
-    <Page>
+    <OwnerShell>
       <PageHeader eyebrow="Owners" title="Review queue" meta={rows ? String(rows.length) : undefined}
         description="Submitted profiles, oldest first. Open one to approve it or suggest edits."
         actions={rows?.length ? <ButtonLink href={`/owners/people/${rows[0].person.id}/`} variant="strong" iconEnd={<ArrowRight />}>Start with the oldest</ButtonLink> : undefined} />
@@ -48,6 +48,6 @@ function Queue() {
             </ol>
           )}
       </div>
-    </Page>
+    </OwnerShell>
   );
 }

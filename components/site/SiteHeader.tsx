@@ -9,14 +9,18 @@ import { ButtonLink } from "@/components/ui/ButtonLink";
 
 interface NavLink { href: string; label: string }
 
-/** The public site's top bar: logo, the links for whoever is signed in, theme, account. */
-export function SiteHeader() {
+/**
+ * The public site's top bar: logo, the links for whoever is signed in, theme, account. In the owners'
+ * workspace (`app`) it spans the full width and the sidebar takes over the links; below lg a menu button
+ * opens the sidebar drawer.
+ */
+export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNav?: () => void } = {}) {
   const pathname = usePathname();
   const router = useRouter();
   const { session, loading } = useSession();
   const auth = useAuthActions();
 
-  const links: NavLink[] = session?.role === "owner"
+  const links: NavLink[] = app ? [] : session?.role === "owner"
     ? [{ href: "/owners/", label: "Dashboard" }, { href: "/owners/review/", label: "Review" }, { href: "/owners/people/", label: "People" }, { href: "/owners/waitlist/", label: "Waitlist" }, { href: "/emails/", label: "Emails" }]
     : session?.role === "gigster"
       ? [{ href: "/profile/", label: "My profile" }, { href: "/profile/edit/", label: "Edit profile" }]
@@ -44,8 +48,9 @@ export function SiteHeader() {
   ] : [];
 
   return (
-    <header className="sticky top-0 z-sticky border-b border-line bg-bg/85 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
+    <header className={cx("sticky top-0 z-sticky border-b border-line", app ? "bg-surface" : "bg-bg/85 backdrop-blur-md")}>
+      <div className={cx("mx-auto flex h-16 items-center gap-4 px-4 sm:px-6", app ? "max-w-none gap-2 lg:px-5" : "max-w-7xl")}>
+        {onOpenNav && <IconButton label="Open owner menu" variant="ghost" icon={<MenuIcon />} onClick={onOpenNav} className="lg:hidden" />}
         <Link href="/" aria-label="Between Gigs home" className="rounded-md"><Logo height={28} /></Link>
         {links.length > 0 && (
           <nav aria-label="Main" className={cx("ml-4 hidden items-center gap-1", links.length > 3 ? "lg:flex" : "md:flex")}>

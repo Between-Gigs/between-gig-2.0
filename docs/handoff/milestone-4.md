@@ -12,7 +12,7 @@
 | `/owners/people` | People search (from Milestone 2): search, filter by status, service, area and availability, sort, list or grid |
 | `/owners/waitlist` | The ~500 call-sheet sign-ups: search, filter by invite status (the count tiles double as filters) and by interest, sort, 25 per page. Select rows, or "select all not invited", then **Invite N people** (with confirmation) sends each person their own invite. |
 
-Owners sign in at `/login` with the email code (sample: `owners@between-gigs.example`) and land on `/owners`. The nav shows Dashboard · Review · People · Waitlist · Emails, and moves into the account menu below 1024px.
+Owners sign in at `/login` with the email code (sample: `owners@between-gigs.example`) and land on `/owners`. The owner pages sit in a workspace with a left sidebar (`components/owners/OwnerShell.tsx`), after the client's earlier Hub exploration: Overview (Dashboard) · Gigsters (Review queue, People, Waitlist, each with a live count; the review count is highlighted while anything waits) · Messages (Emails), a "Find a person" search that opens People filtered, and Public site / Preview guide at the bottom. It collapses to an icon rail (remembered per browser, `[` toggles; a dot marks waiting reviews) and becomes a drawer from the header's menu button below 1024px. Owners also see the email previews inside it.
 
 ## Data seams
 

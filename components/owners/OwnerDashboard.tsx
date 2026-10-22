@@ -6,7 +6,7 @@ import * as React from "react";
 import { data, personStatuses, type DashboardSummary } from "@/lib/data";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { personStatusMeta } from "@/components/people/PersonStatusBadge";
-import { Page } from "@/components/site/Page";
+import { OwnerShell } from "./OwnerShell";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { ActivityList, ago } from "./activity";
 import { OwnerGate } from "./OwnerGate";
@@ -22,13 +22,13 @@ function Dashboard() {
   const [d, setD] = React.useState<DashboardSummary | null>(null);
   React.useEffect(() => { void data.owners.dashboard().then(setD); }, []);
 
-  if (!d) return <Page><div aria-busy="true" aria-label="Loading dashboard" className="grid gap-4"><Skeleton className="h-10 w-1/3" /><Skeleton shape="block" className="h-24" /><Skeleton shape="block" className="h-80" /></div></Page>;
+  if (!d) return <OwnerShell><div aria-busy="true" aria-label="Loading dashboard" className="grid gap-4"><Skeleton className="h-10 w-1/3" /><Skeleton shape="block" className="h-24" /><Skeleton shape="block" className="h-80" /></div></OwnerShell>;
 
   const queue = d.reviewQueue;
   const invited = d.waitlist.total - d.waitlist.not_invited;
 
   return (
-    <Page>
+    <OwnerShell>
       <PageHeader eyebrow="Owners" title={greeting()}
         description={queue.length ? `${queue.length} ${queue.length === 1 ? "profile is" : "profiles are"} waiting for your review.` : "Nothing is waiting for review. Nice work."}
         actions={queue.length ? <ButtonLink href={`/owners/people/${queue[0].person.id}/`} variant="strong" iconEnd={<ArrowRight />}>Review the oldest</ButtonLink> : undefined} />
@@ -85,6 +85,6 @@ function Dashboard() {
         </section>
       </div>
       <p className="mt-6 text-caption text-ink-subtle">Names shown are illustrative samples for this draft.</p>
-    </Page>
+    </OwnerShell>
   );
 }

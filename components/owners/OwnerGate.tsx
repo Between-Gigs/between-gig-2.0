@@ -6,6 +6,7 @@ import { data, type Session } from "@/lib/data";
 import { useSession } from "@/lib/session";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
+import { OwnerShell } from "./OwnerShell";
 
 /**
  * Owner pages render only for an owner session. In the sample, a visitor can switch to the sample owner
@@ -13,7 +14,7 @@ import { ButtonLink } from "@/components/ui/ButtonLink";
  */
 export function OwnerGate({ children }: { children: (session: Session) => React.ReactNode }) {
   const { session, loading } = useSession();
-  if (loading) return <Page><div aria-busy="true" aria-label="Loading" className="grid gap-4"><Skeleton className="h-10 w-1/4" /><Skeleton shape="block" className="h-64" /></div></Page>;
+  if (loading) return <OwnerShell><div aria-busy="true" aria-label="Loading" className="grid gap-4"><Skeleton className="h-10 w-1/4" /><Skeleton shape="block" className="h-64" /></div></OwnerShell>;
   if (session?.role === "owner") return <>{children(session)}</>;
   return (
     <Page>

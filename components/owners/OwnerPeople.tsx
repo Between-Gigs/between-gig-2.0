@@ -2,6 +2,7 @@
 import { Badge, Button, EmptyState, Input, PageHeader, Progress, SegmentedControl, Select, cx } from "@ds/components";
 import { ArrowUpRight, Calendar, LayoutGrid, List, MapPin, Search, SearchX } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { flushSync } from "react-dom";
 import { data, personStatuses, type PeopleQuery, type PeopleSort, type PersonStatus, type PersonSummary } from "@/lib/data";
@@ -9,7 +10,7 @@ import { laServiceAreas, monthStatusLabel, offSetServices } from "@/lib/data/tax
 import { useMorphNavigate } from "@/lib/motion";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { PersonStatusBadge, personStatusMeta } from "@/components/people/PersonStatusBadge";
-import { Page } from "@/components/site/Page";
+import { OwnerShell } from "./OwnerShell";
 import { OwnerGate } from "./OwnerGate";
 
 const VIEW_KEY = "bg2-people-view";
@@ -40,6 +41,10 @@ function People() {
   const [counts, setCounts] = React.useState<Record<PersonStatus, number> | null>(null);
   const [view, setView] = React.useState("list");
   const first = React.useRef(true);
+  const q = useSearchParams().get("q");
+
+  // "Find a person" in the sidebar lands here with ?q=.
+  React.useEffect(() => { if (q !== null) setText(q); }, [q]); // eslint-disable-line react-hooks/set-state-in-effect
 
   React.useEffect(() => {
     try { const v = localStorage.getItem(VIEW_KEY); if (v === "grid" || v === "list") setView(v); } catch { /* ignore */ } // eslint-disable-line react-hooks/set-state-in-effect
@@ -69,7 +74,7 @@ function People() {
   const total = counts ? Object.values(counts).reduce((a, b) => a + b, 0) : 0;
 
   return (
-    <Page>
+    <OwnerShell>
       <PageHeader eyebrow="Owners" title="People" meta={counts ? String(total) : undefined}
         description="Everyone from the waitlist on: who has joined, how far along their profile is, and who is waiting for review." />
 
@@ -135,7 +140,7 @@ function People() {
         )}
       </section>
       <p className="mt-6 text-caption text-ink-subtle">Names shown are illustrative samples for this draft.</p>
-    </Page>
+    </OwnerShell>
   );
 }
 

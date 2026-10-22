@@ -10,7 +10,7 @@ import { basePath } from "@/lib/site";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { PersonStatusBadge } from "@/components/people/PersonStatusBadge";
 import { ProfileView } from "@/components/profile/ProfileView";
-import { Page } from "@/components/site/Page";
+import { OwnerShell } from "./OwnerShell";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { OwnerGate } from "./OwnerGate";
 import { ReviewDone, ReviewPanel } from "./ReviewPanel";
@@ -39,14 +39,14 @@ function Person({ id }: { id: string }) {
 
   const crumbs = (label: string) => <Breadcrumbs items={[{ label: "Dashboard", href: `${basePath}/owners/` }, { label: "People", href: `${basePath}/owners/people/` }, { label }]} />;
 
-  if (s === undefined) return <Page><div aria-busy="true" aria-label="Loading" className="grid gap-4"><Skeleton className="h-4 w-40" /><Skeleton shape="block" className="h-40" /></div></Page>;
+  if (s === undefined) return <OwnerShell><div aria-busy="true" aria-label="Loading" className="grid gap-4"><Skeleton className="h-4 w-40" /><Skeleton shape="block" className="h-40" /></div></OwnerShell>;
   if (s === null) {
     return (
-      <Page>
+      <OwnerShell>
         {crumbs("Not found")}
         <h1 className="sr-only">Person not found</h1>
         <EmptyState className="py-20" icon={<SearchX />} title="We can't find that person" headingLevel={2} action={<ButtonLink href="/owners/people/">Back to people</ButtonLink>}>They may have been removed, or the link is incomplete.</EmptyState>
-      </Page>
+      </OwnerShell>
     );
   }
 
@@ -57,7 +57,7 @@ function Person({ id }: { id: string }) {
   ];
 
   return (
-    <Page>
+    <OwnerShell>
       {crumbs(name)}
       {decided && <div className="mt-4"><ReviewDone person={p} next={decided.next} /></div>}
       <div className="mt-4 grid gap-6 lg:grid-cols-12 lg:items-start">
@@ -105,6 +105,6 @@ function Person({ id }: { id: string }) {
           {p.status === "invited" ? "They've been invited but haven't created an account yet." : "They've created an account. Their answers appear here as they fill in the questionnaire."}
         </EmptyState>
       )}
-    </Page>
+    </OwnerShell>
   );
 }

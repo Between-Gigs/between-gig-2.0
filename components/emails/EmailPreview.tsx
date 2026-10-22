@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { emailTemplates } from "@/emails";
 import { data, type EmailTemplate, type OutboxEmail } from "@/lib/data";
-import { Page } from "@/components/site/Page";
+import { AppPage } from "@/components/site/AppPage";
 import { renderPreview, type PreviewScheme } from "./preview";
 import { basePath } from "@/lib/site";
 
@@ -14,7 +14,7 @@ const widths = { desktop: "w-full max-w-160", mobile: "w-full max-w-sm" } as con
 /** /emails/[name]: one template in light or dark, desktop or phone width, with its subject, preheader and text twin. */
 export function EmailPreview({ name }: { name: EmailTemplate }) {
   return (
-    <React.Suspense fallback={<Page><span /></Page>}>
+    <React.Suspense fallback={<AppPage><span /></AppPage>}>
       <Preview name={name} />
     </React.Suspense>
   );
@@ -53,7 +53,7 @@ function Preview({ name }: { name: EmailTemplate }) {
   };
 
   return (
-    <Page>
+    <AppPage>
       <PageHeader
         breadcrumbs={<Breadcrumbs items={[{ label: "Emails", href: `${basePath}/emails/` }, { label: t.label }]} />}
         eyebrow="Email preview" title={t.label} description={t.when}
@@ -125,6 +125,6 @@ function Preview({ name }: { name: EmailTemplate }) {
           </Tabs>
         </div>
       </div>
-    </Page>
+    </AppPage>
   );
 }

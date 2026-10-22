@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { data, inviteStatuses, type InviteStatus, type WaitlistQuery, type WaitlistRow } from "@/lib/data";
 import { waitlistCategories, waitlistCategoryLabel } from "@/lib/data/taxonomy";
-import { Page } from "@/components/site/Page";
+import { OwnerShell } from "./OwnerShell";
 import { OwnerGate } from "./OwnerGate";
 
 const PAGE = 25;
@@ -84,7 +84,7 @@ function Waitlist() {
   ];
 
   return (
-    <Page>
+    <OwnerShell>
       <PageHeader eyebrow="Owners" title="Waitlist" meta={counts ? String(Object.values(counts).reduce((a, b) => a + b, 0)) : undefined}
         description="Everyone who got on the call sheet, and where they are with their invite. Pick people and send their personal “Create your profile” link." />
 
@@ -136,6 +136,6 @@ function Waitlist() {
       <ConfirmDialog open={confirm} busy={busy} onCancel={() => setConfirm(false)} onConfirm={invite}
         title={`Invite ${selected.length} ${selected.length === 1 ? "person" : "people"}?`} confirmLabel={`Send ${selected.length} ${selected.length === 1 ? "invite" : "invites"}`}
         description={<>Each gets the invite email with their own “Create your profile” link, valid for 30 days. <Link href="/emails/invite/" className="text-link underline underline-offset-2">Preview the email</Link>.</>} />
-    </Page>
+    </OwnerShell>
   );
 }
