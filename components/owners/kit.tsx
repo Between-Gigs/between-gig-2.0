@@ -17,9 +17,16 @@ import * as React from "react";
  * sidebar already says where you are and every card has its own title, so there's no explainer paragraph on
  * screen; `description` is kept for screen readers.
  */
-function PageBar({ title, description, meta, actions }: { title: React.ReactNode; description?: React.ReactNode; meta?: React.ReactNode; actions?: React.ReactNode }) {
+function PageBar({ title, description, meta, actions, sticky = false }: { title: React.ReactNode; description?: React.ReactNode; meta?: React.ReactNode; actions?: React.ReactNode; sticky?: boolean }) {
+  // Pinned on scrolling pages: once the page moves, it gains a frosted surface and a hairline, keeping its
+  // actions in reach. Its height never changes, so nothing below it jumps.
+  const [mark, past] = useScrolledPast<HTMLSpanElement>();
   return (
-    <header className="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
+    <>
+    {sticky && <span ref={mark} aria-hidden="true" className="block h-0" />}
+    <header className={cx("flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2",
+      sticky && "sticky top-0 z-sticky -mx-4 px-4 py-2 transition-[background-color,box-shadow] duration-fast sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10",
+      sticky && past && "bg-bg/85 shadow-sm backdrop-blur-md")}>
       <div className="flex min-w-0 items-center gap-3">
         <h1 className="truncate font-display text-heading-lg text-ink">{title}</h1>
         {meta !== undefined && <span className="inline-flex h-6 min-w-8 items-center justify-center rounded-full bg-surface-sunken px-2 text-label-sm text-ink-muted tabular-nums">{meta}</span>}
@@ -27,6 +34,7 @@ function PageBar({ title, description, meta, actions }: { title: React.ReactNode
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </header>
+    </>
   );
 }
 
@@ -45,7 +53,7 @@ export function OwnerPage({ title, description, meta, actions, breadcrumbs, fit 
   return (
     <>
       {breadcrumbs && <div className="mb-3">{breadcrumbs}</div>}
-      <PageBar title={title} description={description} meta={meta} actions={actions} />
+      <PageBar sticky title={title} description={description} meta={meta} actions={actions} />
       <div className="mt-5 grid min-w-0 grid-cols-1 gap-5">{children}</div>
     </>
   );
@@ -238,4 +246,23 @@ export function useFitList(deps: unknown[]) {
     return () => ro.disconnect();
   }, deps); // eslint-disable-line react-hooks/exhaustive-deps
   return [ref, hidden] as const;
+}
+
+/**
+ * True once `ref` (a marker at the top of the page) has scrolled out of the owner frame's main area: the cue
+ * for sticky headers to show their condensed form. Uses the nearest scrolling ancestor as the viewport.
+ */
+export function useScrolledPast<T extends HTMLElement>(deps: unknown[] = []) {
+  const ref = React.useRef<T>(null);
+  const [past, setPast] = React.useState(false);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let root: HTMLElement | null = el.parentElement;
+    while (root && !/(auto|scroll)/.test(getComputedStyle(root).overflowY)) root = root.parentElement;
+    const io = new IntersectionObserver(([e]) => setPast(!e.isIntersecting && e.boundingClientRect.top < (e.rootBounds?.top ?? 0)), { root, threshold: 0 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, deps); // eslint-disable-line react-hooks/exhaustive-deps
+  return [ref, past] as const;
 }

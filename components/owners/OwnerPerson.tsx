@@ -13,7 +13,7 @@ import { ProfileView } from "@/components/profile/ProfileView";
 import { OwnerShell } from "./OwnerShell";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { OwnerGate } from "./OwnerGate";
-import { HeaderSkeleton, Panel } from "./kit";
+import { HeaderSkeleton, Panel, useScrolledPast } from "./kit";
 import { ReviewWorkspace, type QueueItem } from "./ReviewPanel";
 import { shortDate } from "./format";
 
@@ -27,6 +27,7 @@ function Person({ id }: { id: string }) {
   const [profile, setProfile] = React.useState<Profile | null>(null);
   const [queue, setQueue] = React.useState<QueueItem[]>([]);
   const [fromReview, setFromReview] = React.useState(false);
+  const [heroEnd, pastHero] = useScrolledPast<HTMLSpanElement>([s === undefined]);
   React.useEffect(() => {
     // Read here rather than with useSearchParams, so the prerendered page needs no Suspense boundary.
     setFromReview(new URLSearchParams(window.location.search).get("from") === "review"); // eslint-disable-line react-hooks/set-state-in-effect
@@ -93,6 +94,33 @@ function Person({ id }: { id: string }) {
       </ol>
     </header>
   );
+  const heroMark = <span ref={heroEnd} aria-hidden="true" className="block h-0" />;
+
+  // Once the header scrolls away, a condensed bar slides down in its place: photo, name, status, the steps as
+  // dots and the next thing to do. It takes no room in the layout (h-0), so nothing jumps.
+  const stepAt = timeline.reduce((n, [, v], i) => (v ? i : n), -1);
+  const condensed = (reviewBar: boolean) => (
+    <div className={cx("sticky z-sticky h-0", reviewBar ? "top-16" : "top-0")}>
+      <div inert={!pastHero} aria-hidden={!pastHero}
+        className={cx("absolute inset-x-0 -mx-4 flex h-14 items-center gap-3 border-b border-line bg-bg/90 px-4 backdrop-blur-md transition duration-base ease-standard sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10",
+          pastHero ? "translate-y-0 opacity-100 shadow-md" : "pointer-events-none -translate-y-2 opacity-0")}>
+        <PersonPhoto id={p.id} name={p.name || "?"} src={fields?.photo || undefined} alt="" className="size-8 shrink-0 rounded-md" textClass="text-label-sm" />
+        <span className="min-w-0 truncate text-label-md text-ink">{name}</span>
+        <PersonStatusBadge status={p.status} size="sm" className="max-sm:hidden" />
+        <ol aria-label="Timeline" className="ml-auto hidden items-center md:flex">
+          {timeline.map(([k, v], i) => (
+            <li key={k} className="flex items-center" title={`${k}${v ? ` ${v}` : ": not yet"}`}>
+              {i > 0 && <span aria-hidden="true" className={cx("h-0.5 w-6", v ? "bg-action" : "bg-line")} />}
+              <span aria-hidden="true" className={cx("size-2 rounded-full", v ? "bg-action" : "border-2 border-line-strong", i === stepAt && "ring-4 ring-action/25")} />
+              <span className="sr-only">{k}: {v ?? "not yet"}</span>
+            </li>
+          ))}
+        </ol>
+        {stepAt >= 0 && <span className="hidden text-body-sm whitespace-nowrap text-ink-muted tabular-nums md:inline">{timeline[stepAt][0]} {timeline[stepAt][1]}</span>}
+        {!reviewBar && p.status === "approved" && <ButtonLink href={`/p/${p.slug}/`} size="sm" variant="secondary" iconStart={<Eye />} className="ml-auto md:ml-2">Public page</ButtonLink>}
+      </div>
+    </div>
+  );
 
   // The profile as clients would see it, framed so it doesn't read as part of this page.
   const preview = fields ? (
@@ -111,7 +139,7 @@ function Person({ id }: { id: string }) {
     return (
       <OwnerShell section={section}>
         {crumbs(name)}
-        <ReviewWorkspace person={p} fields={fields} queue={queue} header={header}>{preview}</ReviewWorkspace>
+        <ReviewWorkspace person={p} fields={fields} queue={queue} header={<>{condensed(true)}{header}{heroMark}</>}>{preview}</ReviewWorkspace>
       </OwnerShell>
     );
   }
@@ -119,7 +147,9 @@ function Person({ id }: { id: string }) {
   return (
     <OwnerShell section={section}>
       {crumbs(name)}
+      {condensed(false)}
       {header}
+      {heroMark}
       {p.status === "changes_requested" && (
         <Banner tone="warning" className="mt-6" title="Changes requested">
           <ul className="grid gap-1">{(p.reviewNotes ?? []).map((n) => <li key={n.note}><b>{sectionLabel[n.section]}:</b> {n.note}</li>)}</ul>
