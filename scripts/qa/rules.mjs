@@ -4,6 +4,8 @@ export async function checkRules(page, { width }) {
   return page.evaluate(({ width }) => {
     const out = [];
     const add = (rule, el, extra = "") => {
+      // A client-approved design kept as is (data-client-locked): its typography isn't ours to change. Axe still runs.
+      if (el.closest?.("[data-client-locked]") && /long-text-below-16px|centered-long-text|line-too-long/.test(rule)) return;
       const text = (el.getAttribute?.("aria-label") || el.textContent || el.getAttribute?.("placeholder") || el.tagName).trim().replace(/\s+/g, " ").slice(0, 50);
       out.push({ rule, detail: `"${text}"${extra ? ` ${extra}` : ""}` });
     };

@@ -65,3 +65,4 @@ by `pnpm qa:rules` (scripts/qa/rules.mjs) on every route, at desktop and phone w
 ## 9. Copy
 - **Short, concrete, front-loaded.** Lead with what matters; cut words that don't change meaning.
 - **Speak the user's words** (Gigster, call sheet, invite), not the system's ("record", "entity", "submit").
+- **Client-locked designs.** A page the client approved as is (`data-client-locked`, e.g. /crew-call) keeps its own type sizes and centring; the rules checker skips the text-size and centring rules inside it. Accessibility checks still apply.

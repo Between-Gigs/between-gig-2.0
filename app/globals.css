@@ -142,3 +142,41 @@
   transition: background-color 150ms, box-shadow 200ms;
   &:hover, &:focus-within { box-shadow: inset 3px 0 0 var(--action), 0 6px 16px -10px color-mix(in oklab, var(--on-action) 35%, transparent); }
 }
+
+/* A light section inside a dark page (the design system scopes dark only): the light semantic tokens again,
+   for pages that keep the client's approved light look in both themes (/crew-call). Colour values stay primitives. */
+[data-theme=light] {
+  --bg: var(--color-sage-50);
+  --surface: var(--color-sage-0);
+  --surface-raised: var(--color-sage-0);
+  --surface-sunken: var(--color-sage-100);
+  --surface-selected: var(--color-forest-50);
+  --surface-brand: var(--color-forest-800);
+  --surface-embed: var(--color-sage-0);
+  --line: var(--color-sage-200);
+  --line-strong: var(--color-sage-500);
+  --line-dashed: var(--color-sage-300);
+  --focus: var(--color-mint-700);
+  --ink: var(--color-sage-900);
+  --ink-muted: var(--color-sage-700);
+  --ink-subtle: var(--color-sage-600);
+  --ink-disabled: var(--color-sage-400);
+  --ink-brand: var(--color-forest-600);
+  --ink-on-embed: var(--color-sage-900);
+  --link: var(--color-mint-800);
+  --action: var(--color-mint-500);
+  --action-hover: var(--color-mint-600);
+  --action-strong: var(--color-forest-800);
+  --action-strong-hover: var(--color-forest-700);
+  --action-danger: var(--color-red-700);
+  --warning: var(--color-amber-700);
+  --warning-soft: var(--color-amber-100);
+  --danger: var(--color-red-700);
+  --danger-soft: var(--color-red-100);
+  --info: var(--color-blue-700);
+  --info-soft: var(--color-blue-100);
+  --neutral-soft: var(--color-sage-100);
+  --highlight: var(--color-mint-200);
+  color-scheme: light;
+  color-scheme: light;
+}
