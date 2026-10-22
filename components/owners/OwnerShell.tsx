@@ -164,7 +164,7 @@ function OwnerNav({ counts, section, toggle, searchRef, onOpenSearch, onNavigate
       </form>
       {!drawer && <div className="hidden justify-center nav-collapsed:flex"><IconButton variant="ghost" label="Find a person" icon={<Search />} onClick={onOpenSearch} /></div>}
 
-      <div className={cx("grid min-h-0 flex-1 content-start gap-5 overflow-y-auto", !drawer && "px-3", rail("nav-collapsed:justify-items-center nav-collapsed:gap-3"))}>
+      <div className={cx("no-scrollbar grid min-h-0 flex-1 content-start gap-5 overflow-x-hidden overflow-y-auto", !drawer && "px-3", rail("nav-collapsed:justify-items-center nav-collapsed:gap-3"))}>
         {sections.map((s) => (
           <div key={s.title} className={cx("grid gap-0.5", rail("nav-collapsed:border-t nav-collapsed:border-line nav-collapsed:pt-3 nav-collapsed:first:border-0 nav-collapsed:first:pt-0"))}>
             <span className={cx("px-3 pb-1 text-eyebrow text-ink-subtle uppercase", rail("nav-collapsed:hidden"))}>{s.title}</span>
