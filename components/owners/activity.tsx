@@ -46,13 +46,13 @@ export function ActivityList({ events, className, onOpen }: { events: ActivityEv
   return (
     <div className={cx("grid", className)}>
       {days.map(([label, list]) => (
-        <section key={label} aria-label={label} className="border-t border-line first:border-t-0">
+        <section key={label} aria-label={label} data-fit-group="" className="border-t border-line first:border-t-0">
           <h3 className="bg-surface-sunken/50 px-5 py-1.5 text-label-sm text-ink-subtle">{label}</h3>
           <ol>
             {list.map((e) => {
               const m = meta[e.kind];
               return (
-                <li key={e.id} className="flex min-h-12 items-center gap-3 px-5 py-2">
+                <li key={e.id} data-fit="" className="flex min-h-12 items-center gap-3 px-5 py-2">
                   <span className={cx("grid size-7 shrink-0 place-items-center rounded-md", m.tone)}><m.Icon className="size-3.5" aria-hidden="true" /></span>
                   <p className="min-w-0 flex-1 truncate text-body-sm text-ink-muted">
                     {e.personId && onOpen ? <button type="button" onClick={() => onOpen(e.personId!)} className="inline-flex min-h-6 items-center font-semibold text-ink hover:text-ink-brand">{e.who}</button>

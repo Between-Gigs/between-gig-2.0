@@ -12,7 +12,24 @@ import * as React from "react";
  * Nothing animates in: content swaps in place, and skeletons have the final shape so nothing shifts.
  */
 
-/** The page header: title (with an optional count), one line of description, actions on the right. */
+/**
+ * The page header: one slim line. The page's name (and its count) on the left, actions on the right. The
+ * sidebar already says where you are and every card has its own title, so there's no explainer paragraph on
+ * screen; `description` is kept for screen readers.
+ */
+function PageBar({ title, description, meta, actions }: { title: React.ReactNode; description?: React.ReactNode; meta?: React.ReactNode; actions?: React.ReactNode }) {
+  return (
+    <header className="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <div className="flex min-w-0 items-center gap-3">
+        <h1 className="truncate font-display text-heading-lg text-ink">{title}</h1>
+        {meta !== undefined && <span className="inline-flex h-6 min-w-8 items-center justify-center rounded-full bg-surface-sunken px-2 text-label-sm text-ink-muted tabular-nums">{meta}</span>}
+        {description && <p className="sr-only">{description}</p>}
+      </div>
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+    </header>
+  );
+}
+
 export function OwnerPage({ title, description, meta, actions, breadcrumbs, fit = false, children }: {
   title: React.ReactNode; description?: React.ReactNode; meta?: React.ReactNode; actions?: React.ReactNode;
   breadcrumbs?: React.ReactNode; /** Fill the screen height (with OwnerShell fit): children share what's left. */ fit?: boolean; children: React.ReactNode;
@@ -20,31 +37,16 @@ export function OwnerPage({ title, description, meta, actions, breadcrumbs, fit 
   if (fit) {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
-        <header className="flex shrink-0 flex-wrap items-end justify-between gap-x-6 gap-y-3">
-          <div className="grid min-w-0 gap-1">
-            <h1 className="font-display text-display-sm text-balance text-ink">{title}</h1>
-            {description && <p className="max-w-2xl text-body-md text-ink-muted">{description}</p>}
-          </div>
-          {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
-        </header>
-        <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col gap-5">{children}</div>
+        <PageBar title={title} description={description} meta={meta} actions={actions} />
+        <div className="mt-5 flex min-h-0 min-w-0 flex-1 flex-col gap-5">{children}</div>
       </div>
     );
   }
   return (
     <>
-      {breadcrumbs && <div className="mb-4">{breadcrumbs}</div>}
-      <header className="flex min-h-20 flex-wrap items-end justify-between gap-x-6 gap-y-4">
-        <div className="grid min-w-0 gap-1.5">
-          <h1 className="flex flex-wrap items-center gap-3 font-display text-display-sm text-balance text-ink">
-            {title}
-            {meta !== undefined && <span className="inline-flex h-7 min-w-9 items-center justify-center rounded-full bg-surface-sunken px-2.5 text-label-md text-ink-muted tabular-nums">{meta}</span>}
-          </h1>
-          {description && <p className="max-w-2xl text-body-md text-ink-muted">{description}</p>}
-        </div>
-        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
-      </header>
-      <div className="mt-8 grid min-w-0 grid-cols-1 gap-6">{children}</div>
+      {breadcrumbs && <div className="mb-3">{breadcrumbs}</div>}
+      <PageBar title={title} description={description} meta={meta} actions={actions} />
+      <div className="mt-5 grid min-w-0 grid-cols-1 gap-5">{children}</div>
     </>
   );
 }
@@ -86,8 +88,8 @@ export function StatCard({ href, label, value, hint, icon, attention = false }: 
   href: string; label: string; value: number | null; hint: string; icon: React.ReactNode; attention?: boolean;
 }) {
   return (
-    <Link href={href}
-      className={cx("group flex h-full min-w-0 flex-col gap-3 rounded-lg border bg-surface p-4 transition-colors duration-fast hover:bg-surface-hover sm:gap-4 sm:p-5",
+    <Link href={href} data-tilt=""
+      className={cx("lift group flex h-full min-w-0 flex-col gap-3 rounded-lg border bg-surface p-4 hover:bg-surface-hover sm:gap-4 sm:p-5",
         attention ? "border-ink-brand" : "border-line hover:border-line-strong")}>
       <span className="flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-2.5 text-label-md text-ink-muted">
@@ -111,7 +113,7 @@ export function Row({ href, onOpen, leading, title, subtitle, meta, badge, class
 }) {
   const target = "min-w-0 truncate text-left text-label-md text-ink after:absolute after:inset-0";
   return (
-    <li className={cx("group relative flex min-h-16 min-w-0 items-center gap-4 border-t border-line px-5 py-3 transition-colors duration-fast first:border-t-0 hover:bg-surface-hover", className)}>
+    <li data-fit="" className={cx("row-lift group relative flex min-h-16 min-w-0 items-center gap-4 border-t border-line px-5 py-3 first:border-t-0 hover:bg-surface-hover", className)}>
       <span className="shrink-0">{leading}</span>
       <span className="grid min-w-0 flex-1 gap-0.5">
         <span className="flex min-w-0 items-center gap-2">
@@ -177,9 +179,7 @@ export function RowSkeletons({ count = 4 }: { count?: number }) {
 /** A greyed version of a page header, the same height as the real one. */
 export function HeaderSkeleton() {
   return (
-    <div aria-hidden="true" className="flex min-h-20 items-end">
-      <div className="grid gap-2"><Skeleton className="h-9 w-72" /><Skeleton className="h-4 w-96 max-w-full" /></div>
-    </div>
+    <div aria-hidden="true" className="flex min-h-11 items-center"><Skeleton className="h-7 w-56" /></div>
   );
 }
 
@@ -191,8 +191,8 @@ export function StatTab({ label, value, hint, icon, selected, attention = false,
   label: string; value: number | null; hint: string; icon: React.ReactNode; selected: boolean; attention?: boolean; onSelect: () => void; controls: string;
 }) {
   return (
-    <button type="button" role="tab" aria-selected={selected} aria-controls={controls} onClick={onSelect}
-      className={cx("group grid h-full min-w-0 gap-2 rounded-lg border p-4 text-left transition-colors duration-fast",
+    <button type="button" role="tab" aria-selected={selected} aria-controls={controls} onClick={onSelect} data-tilt=""
+      className={cx("lift group grid h-full min-w-0 gap-2 rounded-lg border p-4 text-left",
         selected ? "border-ink-brand bg-surface-selected" : "border-line bg-surface hover:border-line-strong hover:bg-surface-hover")}>
       <span className="flex min-w-0 items-center gap-2.5 text-label-md text-ink-muted">
         <span className={cx("grid size-7 shrink-0 place-items-center rounded-md [&_svg]:size-4", attention ? "bg-action text-on-action" : selected ? "bg-surface text-ink-brand" : "bg-surface-sunken text-ink-muted")}>{icon}</span>
@@ -204,4 +204,38 @@ export function StatTab({ label, value, hint, icon, selected, attention = false,
       </span>
     </button>
   );
+}
+
+/**
+ * Fits a list to its box instead of scrolling it: items ([data-fit]) that don't fully fit are hidden
+ * (data-fit-cut), and the hook returns how many are hidden so the panel can say "+3 more". Re-measures when
+ * the box resizes. Only applies while the box clips (overflow hidden, the desktop dashboard); otherwise
+ * nothing is hidden.
+ */
+export function useFitList(deps: unknown[]) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [hidden, setHidden] = React.useState(0);
+  React.useEffect(() => {
+    const box = ref.current;
+    if (!box) return;
+    const measure = () => {
+      const items = [...box.querySelectorAll<HTMLElement>("[data-fit]")];
+      const groups = [...box.querySelectorAll<HTMLElement>("[data-fit-group]")];
+      [...items, ...groups].forEach((el) => el.removeAttribute("data-fit-cut"));
+      if (getComputedStyle(box).overflowY !== "hidden") { setHidden(0); return; }
+      const limit = box.getBoundingClientRect().bottom;
+      let cut = 0;
+      for (const el of items) {
+        if (cut || el.getBoundingClientRect().bottom > limit + 0.5) { el.setAttribute("data-fit-cut", ""); cut++; }
+      }
+      // A group (a day heading with its events) goes when none of its items are left.
+      for (const g of groups) if (![...g.querySelectorAll("[data-fit]")].some((el) => !el.hasAttribute("data-fit-cut"))) g.setAttribute("data-fit-cut", "");
+      setHidden(cut);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(box);
+    return () => ro.disconnect();
+  }, deps); // eslint-disable-line react-hooks/exhaustive-deps
+  return [ref, hidden] as const;
 }

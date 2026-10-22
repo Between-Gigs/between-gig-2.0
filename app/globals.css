@@ -97,3 +97,38 @@
   :where(button[aria-label], [role=tab][aria-label]):not(.min-h-6, [role=switch], [role=checkbox]) { min-width: 2.75rem; }
   :where(nav[aria-label=Breadcrumb] a) { min-height: 2.75rem; }
 }
+
+/* Rows that don't fit a fitted list (useFitList in components/owners/kit.tsx) are taken out, not half shown. */
+[data-fit-cut] { display: none; }
+
+/*
+ * Depth on interaction (docs/ui-rules.md §5: one light source from above, shadows grow with elevation).
+ * `lift` cards rise 2px on hover with a two-part shadow (a tight contact shadow and a soft ambient one), and,
+ * with data-tilt, lean a few degrees toward the pointer while a soft light follows it (TiltCards sets
+ * --tilt-x / --tilt-y / --mx / --my). Transforms only, so nothing around them moves. Off with reduced motion.
+ */
+@utility lift {
+  position: relative; isolation: isolate; transform-style: preserve-3d;
+  transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateY(var(--lift-y, 0px));
+  transition: transform 260ms cubic-bezier(.2, .8, .2, 1), box-shadow 260ms cubic-bezier(.2, .8, .2, 1), border-color 150ms, background-color 150ms;
+  &::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1; opacity: 0; transition: opacity 200ms;
+    background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 0%), color-mix(in oklab, var(--action) 14%, transparent), transparent 70%);
+  }
+  &:hover, &:focus-visible {
+    --lift-y: -2px;
+    box-shadow: 0 1px 2px color-mix(in oklab, var(--on-action) 10%, transparent), 0 14px 28px -12px color-mix(in oklab, var(--on-action) 30%, transparent), inset 0 1px 0 color-mix(in oklab, var(--action) 18%, transparent);
+  }
+  &:hover::after, &:focus-visible::after { opacity: 1; }
+  &:active { --lift-y: 0px; transition-duration: 80ms; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lift { transition: none; transform: none; }
+  .lift:hover, .lift:focus-visible { --lift-y: 0px; }
+}
+
+/* List rows: a mint edge and a raised shade on hover, instead of moving inside their card. */
+@utility row-lift {
+  transition: background-color 150ms, box-shadow 200ms;
+  &:hover, &:focus-within { box-shadow: inset 3px 0 0 var(--action), 0 6px 16px -10px color-mix(in oklab, var(--on-action) 35%, transparent); }
+}

@@ -116,7 +116,7 @@ export function OwnerFrame({ children, section: fixed, fit: fixedFit = false }: 
             <OwnerNav counts={counts} section={section} drawer onNavigate={() => setDrawer(false)} />
           </Drawer>
           <main ref={main} id="main" tabIndex={-1} className={cx("flex min-w-0 flex-1 flex-col overflow-y-auto outline-none", fit && "lg:overflow-hidden")}>
-            <div className={cx("mx-auto w-full max-w-7xl flex-1 px-4 pt-8 sm:px-6 lg:px-10", fit ? "pb-8 lg:flex lg:min-h-0 lg:flex-col lg:pt-6 lg:pb-4" : "pb-16")}>{children}</div>
+            <div className={cx("mx-auto w-full max-w-7xl flex-1 px-4 pt-6 sm:px-6 lg:px-10", fit ? "pb-8 lg:flex lg:min-h-0 lg:flex-col lg:pt-6 lg:pb-4" : "pb-16")}>{children}</div>
             <p className={cx("mx-auto w-full max-w-7xl shrink-0 px-4 text-caption text-ink-subtle sm:px-6 lg:px-10", fit ? "pb-6 lg:pb-3" : "pb-6")}>Sample data: everyone shown here is fictional.</p>
           </main>
         </div>

@@ -1,6 +1,6 @@
 "use client";
-import { Badge, Button, Checkbox, Drawer, Input, Modal, Pager, Select, cx, type BadgeTone, useToast } from "@ds/components";
-import { Eye, Mail, Search, Send, SlidersHorizontal, X } from "lucide-react";
+import { Badge, Button, Checkbox, Input, Modal, Pager, Select, cx, type BadgeTone, useToast } from "@ds/components";
+import { Eye, Mail, Search, Send, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -10,7 +10,7 @@ import { waitlistCategories, waitlistCategoryLabel } from "@/lib/data/taxonomy";
 import { OwnerShell } from "./OwnerShell";
 import { OwnerGate } from "./OwnerGate";
 import { shortDate } from "./format";
-import { FilterChips, OwnerPage, Panel, RowSkeletons } from "./kit";
+import { OwnerPage, Panel, RowSkeletons } from "./kit";
 
 const PAGE = 25;
 /** Where each sign-up is with their invite now. "Account created" matches the dashboard funnel's wording. */
@@ -38,7 +38,6 @@ function Waitlist() {
   const [selected, setSelected] = React.useState<string[]>([]);
   const [confirm, setConfirm] = React.useState(false);
   const [preview, setPreview] = React.useState(false);
-  const [filters, setFilters] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
 
   const refresh = React.useCallback(async (q: WaitlistQuery) => {
@@ -62,7 +61,6 @@ function Waitlist() {
   const togglePage = (on: boolean) => setSelected((s) => (on ? Array.from(new Set([...s, ...invitable])) : s.filter((x) => !invitable.includes(x))));
   const allNotInvited = (rows ?? []).filter((r) => r.inviteStatus === "not_invited").map((r) => r.signup.id);
   const total = counts ? Object.values(counts).reduce((a, b) => a + b, 0) : 0;
-  const active = [query.category].filter((v) => v !== "all").length;
   const n = selected.length;
   const people = (k: number) => `${k} ${k === 1 ? "person" : "people"}`;
   const invites = (k: number) => `${k} ${k === 1 ? "invite" : "invites"}`;
@@ -95,22 +93,13 @@ function Waitlist() {
     <OwnerShell>
       <OwnerPage title="Waitlist" meta={counts ? total : "–"}
         description="Everyone who got on the call sheet, and where they are with their invite. Pick people and send their personal “Create your profile” link.">
-      <div className="grid gap-4">
-        <FilterChips label="Filter by invite status" value={query.inviteStatus} onChange={set("inviteStatus")}
-          options={[{ value: "all", label: "Everyone", count: counts ? total : null }, ...inviteStatuses.map((s) => ({ value: s, label: statusMeta[s].label, count: counts ? counts[s] : null }))]} />
-        <div className="flex flex-wrap items-center gap-2 md:gap-3">
-          <div className="min-w-0 flex-1 md:max-w-sm"><Input type="search" aria-label="Search the waitlist" placeholder="Email or ZIP" value={text} onChange={(e) => setText(e.target.value)} start={<Search />} /></div>
-          <div className="hidden gap-2 md:flex [&>*]:w-44">{selects}</div>
-          <Button type="button" variant="secondary" className="shrink-0 md:hidden" iconStart={<SlidersHorizontal />} onClick={() => setFilters(true)}
-            aria-label={active ? `Filters, ${active} on` : "Filters"}>
-            Filters{active > 0 && <span aria-hidden="true" className="ml-1 inline-grid size-5 place-items-center rounded-full bg-action text-label-sm text-on-action tabular-nums">{active}</span>}
-          </Button>
-        </div>
+      {/* One line: search, invite status (with counts), interest and order. On phones they wrap. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="min-w-0 flex-1 basis-60"><Input type="search" aria-label="Search the waitlist" placeholder="Email or ZIP" value={text} onChange={(e) => setText(e.target.value)} start={<Search />} /></div>
+        <Select aria-label="Invite status" value={query.inviteStatus} onValueChange={set("inviteStatus")} className="w-full sm:w-56"
+          options={[{ value: "all", label: `Everyone${counts ? ` · ${total}` : ""}` }, ...inviteStatuses.map((st) => ({ value: st, label: `${statusMeta[st].label}${counts ? ` · ${counts[st]}` : ""}` }))]} />
+        <div className="flex w-full gap-2 sm:w-auto [&>*]:flex-1 sm:[&>*]:w-44 sm:[&>*]:flex-none">{selects}</div>
       </div>
-      <Drawer open={filters} onClose={() => setFilters(false)} title="Filters"
-        footer={<><Button variant="ghost" onClick={() => { setQuery((q) => ({ ...q, inviteStatus: "all", category: "all", sort: "joined-new" })); setPage(1); }}>Clear</Button><Button variant="primary" onClick={() => setFilters(false)}>Show {rows?.length ?? 0}</Button></>}>
-        <div className="grid gap-3">{selects}</div>
-      </Drawer>
 
       <Panel flush title={<><span className="tabular-nums">{rows?.length ?? 0}</span> sign-ups</>}
         aside={allNotInvited.length > 0 && n < allNotInvited.length && <button type="button" className="inline-flex min-h-8 items-center text-label-md text-ink-muted hover:text-ink" onClick={() => setSelected(allNotInvited)}>Select all {allNotInvited.length} not invited{query.text || query.category !== "all" ? " in this view" : ""}</button>}

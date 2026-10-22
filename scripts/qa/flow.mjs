@@ -134,7 +134,8 @@ export async function flow({ browser, base, outDir }) {
       await page.locator("[data-results]").waitFor();
       await page.getByLabel("Search people").fill("riley");
       await page.getByRole("link", { name: "Riley Park" }).waitFor();
-      await page.getByRole("button", { name: /Submitted/ }).first().click();
+      await page.getByRole("combobox", { name: "Status" }).click();
+      await page.getByRole("option", { name: /^Submitted/ }).click();
       await page.getByRole("link", { name: "Riley Park" }).click();
       await page.waitForURL(/\/owners\/people\/riley-park\/?$/);
       await page.getByRole("heading", { name: "Riley Park", level: 1 }).waitFor();

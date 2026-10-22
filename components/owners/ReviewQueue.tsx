@@ -35,7 +35,7 @@ function Queue() {
       <OwnerShell>
         <div aria-busy="true" aria-label="Loading queue">
           <HeaderSkeleton />
-          <div aria-hidden="true" className="mt-8 overflow-hidden rounded-lg border border-line bg-surface"><div className="h-14 border-b border-line" /><RowSkeletons count={4} /></div>
+          <div aria-hidden="true" className="mt-5 overflow-hidden rounded-lg border border-line bg-surface"><div className="h-14 border-b border-line" /><RowSkeletons count={4} /></div>
         </div>
       </OwnerShell>
     );

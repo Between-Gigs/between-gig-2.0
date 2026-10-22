@@ -1,5 +1,5 @@
 "use client";
-import { Button, EmptyState, Skeleton, cx } from "@ds/components";
+import { Button, EmptyState, SegmentedControl, Skeleton, cx } from "@ds/components";
 import { CircleCheck, ClipboardCheck, Inbox, ListPlus, MessageSquareWarning, Play, Send } from "lucide-react";
 import * as React from "react";
 import { data, type DashboardSummary, type PersonStatus, type PersonSummary, type Session, type WaitlistRow } from "@/lib/data";
@@ -10,7 +10,7 @@ import { ButtonLink } from "@/components/ui/ButtonLink";
 import { ActivityList, ago } from "./activity";
 import { shortDate } from "./format";
 import { FunnelCompact } from "./Funnel";
-import { Meter, OwnerPage, Panel, PanelLink, Row, RowSkeletons, StatTab } from "./kit";
+import { Meter, OwnerPage, Panel, PanelLink, Row, RowSkeletons, StatTab, useFitList } from "./kit";
 import { OwnerGate } from "./OwnerGate";
 import { OwnerShell } from "./OwnerShell";
 import { PersonDrawer } from "./PersonDrawer";
@@ -50,6 +50,7 @@ function Dashboard({ session }: { session: Session }) {
   /** The open person: the list they were opened from (a view, or one person from Recent activity) and where in it. */
   const [drawer, setDrawer] = React.useState<{ rows: PersonSummary[]; index: number; from: View | "one" } | null>(null);
   const [expanded, setExpanded] = React.useState(false);
+  const [side, setSide] = React.useState<"activity" | "funnel">("activity");
 
   // Everything loads once, so switching tabs is instant: no spinners, no layout shifts.
   const load = React.useCallback(async () => {
@@ -64,6 +65,9 @@ function Dashboard({ session }: { session: Session }) {
   const rows: PersonSummary[] = d ? (view === "submitted" ? d.reviewQueue : v.statuses ? people.filter((r) => v.statuses!.includes(r.person.status)) : []) : [];
   const count = view === "not_invited" ? waitlist.length : rows.length;
   const pick = (next: View) => { setView(next); setExpanded(false); };
+  // No scrollbars: each list shows the rows that fit its card and says how many more there are.
+  const [listRef, listHidden] = useFitList([view, count, d]);
+  const [sideRef] = useFitList([side, d]);
 
   /** The rows of a view, from fresh data. */
   const rowsFor = (vw: View, summary: DashboardSummary, all: PersonSummary[]) => {
@@ -91,7 +95,8 @@ function Dashboard({ session }: { session: Session }) {
   return (
     <OwnerShell fit>
       <OwnerPage fit title={`${greeting()}${name ? `, ${name}` : ""}`}
-        description={<>{today()} · {d.counts.submitted ? <>{d.counts.submitted} {d.counts.submitted === 1 ? "profile is" : "profiles are"} waiting for your review.</> : "Nothing is waiting for review."}</>}
+        meta={today()}
+        description={d.counts.submitted ? `${d.counts.submitted} ${d.counts.submitted === 1 ? "profile is" : "profiles are"} waiting for your review.` : "Nothing is waiting for review."}
         actions={
           <>
             <ButtonLink href="/owners/waitlist/?status=not_invited" variant="secondary" iconStart={<Send />}>Invite people</ButtonLink>
@@ -106,16 +111,21 @@ function Dashboard({ session }: { session: Session }) {
         </div>
 
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 lg:grid-cols-12">
-          <Panel className="min-h-0 lg:col-span-7" title={v.title} flush bodyClassName="min-h-0 lg:overflow-y-auto"
+          <Panel className="min-h-0 lg:col-span-7" title={v.title} flush bodyClassName="flex min-h-0 flex-col"
             aside={<span className="tabular-nums">{count} {count === 1 ? "person" : "people"}</span>}
-            footer={<PanelLink href={v.more.href}>{v.more.label}</PanelLink>}>
-            <div id="dash-list" role="tabpanel" aria-label={v.title}>
+            footer={
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <PanelLink href={v.more.href}>{v.more.label}</PanelLink>
+                {listHidden > 0 && <span className="text-body-sm text-ink-subtle tabular-nums">+{listHidden} more</span>}
+              </div>
+            }>
+            <div ref={listRef} id="dash-list" role="tabpanel" aria-label={v.title} className="min-h-0 flex-1 lg:overflow-hidden">
               {count === 0 ? (
                 <EmptyState className="py-10" icon={<Inbox />} title="Nothing here" headingLevel={3}>{v.empty}</EmptyState>
               ) : view === "not_invited" ? (
                 <ul>
                   {waitlist.map((w, i) => (
-                    <li key={w.signup.id} className={cx("flex min-h-14 min-w-0 items-center gap-4 border-t border-line px-5 py-2.5 first:border-t-0", i >= PHONE_ROWS && !expanded && "max-lg:hidden")}>
+                    <li key={w.signup.id} data-fit="" className={cx("flex min-h-14 min-w-0 items-center gap-4 border-t border-line px-5 py-2.5 first:border-t-0", i >= PHONE_ROWS && !expanded && "max-lg:hidden")}>
                       <span className="grid size-10 shrink-0 place-items-center rounded-md bg-surface-sunken text-ink-subtle"><Send className="size-4" aria-hidden="true" /></span>
                       <span className="grid min-w-0 flex-1">
                         <span className="truncate text-label-md text-ink">{w.signup.email}</span>
@@ -148,12 +158,20 @@ function Dashboard({ session }: { session: Session }) {
             </div>
           </Panel>
 
-          <div className="flex min-h-0 flex-col gap-5 lg:col-span-5">
-            <FunnelCompact d={d} selected={view} onSelect={(x) => pick(x)} />
-            <Panel className="min-h-0 flex-1" title="Recent activity" flush bodyClassName="min-h-0 lg:overflow-y-auto">
-              <ActivityList events={d.activity.slice(0, 12)} onOpen={openPerson} />
-            </Panel>
-          </div>
+          {/* One card for the right column: what just happened, or how the invites are going. */}
+          <Panel className="min-h-0 lg:col-span-5" flush bodyClassName="flex min-h-0 flex-col"
+            title={side === "activity" ? "Recent activity" : "From invite to live"}
+            aside={<SegmentedControl label="Show" size="sm" value={side} onChange={(x) => setSide(x as "activity" | "funnel")}
+              options={[{ value: "activity", label: "Activity" }, { value: "funnel", label: "Funnel" }]} />}>
+            <div ref={sideRef} className="min-h-0 flex-1 lg:overflow-hidden">
+              {side === "activity"
+                ? <ActivityList events={d.activity.slice(0, 12)} onOpen={openPerson} />
+                : <>
+                    <p className="px-5 pt-3 text-body-sm text-ink-subtle tabular-nums">Out of {d.funnel.invited} invited. Select a step to list who&apos;s there.</p>
+                    <FunnelCompact bare d={d} selected={view} onSelect={(x) => pick(x)} />
+                  </>}
+            </div>
+          </Panel>
         </div>
       </OwnerPage>
 
@@ -167,8 +185,8 @@ function Dashboard({ session }: { session: Session }) {
 function DashboardSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading dashboard" className="flex min-h-0 flex-1 flex-col">
-      <div aria-hidden="true" className="grid gap-2"><Skeleton className="h-9 w-72" /><Skeleton className="h-4 w-96 max-w-full" /></div>
-      <div aria-hidden="true" className="mt-6 flex min-h-0 flex-1 flex-col gap-5">
+      <div aria-hidden="true" className="flex min-h-11 items-center"><Skeleton className="h-7 w-72" /></div>
+      <div aria-hidden="true" className="mt-5 flex min-h-0 flex-1 flex-col gap-5">
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           {[0, 1, 2, 3].map((i) => <div key={i} className="grid h-24 content-between rounded-lg border border-line bg-surface p-4"><Skeleton className="h-4 w-32" /><Skeleton className="h-6 w-12" /></div>)}
         </div>

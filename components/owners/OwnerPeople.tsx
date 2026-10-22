@@ -1,6 +1,6 @@
 "use client";
 import { Button, Drawer, EmptyState, Input, SegmentedControl, Select, cx } from "@ds/components";
-import { ChevronRight, LayoutGrid, List, Mail, MapPin, Search, SearchX, SlidersHorizontal } from "lucide-react";
+import { ChevronRight, LayoutGrid, List, Mail, MapPin, Search, SearchX, SlidersHorizontal, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -8,7 +8,7 @@ import { data, personStatuses, type PeopleQuery, type PeopleSort, type PersonSta
 import { laServiceAreas, monthStatusLabel, offSetServices } from "@/lib/data/taxonomy";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { PersonStatusBadge, personStatusMeta } from "@/components/people/PersonStatusBadge";
-import { FilterChips, Meter, OwnerPage, Panel, Row, RowSkeletons } from "./kit";
+import { Meter, OwnerPage, Panel, Row, RowSkeletons } from "./kit";
 import { OwnerShell } from "./OwnerShell";
 import { OwnerGate } from "./OwnerGate";
 
@@ -84,22 +84,33 @@ function People() {
     <OwnerShell>
       <OwnerPage title="People" meta={counts ? total : "–"}
         description="Everyone from the waitlist on: who has joined, how far along their profile is, and who is waiting for review.">
-        <div className="grid gap-4">
-          <FilterChips label="Filter by status" value={query.status} onChange={set("status")}
-            options={[{ value: "all", label: "Everyone", count: counts ? total : null }, ...personStatuses.map((s) => ({ value: s, label: personStatusMeta[s].label, count: counts ? counts[s] : null }))]} />
-
-          <form role="search" onSubmit={(e) => { e.preventDefault(); setQuery((q) => ({ ...q, text })); }} className="flex flex-wrap items-center gap-2 md:gap-3">
-            <div className="min-w-0 flex-1 md:max-w-sm">
+        {/* One line: search, status (with counts), and the rest behind Filters. Active filters show as chips. */}
+        <div className="grid gap-3">
+          <form role="search" onSubmit={(e) => { e.preventDefault(); setQuery((q) => ({ ...q, text })); }} className="flex flex-wrap items-center gap-2">
+            <div className="min-w-0 flex-1 basis-60">
               <Input aria-label="Search people" type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder="Name, email, ZIP, craft or service" start={<Search />} />
             </div>
-            <div className="hidden gap-2 md:flex [&>*]:w-40">{selects}</div>
-            <Button type="button" variant="secondary" className="shrink-0 md:hidden" iconStart={<SlidersHorizontal />} onClick={() => setFilters(true)}
-              aria-label={active ? `Filters, ${active} on` : "Filters"}>
+            <Select aria-label="Status" value={query.status} onValueChange={set("status")} className="w-full sm:w-60"
+              options={[{ value: "all", label: `Everyone${counts ? ` · ${total}` : ""}` }, ...personStatuses.map((st) => ({ value: st, label: `${personStatusMeta[st].label}${counts ? ` · ${counts[st]}` : ""}` }))]} />
+            <Button type="button" variant="secondary" className="shrink-0" iconStart={<SlidersHorizontal />} onClick={() => setFilters(true)}
+              aria-label={active ? `More filters, ${active} on` : "More filters"}>
               Filters{active > 0 && <span aria-hidden="true" className="ml-1 inline-grid size-5 place-items-center rounded-full bg-action text-label-sm text-on-action tabular-nums">{active}</span>}
             </Button>
           </form>
+          {active > 0 && (
+            <ul aria-label="Active filters" className="flex flex-wrap gap-2">
+              {([["service", query.service], ["area", query.area], ["availability", query.availability]] as const).filter(([, val]) => val !== "all").map(([k, val]) => (
+                <li key={k}>
+                  <button type="button" onClick={() => set(k)("all")} aria-label={`Remove filter: ${k === "availability" ? monthStatusLabel[val as keyof typeof monthStatusLabel] : val}`}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full border border-ink-brand bg-surface-selected pr-2 pl-3 text-label-sm text-ink hover:bg-surface-hover">
+                    {k === "availability" ? monthStatusLabel[val as keyof typeof monthStatusLabel] : val}<X className="size-3.5" aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-        <Drawer open={filters} onClose={() => setFilters(false)} title="Filters" side="right"
+        <Drawer open={filters} onClose={() => setFilters(false)} title="More filters" side="right"
           footer={<><Button variant="ghost" onClick={() => { setQuery((q) => ({ ...blank, text: q.text, sort: q.sort })); }}>Clear</Button><Button variant="primary" onClick={() => setFilters(false)}>Show {rows?.length ?? 0} {rows?.length === 1 ? "person" : "people"}</Button></>}>
           <div className="grid gap-3">{selects}</div>
         </Drawer>
@@ -159,7 +170,7 @@ function PersonRow({ row }: { row: PersonSummary }) {
 function PersonCard({ row }: { row: PersonSummary }) {
   const { person: p, fields: f } = row;
   return (
-    <article className="group relative flex h-full min-w-0 flex-col gap-4 rounded-md border border-line bg-surface p-4 transition-colors duration-fast hover:border-line-strong hover:bg-surface-hover">
+    <article data-tilt="" className="lift group relative flex h-full min-w-0 flex-col gap-4 rounded-md border border-line bg-surface p-4 hover:border-line-strong">
       <div className="flex min-w-0 items-center gap-3">
         <Avatar row={row} className="size-12 shrink-0 rounded-md" />
         <div className="grid min-w-0 gap-0.5">
