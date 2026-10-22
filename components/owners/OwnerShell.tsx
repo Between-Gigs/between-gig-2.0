@@ -18,7 +18,7 @@ const sections: { title: string; items: Item[] }[] = [
     title: "Gigsters",
     items: [
       { href: "/owners/review/", label: "Review queue", icon: <ClipboardCheck />, count: "review", hint: "waiting for review" },
-      { href: "/owners/people/", label: "People", icon: <Users />, count: "people", hint: "people" },
+      { href: "/owners/people/", label: "People", icon: <Users />, count: "people", hint: "invited so far" },
       { href: "/owners/waitlist/", label: "Waitlist", icon: <ListPlus />, count: "waitlist", hint: "not invited yet" },
     ],
   },
@@ -39,7 +39,7 @@ function countsFrom(d: DashboardSummary): Record<CountKey, number> {
  * sections, live counts that flag what needs attention, a quick person search, a collapsible rail
  * (remembered, "[" to toggle) and a drawer on phones and tablets.
  */
-export function OwnerShell({ children }: { children: React.ReactNode }) {
+export function OwnerShell({ children, section }: { children: React.ReactNode; section?: "/owners/review/" }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = React.useState(false);
   const [drawer, setDrawer] = React.useState(false);
@@ -85,14 +85,14 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
       <SiteHeader app onOpenNav={() => setDrawer(true)} />
       <div className="flex min-h-0 flex-1">
         <nav aria-label="Owner workspace" className={cx("hidden shrink-0 flex-col border-r border-line bg-surface lg:flex", collapsed ? "w-16" : "w-62")}>
-          <OwnerNav collapsed={collapsed} counts={counts} searchRef={search} onOpenSearch={openSearch}
+          <OwnerNav collapsed={collapsed} counts={counts} section={section} searchRef={search} onOpenSearch={openSearch}
             toggle={
               <IconButton variant="ghost" size="sm" onClick={() => toggle()} label={collapsed ? "Expand sidebar ([)" : "Collapse sidebar ([)"}
                 icon={collapsed ? <PanelLeftOpen /> : <PanelLeftClose />} />
             } />
         </nav>
         <Drawer side="left" open={drawer} onClose={() => setDrawer(false)} title="Owner workspace">
-          <OwnerNav counts={counts} onNavigate={() => setDrawer(false)} />
+          <OwnerNav counts={counts} section={section} onNavigate={() => setDrawer(false)} />
         </Drawer>
         <main ref={main} id="main" tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto outline-none">
           <div className="mx-auto w-full max-w-7xl px-4 pt-8 pb-20 sm:px-6 lg:px-8">{children}</div>
@@ -102,8 +102,10 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function OwnerNav({ collapsed = false, counts, toggle, searchRef, onOpenSearch, onNavigate }: {
+function OwnerNav({ collapsed = false, counts, section, toggle, searchRef, onOpenSearch, onNavigate }: {
   collapsed?: boolean;
+  /** Highlights this section instead of the one the path is in (a profile opened from the review queue). */
+  section?: string;
   counts: Record<CountKey, number> | null;
   toggle?: React.ReactNode;
   searchRef?: React.Ref<HTMLInputElement>;
@@ -114,7 +116,7 @@ function OwnerNav({ collapsed = false, counts, toggle, searchRef, onOpenSearch, 
   const router = useRouter();
   const [q, setQ] = React.useState("");
   const path = pathname.endsWith("/") ? pathname : `${pathname}/`;
-  const active = (i: Item) => (i.exact ? path === i.href : path.startsWith(i.href));
+  const active = (i: Item) => (section ? i.href === section : i.exact ? path === i.href : path.startsWith(i.href));
 
   // Client-side navigation for plain anchors, keeping new-tab clicks working.
   const go = (href: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -156,7 +158,7 @@ function OwnerNav({ collapsed = false, counts, toggle, searchRef, onOpenSearch, 
               const attention = i.count === "review" && !!n;
               return (
                 <NavLink key={i.href} href={i.href} onClick={go(i.href)} active={active(i)} collapsed={collapsed} label={i.label}
-                  description={n !== undefined ? `${n} ${i.hint}` : undefined} icon={i.icon} count={n} attention={attention} />
+                  description={n !== undefined ? `${n} ${i.hint}` : undefined} hint={i.hint} icon={i.icon} count={n} attention={attention} />
               );
             })}
           </NavSection>
@@ -176,23 +178,29 @@ function OwnerNav({ collapsed = false, counts, toggle, searchRef, onOpenSearch, 
  * One sidebar row. NavItem's look, plus what the owners need: the review count in the accent tone, a dot
  * on the rail icon when something is waiting, and the count in the accessible name when it's collapsed.
  */
-function NavLink({ href, onClick, label, description, icon, count, attention, active, collapsed }: {
-  href: string; onClick: React.MouseEventHandler<HTMLAnchorElement>; label: string; description?: string; icon: React.ReactNode;
+function NavLink({ href, onClick, label, description, hint, icon, count, attention, active, collapsed }: {
+  href: string; onClick: React.MouseEventHandler<HTMLAnchorElement>; label: string; description?: string; hint?: string; icon: React.ReactNode;
   count?: number; attention: boolean; active: boolean; collapsed: boolean;
 }) {
   const name = collapsed && description ? `${label}, ${description}` : label;
   return (
     <a href={href} onClick={onClick} aria-current={active ? "page" : undefined} aria-label={collapsed ? name : undefined} title={collapsed ? name : undefined}
       className={cx(
-        "group flex h-10 items-center gap-3 rounded-md text-label-md transition-colors duration-fast ease-standard [&_svg]:size-5 [&_svg]:shrink-0",
-        collapsed ? "w-10 justify-center" : "px-3",
+        "group flex min-h-10 items-center gap-3 rounded-md text-label-md transition-colors duration-fast ease-standard [&_svg]:size-5 [&_svg]:shrink-0",
+        collapsed ? "size-10 justify-center" : cx("px-3", hint && "py-1.5"),
         active ? "bg-surface-selected text-ink" : "text-ink-muted hover:bg-surface-hover hover:text-ink",
       )}>
       <span className={cx("relative inline-flex", active ? "text-ink-brand" : "text-ink-subtle group-hover:text-ink-muted")}>
         {icon}
         {collapsed && attention && <span aria-hidden="true" className="absolute -top-1 -right-1 size-2.5 rounded-full border-2 border-surface bg-action" />}
       </span>
-      {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
+      {!collapsed && (
+        <span className="grid min-w-0 flex-1">
+          <span className="truncate">{label}</span>
+          {/* Says what the number counts, so 476 on the Waitlist isn't read as everyone on it. */}
+          {hint && <span aria-hidden="true" className="truncate text-caption text-ink-subtle">{hint}</span>}
+        </span>
+      )}
       {!collapsed && count !== undefined && <><Count aria-hidden="true" value={count} max={999} tone={attention ? "accent" : "quiet"} /><span className="sr-only">, {description}</span></>}
     </a>
   );

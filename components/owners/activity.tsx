@@ -37,7 +37,7 @@ export function ActivityList({ events, className }: { events: ActivityEvent[]; c
               {e.personId ? <Link href={`/owners/people/${e.personId}/`} className="font-semibold text-ink hover:text-ink-brand hover:underline">{e.who}</Link> : <b className="font-semibold text-ink">{e.who}</b>}{" "}
               {m.verb}{e.by && <span className="text-ink-subtle"> · by {e.by}</span>}
             </p>
-            <time dateTime={e.at} className="shrink-0 font-mono text-data-sm text-ink-subtle">{ago(e.at)}</time>
+            <time dateTime={e.at} className="shrink-0 text-body-sm whitespace-nowrap text-ink-subtle tabular-nums">{ago(e.at)}</time>
           </li>
         );
       })}
