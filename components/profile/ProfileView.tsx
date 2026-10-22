@@ -138,7 +138,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
   return (
     <div ref={root} className="relative">
       {/* Ambient glow from the person's own work. */}
-      {all[0] && (
+      {mode === "public" && all[0] && (
         <div aria-hidden="true" className="pointer-events-none absolute -top-8 left-1/2 -z-0 h-96 w-screen -translate-x-1/2 overflow-hidden">
           <img src={asset(all[0].src)} alt="" className="size-full scale-125 object-cover opacity-30 blur-3xl" />
           <span className="absolute inset-0 bg-linear-to-b from-transparent to-bg" />

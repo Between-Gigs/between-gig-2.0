@@ -1,5 +1,5 @@
 "use client";
-import { Banner, Button, Checkbox, EmptyState, Field, Input, Skeleton, useToast } from "@ds/components";
+import { Banner, Button, Checkbox, Field, Input, Skeleton, useToast } from "@ds/components";
 import { SignUp } from "@clerk/react";
 import { ArrowLeft, ArrowRight, Clock, Lock, Mail, SearchX, UserCheck } from "lucide-react";
 import Link from "next/link";
@@ -87,7 +87,7 @@ function JoinForm({ token, email }: { token: string; email: string }) {
             description="You can ask us to delete your account at any time." />
           {errors.terms && <p id="terms-error" className="text-body-sm text-danger">{errors.terms}</p>}
         </div>
-        <Button type="submit" variant="strong" size="lg" fullWidth loading={busy} iconEnd={<ArrowRight />}>Create my profile</Button>
+        <Button type="submit" variant="primary" size="lg" fullWidth className="glow-hover" loading={busy} iconEnd={<ArrowRight />}>Create my profile</Button>
         <p className="text-center text-body-sm text-ink-muted">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2">Sign in</Link></p>
       </form>
     </AuthShell>
@@ -121,28 +121,63 @@ function ClerkVerify({ token, email, name, onBack }: { token: string; email: str
 
 function InviteProblem({ lookup, hasToken }: { lookup: InviteLookup; hasToken: boolean }) {
   const email = lookup.invite?.email;
-  const copy = {
-    used: { icon: <UserCheck />, title: "You've already joined", body: `This invite has been used to create an account${email ? ` for ${email}` : ""}. Sign in with your email to pick up where you left off.` },
-    expired: { icon: <Clock />, title: "This invite has expired", body: "Invites last 30 days. Ask us for a fresh one and we'll send it to the same email." },
+  const ask = `mailto:hello@between-gigs.com?subject=${encodeURIComponent("A new Between Gigs invite")}`;
+  const copy: Record<InviteLookup["state"], { icon: React.ReactNode; title: string; body: string; steps: string[]; primary?: React.ReactNode; secondary?: React.ReactNode }> = {
+    used: {
+      icon: <UserCheck />, title: "You've already joined",
+      body: `This invite has been used to create an account${email ? ` for ${email}` : ""}.`,
+      steps: ["Sign in with the same email.", "We'll email you a 6-digit code: no password needed.", "You'll pick up your profile where you left off."],
+      primary: <ButtonLink href={`/login/?email=${encodeURIComponent(email ?? "")}`} variant="primary" iconEnd={<ArrowRight />}>Sign in</ButtonLink>,
+    },
+    expired: {
+      icon: <Clock />, title: "This invite has expired",
+      body: "Invites last 30 days, and this one has run out.",
+      steps: ["Ask us for a fresh invite. We'll send it to the same email.", "Already created your account? Sign in instead."],
+      primary: <ButtonLink href={ask} variant="primary" iconStart={<Mail />}>Ask for a new invite</ButtonLink>,
+      secondary: <ButtonLink href="/login/" iconEnd={<ArrowRight />}>Sign in</ButtonLink>,
+    },
     unknown: hasToken
-      ? { icon: <SearchX />, title: "We can't find that invite", body: "The link may be incomplete. Open it again from your invite email, or copy the whole link into your browser." }
-      : { icon: <Mail />, title: "Joining is by invite", body: "Professional onboarding opens by email invite to everyone on the call sheet. Use the link in your invite to create your account." },
-    valid: { icon: <Mail />, title: "", body: "" },
-  }[lookup.state];
+      ? {
+        icon: <SearchX />, title: "We can't find that invite",
+        body: "The link may be incomplete or mistyped.",
+        steps: ["Open the link again from your invite email.", "Or copy the whole link into your browser.", "Still stuck? Ask us for a new invite."],
+        primary: <ButtonLink href={ask} variant="primary" iconStart={<Mail />}>Ask for a new invite</ButtonLink>,
+        secondary: <ButtonLink href="/login/" iconEnd={<ArrowRight />}>Already joined? Sign in</ButtonLink>,
+      }
+      : {
+        icon: <Mail />, title: "Joining is by invite",
+        body: "Professional onboarding opens by email invite to everyone on the call sheet.",
+        steps: ["Use the “Create your profile” link in your invite email.", "Not on the call sheet yet? Join it from the professionals page."],
+        primary: <ButtonLink href="/professionals/" variant="primary" iconEnd={<ArrowRight />}>Get on the call sheet</ButtonLink>,
+        secondary: <ButtonLink href="/login/" iconEnd={<ArrowRight />}>Already joined? Sign in</ButtonLink>,
+      },
+    valid: { icon: <Mail />, title: "", body: "", steps: [] },
+  };
+  const c = copy[lookup.state];
 
   return (
     <AuthShell eyebrow="Professional onboarding" title="Your next chapter" accent="starts here.">
-      <EmptyState icon={copy.icon} title={copy.title} headingLevel={2} className="py-6"
-        action={
-          <div className="flex flex-wrap justify-center gap-2">
-            {lookup.state === "used" && <ButtonLink href={`/login/?email=${encodeURIComponent(email ?? "")}`} variant="primary" iconEnd={<ArrowRight />}>Sign in</ButtonLink>}
-            {lookup.state === "expired" && <ButtonLink href={`mailto:hello@between-gigs.com?subject=${encodeURIComponent("A new Between Gigs invite")}`} variant="primary" iconStart={<Mail />}>Ask for a new invite</ButtonLink>}
-            {lookup.state === "unknown" && <ButtonLink href="/login/" iconEnd={<ArrowRight />}>Already joined? Sign in</ButtonLink>}
+      <div className="grid gap-6">
+        <div className="flex items-start gap-4">
+          <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-xl bg-surface-selected text-ink-brand [&_svg]:size-6">{c.icon}</span>
+          <div>
+            <h2 className="font-display text-display-sm text-ink">{c.title}</h2>
+            <p className="mt-1 text-body-md text-ink-muted">{c.body}</p>
           </div>
-        }>
-        {copy.body}
-      </EmptyState>
-      <p className="mt-6 text-center text-body-sm text-ink-muted">Questions? Write to <a className="text-link underline underline-offset-2" href="mailto:hello@between-gigs.com">hello@between-gigs.com</a>.</p>
+        </div>
+        <div>
+          <h3 className="text-label-md text-ink">What to do next</h3>
+          <ol className="mt-3 grid gap-3">
+            {c.steps.map((step, i) => (
+              <li key={step} className="flex items-start gap-3 text-body-md text-ink-muted">
+                <span aria-hidden="true" className="grid size-6 shrink-0 place-items-center rounded-full border border-line-strong text-label-sm text-ink tabular-nums">{i + 1}</span>{step}
+              </li>
+            ))}
+          </ol>
+        </div>
+        <div className="flex flex-wrap gap-2 border-t border-line pt-6">{c.primary}{c.secondary}</div>
+        <p className="text-body-sm text-ink-muted">Questions? Write to <a className="text-link underline underline-offset-2" href="mailto:hello@between-gigs.com">hello@between-gigs.com</a>.</p>
+      </div>
     </AuthShell>
   );
 }
