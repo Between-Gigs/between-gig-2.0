@@ -1,5 +1,5 @@
 "use client";
-import { Badge, Banner, Button, Field, IconButton, Input, Progress, Select, Skeleton, Stepper, Textarea, cx, useToast } from "@ds/components";
+import { Badge, Banner, Button, Drawer, Field, IconButton, Input, Select, Skeleton, Stepper, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
 import { AlertCircle, ArrowLeft, ArrowRight, Check, CloudCheck, Eye, Film, Inbox, Link2, LoaderCircle, MapPin, MessageSquareWarning, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import Link from "next/link";
@@ -12,6 +12,7 @@ import { ABOUT_MAX, SECTIONS, STEPS, fieldLabel, sectionLabel, validateAll, vali
 import { ChipPicker } from "@/components/profile/ChipPicker";
 import { PhotoPicker } from "@/components/profile/PhotoPicker";
 import { ProfilePreviewCard } from "@/components/profile/ProfilePreviewCard";
+import { ProfileStrength } from "@/components/profile/ProfileStrength";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 
@@ -35,14 +36,28 @@ export function ProfileBuilder() {
   return session?.personId ? <Builder personId={session.personId} /> : <Page bare><Intro /><BuilderSkeleton /></Page>;
 }
 
-function Intro() {
+/**
+ * The welcome hero, full size before the first step only. Once they're underway it shrinks to a slim band,
+ * so every later step starts with the form, not the same big headline.
+ */
+function Intro({ compact = false }: { compact?: boolean }) {
+  if (compact) {
+    return (
+      <section data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
+        <div className="relative z-raised mx-auto flex max-w-7xl flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-4 py-5 sm:px-6">
+          <h1 className="font-display text-heading-lg text-ink">Build your profile</h1>
+          <p className="text-body-sm text-ink-muted">It saves as you go. Come back any time.</p>
+        </div>
+      </section>
+    );
+  }
   return (
     <section data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
-      <span aria-hidden="true" className="glow-horizon opacity-50" />
-      <div className="relative z-raised mx-auto max-w-7xl px-4 pt-10 pb-24 sm:px-6 sm:pt-12">
+      <span aria-hidden="true" className="glow-horizon hidden opacity-50 sm:block" />
+      <div className="relative z-raised mx-auto max-w-7xl px-4 pt-8 pb-20 sm:px-6 sm:pt-12 sm:pb-24">
         <Reveal effect="fade-up"><p className="text-eyebrow text-ink-brand uppercase">Good work. Great people. Your next chapter.</p></Reveal>
-        <Reveal effect="fade-up" delay={60}><h1 className="mt-3 max-w-3xl font-display text-display-md text-balance text-ink sm:text-display-lg">Let's meet the person <span className="glow-text text-ink-brand">behind the experience.</span></h1></Reveal>
-        <Reveal effect="fade-up" delay={120}><p className="mt-4 max-w-xl text-body-lg text-ink-muted">Bring your on-set know-how to everyday life. Build a profile that feels like you.</p></Reveal>
+        <Reveal effect="fade-up" delay={60}><h1 className="mt-3 max-w-3xl font-display text-display-sm text-balance text-ink sm:text-display-lg">Let's meet the person <span className="glow-text text-ink-brand">behind the experience.</span></h1></Reveal>
+        <Reveal effect="fade-up" delay={120}><p className="mt-4 max-w-xl text-body-md text-ink-muted sm:text-body-lg">Bring your on-set know-how to everyday life. Build a profile that feels like you.</p></Reveal>
       </div>
     </section>
   );
@@ -68,6 +83,7 @@ function Builder({ personId }: { personId: string }) {
   const [save, setSave] = React.useState<SaveState>({ status: "idle" });
   const [submitting, setSubmitting] = React.useState(false);
   const [done, setDone] = React.useState<{ outboxId?: string } | null>(null);
+  const [preview, setPreview] = React.useState(false);
   const top = React.useRef<HTMLDivElement>(null);
   const stage = React.useRef<HTMLDivElement>(null);
   const dirty = React.useRef(false);
@@ -171,13 +187,14 @@ function Builder({ personId }: { personId: string }) {
   const errorCount = Object.keys(errors).length;
   const resubmitting = person.status === "submitted" || person.status === "approved";
 
+  const full = step === 0 && !done;
   return (
     <Page bare>
-      <Intro />
+      <Intro compact={!full} />
       <div ref={top} className="scroll-mt-20" />
-      <div className="relative z-raised mx-auto -mt-14 grid max-w-7xl gap-8 px-4 pb-20 sm:px-6 lg:grid-cols-12">
+      <div className={cx("relative z-raised mx-auto grid max-w-7xl gap-8 px-4 pb-20 sm:px-6 lg:grid-cols-12", full ? "-mt-14" : "mt-6")}>
         <div className="min-w-0 lg:col-span-7">
-          {!done && notes.length > 0 && (
+          {!done && step < 4 && notes.length > 0 && (
             <Banner tone="warning" className="mb-4 shadow-md" title="Changes requested">
               The Between Gigs team left {notes.length === 1 ? "a note" : `${notes.length} notes`} on your profile. You'll see each one on its step. Update those parts, then submit again.
             </Banner>
@@ -191,9 +208,9 @@ function Builder({ personId }: { personId: string }) {
             {!done && (
               <div className="border-b border-line px-5 pt-5 pb-4 sm:px-8">
                 <Stepper steps={[...STEPS]} current={step} onStepClick={(i) => i < step && go(i)} />
-                <div className="mt-4 flex items-center gap-4">
-                  <Progress value={step + 1} max={5} size="sm" className="flex-1" label={`Step ${step + 1} of 5`} valueText={`${Math.round(((step + 1) / 5) * 100)}%`} />
+                <div className="mt-4 flex min-h-8 items-center justify-between gap-4">
                   <SaveIndicator state={save} onRetry={() => { dirty.current = true; void flush(); }} />
+                  <Button size="sm" variant="secondary" iconStart={<Eye />} className="lg:hidden" onClick={() => setPreview(true)}>Preview</Button>
                 </div>
               </div>
             )}
@@ -203,7 +220,7 @@ function Builder({ personId }: { personId: string }) {
               ) : (
                 <>
                   <div className="mb-6">
-                    <h2 tabIndex={-1} className="font-display text-display-sm text-ink outline-none">{HEADS[step][0]}</h2>
+                    <h2 tabIndex={-1} className="font-display text-display-sm text-ink outline-none">{HEADS[step][0]}<span className="sr-only">, step {step + 1} of 5</span></h2>
                     <p className="mt-1 text-body-md text-ink-muted">{HEADS[step][1]}</p>
                   </div>
 
@@ -226,7 +243,7 @@ function Builder({ personId }: { personId: string }) {
                   {step === 0 && (
                     <div className="grid gap-5">
                       <PhotoPicker id="f-photo" value={d.photo} name={d.name} onChange={set("photo")} error={err("photo")} />
-                      <div className="grid gap-5 sm:grid-cols-2">
+                      <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
                         <Field label="Full name" error={err("name")}><Input id="f-name" autoComplete="name" value={d.name} onChange={(e) => set("name")(e.target.value)} /></Field>
                         <Field label="Years in the business" error={err("years")}><Input id="f-years" inputMode="numeric" value={d.years} placeholder="e.g. 6" onChange={(e) => set("years")(e.target.value.replace(/\D/g, "").slice(0, 2))} /></Field>
                       </div>
@@ -269,7 +286,7 @@ function Builder({ personId }: { personId: string }) {
 
                   {step === 2 && (
                     <div className="grid gap-5">
-                      <div className="grid gap-5 sm:grid-cols-2">
+                      <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
                         <Field label="Home market"><Select id="f-market" value={d.market} onValueChange={(v) => set("market")(v as ProfileFields["market"])} options={[{ value: "la", label: "Los Angeles" }, { value: "other", label: "Another market" }]} /></Field>
                         <Field label="Home ZIP code" error={err("zip")}><Input id="f-zip" inputMode="numeric" autoComplete="postal-code" value={d.zip} start={<MapPin />} placeholder="90026" onChange={(e) => set("zip")(e.target.value.replace(/\D/g, "").slice(0, 5))} /></Field>
                       </div>
@@ -286,13 +303,13 @@ function Builder({ personId }: { personId: string }) {
                         </div>
                       )}
                       <Field label="Travel notes" optional hint="Only a limit or exception. No need to repeat the areas above."><Input id="f-travel" value={d.travel} onChange={(e) => set("travel")(e.target.value)} /></Field>
-                      <div className="grid gap-5 sm:grid-cols-2">
+                      <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
                         <Field label="Availability month"><Input id="f-month" value={d.month} readOnly /></Field>
                         <Field label="This month"><Select id="f-monthStatus" value={d.monthStatus} onValueChange={(v) => set("monthStatus")(v as ProfileFields["monthStatus"])} options={Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))} /></Field>
                       </div>
                       <Field label="Dates or times this month" error={err("dates")} hint="Exact project dates are agreed with each client."><Input id="f-dates" value={d.dates} placeholder="e.g. Weekday mornings" onChange={(e) => set("dates")(e.target.value)} /></Field>
                       <Banner tone="success" title="Keep availability fresh">Confirm it each month. Production comes first: pause it when the call comes.</Banner>
-                      <div className="grid gap-5 sm:grid-cols-2">
+                      <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
                         <Field label="Rate" optional hint="Final scope and rate are agreed with the client."><Input id="f-rate" inputMode="numeric" value={d.rate} start={<span className="text-label-md">$</span>} end={<span className="text-label-sm text-ink-subtle">USD</span>} onChange={(e) => set("rate")(e.target.value.replace(/\D/g, "").slice(0, 4))} /></Field>
                         <Field label="Rate basis" optional><Select id="f-basis" value={d.basis} onValueChange={(v) => set("basis")(v as ProfileFields["basis"])} options={Object.entries(basisLabel).map(([value, label]) => ({ value, label }))} /></Field>
                       </div>
@@ -305,7 +322,7 @@ function Builder({ personId }: { personId: string }) {
                         <Textarea id="f-about" rows={6} showCount maxLength={ABOUT_MAX} value={d.about} onChange={(e) => set("about")(e.target.value)} />
                       </Field>
                       <Field label="Languages" optional><Input id="f-languages" value={d.languages} placeholder="e.g. English, Spanish" onChange={(e) => set("languages")(e.target.value)} /></Field>
-                      <div className="grid gap-5 sm:grid-cols-2">
+                      <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
                         <Field label="Insurance" optional hint="Self-reported; not verified."><Select id="f-insurance" value={d.insurance} onValueChange={(v) => set("insurance")(v as ProfileFields["insurance"])} options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance" }]} /></Field>
                         <Field label="Work mode" optional><Select id="f-mode" value={d.mode} onValueChange={(v) => set("mode")(v as ProfileFields["mode"])} options={[{ value: "on-site", label: "On site" }, { value: "studio", label: "At my studio" }, { value: "both", label: "Both" }]} /></Field>
                       </div>
@@ -318,7 +335,6 @@ function Builder({ personId }: { personId: string }) {
 
                   <div className="mt-8 flex items-center justify-between gap-3 border-t border-line pt-5">
                     {step > 0 ? <Button variant="secondary" iconStart={<ArrowLeft />} onClick={(e) => go(step - 1, e.currentTarget)}>Back</Button> : <span />}
-                    <span className="hidden font-mono text-data-sm text-ink-subtle sm:inline">{step + 1} / 5</span>
                     <Button variant="primary" className="glow-hover" loading={submitting} iconEnd={step === 4 ? <Sparkles /> : <ArrowRight />} onClick={next}>
                       {step === 4 ? (resubmitting || notes.length ? "Submit again" : "Submit for review") : "Continue"}
                     </Button>
@@ -329,13 +345,20 @@ function Builder({ personId }: { personId: string }) {
           </div>
         </div>
 
-        <aside aria-label="Preview" className="lg:col-span-5">
-          <div className="lg:sticky lg:top-24">
+        <aside aria-label="Preview" className="hidden lg:col-span-5 lg:block">
+          <div className="grid gap-4 lg:sticky lg:top-24">
+            {!done && <ProfileStrength fields={d} />}
             <ProfilePreviewCard fields={d} personId={personId} />
-            <p className="mt-3 text-caption text-ink-subtle">Profile details and credits are self-reported. No identity, qualifications or coverage have been verified.</p>
+            <p className="text-caption text-ink-subtle">This is your card as clients will see it in search. It updates as you type.</p>
           </div>
         </aside>
       </div>
+      <Drawer open={preview} onClose={() => setPreview(false)} title="Your card" description="How clients will see you in search. It updates as you type." size="md">
+        <div className="grid gap-4">
+          <ProfilePreviewCard fields={d} personId={personId} />
+          {!done && <ProfileStrength fields={d} />}
+        </div>
+      </Drawer>
     </Page>
   );
 }
@@ -363,18 +386,24 @@ function Review({ d, notes, onEdit }: { d: ProfileFields; notes: { section: Prof
   const ready = Object.keys(problems).length === 0;
   return (
     <div className="grid gap-4">
-      {ready
+      {notes.length > 0 ? (
+        <Banner tone="warning" title="Changes requested">
+          The Between Gigs team left {notes.length === 1 ? "a note" : `${notes.length} notes`}. Update the steps marked “Needs changes”, then submit again.{ready ? "" : " A few required details are missing too; each step lists them."}
+        </Banner>
+      ) : ready
         ? <Banner tone="success" title="Ready for review">Go back and edit anything. When it looks right, submit it to the Between Gigs team.</Banner>
         : <Banner tone="warning" title="A few things to finish">The steps marked below need attention before you can submit.</Banner>}
       {SECTIONS.map((section, i) => {
         const missing = problems[i];
         const note = notes.find((n) => n.section === section);
         return (
-          <section key={section} aria-labelledby={`review-${section}`} className={cx("rounded-xl border p-4", missing ? "border-warning" : "border-line")}>
+          <section key={section} aria-labelledby={`review-${section}`} className={cx("rounded-xl border p-4", missing || note ? "border-warning" : "border-line")}>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <h3 id={`review-${section}`} className="flex items-center gap-2 font-display text-heading-md text-ink">
-                <span className="font-mono text-data-md text-ink-subtle">0{i + 1}</span>{sectionLabel[section]}
-                {missing ? <Badge tone="warning" size="sm" icon={<AlertCircle />}>Needs attention</Badge> : <Badge tone="success" size="sm" icon={<Check />}>Complete</Badge>}
+                <span className="text-label-md text-ink-subtle tabular-nums">0{i + 1}</span>{sectionLabel[section]}
+                {note
+                  ? <Badge tone="warning" size="sm" icon={<MessageSquareWarning />}>Needs changes</Badge>
+                  : missing ? <Badge tone="warning" size="sm" icon={<AlertCircle />}>Needs attention</Badge> : <Badge tone="success" size="sm" icon={<Check />}>Complete</Badge>}
               </h3>
               <Button size="sm" variant="ghost" iconStart={<Pencil />} aria-label={`Edit ${sectionLabel[section]}`} onClick={(e) => onEdit(i, e.currentTarget)}>Edit</Button>
             </div>
