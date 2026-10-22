@@ -8,7 +8,7 @@ Every method is async and returns plain JSON-able objects, so each maps to one A
 
 | | Sample (now) | Production (Anu) |
 | --- | --- | --- |
-| Storage | One localStorage key `bg2-sample-v1`, seeded from `lib/data/seed.ts` | Cloudflare D1 |
+| Storage | One localStorage key `bg2-sample-v2`, seeded from `lib/data/seed.ts` | Cloudflare D1 |
 | Auth | Session object in the same key; with a Clerk key, Clerk signs in and the session mirrors it | Clerk (email code), verified in the Worker |
 | Email | Rendered and pushed to a local outbox, visible at `/emails` | Rendered by the same `emails/*.ts` functions and queued in the Resend outbox |
 | Photos | Resized to 480px JPEG data URL | Upload to storage (R2 or Supabase Storage), keep the URL |
