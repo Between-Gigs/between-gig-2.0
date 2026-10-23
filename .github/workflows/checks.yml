@@ -10,7 +10,7 @@ permissions:
   contents: read
 jobs:
   signup:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -22,10 +22,14 @@ jobs:
       - run: pnpm typecheck && pnpm lint && pnpm lint:values
       - run: node scripts/qa/auth-data.mjs
       - run: pnpm build
-      - run: pnpm exec playwright-core install --with-deps chromium
+      - name: Use the runner's installed Chrome for browser checks
+        run: |
+          bg_chrome_path=$(command -v google-chrome)
+          test -x "$bg_chrome_path"
+          "$bg_chrome_path" --version
+          echo "CHROMIUM_PATH=$bg_chrome_path" >> "$GITHUB_ENV"
       - name: Test signup and existing product flow (sample mode, no real accounts)
         run: |
-          export CHROMIUM_PATH=$(node --input-type=module -e 'import { chromium } from "playwright-core"; console.log(chromium.executablePath())')
           node scripts/qa/auth-flow.mjs
           pnpm qa:flow
           node scripts/qa/funnel-cohort.mjs
@@ -36,9 +40,7 @@ jobs:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Z2xhZC1tb25rZXktNjkwOC5jbGVyay5hY2NvdW50cy5kZXYk
       - name: Check password handoff and offline recovery (Clerk requests blocked)
         run: |
-          export CHROMIUM_PATH=$(node --input-type=module -e 'import { chromium } from "playwright-core"; console.log(chromium.executablePath())')
           node scripts/qa/clerk-entry.mjs
       - name: Verify signup callbacks, returning login and roles (isolated mock SDK)
         run: |
-          export CHROMIUM_PATH=$(node --input-type=module -e 'import { chromium } from "playwright-core"; console.log(chromium.executablePath())')
           node scripts/qa/clerk-contract.mjs
