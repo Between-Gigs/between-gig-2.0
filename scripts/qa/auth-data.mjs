@@ -52,7 +52,7 @@ assert.equal(edited.ok, true);
 assert.equal((await data.invites.lookup(DEMO_TOKENS.valid)).state, "valid");
 for (const token of [undefined, DEMO_TOKENS.valid, DEMO_TOKENS.expired, DEMO_TOKENS.used, DEMO_TOKENS.unknown]) {
   await data.demo.reset();
-  const result = await data.auth.syncExternal({ email: "verified@example.com", name: "Verified User", inviteToken: token });
+  const result = await data.auth.syncExternal({ email: "verified@example.com", name: "Verified User", inviteToken: token, acceptedTerms: true });
   assert.equal(result.ok, true);
   assert.equal(result.session.role, "gigster");
   assert.equal(result.created, true);
@@ -63,7 +63,7 @@ for (const token of [undefined, DEMO_TOKENS.valid, DEMO_TOKENS.expired, DEMO_TOK
   assert.equal(again.session.name, "Verified User");
 }
 await data.demo.reset();
-const matched = await data.auth.syncExternal({ email: "riley.park@example.com", name: "Riley", inviteToken: DEMO_TOKENS.valid });
+const matched = await data.auth.syncExternal({ email: "riley.park@example.com", name: "Riley", inviteToken: DEMO_TOKENS.valid, acceptedTerms: true });
 assert.equal(matched.session.role, "gigster");
 assert.equal((await data.invites.lookup(DEMO_TOKENS.valid)).state, "used");
 const existing = await data.people.get("maya");
@@ -71,7 +71,7 @@ const login = await data.auth.syncExternal({ email: "maya.chen@example.com", nam
 assert.equal(login.created, false);
 assert.deepEqual((await data.people.get("maya")).person, existing.person);
 // Even the sample owner's email grants no owner role through verified signup.
-const ordinary = await data.auth.syncExternal({ email: SAMPLE_OWNER.email, name: "Ordinary" });
+const ordinary = await data.auth.syncExternal({ email: SAMPLE_OWNER.email, name: "Ordinary", acceptedTerms: true });
 assert.equal(ordinary.session.role, "gigster");
 const owner = await data.auth.syncExternal({ email: "trusted@example.com", role: "owner" });
 assert.equal(owner.session.role, "owner"); // represents trusted Clerk publicMetadata, never signup metadata
@@ -105,3 +105,17 @@ assert.equal(afterApprove.counts.approved, beforeSubmit.counts.approved + 1);
 const values = [afterApprove.funnel.invited, afterApprove.funnel.opened, afterApprove.funnel.accounts, afterApprove.funnel.submitted, afterApprove.funnel.approved];
 assert.equal(values.every((value, index) => index === 0 || value <= values[index - 1]), true);
 console.log("Open-account review/approval stays visible globally without distorting invitation-funnel stages.");
+
+await data.demo.reset();
+const beforeConsent = await data.people.list();
+assert.equal((await data.auth.syncExternal({ email: "login-first@example.com", name: "Login First" })).error, "terms");
+assert.equal((await data.people.list()).length, beforeConsent.length);
+assert.equal((await data.auth.syncExternal({ email: "riley.park@example.com", name: "Riley" })).error, "terms");
+assert.equal((await data.invites.lookup(DEMO_TOKENS.valid)).state, "valid");
+const consented = await data.auth.syncExternal({ email: "login-first@example.com", name: "Login First", acceptedTerms: true });
+assert.equal(consented.ok, true);
+assert.equal(consented.session.role, "gigster");
+const consentReturn = await data.auth.syncExternal({ email: "login-first@example.com" });
+assert.equal(consentReturn.ok, true);
+assert.equal(consentReturn.session.personId, consented.session.personId);
+console.log("Login-first consent required before creating a person; returning profiles remain unchanged.");

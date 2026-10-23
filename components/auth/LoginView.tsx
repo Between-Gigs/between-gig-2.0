@@ -59,7 +59,7 @@ function ClerkLogin() {
       <div className="grid gap-6">
         {params.get("signedOut") && <Banner tone="success" title="You're signed out">See you next time.</Banner>}
         <ClerkSlot label="Loading sign-in">
-          <SignIn routing="hash" signUpUrl={`${basePath}/join/`}
+          <SignIn routing="hash" signUpUrl={`${basePath}/join/`} withSignUp={false} transferable={false}
             initialValues={{ emailAddress: params.get("email") ?? undefined }}
             fallbackRedirectUrl={`${basePath}/login/${params.get("next") ? `?next=${encodeURIComponent(params.get("next")!)}` : ""}`} />
         </ClerkSlot>

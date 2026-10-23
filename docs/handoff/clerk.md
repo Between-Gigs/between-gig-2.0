@@ -48,3 +48,15 @@ The sample role switcher is demonstration tooling, not production authorization.
 tokens and roles on every protected operation; localStorage is not a server authorization boundary.
 
 The production `between-gigs.com` waitlist is separate and unchanged.
+
+## Login-first consent and demo startup
+
+Native SignIn does not create accounts implicitly; its explicit signup link goes through `/join`.
+A signed-in identity without a registered app profile must complete the existing name/terms form at `/join`.
+This completes setup for the same Clerk identity, with a fixed signed-in email and a way to switch accounts.
+Registered app profiles keep their existing login behavior. The data contract returns `terms` before creating
+or advancing a person without consent; the Worker implementation must record that consent durably.
+
+Demo startup uses the loaded Clerk hook, confirms sign-out with the supported non-navigating callback, and
+requires `clerk.user === null` before enabling signup. SDK-load or sign-out failures show a retry path. The
+browser-only sample fallback is offered after SDK initialization; it never creates a real Clerk identity.

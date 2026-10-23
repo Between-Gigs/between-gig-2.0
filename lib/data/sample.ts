@@ -283,6 +283,7 @@ export const sampleSource: DataSource = {
         return { ok: true, session: clone(state.session), created: false };
       }
       let person = state.people.find((p) => p.email.toLowerCase() === address);
+      if ((!person || person.status === "invited") && identity.acceptedTerms !== true) return { ok: false, error: "terms" };
       if (!person) {
         person = { id: uid(), email: address, name: "", slug: "", status: "invited",
           waitlistZip: "", waitlistCategory: "", invitedAt: "", updatedAt: now() };

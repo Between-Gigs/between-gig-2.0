@@ -7,26 +7,34 @@ const KEY = "qa-clerk-identities";
 const ACTIVE = "qa-clerk-active";
 const google: Identity = { id: "existing-google-id", fullName: "Existing Google", primaryEmailAddress: { emailAddress: "existing-google@example.test" }, unsafeMetadata: {}, publicMetadata: {}, password: null, provider: "google" };
 const accounts = (): Identity[] => JSON.parse(localStorage.getItem(KEY) ?? JSON.stringify([google]));
-const Context = React.createContext({ isLoaded: false, user: null as Identity | null, signOut: (async () => {}) as (options?: { redirectUrl?: string }) => Promise<void>, routerPush: (() => {}) as (url: string) => void });
+const Context = React.createContext({ isLoaded: false, user: null as Identity | null, signOut: (async () => {}) as (options?: { redirectUrl?: string } | (() => void | Promise<void>)) => Promise<void>, routerPush: (() => {}) as (url: string) => void });
 
-type ProviderProps = { children: React.ReactNode; routerPush: (url: string) => void; routerReplace: (url: string) => void; [key: string]: unknown };
-export function ClerkProvider({ children, routerPush }: ProviderProps) {
+type ProviderProps = { children: React.ReactNode; afterSignOutUrl?: string; routerPush: (url: string) => void; routerReplace: (url: string) => void; [key: string]: unknown };
+export function ClerkProvider({ children, routerPush, afterSignOutUrl }: ProviderProps) {
   const [isLoaded, setLoaded] = React.useState(false);
   const [user, setUser] = React.useState<Identity | null>(null);
   React.useEffect(() => {
     // A cold callback must wait for the identity SDK, not redirect before initialization finishes.
-    const timer = setTimeout(() => { setUser(JSON.parse(localStorage.getItem(ACTIVE) ?? "null")); setLoaded(true); }, 200);
+    const timer = setTimeout(() => {
+      setUser(JSON.parse(localStorage.getItem(ACTIVE) ?? "null")); setLoaded(true);
+      (window as unknown as { qaSdkLoaded: boolean }).qaSdkLoaded = true;
+    }, Number(sessionStorage.getItem("qa-sdk-delay") ?? "200"));
     return () => clearTimeout(timer);
   }, []);
-  const signOut = React.useCallback(async (options?: { redirectUrl?: string }) => {
+  const signOut = React.useCallback(async (options?: { redirectUrl?: string } | (() => void | Promise<void>)) => {
+    if (sessionStorage.getItem("qa-signout-mode") === "reject") throw new Error("Test sign-out failure");
+    if (sessionStorage.getItem("qa-signout-mode") === "hold") await new Promise<void>((resolve) => {
+      (window as unknown as { qaReleaseDemoSignOut: () => void }).qaReleaseDemoSignOut = resolve;
+    });
     localStorage.removeItem(ACTIVE); setUser(null);
-    if (options?.redirectUrl) routerPush(options.redirectUrl);
-  }, [routerPush]);
+    if (typeof options === "function") await options();
+    else routerPush(options?.redirectUrl ?? afterSignOutUrl ?? "/");
+  }, [routerPush, afterSignOutUrl]);
   const value = React.useMemo(() => ({ isLoaded, user, signOut, routerPush }), [isLoaded, user, signOut, routerPush]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 export const useUser = () => { const c = React.useContext(Context); return { isLoaded: c.isLoaded, isSignedIn: !!c.user, user: c.user }; };
-export const useClerk = () => { const c = React.useContext(Context); return React.useMemo(() => ({ loaded: c.isLoaded, status: c.isLoaded ? "ready" : "loading", signOut: c.signOut }), [c.isLoaded, c.signOut]); };
+export const useClerk = () => { const c = React.useContext(Context); return React.useMemo(() => ({ loaded: c.isLoaded, status: c.isLoaded ? "ready" : "loading", signOut: c.signOut, get user(): Identity | null { return typeof window === "undefined" ? null : JSON.parse(localStorage.getItem(ACTIVE) ?? "null"); } }), [c.isLoaded, c.signOut]); };
 
 function callback(user: Identity, to: string) {
   localStorage.setItem(ACTIVE, JSON.stringify(user));

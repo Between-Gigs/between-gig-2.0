@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { data, type InviteLookup } from "@/lib/data";
 import { ButtonLink } from "@/components/ui/ButtonLink";
+import { useAuthActions } from "@/lib/auth/context";
 import { clerkEnabled } from "@/lib/auth/clerk";
 import { demoActive } from "@/lib/demo-flow";
 import { useSession } from "@/lib/session";
@@ -17,6 +18,8 @@ import { ClerkSlot } from "./ClerkSlot";
 /** Open signup, with an optional invite to prefill the email and retain its attribution. */
 export function JoinView() {
   const token = useSearchParams().get("invite") ?? "";
+  const { onboarding } = useAuthActions();
+  if (onboarding) return <JoinForm key={`onboarding-${onboarding.email}`} initialEmail={onboarding.email} initialName={onboarding.name} authenticated />;
   return <JoinForToken key={token} token={token} />;
 }
 
@@ -43,12 +46,13 @@ function JoinForToken({ token }: { token: string }) {
   return <InviteProblem lookup={lookup} />;
 }
 
-function JoinForm({ token, initialEmail = "" }: { token?: string; initialEmail?: string }) {
+function JoinForm({ token, initialEmail = "", initialName = "", authenticated = false }: { token?: string; initialEmail?: string; initialName?: string; authenticated?: boolean }) {
+  const auth = useAuthActions();
   const router = useRouter();
   const toast = useToast();
   const [email, setEmail] = React.useState(initialEmail);
   const matchingToken = email.trim().toLowerCase() === initialEmail.toLowerCase() ? token : undefined;
-  const [name, setName] = React.useState("");
+  const [name, setName] = React.useState(initialName);
   const [terms, setTerms] = React.useState(false);
   const [errors, setErrors] = React.useState<{ email?: string; name?: string; terms?: string; form?: string }>({});
   const [busy, setBusy] = React.useState(false);
@@ -64,6 +68,14 @@ function JoinForm({ token, initialEmail = "" }: { token?: string; initialEmail?:
     if (!terms) next.terms = "Agree to the Terms of Use and Privacy Policy to continue.";
     setErrors(next);
     if (Object.keys(next).length) return;
+    if (authenticated && auth.onboarding) {
+      setBusy(true);
+      try {
+        await auth.onboarding.finish({ name, acceptTerms: terms });
+        router.replace("/profile/edit/");
+      } catch { setBusy(false); setErrors({ form: "We couldn't finish your setup. Try again." }); }
+      return;
+    }
     if (clerkEnabled) { setVerify(true); return; } // Clerk confirms the email next; ClerkLayer then registers them.
     setBusy(true);
     const r = await data.auth.register({ token: matchingToken, email, name, acceptTerms: terms });
@@ -81,12 +93,12 @@ function JoinForm({ token, initialEmail = "" }: { token?: string; initialEmail?:
   return (
     <AuthShell eyebrow="Professional onboarding" title="Your next chapter" accent="starts here."
       lead={<p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
-      <h2 className="font-display text-display-sm text-ink">Create your account</h2>
-      <p className="mt-2 text-body-md text-ink-muted">No invite needed. Enter your details to get started.</p>
+      <h2 className="font-display text-display-sm text-ink">{authenticated ? "Finish your account setup" : "Create your account"}</h2>
+      <p className="mt-2 text-body-md text-ink-muted">{authenticated ? "You are signed in. Confirm your details and agree to the terms to create your profile." : "No invite needed. Enter your details to get started."}</p>
       <form noValidate onSubmit={submit} className="mt-8 grid gap-5">
         {errors.form && <Banner tone="danger" title="We couldn't create your account">{errors.form}</Banner>}
-        <Field label="Email" error={errors.email} hint="Use the email you want to sign in with.">
-          <Input type="email" value={email} autoComplete="email" start={<Mail />} onChange={(e) => { setEmail(e.target.value); setErrors((x) => ({ ...x, email: undefined })); }} />
+        <Field label="Email" error={errors.email} hint={authenticated ? "You are signed in with this email." : "Use the email you want to sign in with."}>
+          <Input type="email" value={email} readOnly={authenticated} autoComplete="email" start={<Mail />} onChange={(e) => { setEmail(e.target.value); setErrors((x) => ({ ...x, email: undefined })); }} />
         </Field>
         <Field label="Full name" error={errors.name}>
           <Input value={name} autoComplete="name" autoFocus onChange={(e) => { setName(e.target.value); setErrors((x) => ({ ...x, name: undefined })); }} />
@@ -98,10 +110,15 @@ function JoinForm({ token, initialEmail = "" }: { token?: string; initialEmail?:
             description="You can ask us to delete your account at any time." />
           {errors.terms && <p id="terms-error" className="text-body-sm text-danger">{errors.terms}</p>}
         </div>
-        {clerkEnabled && <p className="text-body-sm text-ink-muted">Next, create your password (at least 8 characters). Clerk may then ask for a code to verify your email.</p>}
-        <Button type="submit" variant="primary" size="lg" fullWidth className="glow-hover" loading={busy} iconEnd={<ArrowRight />}>{clerkEnabled ? "Continue to password" : "Create my profile"}</Button>
-        {clerkEnabled && demo && <DemoSkip token={matchingToken} email={email} name={name.trim()} />}
-        <p className="text-center text-body-sm text-ink-muted">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2">Sign in</Link></p>
+        {clerkEnabled && !authenticated && <p className="text-body-sm text-ink-muted">Next, create your password (at least 8 characters). Clerk may then ask for a code to verify your email.</p>}
+        <Button type="submit" variant="primary" size="lg" fullWidth className="glow-hover" loading={busy} iconEnd={<ArrowRight />}>{authenticated ? "Finish setup" : clerkEnabled ? "Continue to password" : "Create my profile"}</Button>
+        {clerkEnabled && !authenticated && demo && <DemoSkip token={matchingToken} email={email} name={name.trim()} />}
+        {authenticated
+          ? <Button variant="ghost" disabled={busy} onClick={() => {
+            setBusy(true);
+            void auth.signOut().catch(() => { setBusy(false); setErrors({ form: "We couldn't sign out. Try again." }); });
+          }}>Use a different account</Button>
+          : <p className="text-center text-body-sm text-ink-muted">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2">Sign in</Link></p>}
       </form>
     </AuthShell>
   );
@@ -138,10 +155,11 @@ function ClerkAccount({ token, email, name, onBack }: { token?: string; email: s
 }
 
 /**
- * The client demo only (/demo): if Clerk's code doesn't arrive or Clerk won't load, create the account in this
+ * The client demo only (/demo): once Clerk has initialized, preview without a real account in this
  * browser's sample store and carry on. The live site has no sample store, so this never shows there.
  */
 function DemoSkip({ token, email, name }: { token?: string; email: string; name: string }) {
+  const { sdkLoaded } = useAuthActions();
   const router = useRouter();
   const [busy, setBusy] = React.useState(false);
   const skip = async () => {
@@ -149,9 +167,10 @@ function DemoSkip({ token, email, name }: { token?: string; email: string; name:
     const r = await data.auth.register({ token, email, name: name || "Demo Gigster", acceptTerms: true });
     if (r.ok) router.push("/profile/edit/"); else setBusy(false);
   };
+  if (!sdkLoaded) return null;
   return (
     <div className="grid gap-2 rounded-lg border border-dashed border-line-strong p-4">
-      <p className="text-label-md text-ink">Demo: no code, or the sign-in won&apos;t load?</p>
+      <p className="text-label-md text-ink">Demo: continue with browser-only sample data?</p>
       <p className="text-body-sm text-ink-muted">Skip the email check for this demo. Your account is made in this browser only.</p>
       <Button variant="secondary" loading={busy} iconEnd={<ArrowRight />} onClick={() => void skip()} className="justify-self-start">Skip sign-in and continue</Button>
     </div>
