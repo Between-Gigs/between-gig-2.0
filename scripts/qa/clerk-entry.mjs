@@ -26,7 +26,20 @@ try {
     assert.equal(await page.locator("input[type=password]").count(), 0); // never pretend an unavailable SDK is working
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     assert.equal(await page.getByRole("button", { name: "Back", exact: true }).count(), 0); // no Back on the password step
-    await page.goto(`${url}/login/?notInvited=old@example.com`);
+    // A cold hash callback must mount native SignUp even when the initial details
+    // form no longer exists. This checks the app boundary with SDK network blocked,
+    // not whether Clerk accepts an actual OAuth callback or verification code.
+    for (const hash of ["#/sso-callback", "#/verify-email-address", "#verify-email-address"]) {
+      await page.goto("about:blank");
+      await page.goto(`${url}/join/${hash}`);
+      await page.getByRole("heading", { name: "Continue your signup", exact: true }).waitFor();
+      assert.equal(await page.getByRole("button", { name: "Continue to password", exact: true }).count(), 0);
+      await page.reload();
+      await page.getByRole("heading", { name: "Continue your signup", exact: true }).waitFor();
+    }
+    await page.goto(`${url}/login/?__clerk_status=client_mismatch&notInvited=old@example.com`);
+    await page.getByText("This sign-in link is out of date", { exact: true }).waitFor();
+    assert.equal(await page.getByRole("link", { name: "Reload sign-in" }).getAttribute("href"), `${base}/login/`);
     await page.locator("p:visible").filter({ hasText: "Use the email and password you created" }).first().waitFor();
     assert.equal(await page.getByText("That email isn't on the call sheet yet", { exact: true }).count(), 0);
     assert.equal(await page.getByText("Need to create a password?", { exact: false }).count(), 0);

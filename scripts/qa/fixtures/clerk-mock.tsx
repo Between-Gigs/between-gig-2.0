@@ -60,6 +60,15 @@ export function SignUp({ initialValues, unsafeMetadata, fallbackRedirectUrl }: {
   </form>;
 }
 export function SignIn({ fallbackRedirectUrl }: { fallbackRedirectUrl: string; [key: string]: unknown }) {
+  const context = React.useContext(Context);
+  React.useEffect(() => {
+    if (context.isLoaded && context.user) {
+      // Match native single-session behavior: a signed-in SignIn redirects again.
+      const target = window as unknown as { qaSignedInWidgetMounts?: number };
+      target.qaSignedInWidgetMounts = (target.qaSignedInWidgetMounts ?? 0) + 1;
+      context.routerPush(fallbackRedirectUrl);
+    }
+  }, [context, fallbackRedirectUrl]);
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState("");

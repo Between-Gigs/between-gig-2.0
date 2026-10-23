@@ -2,13 +2,14 @@
 import { Banner, Button, Field, Input, useToast } from "@ds/components";
 import { startPageTransition } from "@ds/motion";
 import { ArrowLeft, ArrowRight, Clock, Inbox, Mail, RotateCcw } from "lucide-react";
-import { SignIn } from "@clerk/react";
+import { SignIn, useUser } from "@clerk/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { data, type RequestCodeResult, type SignInResult } from "@/lib/data";
 import { SAMPLE_OWNER } from "@/lib/data/seed";
 import { clerkEnabled } from "@/lib/auth/clerk";
+import { useAuthActions } from "@/lib/auth/context";
 import { useSession } from "@/lib/session";
 import { basePath } from "@/lib/site";
 import { AuthShell } from "./AuthShell";
@@ -37,7 +38,11 @@ export function LoginView() {
 
 /** Where to go once signed in: a safe ?next=, else the role's home. */
 function destination(next: string | null, role: "owner" | "gigster") {
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : role === "owner" ? "/owners/" : "/profile/";
+  const fallback = role === "owner" ? "/owners/" : "/profile/";
+  if (!next || !next.startsWith("/") || next.startsWith("//") || next.includes("\\")) return fallback;
+  const local = basePath && (next === basePath || next.startsWith(`${basePath}/`)) ? next.slice(basePath.length) || "/" : next;
+  const path = local.split(/[?#]/)[0].replace(/\/+$/, "");
+  return path === "/login" || path === "/join" || (role === "owner" && (path === "/profile" || path.startsWith("/profile/"))) ? fallback : local;
 }
 
 /**
@@ -48,21 +53,30 @@ function ClerkLogin() {
   const params = useSearchParams();
   const router = useRouter();
   const { session, loading } = useSession();
+  const { isLoaded, isSignedIn } = useUser();
+  const auth = useAuthActions();
 
   React.useEffect(() => {
-    if (!loading && session?.via === "clerk") router.replace(destination(params.get("next"), session.role));
-  }, [session, loading, params, router]);
+    if (!isLoaded || !isSignedIn) return;
+    if (auth.onboarding) router.replace("/join/");
+    else if (!loading && session?.via === "clerk") router.replace(destination(params.get("next"), session.role));
+  }, [isLoaded, isSignedIn, auth.onboarding, session, loading, params, router]);
 
   return (
     <AuthShell eyebrow="Welcome back" title="Sign in to" accent="Between Gigs."
       lead={<p>Use the email and password you created. Existing Google or email-code accounts can use their original sign-in method.</p>}>
       <div className="grid gap-6">
         {params.get("signedOut") && <Banner tone="success" title="You're signed out">See you next time.</Banner>}
-        <ClerkSlot label="Loading sign-in">
-          <SignIn routing="hash" signUpUrl={`${basePath}/join/`} withSignUp={false} transferable={false}
+        {params.get("__clerk_status") === "client_mismatch" && <Banner tone="warning" title="This sign-in link is out of date">
+          Open a fresh sign-in page to continue with your current account. <a className="text-link underline underline-offset-2" href={`${basePath}/login/`}>Reload sign-in</a>.
+        </Banner>}
+        {isLoaded && isSignedIn ? <Banner tone="info" title="You're already signed in">
+          {auth.onboarding ? <>Finish your account setup to continue. <Link className="text-link underline underline-offset-2" href="/join/">Continue setup</Link>.</> : "Opening your profile…"}
+        </Banner> : <ClerkSlot label="Loading sign-in">
+          {isLoaded && <SignIn routing="hash" signUpUrl={`${basePath}/join/`} withSignUp={false} transferable={false}
             initialValues={{ emailAddress: params.get("email") ?? undefined }}
-            fallbackRedirectUrl={`${basePath}/login/${params.get("next") ? `?next=${encodeURIComponent(params.get("next")!)}` : ""}`} />
-        </ClerkSlot>
+            fallbackRedirectUrl={`${basePath}${destination(params.get("next"), "gigster")}`} />}
+        </ClerkSlot>}
         <p className="text-center text-body-sm text-ink-muted">New here? <Link href="/join/" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2">Create an account</Link>. Already joined with Google or an email code? Use that same sign-in method; account recovery keeps your existing identity.</p>
       </div>
     </AuthShell>
