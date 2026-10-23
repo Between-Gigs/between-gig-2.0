@@ -47,11 +47,11 @@ function destination(next: string | null, role: "owner" | "gigster") {
 function ClerkLogin() {
   const params = useSearchParams();
   const router = useRouter();
-  const { session } = useSession();
+  const { session, loading } = useSession();
 
   React.useEffect(() => {
-    if (session?.via === "clerk") router.replace(destination(params.get("next"), session.role));
-  }, [session, params, router]);
+    if (!loading && session?.via === "clerk") router.replace(destination(params.get("next"), session.role));
+  }, [session, loading, params, router]);
 
   return (
     <AuthShell eyebrow="Welcome back" title="Sign in to" accent="Between Gigs."

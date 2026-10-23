@@ -8,9 +8,11 @@ import { data } from "@/lib/data";
  */
 export interface AuthActions {
   provider: "sample" | "clerk";
+  /** Wait for the identity SDK and its app-session bridge before making role/redirect decisions. */
+  loading: boolean;
   signOut: () => Promise<void>;
 }
 
-const fallback: AuthActions = { provider: "sample", signOut: () => data.auth.signOut() };
+const fallback: AuthActions = { provider: "sample", loading: false, signOut: () => data.auth.signOut() };
 export const AuthContext = React.createContext<AuthActions>(fallback);
 export const useAuthActions = () => React.useContext(AuthContext);

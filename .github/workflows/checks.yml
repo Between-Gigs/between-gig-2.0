@@ -34,3 +34,7 @@ jobs:
         run: |
           export CHROMIUM_PATH=$(node --input-type=module -e 'import { chromium } from "playwright-core"; console.log(chromium.executablePath())')
           node scripts/qa/clerk-entry.mjs
+      - name: Verify signup callbacks, returning login and roles (isolated mock SDK)
+        run: |
+          export CHROMIUM_PATH=$(node --input-type=module -e 'import { chromium } from "playwright-core"; console.log(chromium.executablePath())')
+          node scripts/qa/clerk-contract.mjs

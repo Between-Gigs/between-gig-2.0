@@ -25,18 +25,26 @@ function Bridge({ children }: { children: React.ReactNode }) {
   const clerk = useClerk();
   const { isLoaded, isSignedIn, user } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress ?? null;
+  const role = user?.publicMetadata?.role === "owner" ? "owner" : "gigster";
+  const identity = !isLoaded ? undefined : isSignedIn && email ? `${user?.id}:${email.toLowerCase()}:${role}` : null;
+  const [syncedIdentity, setSyncedIdentity] = React.useState<string | null | undefined>(undefined);
 
   React.useEffect(() => {
     if (!isLoaded) return;
     let cancelled = false;
     void (async () => {
       const current = await data.auth.session();
+      if (cancelled) return;
       if (!isSignedIn || !email) {
         // Signed out of Clerk (here or in another tab): close the session Clerk opened. Demo sessions stay.
         if (current?.via === "clerk") await data.auth.signOut();
+        if (!cancelled) setSyncedIdentity(null);
         return;
       }
-      if (current?.via === "clerk" && current.email === email.toLowerCase()) return;
+      if (current?.via === "clerk" && current.email === email.toLowerCase() && current.role === role) {
+        setSyncedIdentity(identity);
+        return;
+      }
       const meta = (user?.unsafeMetadata ?? {}) as { inviteToken?: string; name?: string; acceptedTerms?: boolean };
       const r = await data.auth.syncExternal({
         email,
@@ -48,13 +56,15 @@ function Bridge({ children }: { children: React.ReactNode }) {
       if (cancelled) return;
       // Keep a failure recoverable; open signup does not depend on call-sheet membership.
       if (!r.ok) await clerk.signOut({ redirectUrl: `${basePath}/login/` });
+      else setSyncedIdentity(identity);
     })();
     return () => { cancelled = true; };
-  }, [isLoaded, isSignedIn, email, user, clerk]);
+  }, [isLoaded, isSignedIn, email, user, clerk, identity, role]);
 
   const value = React.useMemo<AuthActions>(() => ({
     provider: "clerk",
+    loading: !isLoaded || syncedIdentity !== identity,
     signOut: async () => { await data.auth.signOut(); await clerk.signOut({ redirectUrl: `${basePath}/login/?signedOut=1` }); },
-  }), [clerk]);
+  }), [clerk, isLoaded, syncedIdentity, identity]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -112,8 +112,8 @@ function ClerkAccount({ token, email, name, onBack }: { token?: string; email: s
   const router = useRouter();
   const [demo, setDemo] = React.useState(false);
   React.useEffect(() => { setDemo(!!data.demo && demoActive()); }, []); // eslint-disable-line react-hooks/set-state-in-effect
-  const { session } = useSession();
-  React.useEffect(() => { if (session?.via === "clerk") router.replace("/profile/edit/"); }, [session, router]);
+  const { session, loading } = useSession();
+  React.useEffect(() => { if (!loading && session?.via === "clerk") router.replace("/profile/edit/"); }, [session, loading, router]);
   const [firstName, ...rest] = name.split(" ");
   return (
     <AuthShell eyebrow="Professional onboarding" title="Your next chapter" accent="starts here."
