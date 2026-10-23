@@ -12,6 +12,8 @@
  * adopts this (docs/design-system-requests.md).
  */
 @theme {
+  --color-ink-deep: var(--ink-deep);
+  --color-ink-deep-hover: var(--ink-deep-hover);
   --text-body-lg: 1.125rem;
   --text-body-lg--line-height: 28px;
   --text-body-md: 1rem;
@@ -68,6 +70,14 @@
   100% { --comet: 160deg; opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .glow-horizon[data-comet]::after { animation: none; } }
+
+/*
+ * Deep brand ink for client-styled pages (Crew Call): the client's forest green on light, a soft mint on dark, so
+ * headlines and the dark pill buttons read in both themes. Use text-ink-deep / bg-ink-deep with text-bg.
+ */
+:root { --ink-deep: var(--color-forest-800); --ink-deep-hover: var(--color-forest-700); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme=light]) { --ink-deep: var(--color-mint-300); --ink-deep-hover: var(--color-mint-200); } }
+[data-theme=dark] { --ink-deep: var(--color-mint-300); --ink-deep-hover: var(--color-mint-200); }
 
 /*
  * Dark-mode status surfaces. The system's amber-900 / blue-900 / red-900 read as muddy brown, navy and maroon

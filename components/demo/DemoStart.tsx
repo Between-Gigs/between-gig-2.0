@@ -35,6 +35,8 @@ export function DemoStart() {
   const send = React.useCallback(async (to: string) => {
     setMail(null);
     if (!data.demo) return;
+    // Start clean: end any Clerk session from earlier (an owner, or another email), or it would take over the demo.
+    try { await (window as unknown as { Clerk?: { user?: unknown; signOut?: () => Promise<void> } }).Clerk?.signOut?.(); } catch { /* not loaded */ }
     await data.auth.signOut();
     const r = await data.demo.inviteMe(to);
     setMail(await data.emails.get(r.outboxId));
@@ -42,7 +44,13 @@ export function DemoStart() {
     setDemoActive(true);
   }, []);
 
-  React.useEffect(() => { void send(SAMPLE); }, [send]); // eslint-disable-line react-hooks/set-state-in-effect
+  // Back from Clerk with an email the invite wasn't sent to: offer that email instead.
+  const [clerkEmail, setClerkEmail] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    const fromClerk = new URLSearchParams(window.location.search).get("clerk");
+    if (fromClerk) { setClerkEmail(fromClerk); setEmail(fromClerk); } // eslint-disable-line react-hooks/set-state-in-effect
+    void send(SAMPLE);
+  }, [send]);
 
   const resend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,6 +86,11 @@ export function DemoStart() {
             <p className="mt-3 text-body-md text-ink-muted">No invite is required to join. This is the optional email a Gigster gets from the waitlist. Press <b className="text-ink">Create your profile</b> in it to sign up, build a profile and see how it looks.</p>
           </div>
           <ButtonLink href="/join/" variant="primary" iconEnd={<ArrowRight />}>Sign up without an invite</ButtonLink>
+          {clerkEmail && (
+            <Banner tone="warning" title="Try signing up again">
+              The previous sign-in used {clerkEmail}. You can sign up with any email above, or preview an optional invite below.
+            </Banner>
+          )}
           <form onSubmit={resend} className="grid gap-3 rounded-xl border border-line bg-surface p-4">
             <Field label="Send the invite to" error={error}
               hint={clerkEnabled ? "Use your real email to get the real sign-in code. Keep the sample, and you can skip sign-in on the next page." : "Any email works. Nothing is sent."}>

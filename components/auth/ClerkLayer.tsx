@@ -2,6 +2,7 @@
 import { ClerkProvider, useClerk, useUser } from "@clerk/react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { demoActive } from "@/lib/demo-flow";
 import { AuthContext, type AuthActions } from "@/lib/auth/context";
 import { clerkAppearance, clerkPublishableKey } from "@/lib/auth/clerk";
 import { data } from "@/lib/data";
@@ -54,8 +55,8 @@ function Bridge({ children }: { children: React.ReactNode }) {
         acceptedTerms: meta.acceptedTerms,
       });
       if (cancelled) return;
-      // Keep a failure recoverable; open signup does not depend on call-sheet membership.
-      if (!r.ok) await clerk.signOut({ redirectUrl: `${basePath}/login/` });
+      // Keep failures recoverable in the client demo; open signup does not require a call-sheet record.
+      if (!r.ok) await clerk.signOut({ redirectUrl: demoActive() ? `${basePath}/demo/?clerk=${encodeURIComponent(email)}` : `${basePath}/login/` });
       else setSyncedIdentity(identity);
     })();
     return () => { cancelled = true; };
