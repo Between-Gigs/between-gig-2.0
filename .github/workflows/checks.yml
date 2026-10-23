@@ -3,6 +3,9 @@ on:
   pull_request:
   push:
     branches: [main]
+concurrency:
+  group: signup-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -25,6 +28,7 @@ jobs:
           export CHROMIUM_PATH=$(node --input-type=module -e 'import { chromium } from "playwright-core"; console.log(chromium.executablePath())')
           node scripts/qa/auth-flow.mjs
           pnpm qa:flow
+          node scripts/qa/funnel-cohort.mjs
       - name: Build Pages configuration with Clerk
         run: pnpm build
         env:

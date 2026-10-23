@@ -294,6 +294,8 @@ export interface DashboardSummary {
   counts: Record<PersonStatus, number>;
   /** Current status counts for the invited waitlist cohort only (the funnel annotations). */
   invitedCounts: Record<PersonStatus, number>;
+  /** Membership for invitation-funnel drill-downs; headline lists remain global. */
+  invitedPersonIds: string[];
   /** Cumulative stages for that same invited waitlist cohort. */
   funnel: FunnelCounts;
   waitlist: Record<InviteStatus, number> & { total: number };

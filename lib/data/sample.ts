@@ -467,7 +467,7 @@ export const sampleSource: DataSource = {
         submitted: invited.filter((p) => p.status !== "invited" && (sent.includes(p.status) || !!p.submittedAt)).length,
         approved: invitedCounts.approved,
       };
-      return { counts, invitedCounts, funnel, waitlist, reviewQueue: await sampleSource.owners.reviewQueue(), activity: clone((state.activity ?? []).slice(0, 12)) };
+      return { counts, invitedCounts, invitedPersonIds: invited.map((p) => p.id), funnel, waitlist, reviewQueue: await sampleSource.owners.reviewQueue(), activity: clone((state.activity ?? []).slice(0, 12)) };
     },
     async activity(limit = 50) {
       await latency(0);

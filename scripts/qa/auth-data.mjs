@@ -99,6 +99,8 @@ await data.owners.approve(openPerson.person.id);
 const afterApprove = await data.owners.dashboard();
 assert.deepEqual(afterApprove.funnel, beforeSubmit.funnel);
 assert.deepEqual(afterApprove.invitedCounts, beforeSubmit.invitedCounts);
+assert.equal(afterApprove.invitedPersonIds.includes(openPerson.person.id), false);
+assert.deepEqual(afterApprove.invitedPersonIds, beforeSubmit.invitedPersonIds);
 assert.equal(afterApprove.counts.approved, beforeSubmit.counts.approved + 1);
 const values = [afterApprove.funnel.invited, afterApprove.funnel.opened, afterApprove.funnel.accounts, afterApprove.funnel.submitted, afterApprove.funnel.approved];
 assert.equal(values.every((value, index) => index === 0 || value <= values[index - 1]), true);

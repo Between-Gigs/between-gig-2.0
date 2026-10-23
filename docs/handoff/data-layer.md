@@ -90,3 +90,11 @@ The **invite** email isn't sent by the UI in this milestone: send it in a batch 
 ## Email assets
 
 The emails load the logo from `${assetBase}/email/between-gigs-wide-on-{light,dark}.png`. Deploy `public/email/` to `https://between-gigs.com/email/`. Rebuild the PNGs with `node scripts/build-email-assets.mjs` after a logo change.
+
+
+### Open signup and invitation reporting
+
+Dashboard `counts` and the headline lists include every account. Invitation-funnel stages use only waitlist
+people with actual invitation records. Return `invitedCounts` and `invitedPersonIds` for that same cohort;
+funnel-driven lists and drawer refreshes use those IDs, while headline tabs and the full review queue remain
+global. A direct signup must remain visible for review without being counted as an invitation conversion.
