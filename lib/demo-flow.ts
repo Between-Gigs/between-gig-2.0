@@ -1,11 +1,11 @@
 /*
- * The client demo (/demo): invite email → sign up → build a profile → see it. Everything stays in this browser's
+ * The client demo (/demo): get started (with an optional invite) → sign up → build a profile → see it. Everything stays in this browser's
  * sample store. A flag in localStorage keeps the demo bar on while they move through the real pages.
  */
 const KEY = "bg2-demo-flow";
 const CHANGE = "bg2-demo-flow";
 
-export const demoSteps = ["Your invite", "Sign up", "Build your profile", "See your profile"] as const;
+export const demoSteps = ["Get started", "Sign up", "Build your profile", "See your profile"] as const;
 
 export function demoActive() {
   try { return localStorage.getItem(KEY) === "1"; } catch { return false; }
