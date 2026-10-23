@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+<defs>
+<radialGradient id="spot" cx="10" cy="10" r="9.5" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2ee08e" stop-opacity=".55"/><stop offset=".6" stop-color="#2ee08e" stop-opacity=".14"/><stop offset="1" stop-color="#2ee08e" stop-opacity="0"/></radialGradient>
+<linearGradient id="lf" x1="4" y1="4" x2="14" y2="26" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8ff7c4"/><stop offset="1" stop-color="#2ee08e"/></linearGradient>
+<linearGradient id="rf" x1="4" y1="4" x2="26" y2="14" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2ee08e"/><stop offset="1" stop-color="#139a5e"/></linearGradient>
+</defs>
+<circle cx="10" cy="10" r="9.5" fill="url(#spot)"/>
+<path d="M6.2 7.4 L28.6 16.2 L17.6 19 L15.4 29.4 Z" fill="#020a07" fill-opacity=".35"/>
+<path d="M4 4 L26 13 L15 16 L13 26 Z M26 13 L27.6 15.2 L16.6 18 L15 16 Z M13 26 L14.6 28 L16.6 18 L15 16 Z" fill="#0a4a2e" stroke="#062015" stroke-width=".6" stroke-linejoin="round"/>
+<path d="M4 4 L15 16 L13 26 Z" fill="url(#lf)"/>
+<path d="M4 4 L26 13 L15 16 Z" fill="url(#rf)"/>
+<path d="M4 4 L26 13 L15 16 L13 26 Z" fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M5.6 6 L13.2 14.4" stroke="#ffffff" stroke-opacity=".7" stroke-width=".9" stroke-linecap="round"/>
+</svg>

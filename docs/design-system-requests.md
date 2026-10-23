@@ -63,4 +63,4 @@ real font, which can set any words but won't be his handwriting).
 ## From the profile round (23 Oct)
 
 - **ThemeToggle** (`size="sm"`, `showLabel={false}`) gets both `pr-3` and `pr-0.5`, so the switch sits off-centre with a gap on its right. The app passes `className="pr-0.5!"` until the component drops `pr-3` when there's no label.
-- **backdrop-europium** is dark-only and paints its dots as one flat sheet. The home page now uses the app's `depth-field` with three fading dot layers (far, near, a perspective floor) and pointer parallax, in Day and Night (`app/globals.css`). A system-level version would replace it.
+- **backdrop-europium** is dark-only and paints its dots as one flat sheet. The home page now draws its dots on a canvas as a gravity well around the pointer (`lib/gravity-field.ts`) over the app's `depth-field` ground, in Day and Night. A system-level version would replace it.

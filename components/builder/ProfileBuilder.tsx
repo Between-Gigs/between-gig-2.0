@@ -1,7 +1,7 @@
 "use client";
 import { Badge, Banner, Button, Drawer, Field, IconButton, Input, RadioGroup, Skeleton, Stepper, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
-import { AlertCircle, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, CloudCheck, Eye, Film, Inbox, Link2, LoaderCircle, MapPin, MessageSquareWarning, Pencil, Pin, PinOff, Plus, Sparkles, Trash2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, Check, CloudCheck, Eye, Film, GripVertical, Inbox, Link2, LoaderCircle, MapPin, MessageSquareWarning, Pencil, Pin, PinOff, Plus, Sparkles, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -328,38 +328,68 @@ function Builder({ personId }: { personId: string }) {
 
 /**
  * Notable credits: up to five, in the order the Gigster wants, each pinned (shown to clients) or not.
- * Pins run parallel to the credits, so moving or removing a credit carries its pin with it.
+ * Reorder by dragging the grip at the left (mouse or touch), or focus it and use the arrow keys. Pins run
+ * parallel to the credits, so moving or removing a credit carries its pin with it.
  */
 function Credits({ credits, pins, error, onChange }: { credits: string[]; pins: boolean[]; error?: string; onChange: (credits: string[], pins: boolean[]) => void }) {
   const pinned = (i: number) => pins[i] !== false;
   const all = credits.map((_, i) => pinned(i));
-  const move = (i: number, by: number) => {
-    const c = [...credits], p = [...all], j = i + by;
+  const rows = React.useRef<(HTMLLIElement | null)[]>([]);
+  const [dragging, setDragging] = React.useState<number | null>(null);
+  const [said, setSaid] = React.useState("");
+  const swap = (i: number, j: number) => {
+    const c = [...credits], p = [...all];
     [c[i], c[j]] = [c[j], c[i]]; [p[i], p[j]] = [p[j], p[i]];
     onChange(c, p);
-    requestAnimationFrame(() => document.getElementById(`credit-${j}`)?.focus());
   };
+  // While dragging, the credit swaps with a neighbour once the pointer passes that row's middle.
+  const drag = (e: React.PointerEvent) => {
+    if (dragging === null) return;
+    const up = rows.current[dragging - 1]?.getBoundingClientRect(), down = rows.current[dragging + 1]?.getBoundingClientRect();
+    if (up && e.clientY < up.top + up.height / 2) { swap(dragging, dragging - 1); setDragging(dragging - 1); }
+    else if (down && e.clientY > down.top + down.height / 2) { swap(dragging, dragging + 1); setDragging(dragging + 1); }
+  };
+  const drop = () => { if (dragging !== null) setSaid(`Moved to position ${dragging + 1} of ${credits.length}.`); setDragging(null); };
+  const key = (e: React.KeyboardEvent, i: number) => {
+    const j = e.key === "ArrowUp" ? i - 1 : e.key === "ArrowDown" ? i + 1 : -1;
+    if (j < 0 || j >= credits.length) return;
+    e.preventDefault();
+    swap(i, j);
+    setSaid(`Moved to position ${j + 1} of ${credits.length}.`);
+    requestAnimationFrame(() => document.getElementById(`credit-grip-${j}`)?.focus());
+  };
+  const filled = credits.filter((c) => c.trim()).length;
   const shown = credits.filter((c, i) => c.trim() && pinned(i)).length;
   return (
     <fieldset className="grid gap-2">
       <legend className="mb-1 text-label-md text-ink">Notable credits <span className="font-normal text-ink-subtle">· at least one, up to five</span></legend>
-      <p className="mb-1 text-body-sm text-ink-muted">Put your best first. Only pinned credits show on your profile{credits.length > 1 ? ` (${shown} of ${credits.filter((c) => c.trim()).length} now)` : ""}.</p>
+      <p id="credits-hint" className="mb-1 text-body-sm text-ink-muted">Put your best first: drag the grip to reorder. Only pinned credits show on your profile{filled > 1 ? ` (${shown} of ${filled} now)` : ""}.</p>
       <ol className="grid gap-2">
         {credits.map((c, i) => (
-          <li key={i} className={cx("flex items-center gap-1.5 rounded-lg border p-1.5 transition-colors", pinned(i) ? "border-line bg-surface" : "border-dashed border-line bg-surface-sunken")}>
-            <span aria-hidden="true" className="w-6 shrink-0 text-center text-label-sm text-ink-subtle tabular-nums">{i + 1}</span>
+          <li key={i} ref={(el) => { rows.current[i] = el; }}
+            className={cx("flex items-center gap-1.5 rounded-lg border p-1.5 transition-colors", pinned(i) ? "border-line bg-surface" : "border-dashed border-line bg-surface-sunken",
+              dragging === i && "border-ink-brand bg-surface-selected shadow-md")}>
+            {credits.length > 1
+              ? <button type="button" id={`credit-grip-${i}`} aria-label={`Move credit ${i + 1} of ${credits.length}`} aria-describedby="credits-hint"
+                  title="Drag to reorder, or use the arrow keys"
+                  className={cx("grid size-10 shrink-0 touch-none place-items-center rounded-md text-ink-subtle transition-colors hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-ink-brand",
+                    dragging === i ? "cursor-grabbing text-ink-brand" : "cursor-grab")}
+                  onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDragging(i); }}
+                  onPointerMove={drag} onPointerUp={drop} onPointerCancel={drop} onKeyDown={(e) => key(e, i)}>
+                  <GripVertical className="size-5" aria-hidden="true" />
+                </button>
+              : <span aria-hidden="true" className="size-10 shrink-0" />}
             <Input id={i === 0 ? "f-credits" : `credit-${i}`} aria-label={`Credit ${i + 1}`} value={c} placeholder="Production · Role" className="min-w-0 flex-1" invalid={!!error && i === 0}
               aria-describedby={error && i === 0 ? "credits-error" : undefined}
               onChange={(e) => onChange(credits.map((x, j) => (j === i ? e.target.value : x)), all)} />
             <IconButton label={pinned(i) ? `Unpin credit ${i + 1}: hide it from your profile` : `Pin credit ${i + 1}: show it on your profile`} aria-pressed={pinned(i)}
               variant="ghost" className={pinned(i) ? "text-ink-brand" : "text-ink-subtle"} icon={pinned(i) ? <Pin /> : <PinOff />}
               onClick={() => onChange(credits, all.map((p, j) => (j === i ? !p : p)))} />
-            <IconButton label={`Move credit ${i + 1} up`} variant="ghost" icon={<ArrowUp />} disabled={i === 0} onClick={() => move(i, -1)} />
-            <IconButton label={`Move credit ${i + 1} down`} variant="ghost" icon={<ArrowDown />} disabled={i === credits.length - 1} onClick={() => move(i, 1)} />
             {credits.length > 1 && <IconButton label={`Remove credit ${i + 1}`} variant="ghost" icon={<Trash2 />} onClick={() => onChange(credits.filter((_, j) => j !== i), all.filter((_, j) => j !== i))} />}
           </li>
         ))}
       </ol>
+      <p role="status" aria-live="polite" className="sr-only">{said}</p>
       {error && <p id="credits-error" className="text-body-sm text-danger">{error}</p>}
       {credits.length < 5 && <div><Button size="sm" variant="ghost" iconStart={<Plus />} onClick={() => onChange([...credits, ""], [...all, true])}>Add a credit</Button></div>}
     </fieldset>

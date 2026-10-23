@@ -26,11 +26,11 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
       ? [{ href: "/profile/", label: "My profile" }, { href: "/profile/edit/", label: "Edit profile" }]
       : [{ href: "/professionals/", label: "For professionals" }, { href: "/storyboard/", label: "Storyboard" }];
 
-  const current = (href: string) => {
-    const path = pathname.endsWith("/") ? pathname : `${pathname}/`;
-    // "/owners/" is the dashboard only; its sub-pages light their own tab.
-    return href === "/owners/" ? path === href : path === href || path.startsWith(href);
-  };
+  // Only the most specific matching link is current: on /profile/edit/ that's "Edit profile", not "My profile";
+  // on /owners/review/ it's "Review", not "Dashboard".
+  const path = pathname.endsWith("/") ? pathname : `${pathname}/`;
+  const best = links.map((l) => l.href).filter((h) => path.startsWith(h)).sort((a, b) => b.length - a.length)[0];
+  const current = (href: string) => href === best;
 
   const signOut = async () => {
     await auth.signOut();

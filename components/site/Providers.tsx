@@ -5,7 +5,7 @@ import { clerkEnabled } from "@/lib/auth/clerk";
 import { HorizonComets } from "./HorizonComets";
 import { TiltCards } from "./TiltCards";
 import { SampleHook } from "./SampleHook";
-import { CursorFx } from "@/components/fx/CursorFx";
+import { CursorFx, CursorStyleSheet } from "@/components/fx/CursorFx";
 
 /** Client-side roots: Clerk (when a publishable key is set), and the toast queue. */
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -19,6 +19,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <HorizonComets />
       <TiltCards />
       <CursorFx />
+      <CursorStyleSheet />
     </ToastProvider>
   );
   return clerkEnabled ? <ClerkLayer>{app}</ClerkLayer> : app;

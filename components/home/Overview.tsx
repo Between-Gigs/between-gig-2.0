@@ -32,6 +32,7 @@ const pages = [
   { href: "/p/maya/", thumb: "public-profile", title: "A public profile", body: "Maya Chen, approved and live." },
   { href: "/emails/", thumb: "emails", title: "Emails", body: "Every email, and the sample outbox." },
   { href: "/preview/cursors/", thumb: "cursors", title: "Mouse effects", body: "Try five mouse effects and pick one for the site." },
+  { href: "/preview/curtain/", thumb: "home", title: "Curtain tuner", body: "Tune the home page curtain live and copy your favourite settings." },
 ];
 
 /**

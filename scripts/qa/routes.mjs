@@ -7,6 +7,7 @@ export const routes = [
   { name: "home", path: "/", ready: "h1" },
   { name: "preview-guide", path: "/preview/", ready: "h1" },
   { name: "preview-cursors", path: "/preview/cursors/", ready: "h1" },
+  { name: "preview-curtain", path: "/preview/curtain/", ready: "h1" },
   // Milestone 5b: home page proposals.
   { name: "proposal-visitor", path: "/proposals/home/", setup: reset, ready: "#proposal-h" },
   { name: "proposal-gigster", path: "/proposals/home/?view=gigster", setup: reset, ready: "#g-hello" },

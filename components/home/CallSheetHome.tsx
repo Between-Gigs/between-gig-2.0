@@ -4,7 +4,10 @@ import { buttonSizes, buttonVariants } from "@ds/components/Button";
 import { Reveal } from "@ds/motion";
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
+import { startCurtain, type CurtainController, type CurtainParams } from "@/lib/curtain";
+import { startGravityField } from "@/lib/gravity-field";
 
 const links = [
   { label: "For professionals", href: "/professionals/" },
@@ -17,27 +20,41 @@ const links = [
  * Milestone 5a: today's home page, the "call sheet", rebuilt from the design system's ComingSoon template.
  * Same words as the live page: "Extraordinary talent. Everyday solutions." / "Coming soon." /
  * "Los Angeles Call Sheet" / "Get on the call sheet ↗" → /professionals. Follows the Day/Night toggle.
- * The field has depth: far and near dot layers and a dotted floor under the horizon, which drift a little with the
- * pointer (near ones more), so the dots read as space rather than a flat sheet. Still under reduced motion.
+ * The dot field is a gravity well: the pointer is a mass that bends the grid toward it (lib/gravity-field.ts).
+ * Still on touch and under reduced motion.
  */
-export function CallSheetHome() {
+export function CallSheetHome({ curtain }: {
+  /**
+   * Draw the stage curtain (lib/curtain.ts) instead of the gravity well. The tuning page passes its live settings,
+   * gets the controller, and can keep the button from leaving the page (it replays the opening instead).
+   */
+  curtain?: { params: () => CurtainParams; onReady?: (c: CurtainController) => void; stayOnPage?: boolean };
+} = {}) {
   const field = React.useRef<HTMLDivElement>(null);
-  const tilt = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType !== "mouse") return;
-    const el = field.current, r = el?.getBoundingClientRect();
-    if (!el || !r) return;
-    el.style.setProperty("--px", (((e.clientX - r.left) / r.width) * 2 - 1).toFixed(3));
-    el.style.setProperty("--py", (((e.clientY - r.top) / r.height) * 2 - 1).toFixed(3));
+  const router = useRouter();
+  const ctl = React.useRef<CurtainController | null>(null);
+  const curtainOn = !!curtain;
+  const curtainRef = React.useRef(curtain);
+  React.useEffect(() => { curtainRef.current = curtain; });
+  React.useEffect(() => {
+    const el = field.current;
+    if (!el) return;
+    if (!curtainOn) return startGravityField(el);
+    const c = startCurtain(el, () => curtainRef.current!.params());
+    ctl.current = c; curtainRef.current?.onReady?.(c);
+    return () => { c.stop(); ctl.current = null; };
+  }, [curtainOn]);
+  // With the curtain, the button parts it first, then moves on (or, while tuning, closes it again).
+  const go = (e: React.MouseEvent) => {
+    const c = ctl.current;
+    if (!c || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    e.preventDefault();
+    c.open(() => { if (curtainRef.current?.stayOnPage) window.setTimeout(() => c.reset(), 700); else router.push("/professionals/"); });
   };
-  const settle = () => { field.current?.style.setProperty("--px", "0"); field.current?.style.setProperty("--py", "0"); };
   return (
     <div className="flex min-h-dvh bg-bg p-2 sm:p-3">
-      <div ref={field} onPointerMove={tilt} onPointerLeave={settle}
-        className="depth-field relative isolate flex flex-1 flex-col overflow-hidden rounded-xl border border-line text-ink sm:rounded-2xl">
-        <span aria-hidden="true" className="depth-dots-far" />
-        <span aria-hidden="true" className="depth-dots-near" />
-        <span aria-hidden="true" className="depth-floor" />
-        <span aria-hidden="true" className="glow-horizon" />
+      <div ref={field} className="depth-field relative isolate flex flex-1 flex-col overflow-hidden rounded-xl border border-line text-ink sm:rounded-2xl">
+        {!curtainOn && <span aria-hidden="true" className="glow-horizon" />}
 
         <header className="relative z-raised flex items-center justify-between gap-4 px-6 py-6 sm:px-10">
           <Link href="/" aria-label="Between Gigs home" className="inline-flex min-h-11 items-center rounded-md"><Logo height={30} /></Link>
@@ -56,7 +73,7 @@ export function CallSheetHome() {
           </Reveal>
           <Reveal effect="fade-up" delay={160}><p className="text-body-lg text-ink-muted">Los Angeles Call Sheet</p></Reveal>
           <Reveal effect="fade-up" delay={240}>
-            <Link href="/professionals/"
+            <Link href="/professionals/" onClick={go}
               className={cx("group glow-hover mt-4 inline-flex shrink-0 items-center justify-center gap-2 rounded-lg font-sans whitespace-nowrap transition-colors duration-fast [&_svg]:size-5",
                 buttonVariants.primary, buttonSizes.lg, "h-14 px-8 text-heading-sm")}>
               Get on the call sheet
