@@ -63,7 +63,7 @@ function ClerkLogin() {
             initialValues={{ emailAddress: params.get("email") ?? undefined }}
             fallbackRedirectUrl={`${basePath}/login/${params.get("next") ? `?next=${encodeURIComponent(params.get("next")!)}` : ""}`} />
         </ClerkSlot>
-        <p className="text-center text-body-sm text-ink-muted">New here? <Link href="/join/" className="text-link underline underline-offset-2">Create an account</Link>. Already joined with Google or an email code? Use that same sign-in method; account recovery keeps your existing identity.</p>
+        <p className="text-center text-body-sm text-ink-muted">New here? <Link href="/join/" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2">Create an account</Link>. Already joined with Google or an email code? Use that same sign-in method; account recovery keeps your existing identity.</p>
       </div>
     </AuthShell>
   );
@@ -150,7 +150,7 @@ function SampleLogin() {
                 onChange={(e) => { setEmail(e.target.value); setError(undefined); }} />
             </Field>
             <Button type="submit" variant="primary" size="lg" fullWidth loading={busy} iconEnd={<ArrowRight />}>Email me a code</Button>
-            <p className="text-center text-body-sm text-ink-muted">New here? <Link href="/join/" className="text-link underline underline-offset-2">Create an account</Link>.</p>
+            <p className="text-center text-body-sm text-ink-muted">New here? <Link href="/join/" className="inline-flex min-h-11 items-center font-semibold text-link underline underline-offset-2">Create an account</Link>.</p>
             {data.kind === "sample" && (
               <p className="rounded-lg border border-dashed border-line-dashed p-3 text-body-sm text-ink-subtle">
                 Sample accounts: <button type="button" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2" onClick={() => setEmail("maya.chen@example.com")}>maya.chen@example.com</button> (Gigster) or{" "}

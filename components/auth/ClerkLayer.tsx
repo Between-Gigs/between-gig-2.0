@@ -2,7 +2,6 @@
 import { ClerkProvider, useClerk, useUser } from "@clerk/react";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
-import { demoActive } from "@/lib/demo-flow";
 import { AuthContext, type AuthActions } from "@/lib/auth/context";
 import { clerkAppearance, clerkPublishableKey } from "@/lib/auth/clerk";
 import { data } from "@/lib/data";
@@ -55,10 +54,10 @@ function Bridge({ children }: { children: React.ReactNode }) {
       if (cancelled) return;
       if (!result.ok && result.error === "terms") {
         setNeedsConsent(identity ?? null);
-        if (!pathname.startsWith("/join") && !pathname.startsWith("/demo")) router.replace("/join/");
+        if (!pathname.startsWith("/join")) router.replace("/join/");
         return;
       }
-      if (!result.ok) await clerk.signOut({ redirectUrl: demoActive() ? `${basePath}/demo/?clerk=${encodeURIComponent(email)}` : `${basePath}/login/` });
+      if (!result.ok) await clerk.signOut({ redirectUrl: `${basePath}/login/` });
       else { setNeedsConsent(null); setSyncedIdentity(identity); }
     };
     void sync();
@@ -66,18 +65,10 @@ function Bridge({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; unsubscribe(); };
   }, [isLoaded, isSignedIn, email, user, clerk, identity, role, pathname, router]);
 
-  const prepareDemo = React.useCallback(async () => {
-    if (!isLoaded) throw new Error("Sign-in is still loading. Try again when it finishes.");
-    if (clerk.user) await clerk.signOut(() => undefined);
-    if (clerk.user !== null) throw new Error("Sign-in has not confirmed sign-out yet. Try again.");
-    await data.auth.signOut();
-  }, [clerk, isLoaded]);
-
   const value = React.useMemo<AuthActions>(() => ({
     provider: "clerk",
     loading: !isLoaded || syncedIdentity !== identity || (isSignedIn === true && needsConsent === identity),
     sdkLoaded: !!isLoaded,
-    prepareDemo,
     onboarding: needsConsent === identity && isSignedIn && email ? {
       email,
       name: user?.fullName || "",
@@ -95,6 +86,6 @@ function Bridge({ children }: { children: React.ReactNode }) {
       if (isLoaded) await clerk.signOut({ redirectUrl: `${basePath}/login/?signedOut=1` });
       else router.replace("/login/?signedOut=1");
     },
-  }), [clerk, isLoaded, syncedIdentity, identity, prepareDemo, needsConsent, isSignedIn, email, user, role, router]);
+  }), [clerk, isLoaded, syncedIdentity, identity, needsConsent, isSignedIn, email, user, role, router]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

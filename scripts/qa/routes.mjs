@@ -48,7 +48,6 @@ export const routes = [
   },
   { name: "storyboard", path: "/storyboard/", ready: "h1" },
   { name: "crew-call", path: "/crew-call/", ready: "h1" },
-  { name: "demo", path: "/demo/", setup: reset, ready: "iframe" },
   {
     name: "crew-call-form", path: "/crew-call/", ready: "h1",
     act: async (page) => { await page.getByRole("button", { name: "Carpentry & Custom Builds" }).click(); await page.getByRole("dialog").waitFor(); },

@@ -110,52 +110,6 @@ try {
     await context.close();
     console.log(`Mock SDK contract passed: ${password.length}-character signup, cold callback, profile creation, returning login, role gate, existing Google identity.`);
   }
-  // The production demo must wait for SDK readiness even when window.Clerk never exists.
-  for (const mode of ["hold", "reject"]) {
-    const context = await browser.newContext({ viewport: { width: 390, height: 900 }, reducedMotion: "reduce" });
-    await context.route("**/*", (route) => new URL(route.request().url()).hostname === "127.0.0.1" ? route.continue() : route.abort());
-    await context.addInitScript((initialMode) => {
-      if (sessionStorage.getItem("qa-demo-configured")) return;
-      sessionStorage.setItem("qa-demo-configured", "1");
-      sessionStorage.setItem("qa-sdk-delay", "700");
-      sessionStorage.setItem("qa-signout-mode", initialMode);
-      localStorage.setItem("qa-clerk-active", JSON.stringify({ id: "existing-google-id", fullName: "Existing Google", primaryEmailAddress: { emailAddress: "existing-google@example.test" }, unsafeMetadata: {}, publicMetadata: {}, password: null, provider: "google" }));
-    }, mode);
-    const page = await context.newPage();
-    page.setDefaultTimeout(12000);
-    await page.goto(`${hosted.url}/demo/`);
-    await page.getByRole("button", { name: /Preparing signup/ }).waitFor();
-    assert.equal(await page.getByRole("link", { name: "Sign up without an invite", exact: true }).count(), 0);
-    assert.equal(await page.evaluate(() => typeof window.Clerk), "undefined");
-    if (mode === "hold") {
-      await page.waitForFunction(() => typeof window.qaReleaseDemoSignOut === "function");
-      assert.equal(await page.getByRole("link", { name: "Sign up without an invite", exact: true }).count(), 0);
-      await page.evaluate(() => window.qaReleaseDemoSignOut());
-    } else {
-      await page.getByText("Signup setup couldn't finish", { exact: true }).waitFor();
-      assert.equal(await page.getByRole("link", { name: "Sign up without an invite", exact: true }).count(), 0);
-      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("qa-clerk-active")).id), "existing-google-id");
-      await page.evaluate(() => sessionStorage.removeItem("qa-signout-mode"));
-      await page.getByRole("button", { name: "Retry setup", exact: true }).click();
-    }
-    const signup = page.getByRole("link", { name: "Sign up without an invite", exact: true });
-    await signup.waitFor();
-    assert.equal(await page.evaluate(() => localStorage.getItem("qa-clerk-active")), null);
-    assert.equal(await page.evaluate(() => localStorage.getItem("bg2-demo-flow")), "1");
-    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).session), null);
-    await signup.click();
-    await page.getByLabel("Email", { exact: true }).fill(`sample-${mode}@example.test`);
-    await page.getByLabel("Full name").fill("Sample Preview");
-    await page.getByRole("checkbox").check();
-    await page.getByRole("button", { name: "Continue to password", exact: true }).click();
-    await page.getByRole("button", { name: "Skip sign-in and continue", exact: true }).click();
-    await page.waitForURL(new RegExp(`${basePath}/profile/edit/$`));
-    await page.locator("[data-step=welcome]").waitFor();
-    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).session.role), "gigster");
-    assert.equal(await page.evaluate(() => localStorage.getItem("qa-clerk-active")), null);
-    await context.close();
-    console.log(`Demo SDK contract passed: ${mode} sign-out, absent global, readiness gating, retry and explicit browser-only fallback.`);
-  }
 } finally {
   if (browser) await browser.close();
   if (server) server.close();

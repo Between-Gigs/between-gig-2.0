@@ -41,7 +41,6 @@ jobs:
       - name: Check password handoff and offline recovery (Clerk requests blocked)
         run: |
           node scripts/qa/clerk-entry.mjs
-          node scripts/qa/demo-init.mjs
       - name: Verify signup callbacks, returning login and roles (isolated mock SDK)
         run: |
           node scripts/qa/clerk-contract.mjs

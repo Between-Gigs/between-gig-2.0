@@ -11,11 +11,10 @@ export interface AuthActions {
   /** Wait for the identity SDK and its app-session bridge before making role/redirect decisions. */
   loading: boolean;
   sdkLoaded: boolean;
-  prepareDemo: () => Promise<void>;
   onboarding: null | { email: string; name: string; finish: (input: { name: string; acceptTerms: boolean }) => Promise<void> };
   signOut: () => Promise<void>;
 }
 
-const fallback: AuthActions = { provider: "sample", loading: false, sdkLoaded: true, prepareDemo: () => data.auth.signOut(), onboarding: null, signOut: () => data.auth.signOut() };
+const fallback: AuthActions = { provider: "sample", loading: false, sdkLoaded: true, onboarding: null, signOut: () => data.auth.signOut() };
 export const AuthContext = React.createContext<AuthActions>(fallback);
 export const useAuthActions = () => React.useContext(AuthContext);

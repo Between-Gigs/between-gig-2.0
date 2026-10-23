@@ -11,8 +11,7 @@ try {
     const page = await context.newPage();
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
-    await page.goto(`${url}/demo/`);
-    await page.getByRole("link", { name: "Sign up without an invite" }).click();
+    await page.goto(`${url}/join/`);
     await page.getByLabel("Email", { exact: true }).fill("bad");
     await page.getByRole("button", { name: "Create my profile" }).click();
     await page.getByText("Enter your email address, like name@example.com.", { exact: true }).waitFor();
@@ -50,7 +49,7 @@ try {
     await page.getByRole("link", { name: "Create an account", exact: true }).waitFor();
     assert.deepEqual(errors, []);
     await context.close();
-    console.log(`Open signup UI passed at ${width}px: demo entry, validation, recovery, editable invite, owner gate, login link.`);
+    console.log(`Open signup UI passed at ${width}px: open entry, validation, recovery, editable invite, owner gate, login link.`);
   }
 } finally {
   await browser.close();

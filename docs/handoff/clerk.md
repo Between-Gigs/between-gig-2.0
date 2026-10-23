@@ -43,7 +43,7 @@ an ordinary Gigster record for a new email. Existing people retain their identit
 Valid optional invites prefill an editable email and are consumed only for their matching address. Used invites
 lead to sign-in; expired and unknown invites offer open signup. Stale signup metadata cannot block a verified user.
 
-The `/demo` email preview and its explicit browser-only skip remain available; neither sends a real invite email.
+The client demo (`/demo` and its browser-only skip) was removed once Clerk sign-in worked; `/join/` is the sign-up entry.
 The sample role switcher is demonstration tooling, not production authorization. A future Worker must verify Clerk
 tokens and roles on every protected operation; localStorage is not a server authorization boundary.
 

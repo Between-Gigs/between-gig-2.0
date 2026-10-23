@@ -37,13 +37,14 @@ function Live({ value, className, children }: { value: unknown; className?: stri
  */
 export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview", className, step }: {
   fields: ProfileFields; personId: string; badge?: string | null; className?: string;
-  /** Beside the builder: the step being filled in. Its parts of the card get a ring; empty parts say which step fills them. */
+  /** Beside the builder: the step being filled in. Its parts of the card get a marker bar; empty parts say which step fills them. */
   step?: number;
 }) {
   const credits = d.credits.filter((c) => c.trim());
   const shown = d.services.slice(0, 3);
   const live = step !== undefined;
-  const ring = (n: number) => cx(live && step === n && "ring-2 ring-ink-brand/50 ring-offset-2 ring-offset-surface");
+  // The current step's parts: a brand bar on the left and a soft tint. Margins cancel the padding, so nothing moves between steps.
+  const ring = (n: number) => cx(live && "-mx-2.5 rounded-l-none! rounded-r-md border-l-2 pr-2.5 pl-2 transition-colors", live && (step === n ? "border-ink-brand bg-surface-selected" : "border-transparent"));
   const later = (n: number, what: string) => <span className="text-body-sm text-ink-subtle italic">{what} · added in step {n + 1}</span>;
   return (
     <article aria-label={badge ? `${badge} of your profile card` : `${d.name || "Profile"} card`} className={cx("overflow-hidden rounded-2xl border border-line bg-surface shadow-lg", className)}>
@@ -57,7 +58,7 @@ export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview"
       </div>
       <div className="grid gap-3 p-5">
         <div className="flex items-start justify-between gap-3">
-          <div className={cx("min-w-0 rounded-md", ring(0))}>
+          <div className={cx("min-w-0", ring(0))}>
             <h3 className="font-display text-heading-lg break-words text-ink">
               <Live value={d.name}>{d.name || <span className="text-ink-subtle">Your name</span>}</Live>
             </h3>

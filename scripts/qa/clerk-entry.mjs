@@ -25,8 +25,7 @@ try {
     await page.getByText("Sign-in couldn't load", { exact: true }).waitFor();
     assert.equal(await page.locator("input[type=password]").count(), 0); // never pretend an unavailable SDK is working
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-    await page.getByRole("button", { name: "Back", exact: true }).click();
-    assert.equal(await page.getByLabel("Email", { exact: true }).inputValue(), "password-check@example.com");
+    assert.equal(await page.getByRole("button", { name: "Back", exact: true }).count(), 0); // no Back on the password step
     await page.goto(`${url}/login/?notInvited=old@example.com`);
     await page.locator("p:visible").filter({ hasText: "Use the email and password you created" }).first().waitFor();
     assert.equal(await page.getByText("That email isn't on the call sheet yet", { exact: true }).count(), 0);
