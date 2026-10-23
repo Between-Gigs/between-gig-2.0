@@ -48,7 +48,7 @@ Sign out is in the account menu (top right).
 | `lib/data/` | **The seam.** `types.ts` (model), `source.ts` (`DataSource` interface), `sample.ts` (localStorage implementation), `seed.ts` (24 fictional people), `taxonomy.ts` (option lists), `index.ts` (picks the implementation). See [data-layer.md](data-layer.md). |
 | `lib/profile/validate.ts` | Per-step validation, completeness. Use the same file server-side. |
 | `emails/` | `invite.ts`, `sign-in-code.ts`, `profile-submitted.ts` → `{ subject, preheader, html, text }`. `layout.ts` (shell and parts), `tokens.ts` (generated literal colors), `index.ts` (`renderEmail`, registry, sample props). No React; runs in a Worker or Edge Function. |
-| `components/` | `site/` (header, footer, page frame, 404), `auth/`, `builder/`, `profile/` (ProfileView is shared by public, own and owner views), `owners/`, `emails/` (previews), `people/` (status badge, portrait), `demo/`, `ui/`. |
+| `components/` | `site/` (header, footer, page frame, 404), `auth/`, `builder/`, `profile/` (ProfileView is shared by public, own and owner views), `owners/`, `emails/` (previews), `people/` (status badge, portrait), `ui/`. |
 | `lib/motion.ts` | Route view transitions: the portrait morphs from the search card into the person page. |
 | `lib/guard.ts`, `lib/session.ts` | Client-side session and role gate. **The API must enforce roles; this only decides what to render.** |
 | `packages/design-system/` | Vendored design system v1.6.2 (`VERSION` has the commit). Imported as `@ds/components`, `@ds/motion`. Never edit; re-sync with `scripts/sync-design-system.sh <clone>`. The gigs templates are in `reference/` (not built). |

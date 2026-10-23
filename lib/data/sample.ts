@@ -594,26 +594,6 @@ export const sampleSource: DataSource = {
     async tokens() {
       return { ...DEMO_TOKENS };
     },
-    async inviteMe(email) {
-      const state = load();
-      const address = email.trim().toLowerCase();
-      state.session = null;
-      // Start over for this email: drop the person, their invites, drafts and profile from any earlier run.
-      const old = state.people.filter((p) => p.email.toLowerCase() === address).map((p) => p.id);
-      state.people = state.people.filter((p) => !old.includes(p.id));
-      state.invites = state.invites.filter((i) => !old.includes(i.personId));
-      state.drafts = state.drafts.filter((d) => !old.includes(d.personId));
-      state.profiles = state.profiles.filter((p) => !old.includes(p.personId));
-      const t = now();
-      const personId = `${address.split("@")[0].replace(/[^a-z0-9]+/gi, "-")}-${uid().slice(0, 4)}`;
-      state.people.push({ id: personId, email: address, name: "", slug: "", status: "invited", waitlistZip: "90026", waitlistCategory: "", invitedAt: t, updatedAt: t, sample: true });
-      const token = `${personId}-${uid()}`;
-      state.invites.push({ token, personId, email: address, createdAt: t, expiresAt: new Date(Date.now() + 30 * 86400000).toISOString() });
-      const mail = queue(state, "invite", address, { inviteUrl: absoluteUrl(`/join/?invite=${token}`), email: address });
-      log(state, "invited", { personId, email: address }, ownerName(state));
-      save(state, true);
-      return { inviteToken: token, outboxId: mail.id, personId };
-    },
   },
 };
 

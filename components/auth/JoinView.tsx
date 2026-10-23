@@ -8,7 +8,6 @@ import * as React from "react";
 import { data, type InviteLookup } from "@/lib/data";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { clerkEnabled } from "@/lib/auth/clerk";
-import { demoActive } from "@/lib/demo-flow";
 import { useSession } from "@/lib/session";
 import { basePath } from "@/lib/site";
 import { AuthShell } from "./AuthShell";
@@ -46,8 +45,6 @@ function JoinForm({ token, email }: { token: string; email: string }) {
   const [errors, setErrors] = React.useState<{ name?: string; terms?: string; form?: string }>({});
   const [busy, setBusy] = React.useState(false);
   const [verify, setVerify] = React.useState(false);
-  const [demo, setDemo] = React.useState(false);
-  React.useEffect(() => { setDemo(!!data.demo && demoActive()); }, []); // eslint-disable-line react-hooks/set-state-in-effect
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,7 +88,6 @@ function JoinForm({ token, email }: { token: string; email: string }) {
           {errors.terms && <p id="terms-error" className="text-body-sm text-danger">{errors.terms}</p>}
         </div>
         <Button type="submit" variant="primary" size="lg" fullWidth className="glow-hover" loading={busy} iconEnd={<ArrowRight />}>Create my profile</Button>
-        {clerkEnabled && demo && <DemoSkip token={token} name={name.trim()} />}
         <p className="text-center text-body-sm text-ink-muted">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2">Sign in</Link></p>
       </form>
     </AuthShell>
@@ -104,8 +100,6 @@ function JoinForm({ token, email }: { token: string; email: string }) {
  */
 function ClerkVerify({ token, email, name, onBack }: { token: string; email: string; name: string; onBack: () => void }) {
   const router = useRouter();
-  const [demo, setDemo] = React.useState(false);
-  React.useEffect(() => { setDemo(!!data.demo && demoActive()); }, []); // eslint-disable-line react-hooks/set-state-in-effect
   const { session } = useSession();
   React.useEffect(() => { if (session?.via === "clerk") router.replace("/profile/edit/"); }, [session, router]);
   const [firstName, ...rest] = name.split(" ");
@@ -120,30 +114,8 @@ function ClerkVerify({ token, email, name, onBack }: { token: string; email: str
             fallbackRedirectUrl={`${basePath}/join/?invite=${encodeURIComponent(token)}`} />
         </ClerkSlot>
         <Button variant="ghost" size="sm" iconStart={<ArrowLeft />} onClick={onBack} className="justify-self-start">Back</Button>
-        {demo && <DemoSkip token={token} name={name} />}
       </div>
     </AuthShell>
-  );
-}
-
-/**
- * The client demo only (/demo): if Clerk's code doesn't arrive or Clerk won't load, create the account in this
- * browser's sample store and carry on. The live site has no sample store, so this never shows there.
- */
-function DemoSkip({ token, name }: { token: string; name: string }) {
-  const router = useRouter();
-  const [busy, setBusy] = React.useState(false);
-  const skip = async () => {
-    setBusy(true);
-    const r = await data.auth.register({ token, name: name || "Demo Gigster", acceptTerms: true });
-    if (r.ok) router.push("/profile/edit/"); else setBusy(false);
-  };
-  return (
-    <div className="grid gap-2 rounded-lg border border-dashed border-line-strong p-4">
-      <p className="text-label-md text-ink">Demo: no code, or the sign-in won&apos;t load?</p>
-      <p className="text-body-sm text-ink-muted">Skip the email check for this demo. Your account is made in this browser only.</p>
-      <Button variant="secondary" loading={busy} iconEnd={<ArrowRight />} onClick={() => void skip()} className="justify-self-start">Skip sign-in and continue</Button>
-    </div>
   );
 }
 
