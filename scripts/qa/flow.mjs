@@ -49,9 +49,8 @@ export async function flow({ browser, base, outDir }) {
       await page.getByRole("checkbox").check();
       await page.getByRole("button", { name: "Create my profile" }).click();
       await page.waitForURL(/\/profile\/edit\/?$/);
-      // A brand-new account gets the one-time welcome before the first step.
-      await page.locator("[data-step='welcome']").waitFor();
-      await expectText("Welcome, Riley");
+      // A brand-new account goes straight to the first step.
+      await page.locator("[data-step='0']").waitFor();
     })
     && await step("used-invite", async () => {
       await page.goto(`${base}/join/?invite=riley-7q2m`);
@@ -74,19 +73,23 @@ export async function flow({ browser, base, outDir }) {
       const code = await page.evaluate(() => window.bgSample.peekCode("riley.park@example.com"));
       await page.getByLabel("6-digit code").fill(code);
       await page.waitForURL(/\/profile\/?$/);
-      await expectText("Let's build your profile");
+      await expectText("behind the experience.");
     })
     && await step("builder-about", async () => {
       await page.getByRole("link", { name: "Start your profile" }).click();
-      await page.getByRole("button", { name: "Start my profile" }).click();
       await page.locator("[data-step='0']").waitFor();
+      // Steps never block: Next moves on with nothing filled in; required answers are checked on Submit.
       await page.getByRole("button", { name: /^Next/ }).click();
-      await expectText("to continue");
+      await page.locator("[data-step='1']").waitFor();
+      await page.getByRole("button", { name: /^Back\s*:/ }).click();
+      await page.locator("[data-step='0']").waitFor();
       await page.locator("#f-photo").setInputFiles(path.join(ROOT, "public/img/people/jordan-2.jpg"));
+      // Every upload opens the cropper; keep the centred square.
+      await page.getByRole("button", { name: "Use this photo" }).click();
       await page.getByLabel("Years in the business").fill("8");
       await page.getByLabel("Industry position / department").fill("Set decoration");
       await page.getByLabel("IMDb profile link").fill("https://www.imdb.com/name/nm0000001/");
-      await page.getByLabel("Credit 1").fill("Fictional series · Set dresser (sample credit)");
+      await page.locator("#f-credits").fill("Fictional series · Set dresser (sample credit)");
       await page.getByRole("button", { name: /^Next/ }).click();
       await page.locator("[data-step='1']").waitFor();
     })

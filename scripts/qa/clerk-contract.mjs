@@ -52,7 +52,7 @@ try {
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Create test account" }).click();
     await page.waitForURL(new RegExp(`${basePath}/profile/edit/$`));
-    await page.locator("[data-step=welcome]").waitFor();
+    await page.locator("[data-step='0']").waitFor();
     await page.waitForTimeout(450); // allow delayed SDK initialization and role effects to settle
     assert.equal(new URL(page.url()).pathname, `${basePath}/profile/edit/`, "signup callback must reach profile creation without a login bounce");
     assert.equal(navigations.includes(`${basePath}/login/`), false, "role gate must wait for SDK/session initialization");

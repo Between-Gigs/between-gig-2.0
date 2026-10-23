@@ -23,6 +23,7 @@ export const thumbs = [
   { name: "login", path: "/login/", setup: "window.bgSample.reset()" },
   { name: "public-profile", path: "/p/maya/" },
   { name: "emails", path: "/emails/" },
+  { name: "cursors", path: "/preview/cursors/" },
   { name: "invite-email", path: "/emails/invite/" },
   { name: "owner", path: "/owners/", setup: as("owner") },
   { name: "invite", path: "/join/?invite=riley-7q2m", setup: "window.bgSample.reset()" },

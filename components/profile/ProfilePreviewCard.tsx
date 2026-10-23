@@ -5,6 +5,7 @@ import * as React from "react";
 import type { ProfileFields } from "@/lib/data";
 import { basisShort, monthStatusLabel } from "@/lib/data/taxonomy";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
+import { pinnedCredits } from "@/lib/profile/validate";
 
 export const areaLine = (f: ProfileFields) =>
   f.market === "la" ? (f.areas.length ? `${f.areas.slice(0, 2).join(" · ")}, Los Angeles` : "Los Angeles") : f.otherCity || "Another market";
@@ -40,7 +41,7 @@ export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview"
   /** Beside the builder: the step being filled in. Its parts of the card get a marker bar; empty parts say which step fills them. */
   step?: number;
 }) {
-  const credits = d.credits.filter((c) => c.trim());
+  const credits = pinnedCredits(d);
   const shown = d.services.slice(0, 3);
   const live = step !== undefined;
   // The current step's parts: a brand bar on the left and a soft tint. Margins cancel the padding, so nothing moves between steps.
@@ -85,7 +86,7 @@ export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview"
         </Live>
         <Live value={d.about} className={cx("block", ring(3))}>
           {d.about.trim()
-            ? <span className="line-clamp-3 text-body-sm text-ink-muted">{d.about}</span>
+            ? <span className="block text-body-sm whitespace-pre-line text-ink-muted">{d.about}</span>
             : live ? later(3, "A few lines about you") : <span aria-hidden="true" className="grid gap-2 py-1"><span className="h-2.5 w-full rounded-full bg-surface-sunken" /><span className="h-2.5 w-11/12 rounded-full bg-surface-sunken" /><span className="h-2.5 w-2/3 rounded-full bg-surface-sunken" /></span>}
         </Live>
         <div className="flex items-center justify-between gap-3 border-t border-line pt-3 text-body-sm">

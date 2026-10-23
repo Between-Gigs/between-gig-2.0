@@ -6,12 +6,14 @@ export const SECTIONS: ProfileSection[] = ["about", "skills", "where", "story"];
 export const sectionLabel: Record<ProfileSection, string> = { about: "About you", skills: "Skills & services", where: "Where & when", story: "Your story" };
 
 export const IMDB_RE = /^https:\/\/(www\.|m\.)?imdb\.com\/name\/nm\d+\/?$/;
-export const ABOUT_MIN = 80;
 export const ABOUT_MAX = 600;
 
 export type FieldErrors = Partial<Record<keyof ProfileFields, string>>;
 
-/** Per-step validation. Messages say how to fix the field, per BRAND.md. Copy from the GigsterOnboarding template. */
+/**
+ * What each step still needs before the profile can be submitted. The builder doesn't block moving between steps;
+ * it checks everything on Submit. Messages say how to fix the field, per BRAND.md.
+ */
 export function validateStep(step: number, d: ProfileFields): FieldErrors {
   const e: FieldErrors = {};
   if (step === 0) {
@@ -19,7 +21,7 @@ export function validateStep(step: number, d: ProfileFields): FieldErrors {
     if (!d.name.trim()) e.name = "Enter your full name.";
     if (d.years === "" || Number.isNaN(Number(d.years))) e.years = "Enter years in the business, like 6.";
     if (!d.position.trim()) e.position = "Enter your industry position or department.";
-    if (!IMDB_RE.test(d.imdb.trim())) e.imdb = "Use an IMDb name-profile link, like https://www.imdb.com/name/nm1234567/.";
+    if (d.imdb.trim() && !IMDB_RE.test(d.imdb.trim())) e.imdb = "Use an IMDb name-profile link, like https://www.imdb.com/name/nm1234567/, or leave it empty.";
     if (!d.credits.some((c) => c.trim())) e.credits = "Add at least one credit.";
   }
   if (step === 1) {
@@ -32,7 +34,7 @@ export function validateStep(step: number, d: ProfileFields): FieldErrors {
     if (d.market === "la" && !d.areas.length) e.areas = "Pick at least one service area.";
     if (!d.dates.trim()) e.dates = "Add the dates or times you're free this month.";
   }
-  if (step === 3 && d.about.trim().length < ABOUT_MIN) e.about = "Write a few sentences, about 5 to 7 lines.";
+  if (step === 3 && !d.about.trim()) e.about = "Write a few lines about you and the help you offer.";
   return e;
 }
 
@@ -50,10 +52,10 @@ export function validateAll(d: ProfileFields): Record<number, FieldErrors> {
 export function completeness(d: ProfileFields | null): number {
   if (!d) return 0;
   const checks = [
-    !!d.photo, !!d.name.trim(), d.years !== "", !!d.position.trim(), IMDB_RE.test(d.imdb.trim()), d.credits.some((c) => c.trim()),
+    !!d.photo, !!d.name.trim(), d.years !== "", !!d.position.trim(), d.credits.some((c) => c.trim()),
     d.skills.length > 0, d.services.length > 0 || !!d.other.trim(),
     /^\d{5}$/.test(d.zip), d.market === "other" ? !!d.otherCity.trim() : d.areas.length > 0, !!d.dates.trim(),
-    d.about.trim().length >= ABOUT_MIN,
+    !!d.about.trim(),
   ];
   return checks.filter(Boolean).length / checks.length;
 }
@@ -71,3 +73,8 @@ export const fieldLabel: Partial<Record<keyof ProfileFields, string>> = {
   imdb: "IMDb profile link", credits: "Notable credits", skills: "On-set skills", services: "Off-set services",
   otherCity: "City / region and country", zip: "Home ZIP code", areas: "Service areas", dates: "Dates or times this month", about: "About me",
 };
+
+/** The credits shown to clients: the pinned ones, in the order the Gigster set. A credit is pinned unless unpinned. */
+export function pinnedCredits(d: Pick<ProfileFields, "credits" | "creditPins">): string[] {
+  return d.credits.filter((c, i) => c.trim() && d.creditPins?.[i] !== false);
+}

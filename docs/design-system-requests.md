@@ -59,3 +59,8 @@ Request: a "Lettering" section in the system beside Typography, with the asset, 
 treatments, and when to use it (one short phrase, a hero headline at most once per page). If more phrases are
 wanted, the options are more drawn phrases from Peter, or a script typeface chosen to sit close to his hand (a
 real font, which can set any words but won't be his handwriting).
+
+## From the profile round (23 Oct)
+
+- **ThemeToggle** (`size="sm"`, `showLabel={false}`) gets both `pr-3` and `pr-0.5`, so the switch sits off-centre with a gap on its right. The app passes `className="pr-0.5!"` until the component drops `pr-3` when there's no label.
+- **backdrop-europium** is dark-only and paints its dots as one flat sheet. The home page now uses the app's `depth-field` with three fading dot layers (far, near, a perspective floor) and pointer parallax, in Day and Night (`app/globals.css`). A system-level version would replace it.

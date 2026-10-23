@@ -11,7 +11,6 @@ import { PersonStatusBadge } from "@/components/people/PersonStatusBadge";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { ProfilePreviewCard } from "./ProfilePreviewCard";
-import { ProfileStrength } from "./ProfileStrength";
 import { ProfileView } from "./ProfileView";
 
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric" }) : "");
@@ -53,7 +52,6 @@ export function MyProfile() {
     registered: null,
     draft: fields && <Banner tone="warning" title="Draft · not submitted yet">
       Only you can see this. Finish the questionnaire and submit it for review when you're ready.
-      <ProfileStrength fields={fields} className="mt-3 max-w-md" />
       <div className="mt-3"><ButtonLink href="/profile/edit/" size="sm" variant="primary" iconEnd={<ArrowRight />}>{editLabel}</ButtonLink></div>
     </Banner>,
     submitted: <Banner tone="info" title="Submitted for review">
@@ -105,8 +103,9 @@ function NotStarted({ person }: { person: Person }) {
   return (
     <section aria-labelledby="start-h" className="mt-8 grid gap-8 rounded-2xl border border-line bg-surface p-6 shadow-lg sm:p-8 lg:grid-cols-12 lg:gap-12">
       <div className="lg:col-span-7">
-        <h2 id="start-h" className="font-display text-display-sm text-ink">Let's build your profile</h2>
-        <p className="mt-2 max-w-prose text-body-lg text-ink-muted">Five short steps, about 10 minutes. It saves as you go, so you can stop and come back.</p>
+        <p className="text-label-md text-ink-brand">Good work. Great people. Your next chapter.</p>
+        <h2 id="start-h" className="mt-3 font-display text-display-sm text-balance text-ink sm:text-display-md">Let's meet the person <span className="glow-text text-ink-brand">behind the experience.</span></h2>
+        <p className="mt-3 max-w-prose text-body-lg text-ink-muted">Bring your on-set know-how to everyday life. Five short steps, about 10 minutes, and it saves as you go.</p>
         <ol className="mt-6 grid gap-4">
           {STEPS.map((step, i) => (
             <li key={step} className="flex items-start gap-4">

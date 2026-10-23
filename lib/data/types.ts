@@ -61,8 +61,12 @@ export interface ProfileFields {
   name: string;
   years: string;
   position: string;
+  /** Optional. */
   imdb: string;
+  /** In the order the Gigster set. */
   credits: string[];
+  /** Parallel to credits: false hides that credit from clients. Missing means pinned (shown). */
+  creditPins?: boolean[];
   skills: string[];
   services: string[];
   other: string;

@@ -8,6 +8,7 @@ import type { Person, Profile, ProfileFields } from "@/lib/data";
 import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/data/taxonomy";
 import { asset } from "@/lib/site";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
+import { pinnedCredits } from "@/lib/profile/validate";
 
 export type ProfileMode = "public" | "own" | "owner";
 
@@ -177,8 +178,10 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
               <div className="rounded-2xl border border-line bg-surface p-5">
                 <h3 className="text-label-md text-ink">On set</h3>
                 <p className="mt-1 text-body-md text-ink-muted">{[f.position, ...f.skills.filter((s) => s !== f.position)].join(" · ")}{f.years && ` · ${f.years} years in the business`}</p>
-                <h3 className="mt-5 text-label-md text-ink">Selected credits</h3>
-                <ul className="mt-1 grid gap-1 text-body-sm text-ink-muted">{f.credits.filter((c) => c.trim()).map((c) => <li key={c}>{c}</li>)}</ul>
+                {pinnedCredits(f).length > 0 && <>
+                  <h3 className="mt-5 text-label-md text-ink">Selected credits</h3>
+                  <ul className="mt-1 grid gap-1 text-body-sm text-ink-muted">{pinnedCredits(f).map((c) => <li key={c}>{c}</li>)}</ul>
+                </>}
                 {f.imdb && mode !== "public" && <p className="mt-3 text-body-sm"><a className="inline-flex min-h-11 items-center text-link underline underline-offset-2" href={f.imdb} target="_blank" rel="noreferrer">IMDb page<span className="sr-only"> (opens in a new tab)</span></a></p>}
               </div>
               <div className="rounded-2xl border border-line bg-surface p-5">

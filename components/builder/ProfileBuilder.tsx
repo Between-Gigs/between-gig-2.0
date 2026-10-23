@@ -1,18 +1,17 @@
 "use client";
 import { Badge, Banner, Button, Drawer, Field, IconButton, Input, RadioGroup, Skeleton, Stepper, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
-import { AlertCircle, ArrowLeft, ArrowRight, Check, CloudCheck, Eye, Film, Inbox, Link2, LoaderCircle, MapPin, MessageSquareWarning, Pencil, PenLine, Plus, Sparkles, Trash2, UserRound, Wrench } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, CloudCheck, Eye, Film, Inbox, Link2, LoaderCircle, MapPin, MessageSquareWarning, Pencil, Pin, PinOff, Plus, Sparkles, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
 import { basisLabel, insuranceLabel, laServiceAreas, modeLabel, monthStatusLabel, offSetServices, onSetSkills } from "@/lib/data/taxonomy";
 import { useRequireRole } from "@/lib/guard";
-import { ABOUT_MAX, SECTIONS, STEPS, fieldLabel, sectionLabel, validateAll, validateStep, type FieldErrors } from "@/lib/profile/validate";
+import { ABOUT_MAX, SECTIONS, STEPS, fieldLabel, pinnedCredits, sectionLabel, validateAll, type FieldErrors } from "@/lib/profile/validate";
 import { ChipPicker } from "@/components/profile/ChipPicker";
 import { PhotoPicker } from "@/components/profile/PhotoPicker";
 import { ProfilePreviewCard } from "@/components/profile/ProfilePreviewCard";
-import { ProfileStrength } from "@/components/profile/ProfileStrength";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 
@@ -30,84 +29,19 @@ const timeOf = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour
 
 type SaveState = { status: "idle" | "saving" | "saved" | "error"; at?: string };
 
-/** /profile/edit: the questionnaire. Five steps, autosaved, resumable, validated per step, with a live preview. */
+/** /profile/edit: the questionnaire. Five steps, autosaved, resumable, checked once on Submit, with a live preview. */
 export function ProfileBuilder() {
   const session = useRequireRole("gigster");
   return session?.personId ? <Builder personId={session.personId} /> : <Page bare><Intro /><BuilderSkeleton /></Page>;
 }
 
-/**
- * The welcome hero, full size before the first step only. Once they're underway it shrinks to a slim band,
- * so every later step starts with the form, not the same big headline.
- */
-function Intro({ compact = false }: { compact?: boolean }) {
-  if (compact) {
-    return (
-      <section data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
-        <div className="relative z-raised mx-auto flex max-w-7xl flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-4 py-5 sm:px-6">
-          <h1 className="font-display text-heading-lg text-ink">Build your profile</h1>
-          <p className="text-body-sm text-ink-muted">It saves as you go. Come back any time.</p>
-        </div>
-      </section>
-    );
-  }
+/** A slim band above the builder. The big welcome headline lives on My profile, where they start. */
+function Intro() {
   return (
     <section data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
-      <span aria-hidden="true" className="glow-horizon hidden opacity-50 sm:block" />
-      <div className="relative z-raised mx-auto max-w-7xl px-4 pt-8 pb-20 sm:px-6 sm:pt-12 sm:pb-24">
-        <Reveal effect="fade-up"><p className="text-label-md text-ink-brand">Good work. Great people. Your next chapter.</p></Reveal>
-        <Reveal effect="fade-up" delay={60}><h1 className="mt-3 max-w-3xl font-display text-display-sm text-balance text-ink sm:text-display-lg">Let's meet the person <span className="glow-text text-ink-brand">behind the experience.</span></h1></Reveal>
-        <Reveal effect="fade-up" delay={120}><p className="mt-4 max-w-xl text-body-md text-ink-muted sm:text-body-lg">Bring your on-set know-how to everyday life. Build a profile that feels like you.</p></Reveal>
-      </div>
-    </section>
-  );
-}
-
-/** What they'll need, in the invite email's words, so the site and the email say the same thing. */
-const NEED: { icon: React.ReactNode; title: string; body: string }[] = [
-  { icon: <UserRound />, title: "About you", body: "A clear photo, your years in the business, your IMDb page and a credit or two." },
-  { icon: <Wrench />, title: "Skills & services", body: "What you do on set, and what you'd offer between gigs." },
-  { icon: <MapPin />, title: "Where & when", body: "The parts of Los Angeles you'll work in, and when you're free this month." },
-  { icon: <PenLine />, title: "Your story", body: "A few lines in your own words. This is what clients read first." },
-];
-const NEXT = ["You submit your profile.", "We review every profile before it goes live.", "Once it's approved, clients can find you."];
-
-/**
- * Shown once, right after the account is created: what they'll need, how long it takes, and what happens after.
- * It disappears for good once they've saved anything.
- */
-function Welcome({ first, onStart }: { first: string; onStart: () => void }) {
-  return (
-    <section data-step="welcome" aria-labelledby="welcome-h" className="grid gap-8 rounded-2xl border border-line bg-surface p-6 shadow-lg sm:p-8 lg:grid-cols-12">
-      <div className="grid content-start gap-4 lg:col-span-7">
-        <p className="inline-flex items-center gap-2 text-label-md text-ink-brand"><Check className="size-4" aria-hidden="true" />You're in. Your account is ready.</p>
-        <h2 id="welcome-h" className="font-display text-display-sm text-balance text-ink">Welcome, {first}. Let's build your profile.</h2>
-        <p className="max-w-prose text-body-lg text-ink-muted">It takes about 10 minutes. Everything saves as you go, so you can stop and come back any time.</p>
-        <h3 className="mt-2 font-display text-heading-sm text-ink">What you'll need</h3>
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {NEED.map((n) => (
-            <li key={n.title} className="flex gap-3 rounded-lg border border-line bg-surface-raised p-4">
-              <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-md bg-surface-selected text-ink-brand [&_svg]:size-4">{n.icon}</span>
-              <span className="grid gap-0.5"><span className="text-label-md text-ink">{n.title}</span><span className="text-body-sm text-ink-muted">{n.body}</span></span>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <Button variant="primary" size="lg" className="glow-hover" iconEnd={<ArrowRight />} onClick={onStart}>Start my profile</Button>
-          <ButtonLink href="/profile/" variant="ghost">I'll do it later</ButtonLink>
-        </div>
-      </div>
-      <div className="grid content-start gap-4 self-start rounded-xl bg-surface-sunken p-5 lg:col-span-5">
-        <h3 id="next-h" className="font-display text-heading-sm text-ink">What happens next</h3>
-        <ol className="grid gap-3">
-          {NEXT.map((t, i) => (
-            <li key={t} className="flex items-start gap-3">
-              <span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-full bg-surface text-label-sm text-ink-brand tabular-nums">{i + 1}</span>
-              <span className="pt-0.5 text-body-md text-ink">{t}</span>
-            </li>
-          ))}
-        </ol>
-        <p className="text-body-sm text-ink-muted">Production comes first. You can pause your availability any time.</p>
+      <div className="relative z-raised mx-auto flex max-w-7xl flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-4 py-5 sm:px-6">
+        <h1 className="font-display text-heading-lg text-ink">Build your profile</h1>
+        <p className="text-body-sm text-ink-muted">It saves as you go. Come back any time.</p>
       </div>
     </section>
   );
@@ -115,7 +49,7 @@ function Welcome({ first, onStart }: { first: string; onStart: () => void }) {
 
 function BuilderSkeleton() {
   return (
-    <div className="relative z-raised mx-auto -mt-14 grid max-w-7xl gap-8 px-4 pb-20 sm:px-6 lg:grid-cols-12">
+    <div className="relative z-raised mx-auto mt-6 grid max-w-7xl gap-8 px-4 pb-20 sm:px-6 lg:grid-cols-12">
       <div aria-busy="true" aria-label="Loading your profile" className="grid gap-4 rounded-2xl border border-line bg-surface p-8 shadow-lg lg:col-span-7">
         <Skeleton className="h-8 w-1/2" /><Skeleton /><Skeleton shape="block" className="h-24" /><Skeleton shape="block" className="h-40" />
       </div>
@@ -134,8 +68,6 @@ function Builder({ personId }: { personId: string }) {
   const [submitting, setSubmitting] = React.useState(false);
   const [done, setDone] = React.useState<{ outboxId?: string } | null>(null);
   const [preview, setPreview] = React.useState(false);
-  // A first-time welcome: only for a brand-new account that hasn't saved anything yet.
-  const [welcome, setWelcome] = React.useState(false);
   const top = React.useRef<HTMLDivElement>(null);
   const stage = React.useRef<HTMLDivElement>(null);
   const dirty = React.useRef(false);
@@ -151,7 +83,6 @@ function Builder({ personId }: { personId: string }) {
       setD({ ...draft.fields, name: draft.fields.name || s.person.name, month: draft.fields.month || thisMonth() });
       setStep(startAtReview ? 4 : Math.min(Math.max(draft.step, 0), 4));
       if (draft.savedAt) setSave({ status: "saved", at: draft.savedAt });
-      setWelcome(s.person.status === "registered" && !draft.savedAt && !startAtReview);
     });
     return () => { live = false; };
   }, [personId, startAtReview]);
@@ -203,16 +134,8 @@ function Builder({ personId }: { personId: string }) {
   };
 
   const next = async (e: React.MouseEvent) => {
-    if (step < 4) {
-      const errs = validateStep(step, d);
-      if (Object.keys(errs).length) {
-        setErrors(errs);
-        requestAnimationFrame(() => document.getElementById("error-summary")?.focus());
-        return;
-      }
-      go(step + 1, e.currentTarget);
-      return;
-    }
+    // Steps never block: required answers are checked once, on Submit.
+    if (step < 4) { go(step + 1, e.currentTarget); return; }
     const all = validateAll(d);
     const first = Object.keys(all).map(Number).sort()[0];
     if (first !== undefined) {
@@ -240,24 +163,11 @@ function Builder({ personId }: { personId: string }) {
   const errorCount = Object.keys(errors).length;
   const resubmitting = person.status === "submitted" || person.status === "approved";
 
-  if (welcome) {
-    return (
-      <Page bare>
-        <Intro />
-        <div className="relative z-raised mx-auto -mt-14 max-w-7xl px-4 pb-20 sm:px-6">
-          <Welcome first={d.name.split(" ")[0] || person.name.split(" ")[0] || "there"}
-            onStart={() => { setWelcome(false); window.scrollTo({ top: 0 }); }} />
-        </div>
-      </Page>
-    );
-  }
-
-  const full = step === 0 && !done;
   return (
     <Page bare>
-      <Intro compact={!full} />
+      <Intro />
       <div ref={top} className="scroll-mt-20" />
-      <div className={cx("relative z-raised mx-auto grid max-w-7xl gap-8 px-4 pb-20 sm:px-6 lg:grid-cols-12", full ? "-mt-14" : "mt-6")}>
+      <div className="relative z-raised mx-auto mt-6 grid max-w-7xl gap-8 px-4 pb-20 sm:px-6 lg:grid-cols-12">
         <div className="min-w-0 lg:col-span-7">
           {!done && step < 4 && notes.length > 0 && (
             <Banner tone="warning" className="mb-4 shadow-md" title="Changes requested">
@@ -272,7 +182,7 @@ function Builder({ personId }: { personId: string }) {
           <div className="rounded-2xl border border-line bg-surface shadow-lg">
             {!done && (
               <div className="border-b border-line px-5 pt-5 pb-4 sm:px-8">
-                <Stepper steps={[...STEPS]} current={step} onStepClick={(i) => i < step && go(i)} />
+                <Stepper steps={[...STEPS]} current={step} onStepClick={(i) => i !== step && go(i)} />
                 <div className="mt-4 flex min-h-8 items-center justify-between gap-4">
                   <SaveIndicator state={save} onRetry={() => { dirty.current = true; void flush(); }} />
                   <Button size="sm" variant="secondary" iconStart={<Eye />} className="lg:hidden" onClick={() => setPreview(true)}>Preview</Button>
@@ -291,7 +201,7 @@ function Builder({ personId }: { personId: string }) {
 
                   {errorCount > 0 && (
                     <div id="error-summary" tabIndex={-1} className="mb-6 outline-none">
-                      <Banner tone="danger" title={`Fix ${errorCount === 1 ? "one thing" : `${errorCount} things`} to continue`}>
+                      <Banner tone="danger" title={`Fix ${errorCount === 1 ? "one thing" : `${errorCount} things`} before you submit`}>
                         <ul className="mt-1 grid gap-1">
                           {(Object.entries(errors) as [keyof ProfileFields, string][]).map(([k, m]) => (
                             <li key={k}><button type="button" onClick={() => focusField(k)} className="inline-flex min-h-6 items-center text-left underline underline-offset-2 hover:text-danger">{fieldLabel[k] ?? k}: {m}</button></li>
@@ -313,20 +223,9 @@ function Builder({ personId }: { personId: string }) {
                         <Field label="Years in the business" error={err("years")}><Input id="f-years" inputMode="numeric" value={d.years} placeholder="e.g. 6" onChange={(e) => set("years")(e.target.value.replace(/\D/g, "").slice(0, 2))} /></Field>
                       </div>
                       <Field label="Industry position / department" error={err("position")}><Input id="f-position" value={d.position} start={<Film />} placeholder="e.g. Costume & wardrobe" onChange={(e) => set("position")(e.target.value)} /></Field>
-                      <Field label="IMDb profile link" error={err("imdb")} hint="Your IMDb name page. We use it to confirm credits before going live."><Input id="f-imdb" type="url" inputMode="url" value={d.imdb} start={<Link2 />} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} /></Field>
-                      <fieldset className="grid gap-2">
-                        <legend className="mb-2 text-label-md text-ink">Notable credits <span className="font-normal text-ink-subtle">· at least one, up to five</span></legend>
-                        {d.credits.map((c, i) => (
-                          <div key={i} className="flex gap-2">
-                            <Input id={i === 0 ? "f-credits" : undefined} aria-label={`Credit ${i + 1}`} value={c} placeholder="Production · Role" className="flex-1" invalid={!!err("credits") && i === 0}
-                              aria-describedby={err("credits") && i === 0 ? "credits-error" : undefined}
-                              onChange={(e) => set("credits")(d.credits.map((x, j) => (j === i ? e.target.value : x)))} />
-                            {d.credits.length > 1 && <IconButton label={`Remove credit ${i + 1}`} variant="ghost" icon={<Trash2 />} onClick={() => set("credits")(d.credits.filter((_, j) => j !== i))} />}
-                          </div>
-                        ))}
-                        {err("credits") && <p id="credits-error" className="text-body-sm text-danger">{err("credits")}</p>}
-                        {d.credits.length < 5 && <div><Button size="sm" variant="ghost" iconStart={<Plus />} onClick={() => set("credits")([...d.credits, ""])}>Add a credit</Button></div>}
-                      </fieldset>
+                      <Field label="IMDb profile link" optional error={err("imdb")} hint="Your IMDb name page, if you have one. It helps us confirm credits."><Input id="f-imdb" type="url" inputMode="url" value={d.imdb} start={<Link2 />} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} /></Field>
+                      <Credits credits={d.credits} pins={d.creditPins ?? []} error={err("credits")}
+                        onChange={(credits, pins) => { set("credits")(credits); set("creditPins")(pins); }} />
                     </div>
                   )}
 
@@ -383,7 +282,7 @@ function Builder({ personId }: { personId: string }) {
 
                   {step === 3 && (
                     <div className="grid gap-5">
-                      <Field label="About me" error={err("about")} hint="Aim for 5 to 7 lines: your experience, the help you offer and what it's like to work with you.">
+                      <Field label="About me" error={err("about")} hint="In your own words: your experience, the help you offer and what it's like to work with you. Line breaks show on your profile.">
                         <Textarea id="f-about" rows={6} showCount maxLength={ABOUT_MAX} value={d.about} onChange={(e) => set("about")(e.target.value)} />
                       </Field>
                       <Field label="Languages" optional><Input id="f-languages" value={d.languages} placeholder="e.g. English, Spanish" onChange={(e) => set("languages")(e.target.value)} /></Field>
@@ -413,19 +312,57 @@ function Builder({ personId }: { personId: string }) {
 
         <aside aria-label="Preview" className="hidden lg:col-span-5 lg:block">
           <div className="grid gap-4 lg:sticky lg:top-24">
-            {!done && <ProfileStrength fields={d} />}
             <ProfilePreviewCard fields={d} personId={personId} step={done ? undefined : step} />
-            <p className="text-body-sm text-ink-subtle">This is your card as clients will see it in search. It updates as you type; the ringed parts come from this step.</p>
+            <p className="text-body-sm text-ink-subtle">This is your card as clients will see it in search. It updates as you type; the marked parts come from this step.</p>
           </div>
         </aside>
       </div>
       <Drawer open={preview} onClose={() => setPreview(false)} title="Your card" description="How clients will see you in search. It updates as you type." size="md">
         <div className="grid gap-4">
           <ProfilePreviewCard fields={d} personId={personId} step={done ? undefined : step} />
-          {!done && <ProfileStrength fields={d} />}
         </div>
       </Drawer>
     </Page>
+  );
+}
+
+/**
+ * Notable credits: up to five, in the order the Gigster wants, each pinned (shown to clients) or not.
+ * Pins run parallel to the credits, so moving or removing a credit carries its pin with it.
+ */
+function Credits({ credits, pins, error, onChange }: { credits: string[]; pins: boolean[]; error?: string; onChange: (credits: string[], pins: boolean[]) => void }) {
+  const pinned = (i: number) => pins[i] !== false;
+  const all = credits.map((_, i) => pinned(i));
+  const move = (i: number, by: number) => {
+    const c = [...credits], p = [...all], j = i + by;
+    [c[i], c[j]] = [c[j], c[i]]; [p[i], p[j]] = [p[j], p[i]];
+    onChange(c, p);
+    requestAnimationFrame(() => document.getElementById(`credit-${j}`)?.focus());
+  };
+  const shown = credits.filter((c, i) => c.trim() && pinned(i)).length;
+  return (
+    <fieldset className="grid gap-2">
+      <legend className="mb-1 text-label-md text-ink">Notable credits <span className="font-normal text-ink-subtle">· at least one, up to five</span></legend>
+      <p className="mb-1 text-body-sm text-ink-muted">Put your best first. Only pinned credits show on your profile{credits.length > 1 ? ` (${shown} of ${credits.filter((c) => c.trim()).length} now)` : ""}.</p>
+      <ol className="grid gap-2">
+        {credits.map((c, i) => (
+          <li key={i} className={cx("flex items-center gap-1.5 rounded-lg border p-1.5 transition-colors", pinned(i) ? "border-line bg-surface" : "border-dashed border-line bg-surface-sunken")}>
+            <span aria-hidden="true" className="w-6 shrink-0 text-center text-label-sm text-ink-subtle tabular-nums">{i + 1}</span>
+            <Input id={i === 0 ? "f-credits" : `credit-${i}`} aria-label={`Credit ${i + 1}`} value={c} placeholder="Production · Role" className="min-w-0 flex-1" invalid={!!error && i === 0}
+              aria-describedby={error && i === 0 ? "credits-error" : undefined}
+              onChange={(e) => onChange(credits.map((x, j) => (j === i ? e.target.value : x)), all)} />
+            <IconButton label={pinned(i) ? `Unpin credit ${i + 1}: hide it from your profile` : `Pin credit ${i + 1}: show it on your profile`} aria-pressed={pinned(i)}
+              variant="ghost" className={pinned(i) ? "text-ink-brand" : "text-ink-subtle"} icon={pinned(i) ? <Pin /> : <PinOff />}
+              onClick={() => onChange(credits, all.map((p, j) => (j === i ? !p : p)))} />
+            <IconButton label={`Move credit ${i + 1} up`} variant="ghost" icon={<ArrowUp />} disabled={i === 0} onClick={() => move(i, -1)} />
+            <IconButton label={`Move credit ${i + 1} down`} variant="ghost" icon={<ArrowDown />} disabled={i === credits.length - 1} onClick={() => move(i, 1)} />
+            {credits.length > 1 && <IconButton label={`Remove credit ${i + 1}`} variant="ghost" icon={<Trash2 />} onClick={() => onChange(credits.filter((_, j) => j !== i), all.filter((_, j) => j !== i))} />}
+          </li>
+        ))}
+      </ol>
+      {error && <p id="credits-error" className="text-body-sm text-danger">{error}</p>}
+      {credits.length < 5 && <div><Button size="sm" variant="ghost" iconStart={<Plus />} onClick={() => onChange([...credits, ""], [...all, true])}>Add a credit</Button></div>}
+    </fieldset>
   );
 }
 
@@ -444,7 +381,7 @@ function Review({ d, notes, onEdit }: { d: ProfileFields; notes: { section: Prof
   const problems = validateAll(d);
   const none = "Not supplied";
   const rows: [string, string][][] = [
-    [["Photo", d.photo ? "Added" : none], ["Name", d.name], ["Position", d.position], ["Years", d.years || none], ["IMDb", d.imdb || none], ["Credits", d.credits.filter((c) => c.trim()).join(" · ") || none]],
+    [["Photo", d.photo ? "Added" : none], ["Name", d.name], ["Position", d.position], ["Years", d.years || none], ["IMDb", d.imdb || "Not added (optional)"], ["Credits shown", pinnedCredits(d).join(" · ") || none]],
     [["On set", d.skills.join(" · ") || none], ["Off set", [...d.services, d.other && "Other · private review"].filter(Boolean).join(" · ") || none]],
     [["Market", d.market === "la" ? `Los Angeles · ${d.zip || "no ZIP"}` : `${d.otherCity || "Another market"} · ${d.zip}`], ["Areas", d.market === "la" ? d.areas.join(" · ") || none : "Held for a future market"], ["Availability", `${d.month} · ${monthStatusLabel[d.monthStatus]}${d.dates ? ` · ${d.dates}` : ""}`], ["Rate", d.rate ? `$${d.rate} USD · ${basisLabel[d.basis]}` : none]],
     [["About me", d.about || none], ["Languages", d.languages || none], ["Insurance", insuranceLabel[d.insurance]], ["Work mode", modeLabel[d.mode]], ["Tools", d.tools || none], ["Transport", d.transport || none]],

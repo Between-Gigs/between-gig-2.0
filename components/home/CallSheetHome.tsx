@@ -4,6 +4,7 @@ import { buttonSizes, buttonVariants } from "@ds/components/Button";
 import { Reveal } from "@ds/motion";
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import * as React from "react";
 
 const links = [
   { label: "For professionals", href: "/professionals/" },
@@ -15,19 +16,34 @@ const links = [
 /**
  * Milestone 5a: today's home page, the "call sheet", rebuilt from the design system's ComingSoon template.
  * Same words as the live page: "Extraordinary talent. Everyday solutions." / "Coming soon." /
- * "Los Angeles Call Sheet" / "Get on the call sheet ↗" → /professionals. Always a dark-theme island.
+ * "Los Angeles Call Sheet" / "Get on the call sheet ↗" → /professionals. Follows the Day/Night toggle.
+ * The field has depth: far and near dot layers and a dotted floor under the horizon, which drift a little with the
+ * pointer (near ones more), so the dots read as space rather than a flat sheet. Still under reduced motion.
  */
 export function CallSheetHome() {
+  const field = React.useRef<HTMLDivElement>(null);
+  const tilt = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== "mouse") return;
+    const el = field.current, r = el?.getBoundingClientRect();
+    if (!el || !r) return;
+    el.style.setProperty("--px", (((e.clientX - r.left) / r.width) * 2 - 1).toFixed(3));
+    el.style.setProperty("--py", (((e.clientY - r.top) / r.height) * 2 - 1).toFixed(3));
+  };
+  const settle = () => { field.current?.style.setProperty("--px", "0"); field.current?.style.setProperty("--py", "0"); };
   return (
-    <div data-theme="dark" className="flex min-h-dvh bg-bg p-2 sm:p-3">
-      <div className="backdrop-europium relative isolate flex flex-1 flex-col overflow-hidden rounded-xl border border-line text-ink sm:rounded-2xl">
+    <div className="flex min-h-dvh bg-bg p-2 sm:p-3">
+      <div ref={field} onPointerMove={tilt} onPointerLeave={settle}
+        className="depth-field relative isolate flex flex-1 flex-col overflow-hidden rounded-xl border border-line text-ink sm:rounded-2xl">
+        <span aria-hidden="true" className="depth-dots-far" />
+        <span aria-hidden="true" className="depth-dots-near" />
+        <span aria-hidden="true" className="depth-floor" />
         <span aria-hidden="true" className="glow-horizon" />
 
         <header className="relative z-raised flex items-center justify-between gap-4 px-6 py-6 sm:px-10">
           <Link href="/" aria-label="Between Gigs home" className="inline-flex min-h-11 items-center rounded-md"><Logo height={30} /></Link>
           <div className="flex items-center gap-3">
             <Link href="/login/" className="inline-flex min-h-11 items-center rounded-md px-2 text-label-md text-ink-muted transition-colors duration-fast hover:text-ink">Sign in</Link>
-            <ThemeToggle size="sm" showLabel={false} />
+            <ThemeToggle size="sm" showLabel={false} className="pr-0.5!" />
           </div>
         </header>
 

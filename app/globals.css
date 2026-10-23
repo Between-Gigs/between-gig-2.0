@@ -34,6 +34,61 @@
   :target { scroll-margin-top: --spacing(24); }
 }
 
+/* Mouse-effect colours (lib/cursor-fx.ts): forest ink by day, mint by night. */
+:root { --fx-ink: --theme(--color-forest-600); --fx-glow: --theme(--color-mint-500); }
+[data-theme=dark] { --fx-ink: --theme(--color-mint-300); --fx-glow: --theme(--color-mint-500); }
+
+/*
+ * The home page's field, with depth (the client asked for the dots to blend, not sit as one flat sheet).
+ * depth-field is the ground: the design system's forest-950 at night, pale forest-50 by day, with a soft lift in
+ * the middle. The dots come as three layers on top, each fading out on its own so they melt into the ground:
+ *  - depth-dots-far: the system's fine 10px grid, faint, strongest low in the frame;
+ *  - depth-dots-near: the 17px grid, a little brighter, only near the horizon;
+ *  - depth-floor: a dotted floor laid back in perspective under the horizon, so the dots recede into distance.
+ * Pointer parallax moves near layers more than far ones (--px / --py, -1 to 1, set by the page; 0 when still).
+ */
+@utility depth-field {
+  --dot-far: color-mix(in oklab, --theme(--color-forest-600) 16%, transparent);
+  --dot-near: color-mix(in oklab, --theme(--color-mint-500) 18%, transparent);
+  --dot-floor: color-mix(in oklab, --theme(--color-forest-500) 40%, transparent);
+  background-color: --theme(--color-forest-50);
+  background-image: radial-gradient(70% 55% at 50% 42%, color-mix(in oklab, white 55%, transparent), transparent 100%);
+  @variant dark {
+    --dot-far: color-mix(in oklab, --theme(--color-mint-300) 20%, transparent);
+    --dot-near: color-mix(in oklab, --theme(--color-mint-500) 18%, transparent);
+    --dot-floor: color-mix(in oklab, --theme(--color-mint-300) 55%, transparent);
+    background-color: --theme(--color-forest-950);
+    background-image: radial-gradient(60% 50% at 50% 46%, color-mix(in oklab, --theme(--color-forest-800) 45%, transparent), transparent 100%);
+  }
+}
+@utility depth-dots-far {
+  position: absolute; inset: -12px; pointer-events: none;
+  background-image: radial-gradient(var(--dot-far) .7px, transparent 1.3px);
+  background-size: 10px 10px;
+  mask-image: radial-gradient(120% 90% at 50% 100%, black 20%, color-mix(in oklab, black 35%, transparent) 55%, transparent 85%);
+  translate: calc(var(--px, 0) * 3px) calc(var(--py, 0) * 3px);
+  transition: translate 600ms cubic-bezier(.2, .8, .2, 1);
+}
+@utility depth-dots-near {
+  position: absolute; inset: -24px; pointer-events: none;
+  background-image: radial-gradient(var(--dot-near) .9px, transparent 1.6px);
+  background-size: 17px 17px; background-position: 5px 7px;
+  mask-image: radial-gradient(90% 60% at 50% 100%, black 15%, transparent 70%);
+  translate: calc(var(--px, 0) * 8px) calc(var(--py, 0) * 8px);
+  transition: translate 600ms cubic-bezier(.2, .8, .2, 1);
+}
+@utility depth-floor {
+  position: absolute; left: -40%; right: -40%; bottom: -4%; height: 130%; pointer-events: none;
+  background-image: radial-gradient(var(--dot-floor) 1.6px, transparent 2.6px);
+  background-size: 30px 30px;
+  transform: perspective(640px) rotateX(63deg);
+  transform-origin: 50% 100%;
+  mask-image: linear-gradient(to top, black 5%, color-mix(in oklab, black 45%, transparent) 30%, transparent 60%);
+  translate: calc(var(--px, 0) * 14px) 0;
+  transition: translate 600ms cubic-bezier(.2, .8, .2, 1);
+}
+@media (prefers-reduced-motion: reduce) { .depth-dots-far, .depth-dots-near, .depth-floor { translate: none; } }
+
 /*
  * The Europium phosphor dots from the design system's backdrop-europium (the Coming soon field), laid over a
  * brand panel's own forest instead of repainting it, so every forest-green surface carries the same dotted
