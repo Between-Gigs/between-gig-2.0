@@ -12,7 +12,7 @@ export function useRequireRole(role: Role): Session | null {
   const { session, loading } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const ok = !!session && session.role === role;
+  const ok = !loading && !!session && session.role === role;
   React.useEffect(() => {
     if (!loading && !ok && role === "gigster") router.replace(`/login/?next=${encodeURIComponent(pathname)}`);
   }, [loading, ok, role, router, pathname]);

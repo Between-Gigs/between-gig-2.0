@@ -1,0 +1,47 @@
+name: Signup checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+concurrency:
+  group: signup-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  signup:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck && pnpm lint && pnpm lint:values
+      - run: node scripts/qa/auth-data.mjs
+      - run: pnpm build
+      - name: Use the runner's installed Chrome for browser checks
+        run: |
+          bg_chrome_path=$(command -v google-chrome)
+          test -x "$bg_chrome_path"
+          "$bg_chrome_path" --version
+          echo "CHROMIUM_PATH=$bg_chrome_path" >> "$GITHUB_ENV"
+      - name: Test signup and existing product flow (sample mode, no real accounts)
+        run: |
+          node scripts/qa/auth-flow.mjs
+          pnpm qa:flow
+          node scripts/qa/funnel-cohort.mjs
+      - name: Build Pages configuration with Clerk
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_BASE_PATH: /between-gig-2.0
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Z2xhZC1tb25rZXktNjkwOC5jbGVyay5hY2NvdW50cy5kZXYk
+      - name: Check password handoff and offline recovery (Clerk requests blocked)
+        run: |
+          node scripts/qa/clerk-entry.mjs
+          node scripts/qa/demo-init.mjs
+      - name: Verify signup callbacks, returning login and roles (isolated mock SDK)
+        run: |
+          node scripts/qa/clerk-contract.mjs

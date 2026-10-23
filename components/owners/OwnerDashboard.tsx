@@ -33,6 +33,15 @@ const views: Record<View, { title: string; empty: string; more: { href: string; 
 /** On phones the list shows this many, then "Show all": the page stays short. On desktop the panel scrolls. */
 const PHONE_ROWS = 5;
 
+/** A funnel selection narrows the same current-status list to its invited cohort. */
+function rowsFor(view: View, summary: DashboardSummary, all: PersonSummary[], invitedOnly = false) {
+  const statuses = views[view].statuses;
+  const rows = view === "submitted" ? summary.reviewQueue : statuses ? all.filter((r) => statuses.includes(r.person.status)) : [];
+  const invited = new Set(summary.invitedPersonIds);
+  return invitedOnly ? rows.filter((r) => invited.has(r.person.id)) : rows;
+}
+
+
 /**
  * /owners: the owners' home, on one screen. Four headline numbers double as tabs for the list beneath them;
  * the funnel and activity sit beside it. Opening anyone slides a panel over the page (with Approve and Suggest
@@ -47,8 +56,9 @@ function Dashboard({ session }: { session: Session }) {
   const [people, setPeople] = React.useState<PersonSummary[]>([]);
   const [waitlist, setWaitlist] = React.useState<WaitlistRow[]>([]);
   const [view, setView] = React.useState<View>("submitted");
+  const [cohort, setCohort] = React.useState<"all" | "invited">("all");
   /** The open person: the list they were opened from (a view, or one person from Recent activity) and where in it. */
-  const [drawer, setDrawer] = React.useState<{ rows: PersonSummary[]; index: number; from: View | "one" } | null>(null);
+  const [drawer, setDrawer] = React.useState<{ rows: PersonSummary[]; index: number; from: View | "one"; invitedOnly?: boolean } | null>(null);
   const [expanded, setExpanded] = React.useState(false);
   const [side, setSide] = React.useState<"activity" | "funnel">("activity");
 
@@ -62,18 +72,13 @@ function Dashboard({ session }: { session: Session }) {
 
   const name = firstName(session);
   const v = views[view];
-  const rows: PersonSummary[] = d ? (view === "submitted" ? d.reviewQueue : v.statuses ? people.filter((r) => v.statuses!.includes(r.person.status)) : []) : [];
+  const rows = d ? rowsFor(view, d, people, cohort === "invited") : [];
   const count = view === "not_invited" ? waitlist.length : rows.length;
-  const pick = (next: View) => { setView(next); setExpanded(false); };
+  const pick = (next: View, nextCohort: "all" | "invited" = "all") => { setView(next); setCohort(nextCohort); setExpanded(false); };
   // No scrollbars: each list shows the rows that fit its card and says how many more there are.
   const [listRef, listHidden] = useFitList([view, count, d]);
   const [sideRef] = useFitList([side, d]);
 
-  /** The rows of a view, from fresh data. */
-  const rowsFor = (vw: View, summary: DashboardSummary, all: PersonSummary[]) => {
-    const st = views[vw].statuses;
-    return vw === "submitted" ? summary.reviewQueue : st ? all.filter((r) => st.includes(r.person.status)) : [];
-  };
   // After a decision (or Undo): refresh everything, and keep the drawer on the same slot of its now shorter list.
   const refreshAfterDecision = async () => {
     const { summary, all } = await load();
@@ -81,7 +86,7 @@ function Dashboard({ session }: { session: Session }) {
       if (!cur) return cur;
       const list = cur.from === "one"
         ? cur.rows.map((r) => all.find((x) => x.person.id === r.person.id)).filter((r): r is PersonSummary => !!r)
-        : rowsFor(cur.from, summary, all);
+        : rowsFor(cur.from, summary, all, cur.invitedOnly);
       return list.length ? { ...cur, rows: list, index: Math.min(cur.index, list.length - 1) } : null;
     });
   };
@@ -104,18 +109,18 @@ function Dashboard({ session }: { session: Session }) {
           </>
         }>
         <div role="tablist" aria-label="At a glance" className="grid shrink-0 grid-cols-2 gap-3 xl:grid-cols-4">
-          <StatTab controls="dash-list" label="Waiting for review" value={d.counts.submitted} hint="oldest first" icon={<ClipboardCheck />} attention={d.counts.submitted > 0} selected={view === "submitted"} onSelect={() => pick("submitted")} />
-          <StatTab controls="dash-list" label="Making edits" value={d.counts.changes_requested} hint="sent back with notes" icon={<MessageSquareWarning />} selected={view === "changes_requested"} onSelect={() => pick("changes_requested")} />
-          <StatTab controls="dash-list" label="Live profiles" value={d.counts.approved} hint="clients can find them" icon={<CircleCheck />} selected={view === "approved"} onSelect={() => pick("approved")} />
-          <StatTab controls="dash-list" label="Ready to invite" value={d.waitlist.not_invited} hint={`of ${d.waitlist.total}`} icon={<ListPlus />} selected={view === "not_invited"} onSelect={() => pick("not_invited")} />
+          <StatTab controls="dash-list" label="Waiting for review" value={d.counts.submitted} hint="oldest first" icon={<ClipboardCheck />} attention={d.counts.submitted > 0} selected={cohort === "all" && view === "submitted"} onSelect={() => pick("submitted")} />
+          <StatTab controls="dash-list" label="Making edits" value={d.counts.changes_requested} hint="sent back with notes" icon={<MessageSquareWarning />} selected={cohort === "all" && view === "changes_requested"} onSelect={() => pick("changes_requested")} />
+          <StatTab controls="dash-list" label="Live profiles" value={d.counts.approved} hint="clients can find them" icon={<CircleCheck />} selected={cohort === "all" && view === "approved"} onSelect={() => pick("approved")} />
+          <StatTab controls="dash-list" label="Ready to invite" value={d.waitlist.not_invited} hint={`of ${d.waitlist.total}`} icon={<ListPlus />} selected={cohort === "all" && view === "not_invited"} onSelect={() => pick("not_invited")} />
         </div>
 
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 lg:grid-cols-12">
-          <Panel className="min-h-0 lg:col-span-7" title={v.title} flush bodyClassName="flex min-h-0 flex-col"
+          <Panel className="min-h-0 lg:col-span-7" title={cohort === "invited" ? `${v.title} · Invited people` : v.title} flush bodyClassName="flex min-h-0 flex-col"
             aside={<span className="tabular-nums">{count} {count === 1 ? "person" : "people"}</span>}
             footer={
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <PanelLink href={v.more.href}>{v.more.label}</PanelLink>
+                <PanelLink href={v.more.href}>{cohort === "invited" ? "Browse everyone at this status" : v.more.label}</PanelLink>
                 {listHidden > 0 && <span className="text-body-sm text-ink-subtle tabular-nums">+{listHidden} more</span>}
               </div>
             }>
@@ -140,7 +145,7 @@ function Dashboard({ session }: { session: Session }) {
                   {rows.map((r, i) => {
                     const p = r.person;
                     return (
-                      <Row key={p.id} onOpen={() => setDrawer({ rows, index: i, from: view })} title={p.name || p.email}
+                      <Row key={p.id} onOpen={() => setDrawer({ rows, index: i, from: view, invitedOnly: cohort === "invited" })} title={p.name || p.email}
                         className={cx(i >= PHONE_ROWS && !expanded && "max-lg:hidden")}
                         leading={<PersonPhoto id={p.id} name={p.name || "?"} src={r.fields?.photo || undefined} alt="" className="size-10 rounded-md" textClass="text-label-md" />}
                         badge={view === "building" ? <PersonStatusBadge status={p.status} size="sm" /> : undefined}
@@ -168,7 +173,7 @@ function Dashboard({ session }: { session: Session }) {
                 ? <ActivityList events={d.activity.slice(0, 12)} onOpen={openPerson} />
                 : <>
                     <p className="px-5 pt-3 text-body-sm text-ink-subtle tabular-nums">Out of {d.funnel.invited} invited. Select a step to list who&apos;s there.</p>
-                    <FunnelCompact bare d={d} selected={view} onSelect={(x) => pick(x)} />
+                    <FunnelCompact bare d={d} selected={cohort === "invited" ? view : undefined} onSelect={(x) => pick(x, "invited")} />
                   </>}
             </div>
           </Panel>

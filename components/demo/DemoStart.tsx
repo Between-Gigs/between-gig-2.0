@@ -4,10 +4,12 @@ import { ArrowRight, Mail, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { data, type OutboxEmail } from "@/lib/data";
+import { useAuthActions } from "@/lib/auth/context";
 import { clerkEnabled } from "@/lib/auth/clerk";
 import { setDemoActive } from "@/lib/demo-flow";
 import { basePath } from "@/lib/site";
 import { renderPreview } from "@/components/emails/preview";
+import { ButtonLink } from "@/components/ui/ButtonLink";
 import { Page } from "@/components/site/Page";
 
 const SAMPLE = "you@example.com";
@@ -24,35 +26,51 @@ const appPath = (href: string) => {
  */
 export function DemoStart() {
   const router = useRouter();
+  const { sdkLoaded, prepareDemo } = useAuthActions();
   const [email, setEmail] = React.useState(SAMPLE);
   const [sentTo, setSentTo] = React.useState<string | null>(null);
   const [mail, setMail] = React.useState<OutboxEmail | null>(null);
+  const [ready, setReady] = React.useState(false);
+  const [setupError, setSetupError] = React.useState("");
   const [error, setError] = React.useState("");
   const [height, setHeight] = React.useState(1200);
   const frame = React.useRef<HTMLIFrameElement>(null);
 
   const send = React.useCallback(async (to: string) => {
+    setReady(false);
+    setSetupError("");
     setMail(null);
-    if (!data.demo) return;
-    // Start clean: end any Clerk session from earlier (an owner, or another email), or it would take over the demo.
-    try { await (window as unknown as { Clerk?: { user?: unknown; signOut?: () => Promise<void> } }).Clerk?.signOut?.(); } catch { /* not loaded */ }
-    await data.auth.signOut();
-    const r = await data.demo.inviteMe(to);
-    setMail(await data.emails.get(r.outboxId));
-    setSentTo(to);
-    setDemoActive(true);
-  }, []);
+    try {
+      await prepareDemo();
+      if (!data.demo) { setReady(true); return; }
+      const r = await data.demo.inviteMe(to);
+      setMail(await data.emails.get(r.outboxId));
+      setSentTo(to);
+      setDemoActive(true);
+      setReady(true);
+    } catch {
+      setSetupError("We couldn't finish signing out of the previous account. Retry setup before starting signup.");
+    }
+  }, [prepareDemo]);
 
   // Back from Clerk with an email the invite wasn't sent to: offer that email instead.
   const [clerkEmail, setClerkEmail] = React.useState<string | null>(null);
   React.useEffect(() => {
+    if (!sdkLoaded) return;
     const fromClerk = new URLSearchParams(window.location.search).get("clerk");
     if (fromClerk) { setClerkEmail(fromClerk); setEmail(fromClerk); } // eslint-disable-line react-hooks/set-state-in-effect
     void send(SAMPLE);
-  }, [send]);
+  }, [send, sdkLoaded]);
+
+  React.useEffect(() => {
+    if (sdkLoaded) return;
+    const timer = window.setTimeout(() => setSetupError("Sign-in is still loading. Check your connection and reload to start signup."), 10_000);
+    return () => window.clearTimeout(timer);
+  }, [sdkLoaded]);
 
   const resend = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!ready || !sdkLoaded) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError("Enter an email address, like name@example.com."); return; }
     setError("");
     void send(email.trim());
@@ -82,11 +100,16 @@ export function DemoStart() {
           <div>
             <p className="text-label-md text-ink-brand">Try it yourself · Step 1 of 4</p>
             <h1 className="mt-2 font-display text-display-sm text-balance text-ink">You&apos;ve got an invite.</h1>
-            <p className="mt-3 text-body-md text-ink-muted">This is the email a Gigster gets from the waitlist. Press <b className="text-ink">Create your profile</b> in it to sign up, build a profile and see how it looks.</p>
+            <p className="mt-3 text-body-md text-ink-muted">No invite is required to join. This is the optional email a Gigster gets from the waitlist. Press <b className="text-ink">Create your profile</b> in it to sign up, build a profile and see how it looks.</p>
           </div>
+          {setupError && <Banner tone="danger" title="Signup setup couldn't finish"
+            action={<Button onClick={() => { if (sdkLoaded) void send(email.trim() || SAMPLE); else window.location.reload(); }}>Retry setup</Button>}>{setupError}</Banner>}
+          {ready && sdkLoaded
+            ? <ButtonLink href="/join/" variant="primary" iconEnd={<ArrowRight />}>Sign up without an invite</ButtonLink>
+            : <Button variant="primary" disabled loading>Preparing signup</Button>}
           {clerkEmail && (
-            <Banner tone="warning" title="Sign-up used a different email">
-              Clerk signed you in as {clerkEmail}, but the invite went to {sentTo ?? "another address"}. Send the invite to {clerkEmail} below, or use Skip sign-in on the next page.
+            <Banner tone="warning" title="Try signing up again">
+              The previous sign-in used {clerkEmail}. You can sign up with any email above, or preview an optional invite below.
             </Banner>
           )}
           <form onSubmit={resend} className="grid gap-3 rounded-xl border border-line bg-surface p-4">
@@ -94,7 +117,7 @@ export function DemoStart() {
               hint={clerkEnabled ? "Use your real email to get the real sign-in code. Keep the sample, and you can skip sign-in on the next page." : "Any email works. Nothing is sent."}>
               <Input id="demo-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} start={<Mail />} autoComplete="email" />
             </Field>
-            <Button type="submit" variant="secondary" iconStart={<Send />}>Send the invite</Button>
+            <Button type="submit" variant="secondary" disabled={!ready || !sdkLoaded} loading={!ready || !sdkLoaded} iconStart={<Send />}>Send the invite</Button>
           </form>
           <p className="text-body-sm text-ink-subtle">Everything saves in this browser only. Nothing reaches our team yet, and no email leaves this page except Clerk&apos;s sign-in code.</p>
         </div>

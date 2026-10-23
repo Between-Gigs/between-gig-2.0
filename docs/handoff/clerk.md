@@ -19,29 +19,44 @@ Sign-in and joining run on Clerk, themed to Between Gigs. Clerk app: `app_3K6djW
 | File | What it does |
 | --- | --- |
 | `lib/auth/clerk.ts` | The switch, and the appearance: every Clerk color is a design-system CSS variable (`var(--action-strong)`, `var(--surface)`, `var(--ink)`, …), so Clerk follows light and dark with the page. Figtree, 12px radius, Clerk's own card chrome removed so it sits in our brand frame. Styles live in the `clerk` CSS layer (`app/globals.css`). |
-| `components/auth/ClerkLayer.tsx` | `ClerkProvider` (wired to Next's router and the Pages base path) and the bridge: when Clerk has a signed-in user, it calls `data.auth.syncExternal()` to open the Between Gigs session; when Clerk signs out, it closes it. An email that isn't on the call sheet is signed straight back out and sent to `/login/?notInvited=…`. |
+| `components/auth/ClerkLayer.tsx` | `ClerkProvider` (wired to Next's router and the Pages base path) and the bridge: when Clerk has a signed-in user, it calls `data.auth.syncExternal()` to open the Between Gigs session; when Clerk signs out, it closes it. A verified email creates a new Gigster record when absent; call-sheet membership is not required. Only trusted `publicMetadata.role` can identify an owner. |
 | `components/auth/LoginView.tsx` | `/login`: the brand panel with Clerk's `<SignIn>` (hash routing). Once the session exists it routes by role (owners → `/owners/`, Gigsters → `/profile/`) or to a safe `?next=`. |
-| `components/auth/JoinView.tsx` | `/join?invite=…`: our invite check, name and terms, then Clerk's `<SignUp>` with the invite email prefilled and `{ inviteToken, name, acceptedTerms }` in `unsafeMetadata`. The bridge registers the person; then the questionnaire. |
+| `components/auth/JoinView.tsx` | `/join` (optional `?invite=…`): editable email, name and terms, then Clerk's `<SignUp>` collects the required password and verifies the email, with the chosen email prefilled and `{ inviteToken, name, acceptedTerms }` in `unsafeMetadata`. The bridge registers the person; then the questionnaire. |
 | `components/auth/ClerkSlot.tsx` | Skeleton while Clerk's script loads; a plain error after 10 s if it can't load. |
 | `lib/auth/context.tsx` | `useAuthActions().signOut()`: ends Clerk's session too. |
 
-## Clerk dashboard settings (to do in the dashboard)
+## Clerk dashboard settings (preserve existing security controls)
 
-1. **User & authentication → Email**: turn on **Email verification code**; turn off password if we stay passwordless.
-2. **Restrictions**: joining is invite-only. Either turn on **Allowlist** and add invited emails (Anu can automate it
-   from the invite step via the Backend API), or keep sign-ups open and let the app reject non-invited emails (it does
-   today, but the Clerk account still gets created).
-3. **Owners**: on each owner's user, set **Public metadata** to `{ "role": "owner" }`. Only the dashboard or a server
-   can set it, so it's safe to trust.
-4. **Paths**: sign-in URL `/between-gig-2.0/login/`, sign-up URL `/between-gig-2.0/join/` (and the production
-   domain's equivalents later). Add the Pages domain to allowed origins if Clerk asks.
-5. Production: create the production instance, swap in its `pk_live_…` key and set up its DNS records.
+Signup is open. The owner set the password minimum to **8 characters** (a minimum, not a maximum).
+Do not add a Clerk allowlist, waitlist restriction, or a `user.created` rejection based on invitation status.
+Do not disable passwords, email verification, bot protection, compromised-password checks, rate limits, or MFA.
+Clerk's hosted widget enforces the instance's password policy; the custom details form does not handle passwords.
+
+- Owners: trusted **Public metadata** `{ "role": "owner" }` only; signup metadata never grants roles.
+- Paths: `/between-gig-2.0/login/` and `/between-gig-2.0/join/`. Keep allowed-origin protections.
+- Production keys and DNS are a separate rollout. This change only targets this repository's Pages demo.
 
 ## Until the Worker API exists
 
-The data is still the browser's sample store. A real Clerk sign-in maps onto it by email, so to try the whole
-invite flow with a real inbox on the Pages preview: join the waitlist at `/professionals/` with your email, sign in
-as the sample owner from the Preview guide (`/preview/`), invite yourself from the waitlist, then open the invite link from the sample outbox (`/emails/`; no real invite email is sent yet) and sign up. Clerk sends the real code to your inbox.
+The data is still the browser's sample store. Clerk verifies identity and the bridge maps it by email, creating
+an ordinary Gigster record for a new email. Existing people retain their identity, status, drafts and profiles.
+Valid optional invites prefill an editable email and are consumed only for their matching address. Used invites
+lead to sign-in; expired and unknown invites offer open signup. Stale signup metadata cannot block a verified user.
 
-Not verified from the build container: Clerk's servers are blocked there, so the Clerk forms were checked only up
-to loading (and the can't-load fallback). Test the sign-in on the Pages preview.
+The `/demo` email preview and its explicit browser-only skip remain available; neither sends a real invite email.
+The sample role switcher is demonstration tooling, not production authorization. A future Worker must verify Clerk
+tokens and roles on every protected operation; localStorage is not a server authorization boundary.
+
+The production `between-gigs.com` waitlist is separate and unchanged.
+
+## Login-first consent and demo startup
+
+Native SignIn does not create accounts implicitly; its explicit signup link goes through `/join`.
+A signed-in identity without a registered app profile must complete the existing name/terms form at `/join`.
+This completes setup for the same Clerk identity, with a fixed signed-in email and a way to switch accounts.
+Registered app profiles keep their existing login behavior. The data contract returns `terms` before creating
+or advancing a person without consent; the Worker implementation must record that consent durably.
+
+Demo startup uses the loaded Clerk hook, confirms sign-out with the supported non-navigating callback, and
+requires `clerk.user === null` before enabling signup. SDK-load or sign-out failures show a retry path. The
+browser-only sample fallback is offered after SDK initialization; it never creates a real Clerk identity.

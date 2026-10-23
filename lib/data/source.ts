@@ -31,14 +31,14 @@ export interface DataSource {
 
   auth: {
     session(): Promise<Session | null>;
-    /** Uses the invite: creates the account (status invited → registered) and signs them in. */
-    register(input: { token: string; name: string; acceptTerms: boolean }): Promise<RegisterResult>;
+    /** Browser-only sample registration. An invite is optional; new accounts are always Gigsters. */
+    register(input: { token?: string; email?: string; name: string; acceptTerms: boolean }): Promise<RegisterResult>;
     /** Sends a 6-digit sign-in code by email (queues a "sign-in-code" email). */
     requestCode(email: string): Promise<RequestCodeResult>;
     verifyCode(email: string, code: string): Promise<SignInResult>;
     /**
-     * Opens a session for an identity Clerk has verified. Joining stays invite-only: the email must belong
-     * to someone on the call sheet (or be an owner). An invited person becomes registered here.
+     * Opens a session for an identity Clerk has verified, creating a Gigster record on first sign-in.
+     * Optional invites are attributed only when valid and matched to the verified email.
      */
     syncExternal(identity: ExternalIdentity): Promise<SyncExternalResult>;
     signOut(): Promise<void>;

@@ -14,7 +14,7 @@ const pct = (n: number, of: number) => (of ? Math.round((n / of) * 100) : 0);
  * is still there now, linked to that list. The waitlist itself is a headline number above, not a bar here.
  */
 export function Funnel({ d }: { d: DashboardSummary }) {
-  const f = d.funnel, w = d.waitlist, c = d.counts;
+  const f = d.funnel, w = d.waitlist, c = d.invitedCounts;
   const stages: Stage[] = [
     { label: "Invited", value: f.invited, href: "/owners/people/", now: [{ label: "haven't opened it", value: w.invited, href: "/owners/waitlist/?status=invited" }] },
     { label: "Opened the invite", value: f.opened, href: "/owners/waitlist/?status=opened", now: [{ label: "no account yet", value: w.opened, href: "/owners/waitlist/?status=opened" }] },

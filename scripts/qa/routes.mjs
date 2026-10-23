@@ -14,6 +14,7 @@ export const routes = [
   { name: "email-invite", path: "/emails/invite/", ready: "iframe" },
   { name: "email-sign-in-code", path: "/emails/sign-in-code/", ready: "iframe" },
   { name: "email-profile-submitted", path: "/emails/profile-submitted/", ready: "iframe" },
+  { name: "join-open", path: "/join/", setup: reset, ready: "form" },
   { name: "join-valid", path: "/join/?invite=riley-7q2m", setup: reset, ready: "form" },
   { name: "join-used", path: "/join/?invite=grace-3k8d", setup: reset, ready: "h1" },
   { name: "join-expired", path: "/join/?invite=sky-9x4p", setup: reset, ready: "h1" },

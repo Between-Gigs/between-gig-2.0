@@ -144,7 +144,7 @@ export interface ExternalIdentity {
 
 export type SyncExternalResult =
   | { ok: true; session: Session; created: boolean }
-  | { ok: false; error: "unknown-email" | "invite-mismatch" };
+  | { ok: false; error: "unknown-email" | "invite-mismatch" | "terms" };
 
 export type SignInResult =
   | { ok: true; session: Session }
@@ -156,7 +156,7 @@ export type RequestCodeResult =
 
 export type RegisterResult =
   | { ok: true; person: Person }
-  | { ok: false; error: InviteState | "terms" | "name" };
+  | { ok: false; error: InviteState | "terms" | "name" | "email" | "existing-account" };
 
 export type EmailTemplate = "invite" | "sign-in-code" | "profile-submitted" | "welcome" | "coming-soon" | "approved" | "changes-requested";
 
@@ -292,7 +292,11 @@ export interface FunnelCounts {
 export interface DashboardSummary {
   /** People by their current status (each person counted once, where they are now). */
   counts: Record<PersonStatus, number>;
-  /** Cumulative stages, for the funnel. */
+  /** Current status counts for the invited waitlist cohort only (the funnel annotations). */
+  invitedCounts: Record<PersonStatus, number>;
+  /** Membership for invitation-funnel drill-downs; headline lists remain global. */
+  invitedPersonIds: string[];
+  /** Cumulative stages for that same invited waitlist cohort. */
   funnel: FunnelCounts;
   waitlist: Record<InviteStatus, number> & { total: number };
   /** Submitted profiles, oldest first. */

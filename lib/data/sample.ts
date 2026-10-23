@@ -208,21 +208,31 @@ export const sampleSource: DataSource = {
     async session() {
       return clone(load().session);
     },
-    async register({ token, name, acceptTerms }) {
+    async register({ token, email, name, acceptTerms }) {
       await latency(200);
       const state = load();
-      const found = lookupInvite(state, token);
-      if (found.state !== "valid" || !found.invite) return { ok: false, error: found.state };
+      const found = token ? lookupInvite(state, token) : undefined;
+      if (found && found.state !== "valid") return { ok: false, error: found.state };
+      const address = (email ?? found?.invite?.email ?? "").trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) return { ok: false, error: "email" };
       if (!name.trim()) return { ok: false, error: "name" };
       if (!acceptTerms) return { ok: false, error: "terms" };
-      const person = state.people.find((p) => p.id === found.invite!.personId)!;
+      let person = state.people.find((p) => p.email.toLowerCase() === address);
+      if (person && person.status !== "invited") return { ok: false, error: "existing-account" };
       const t = now();
+      if (!person) {
+        person = { id: uid(), email: address, name: "", slug: "", status: "invited",
+          waitlistZip: "", waitlistCategory: "", invitedAt: "", updatedAt: t };
+        state.people.push(person);
+      }
       person.name = name.trim().replace(/\s+/g, " ");
       person.slug = uniqueSlug(state, person.name, person.id);
       person.status = "registered";
       person.registeredAt = t;
       person.updatedAt = t;
-      state.invites.find((i) => i.token === token)!.usedAt = t;
+      // An optional invite belongs to its original address, even if the form's email was edited.
+      const invite = state.invites.find((i) => i.token === token && i.email.toLowerCase() === address && i.personId === person.id);
+      if (invite) invite.usedAt = t;
       log(state, "registered", { personId: person.id, name: person.name, email: person.email });
       state.session = sessionFor(person);
       save(state, true);
@@ -272,18 +282,21 @@ export const sampleSource: DataSource = {
         save(state, true);
         return { ok: true, session: clone(state.session), created: false };
       }
-      const person = state.people.find((p) => p.email.toLowerCase() === address);
-      if (!person) return { ok: false, error: "unknown-email" };
+      let person = state.people.find((p) => p.email.toLowerCase() === address);
+      if ((!person || person.status === "invited") && identity.acceptedTerms !== true) return { ok: false, error: "terms" };
+      if (!person) {
+        person = { id: uid(), email: address, name: "", slug: "", status: "invited",
+          waitlistZip: "", waitlistCategory: "", invitedAt: "", updatedAt: now() };
+        state.people.push(person);
+      }
       let created = false;
       if (person.status === "invited") {
-        // First sign-in after a Clerk sign-up: use the invite, the same as register() does.
-        const invite = state.invites.find((i) => i.personId === person.id && !i.usedAt);
-        if (identity.inviteToken && invite && invite.token !== identity.inviteToken) return { ok: false, error: "invite-mismatch" };
+        // Clerk has verified this email. A missing or stale optional invite never blocks the identity.
+        const invite = state.invites.find((i) => i.token === identity.inviteToken && i.personId === person.id
+          && i.email.toLowerCase() === address && !i.usedAt && new Date(i.expiresAt).getTime() >= Date.now());
         const t = now();
-        if (identity.name?.trim()) {
-          person.name = identity.name.trim().replace(/\s+/g, " ");
-          person.slug = uniqueSlug(state, person.name, person.id);
-        }
+        person.name = identity.name?.trim().replace(/\s+/g, " ") || address.split("@")[0];
+        person.slug = uniqueSlug(state, person.name, person.id);
         person.status = "registered";
         person.registeredAt = t;
         person.updatedAt = t;
@@ -439,16 +452,23 @@ export const sampleSource: DataSource = {
       const waitlist = Object.fromEntries(inviteStatuses.map((st) => [st, 0])) as Record<InviteStatus, number> & { total: number };
       for (const w of state.waitlist ?? []) waitlist[inviteStatusOf(state, w.email).status]++;
       waitlist.total = state.waitlist?.length ?? 0;
+      // Every invitation-funnel stage uses the same waitlist + actual-invitation cohort.
+      // Open signup records remain in the global counts/review queue, but cannot inflate this funnel.
+      const waitlistEmails = new Set((state.waitlist ?? []).map((w) => w.email.toLowerCase()));
+      const invitedIds = new Set(state.invites.map((i) => i.personId));
+      const invited = state.people.filter((p) => waitlistEmails.has(p.email.toLowerCase()) && invitedIds.has(p.id));
+      const invitedCounts = Object.fromEntries(personStatuses.map((st) => [st, invited.filter((p) => p.status === st).length])) as Record<PersonStatus, number>;
+      const openedIds = new Set(state.invites.filter((i) => i.openedAt).map((i) => i.personId));
       const sent = ["submitted", "changes_requested", "approved"];
       const funnel = {
         signups: waitlist.total,
-        invited: waitlist.total - waitlist.not_invited,
-        opened: waitlist.opened + waitlist.registered,
-        accounts: waitlist.registered,
-        submitted: state.people.filter((p) => p.status !== "invited" && (sent.includes(p.status) || !!p.submittedAt)).length,
-        approved: counts.approved,
+        invited: invited.length,
+        opened: invited.filter((p) => p.status !== "invited" || openedIds.has(p.id)).length,
+        accounts: invited.filter((p) => p.status !== "invited").length,
+        submitted: invited.filter((p) => p.status !== "invited" && (sent.includes(p.status) || !!p.submittedAt)).length,
+        approved: invitedCounts.approved,
       };
-      return { counts, funnel, waitlist, reviewQueue: await sampleSource.owners.reviewQueue(), activity: clone((state.activity ?? []).slice(0, 12)) };
+      return { counts, invitedCounts, invitedPersonIds: invited.map((p) => p.id), funnel, waitlist, reviewQueue: await sampleSource.owners.reviewQueue(), activity: clone((state.activity ?? []).slice(0, 12)) };
     },
     async activity(limit = 50) {
       await latency(0);

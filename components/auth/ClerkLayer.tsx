@@ -1,6 +1,6 @@
 "use client";
 import { ClerkProvider, useClerk, useUser } from "@clerk/react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import { demoActive } from "@/lib/demo-flow";
 import { AuthContext, type AuthActions } from "@/lib/auth/context";
@@ -23,40 +23,78 @@ export function ClerkLayer({ children }: { children: React.ReactNode }) {
 }
 
 function Bridge({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const clerk = useClerk();
   const { isLoaded, isSignedIn, user } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress ?? null;
+  const role = user?.publicMetadata?.role === "owner" ? "owner" : "gigster";
+  const identity = !isLoaded ? undefined : isSignedIn && email ? `${user?.id}:${email.toLowerCase()}:${role}` : null;
+  const [syncedIdentity, setSyncedIdentity] = React.useState<string | null | undefined>(undefined);
+  const [needsConsent, setNeedsConsent] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (!isLoaded) return;
     let cancelled = false;
-    void (async () => {
+    const sync = async () => {
       const current = await data.auth.session();
+      if (cancelled) return;
+      if (!isLoaded) return;
       if (!isSignedIn || !email) {
-        // Signed out of Clerk (here or in another tab): close the session Clerk opened. Demo sessions stay.
         if (current?.via === "clerk") await data.auth.signOut();
+        if (!cancelled) { setNeedsConsent(null); setSyncedIdentity(null); }
         return;
       }
-      if (current?.via === "clerk" && current.email === email.toLowerCase()) return;
+      if (current?.via === "clerk" && current.email === email.toLowerCase() && current.role === role) {
+        setNeedsConsent(null);
+        setSyncedIdentity(identity);
+        return;
+      }
       const meta = (user?.unsafeMetadata ?? {}) as { inviteToken?: string; name?: string; acceptedTerms?: boolean };
-      const r = await data.auth.syncExternal({
-        email,
-        name: meta.name || user?.fullName || undefined,
-        role: user?.publicMetadata?.role === "owner" ? "owner" : undefined,
-        inviteToken: meta.inviteToken,
-        acceptedTerms: meta.acceptedTerms,
-      });
+      const result = await data.auth.syncExternal({ email, name: meta.name || user?.fullName || undefined,
+        role: role === "owner" ? "owner" : undefined, inviteToken: meta.inviteToken, acceptedTerms: meta.acceptedTerms });
       if (cancelled) return;
-      // Clerk proved the email, but it isn't on the call sheet: end the Clerk session and say why on /login.
-      // In the client demo, go back to the demo and say why, instead of the sign-in page.
-      if (!r.ok) await clerk.signOut({ redirectUrl: demoActive() ? `${basePath}/demo/?clerk=${encodeURIComponent(email)}` : `${basePath}/login/?notInvited=${encodeURIComponent(email)}` });
-    })();
-    return () => { cancelled = true; };
-  }, [isLoaded, isSignedIn, email, user, clerk]);
+      if (!result.ok && result.error === "terms") {
+        setNeedsConsent(identity ?? null);
+        if (!pathname.startsWith("/join") && !pathname.startsWith("/demo")) router.replace("/join/");
+        return;
+      }
+      if (!result.ok) await clerk.signOut({ redirectUrl: demoActive() ? `${basePath}/demo/?clerk=${encodeURIComponent(email)}` : `${basePath}/login/` });
+      else { setNeedsConsent(null); setSyncedIdentity(identity); }
+    };
+    void sync();
+    const unsubscribe = data.auth.onChange(() => { setSyncedIdentity(undefined); void sync(); });
+    return () => { cancelled = true; unsubscribe(); };
+  }, [isLoaded, isSignedIn, email, user, clerk, identity, role, pathname, router]);
+
+  const prepareDemo = React.useCallback(async () => {
+    if (!isLoaded) throw new Error("Sign-in is still loading. Try again when it finishes.");
+    if (clerk.user) await clerk.signOut(() => undefined);
+    if (clerk.user !== null) throw new Error("Sign-in has not confirmed sign-out yet. Try again.");
+    await data.auth.signOut();
+  }, [clerk, isLoaded]);
 
   const value = React.useMemo<AuthActions>(() => ({
     provider: "clerk",
-    signOut: async () => { await data.auth.signOut(); await clerk.signOut({ redirectUrl: `${basePath}/login/?signedOut=1` }); },
-  }), [clerk]);
+    loading: !isLoaded || syncedIdentity !== identity || (isSignedIn === true && needsConsent === identity),
+    sdkLoaded: !!isLoaded,
+    prepareDemo,
+    onboarding: needsConsent === identity && isSignedIn && email ? {
+      email,
+      name: user?.fullName || "",
+      finish: async ({ name, acceptTerms }) => {
+        if (!acceptTerms || !name.trim()) throw new Error("Enter your name and agree to the terms to continue.");
+        const meta = (user?.unsafeMetadata ?? {}) as { inviteToken?: string };
+        const result = await data.auth.syncExternal({ email, name, acceptedTerms: true, inviteToken: meta.inviteToken, role: role === "owner" ? "owner" : undefined });
+        if (!result.ok) throw new Error("Your setup could not be completed. Try again.");
+        setNeedsConsent(null);
+        setSyncedIdentity(identity);
+      },
+    } : null,
+    signOut: async () => {
+      await data.auth.signOut();
+      if (isLoaded) await clerk.signOut({ redirectUrl: `${basePath}/login/?signedOut=1` });
+      else router.replace("/login/?signedOut=1");
+    },
+  }), [clerk, isLoaded, syncedIdentity, identity, prepareDemo, needsConsent, isSignedIn, email, user, role, router]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
