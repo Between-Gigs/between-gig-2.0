@@ -414,14 +414,14 @@ function Builder({ personId }: { personId: string }) {
         <aside aria-label="Preview" className="hidden lg:col-span-5 lg:block">
           <div className="grid gap-4 lg:sticky lg:top-24">
             {!done && <ProfileStrength fields={d} />}
-            <ProfilePreviewCard fields={d} personId={personId} />
-            <p className="text-body-sm text-ink-subtle">This is your card as clients will see it in search. It updates as you type.</p>
+            <ProfilePreviewCard fields={d} personId={personId} step={done ? undefined : step} />
+            <p className="text-body-sm text-ink-subtle">This is your card as clients will see it in search. It updates as you type; the ringed parts come from this step.</p>
           </div>
         </aside>
       </div>
       <Drawer open={preview} onClose={() => setPreview(false)} title="Your card" description="How clients will see you in search. It updates as you type." size="md">
         <div className="grid gap-4">
-          <ProfilePreviewCard fields={d} personId={personId} />
+          <ProfilePreviewCard fields={d} personId={personId} step={done ? undefined : step} />
           {!done && <ProfileStrength fields={d} />}
         </div>
       </Drawer>

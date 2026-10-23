@@ -23,8 +23,8 @@ const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matc
 
 /**
  * /crew-call: the client's Call sheet prototype, V15, as shared: a light film-set hero, sample testimonials, the
- * Crew Call grid with the embroidered patches, Explore all services, and the Coming soon strip. Kept in the light
- * look the client approved, in both themes. The search filters the crew as you type; every service, live or
+ * Crew Call grid with the embroidered patches, Explore all services, and the Coming soon grid. Light follows the
+ * client's look; dark keeps its layout with the brand's dark palette (the patches and photos stay as they are). The search filters the crew as you type; every service, live or
  * coming soon, opens the Storyboard's "Find talent" form with that service filled in.
  */
 export function CrewCall() {
@@ -43,22 +43,24 @@ export function CrewCall() {
 
   return (
     <Page bare>
-      <div data-theme="light" data-client-locked="" className="bg-bg text-ink">
+      <div data-client-locked="" className="bg-bg text-ink">
         {/* Hero: the client's film-set photo, the promise in the forest serif, one search. */}
         <section aria-labelledby="cc-h" className="relative isolate mx-auto max-w-7xl overflow-hidden">
-          <img src={asset(hero.image)} alt="" width={1600} height={800} className="absolute inset-0 -z-10 size-full object-cover" />
+          <img src={asset(hero.image)} alt="" width={1600} height={800} className="absolute inset-0 -z-20 size-full object-cover" />
+          {/* A wash in the page colour behind the words: barely there on light, a dusk scrim on dark. */}
+          <span aria-hidden="true" className="absolute inset-0 -z-10 bg-radial from-bg/70 via-bg/30 to-transparent" />
           <div className="mx-auto grid max-w-3xl justify-items-center gap-5 px-4 pt-12 pb-14 text-center sm:px-6 sm:pt-16 sm:pb-16">
-            <p className="text-label-md tracking-widest text-forest-900 uppercase">{hero.eyebrow}</p>
-            <h1 id="cc-h" className="font-serif text-display-md font-bold text-balance text-forest-800 sm:text-display-lg lg:text-display-xl">
+            <p className="text-label-md tracking-widest text-ink-deep uppercase">{hero.eyebrow}</p>
+            <h1 id="cc-h" className="font-serif text-display-md font-bold text-balance text-ink-deep sm:text-display-lg lg:text-display-xl">
               {hero.title[0]}<br />{hero.title[1]}
             </h1>
-            <p className="max-w-xl text-body-lg text-forest-900">{hero.lead}</p>
+            <p className="max-w-xl text-body-lg font-medium text-ink">{hero.lead}</p>
             <form role="search" onSubmit={(e) => { e.preventDefault(); if (q.trim() && !shown.length && !soon.length) open(q.trim()); else toCrew(); }}
-              className="flex w-full max-w-xl items-center gap-2 rounded-full bg-surface p-1.5 pl-6 shadow-lg focus-within:ring-2 focus-within:ring-forest-600">
+              className="flex w-full max-w-xl items-center gap-2 rounded-full bg-surface p-1.5 pl-6 shadow-lg focus-within:ring-2 focus-within:ring-ink-brand">
               <label htmlFor="cc-search" className="sr-only">Search the crew</label>
               <input id="cc-search" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={hero.search}
                 className="min-w-0 flex-1 bg-transparent py-2 text-body-lg tracking-wider text-ink uppercase outline-none placeholder:text-ink-muted" />
-              <IconButton type="submit" label="Find the crew" icon={<ArrowRight />} className="rounded-full bg-forest-800 text-surface hover:bg-forest-700" />
+              <IconButton type="submit" label="Find the crew" icon={<ArrowRight />} className="rounded-full bg-ink-deep text-bg hover:bg-ink-deep-hover" />
             </form>
           </div>
         </section>
@@ -72,10 +74,10 @@ export function CrewCall() {
                 <img src={asset(t.image)} alt="" width={512} height={512} loading="lazy" decoding="async" className="w-2/5 shrink-0 rounded-sm object-cover" />
                 <div className="flex min-w-0 flex-1 flex-col gap-2 py-1 pr-1">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="flex gap-0.5 text-amber-700" role="img" aria-label="Five stars (sample)">
+                    <span className="flex gap-0.5 text-warning" role="img" aria-label="Five stars (sample)">
                       {Array.from({ length: 5 }, (_, i) => <Star key={i} className="size-4 fill-current" aria-hidden="true" />)}
                     </span>
-                    <span className="text-label-sm tracking-wider text-amber-700 uppercase">Sample</span>
+                    <span className="text-label-sm tracking-wider text-warning uppercase">Sample</span>
                   </div>
                   <blockquote className="text-body-sm font-semibold text-ink">&ldquo;{t.quote}&rdquo;</blockquote>
                   <figcaption className="mt-auto flex items-center gap-2">
@@ -90,7 +92,7 @@ export function CrewCall() {
 
         {/* Crew Call */}
         <section ref={crew} id="crew" aria-labelledby="cc-crew-h" className="mx-auto max-w-7xl scroll-mt-20 px-4 pt-8 pb-16 sm:px-6">
-          <h2 id="cc-crew-h" className="text-center font-serif text-display-md font-bold text-forest-800 uppercase sm:text-display-lg">Crew Call</h2>
+          <h2 id="cc-crew-h" className="text-center font-serif text-display-md font-bold text-ink-deep uppercase sm:text-display-lg">Crew Call</h2>
           {q && (
             <p aria-live="polite" className="mt-3 flex flex-wrap items-center justify-center gap-2 text-body-md text-ink-muted">
               {shown.length + soon.length ? <>Showing <b className="text-ink tabular-nums">{shown.length + soon.length}</b> for &ldquo;{q}&rdquo;</> : <>Nothing listed for &ldquo;{q}&rdquo; yet.</>}
@@ -116,7 +118,7 @@ export function CrewCall() {
 
           <div className="mt-6 flex justify-center">
             <Link href="/storyboard/#plates"
-              className="inline-flex min-h-12 items-center gap-3 rounded-full bg-forest-800 px-16 text-label-md tracking-widest text-surface uppercase shadow-md transition-colors duration-fast hover:bg-forest-700">
+              className="inline-flex min-h-12 items-center gap-3 rounded-full bg-ink-deep px-16 text-label-md tracking-widest text-bg uppercase shadow-md transition-colors duration-fast hover:bg-ink-deep-hover">
               Explore all services<ArrowRight className="size-5" aria-hidden="true" />
             </Link>
           </div>
@@ -134,10 +136,10 @@ export function CrewCall() {
                       className="group grid w-full justify-items-center gap-4 rounded-xl px-2 pt-3 pb-3 text-center transition-colors duration-fast hover:bg-surface-hover">
                       <span className="relative grid justify-items-center">
                         <SoonPatch icon={icons[s.icon]} />
-                        <span aria-hidden="true" className="absolute -bottom-3 w-28 bg-forest-800 py-0.5 text-center text-label-sm tracking-wide text-surface uppercase shadow-sm"
+                        <span aria-hidden="true" data-theme="dark" className="absolute -bottom-3 w-28 bg-surface-brand py-0.5 text-center text-label-sm tracking-wide text-ink uppercase shadow-sm"
                           style={{ clipPath: "polygon(0 0, 100% 0, 93% 50%, 100% 100%, 0 100%, 7% 50%)" }}>Coming soon</span>
                       </span>
-                      <span className="font-serif text-body-md text-ink group-hover:text-forest-700">{s.title}</span>
+                      <span className="font-serif text-body-md text-ink group-hover:text-ink-brand">{s.title}</span>
                     </button>
                   </li>
                 ))}
@@ -189,7 +191,7 @@ function Strip({ label, children, className, itemClass, progress = false }: { la
       {row}
       {edge.shown < 0.99 && (
         <span aria-hidden="true" className="mx-auto block h-1 w-full max-w-md overflow-hidden rounded-full bg-surface-sunken">
-          <span className="block h-full rounded-full bg-forest-600 transition-transform duration-fast"
+          <span className="block h-full rounded-full bg-ink-brand transition-transform duration-fast"
             style={{ width: `${edge.shown * 100}%`, transform: `translateX(${(edge.at * (1 - edge.shown) / edge.shown) * 100}%)` }} />
         </span>
       )}
@@ -202,7 +204,7 @@ function SoonPatch({ icon: Icon, small = false }: { icon: LucideIcon; small?: bo
   return (
     <span aria-hidden="true" className={cx("grid place-items-center rounded-full border-4 border-amber-700 bg-amber-100 shadow-md transition-transform duration-fast group-hover:-translate-y-1",
       small ? "size-14" : "size-24")}>
-      <span className={cx("grid place-items-center rounded-full border-2 border-dashed border-amber-700/40 bg-surface", small ? "size-10" : "size-18")}>
+      <span className={cx("grid place-items-center rounded-full border-2 border-dashed border-amber-700/40 bg-forest-50", small ? "size-10" : "size-18")}>
         <Icon className={cx("fill-amber-300/70 text-forest-800", small ? "size-6" : "size-10")} strokeWidth={1.6} />
       </span>
     </span>
@@ -218,10 +220,10 @@ function ServiceCard({ title, line, badge, icon, image, onOpen }: { title: strin
         <img src={asset(badge)} alt="" width={192} height={192} loading="lazy" decoding="async" className="size-20 shrink-0 drop-shadow-md" />
         <div className="grid min-w-0 gap-1.5">
           <h3 className="text-body-lg font-semibold text-ink">
-            <button type="button" onClick={onOpen} className="rounded-sm text-left after:absolute after:inset-0 group-hover:text-forest-700">{title}</button>
+            <button type="button" onClick={onOpen} className="rounded-sm text-left after:absolute after:inset-0 group-hover:text-ink-brand">{title}</button>
           </h3>
           <p className="text-body-sm text-ink-muted">{line}</p>
-          <span aria-hidden="true" className="mt-1 grid size-7 place-items-center rounded-full border border-line bg-surface-sunken text-ink transition-colors duration-fast group-hover:bg-forest-800 group-hover:text-surface">
+          <span aria-hidden="true" className="mt-1 grid size-7 place-items-center rounded-full border border-line bg-surface-sunken text-ink transition-colors duration-fast group-hover:bg-ink-deep group-hover:text-bg">
             <ArrowRight className="size-4" />
           </span>
         </div>

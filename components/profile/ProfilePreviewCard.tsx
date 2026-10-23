@@ -35,9 +35,16 @@ function Live({ value, className, children }: { value: unknown; className?: stri
  * The client's view of a profile card, as it appears in search. Beside the builder it updates as they
  * type; on My profile it shows the finished card. Empty fields show quiet placeholders, not prompts.
  */
-export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview", className }: { fields: ProfileFields; personId: string; badge?: string | null; className?: string }) {
+export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview", className, step }: {
+  fields: ProfileFields; personId: string; badge?: string | null; className?: string;
+  /** Beside the builder: the step being filled in. Its parts of the card get a ring; empty parts say which step fills them. */
+  step?: number;
+}) {
   const credits = d.credits.filter((c) => c.trim());
   const shown = d.services.slice(0, 3);
+  const live = step !== undefined;
+  const ring = (n: number) => cx(live && step === n && "ring-2 ring-ink-brand/50 ring-offset-2 ring-offset-surface");
+  const later = (n: number, what: string) => <span className="text-body-sm text-ink-subtle italic">{what} · added in step {n + 1}</span>;
   return (
     <article aria-label={badge ? `${badge} of your profile card` : `${d.name || "Profile"} card`} className={cx("overflow-hidden rounded-2xl border border-line bg-surface shadow-lg", className)}>
       <div className="relative aspect-video overflow-hidden">
@@ -50,7 +57,7 @@ export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview"
       </div>
       <div className="grid gap-3 p-5">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+          <div className={cx("min-w-0 rounded-md", ring(0))}>
             <h3 className="font-display text-heading-lg break-words text-ink">
               <Live value={d.name}>{d.name || <span className="text-ink-subtle">Your name</span>}</Live>
             </h3>
@@ -58,24 +65,30 @@ export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview"
               <Live value={[d.position, d.years]}>{d.position || <span className="text-ink-subtle">Your role</span>}{d.years && ` · ${d.years} ${d.years === "1" ? "year" : "years"}`}</Live>
             </p>
           </div>
-          <Live value={[d.rate, d.basis]} className="shrink-0 text-right">
+          <Live value={[d.rate, d.basis]} className={cx("shrink-0 text-right", ring(2))}>
             {d.rate
               ? <b className="font-display text-heading-md text-ink tabular-nums">${d.rate}<span className="text-body-sm font-normal text-ink-muted">/{basisShort[d.basis]}</span></b>
               : <span className="text-body-sm text-ink-subtle">Rate on request</span>}
           </Live>
         </div>
-        <Live value={d.services} className="flex min-h-5 flex-wrap gap-1.5">
+        {live && (credits.length > 0 || d.imdb) && (
+          <Live value={[credits, d.imdb]} className={cx("grid gap-1 text-body-sm text-ink-muted", ring(0))}>
+            {credits.slice(0, 2).map((c) => <span key={c} className="flex min-w-0 items-center gap-1.5"><Clapperboard className="size-3.5 shrink-0 text-ink-subtle" aria-hidden="true" /><span className="truncate">{c}</span></span>)}
+            {d.imdb && <span className="text-label-sm text-ink-brand">IMDb page linked</span>}
+          </Live>
+        )}
+        <Live value={d.services} className={cx("flex min-h-5 flex-wrap gap-1.5", ring(1))}>
           {shown.length
             ? <>{shown.map((t) => <Badge key={t} tone="brand" size="sm">{t}</Badge>)}{d.services.length > 3 && <Badge tone="neutral" size="sm">+{d.services.length - 3}</Badge>}</>
-            : <><span aria-hidden="true" className="h-5 w-24 rounded-full bg-surface-sunken" /><span aria-hidden="true" className="h-5 w-16 rounded-full bg-surface-sunken" /></>}
+            : live ? later(1, "Your services") : <><span aria-hidden="true" className="h-5 w-24 rounded-full bg-surface-sunken" /><span aria-hidden="true" className="h-5 w-16 rounded-full bg-surface-sunken" /></>}
         </Live>
-        <Live value={d.about} className="block">
+        <Live value={d.about} className={cx("block", ring(3))}>
           {d.about.trim()
             ? <span className="line-clamp-3 text-body-sm text-ink-muted">{d.about}</span>
-            : <span aria-hidden="true" className="grid gap-2 py-1"><span className="h-2.5 w-full rounded-full bg-surface-sunken" /><span className="h-2.5 w-11/12 rounded-full bg-surface-sunken" /><span className="h-2.5 w-2/3 rounded-full bg-surface-sunken" /></span>}
+            : live ? later(3, "A few lines about you") : <span aria-hidden="true" className="grid gap-2 py-1"><span className="h-2.5 w-full rounded-full bg-surface-sunken" /><span className="h-2.5 w-11/12 rounded-full bg-surface-sunken" /><span className="h-2.5 w-2/3 rounded-full bg-surface-sunken" /></span>}
         </Live>
         <div className="flex items-center justify-between gap-3 border-t border-line pt-3 text-body-sm">
-          <Live value={[d.market, d.areas, d.otherCity]} className="flex min-w-0 items-center gap-1 text-ink-subtle">
+          <Live value={[d.market, d.areas, d.otherCity]} className={cx("flex min-w-0 items-center gap-1 text-ink-subtle", ring(2))}>
             <MapPin className="size-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{areaLine(d)}</span>
           </Live>
           <Live value={credits.length} className="flex shrink-0 items-center gap-1 text-ink-subtle">

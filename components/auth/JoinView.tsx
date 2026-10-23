@@ -46,6 +46,8 @@ function JoinForm({ token, email }: { token: string; email: string }) {
   const [errors, setErrors] = React.useState<{ name?: string; terms?: string; form?: string }>({});
   const [busy, setBusy] = React.useState(false);
   const [verify, setVerify] = React.useState(false);
+  const [demo, setDemo] = React.useState(false);
+  React.useEffect(() => { setDemo(!!data.demo && demoActive()); }, []); // eslint-disable-line react-hooks/set-state-in-effect
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,6 +91,7 @@ function JoinForm({ token, email }: { token: string; email: string }) {
           {errors.terms && <p id="terms-error" className="text-body-sm text-danger">{errors.terms}</p>}
         </div>
         <Button type="submit" variant="primary" size="lg" fullWidth className="glow-hover" loading={busy} iconEnd={<ArrowRight />}>Create my profile</Button>
+        {clerkEnabled && demo && <DemoSkip token={token} name={name.trim()} />}
         <p className="text-center text-body-sm text-ink-muted">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2">Sign in</Link></p>
       </form>
     </AuthShell>

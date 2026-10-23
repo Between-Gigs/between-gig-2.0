@@ -2,6 +2,7 @@
 import { ClerkProvider, useClerk, useUser } from "@clerk/react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { demoActive } from "@/lib/demo-flow";
 import { AuthContext, type AuthActions } from "@/lib/auth/context";
 import { clerkAppearance, clerkPublishableKey } from "@/lib/auth/clerk";
 import { data } from "@/lib/data";
@@ -47,7 +48,8 @@ function Bridge({ children }: { children: React.ReactNode }) {
       });
       if (cancelled) return;
       // Clerk proved the email, but it isn't on the call sheet: end the Clerk session and say why on /login.
-      if (!r.ok) await clerk.signOut({ redirectUrl: `${basePath}/login/?notInvited=${encodeURIComponent(email)}` });
+      // In the client demo, go back to the demo and say why, instead of the sign-in page.
+      if (!r.ok) await clerk.signOut({ redirectUrl: demoActive() ? `${basePath}/demo/?clerk=${encodeURIComponent(email)}` : `${basePath}/login/?notInvited=${encodeURIComponent(email)}` });
     })();
     return () => { cancelled = true; };
   }, [isLoaded, isSignedIn, email, user, clerk]);
