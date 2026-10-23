@@ -18,7 +18,15 @@ import { ClerkSlot } from "./ClerkSlot";
 export function JoinView() {
   const token = useSearchParams().get("invite") ?? "";
   const { onboarding } = useAuthActions();
+  const [resumeClerk, setResumeClerk] = React.useState(false);
+  React.useEffect(() => {
+    // Clerk owns these hash routes (verification, OAuth callbacks, etc.). A full
+    // redirect/reload loses the details form's React state, but must still mount
+    // SignUp so the SDK can resume its own resource. No consent is inferred here.
+    setResumeClerk(clerkEnabled && (window.location.hash.startsWith("#/") || /^#(?:sso-callback|verify-email-address|verify-phone-number)(?:[/?]|$)/.test(window.location.hash))); // eslint-disable-line react-hooks/set-state-in-effect
+  }, []);
   if (onboarding) return <JoinForm key={`onboarding-${onboarding.email}`} initialEmail={onboarding.email} initialName={onboarding.name} authenticated />;
+  if (resumeClerk) return <ClerkAccount />;
   return <JoinForToken key={token} token={token} />;
 }
 
@@ -124,21 +132,21 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
  * Clerk mode, step 1b: Clerk's sign-up collects the password and verifies the chosen email. The invite token, name and
  * terms ride along in unsafeMetadata; ClerkLayer reads them and registers the person, then we head to step 2.
  */
-function ClerkAccount({ token, email, name }: { token?: string; email: string; name: string }) {
+function ClerkAccount({ token, email, name }: { token?: string; email?: string; name?: string }) {
   const router = useRouter();
   const { session, loading } = useSession();
   React.useEffect(() => { if (!loading && session?.via === "clerk") router.replace("/profile/edit/"); }, [session, loading, router]);
-  const [firstName, ...rest] = name.split(" ");
+  const [firstName, ...rest] = (name ?? "").split(" ");
   return (
     <AuthShell eyebrow="Professional onboarding" title="Your next chapter" accent="starts here."
-      lead={<p>Create a password for {email}. You may then need to verify your email before continuing.</p>}>
+      lead={<p>{email ? `Create a password for ${email}.` : "Continue your account setup."} You may need to verify your email before continuing.</p>}>
       <div className="grid gap-6">
-        <h2 className="font-display text-display-sm text-ink">Create your password</h2>
+        <h2 className="font-display text-display-sm text-ink">{email ? "Create your password" : "Continue your signup"}</h2>
         <p className="text-body-md text-ink-muted">Use at least 8 characters. If Clerk asks for a 6-digit code afterward, that confirms your email; it does not replace your password.</p>
         <ClerkSlot label="Loading sign-up">
           <SignUp routing="hash" signInUrl={`${basePath}/login/`}
-            initialValues={{ emailAddress: email, firstName, lastName: rest.join(" ") || undefined }}
-            unsafeMetadata={{ inviteToken: token, name, acceptedTerms: true }}
+            initialValues={email ? { emailAddress: email, firstName, lastName: rest.join(" ") || undefined } : undefined}
+            unsafeMetadata={email ? { inviteToken: token, name, acceptedTerms: true } : undefined}
             fallbackRedirectUrl={`${basePath}/profile/edit/`} />
         </ClerkSlot>
       </div>

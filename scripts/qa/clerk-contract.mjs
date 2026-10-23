@@ -62,6 +62,13 @@ try {
     assert.equal(state.session.via, "clerk");
     assert.equal(state.people.filter((p) => p.email === email).length, 1);
     const personId = state.session.personId;
+    // Native SignIn cannot render for an existing single-session user. Cold /login
+    // must route through app state, even with a stale self-returning next URL.
+    await page.goto(`${hosted.url}/login/?next=${encodeURIComponent(`${basePath}/login/`)}`);
+    await page.waitForURL(new RegExp(`${basePath}/profile/$`));
+    await page.getByRole("button", { name: /Account: New Account/ }).waitFor();
+    assert.equal(await page.evaluate(() => window.qaSignedInWidgetMounts ?? 0), 0);
+    assert.equal(await page.getByRole("form", { name: "Mock native Clerk login" }).count(), 0);
     await page.getByRole("button", { name: /Account: New Account/ }).click();
     await page.getByRole("menuitem", { name: "Sign out", exact: true }).click();
     await page.waitForURL((url) => url.pathname === `${basePath}/login/`);
@@ -87,6 +94,12 @@ try {
     await page.getByRole("button", { name: "Continue with test Google" }).click();
     await page.waitForURL(new RegExp(`${basePath}/join/$`));
     await page.getByRole("heading", { name: "Finish your account setup", exact: true }).waitFor();
+    // Existing identity without app consent must leave login for setup, without
+    // mounting the widget and competing with Clerk's automatic redirect.
+    await page.goto(`${hosted.url}/login/?__clerk_status=client_mismatch`);
+    await page.waitForURL(new RegExp(`${basePath}/join/$`));
+    await page.getByRole("heading", { name: "Finish your account setup", exact: true }).waitFor();
+    assert.equal(await page.evaluate(() => window.qaSignedInWidgetMounts ?? 0), 0);
     assert.equal(await page.getByLabel("Email", { exact: true }).inputValue(), "existing-google@example.test");
     assert.equal(await page.getByLabel("Email", { exact: true }).isEditable(), false);
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).people.some((p) => p.email === "existing-google@example.test")), false);
@@ -108,6 +121,17 @@ try {
     assert.equal(await page.evaluate(() => localStorage.getItem("qa-clerk-active")), null);
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).people.some((p) => p.email === "existing-google@example.test")), false);
     await context.close();
+    const ownerContext = await browser.newContext();
+    await ownerContext.route("**/*", (route) => new URL(route.request().url()).hostname === "127.0.0.1" ? route.continue() : route.abort());
+    await ownerContext.addInitScript(() => localStorage.setItem("qa-clerk-active", JSON.stringify({
+      id: "existing-owner-id", fullName: "Existing Owner", primaryEmailAddress: { emailAddress: "owner@example.test" },
+      publicMetadata: { role: "owner" }, unsafeMetadata: {}, password: null, provider: "google",
+    })));
+    const ownerPage = await ownerContext.newPage();
+    await ownerPage.goto(`${hosted.url}/login/?next=${encodeURIComponent(`${basePath}/profile/`)}`);
+    await ownerPage.waitForURL(new RegExp(`${basePath}/owners/$`));
+    assert.equal(await ownerPage.evaluate(() => window.qaSignedInWidgetMounts ?? 0), 0);
+    await ownerContext.close();
     console.log(`Mock SDK contract passed: ${password.length}-character signup, cold callback, profile creation, returning login, role gate, existing Google identity.`);
   }
 } finally {
