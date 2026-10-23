@@ -74,7 +74,7 @@ function JoinForm({ token, initialEmail = "" }: { token?: string; initialEmail?:
     router.push("/profile/edit/");
   };
 
-  if (verify) return <ClerkVerify token={matchingToken} email={email.trim().toLowerCase()} name={name.trim()} onBack={() => setVerify(false)} />;
+  if (verify) return <ClerkAccount token={matchingToken} email={email.trim().toLowerCase()} name={name.trim()} onBack={() => setVerify(false)} />;
 
   return (
     <AuthShell eyebrow="Professional onboarding" title="Your next chapter" accent="starts here."
@@ -96,8 +96,8 @@ function JoinForm({ token, initialEmail = "" }: { token?: string; initialEmail?:
             description="You can ask us to delete your account at any time." />
           {errors.terms && <p id="terms-error" className="text-body-sm text-danger">{errors.terms}</p>}
         </div>
-        {clerkEnabled && <p className="text-body-sm text-ink-muted">Next, choose your password (at least 8 characters) and verify your email securely with Clerk.</p>}
-        <Button type="submit" variant="primary" size="lg" fullWidth className="glow-hover" loading={busy} iconEnd={<ArrowRight />}>Create my profile</Button>
+        {clerkEnabled && <p className="text-body-sm text-ink-muted">Next, create your password (at least 8 characters). Clerk may then ask for a code to verify your email.</p>}
+        <Button type="submit" variant="primary" size="lg" fullWidth className="glow-hover" loading={busy} iconEnd={<ArrowRight />}>{clerkEnabled ? "Continue to password" : "Create my profile"}</Button>
         <p className="text-center text-body-sm text-ink-muted">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2">Sign in</Link></p>
       </form>
     </AuthShell>
@@ -108,7 +108,7 @@ function JoinForm({ token, initialEmail = "" }: { token?: string; initialEmail?:
  * Clerk mode, step 1b: Clerk's sign-up collects the password and verifies the chosen email. The invite token, name and
  * terms ride along in unsafeMetadata; ClerkLayer reads them and registers the person, then we head to step 2.
  */
-function ClerkVerify({ token, email, name, onBack }: { token?: string; email: string; name: string; onBack: () => void }) {
+function ClerkAccount({ token, email, name, onBack }: { token?: string; email: string; name: string; onBack: () => void }) {
   const router = useRouter();
   const [demo, setDemo] = React.useState(false);
   React.useEffect(() => { setDemo(!!data.demo && demoActive()); }, []); // eslint-disable-line react-hooks/set-state-in-effect
@@ -117,8 +117,10 @@ function ClerkVerify({ token, email, name, onBack }: { token?: string; email: st
   const [firstName, ...rest] = name.split(" ");
   return (
     <AuthShell eyebrow="Professional onboarding" title="Your next chapter" accent="starts here."
-      lead={<p>Choose your password, then verify {email} to finish creating your account.</p>}>
+      lead={<p>Create a password for {email}. You may then need to verify your email before continuing.</p>}>
       <div className="grid gap-6">
+        <h2 className="font-display text-display-sm text-ink">Create your password</h2>
+        <p className="text-body-md text-ink-muted">Use at least 8 characters. If Clerk asks for a 6-digit code afterward, that confirms your email; it does not replace your password.</p>
         <ClerkSlot label="Loading sign-up">
           <SignUp routing="hash" signInUrl={`${basePath}/login/`}
             initialValues={{ emailAddress: email, firstName, lastName: rest.join(" ") || undefined }}

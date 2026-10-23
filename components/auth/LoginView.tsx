@@ -30,7 +30,7 @@ const verifyError: Record<Exclude<SignInResult, { ok: true }>["error"], string> 
   "no-code": "There's no active code for this email. Send a new one.",
 };
 
-/** /login: email → 6-digit code → in. Clerk runs it when configured; otherwise the sample login below. */
+/** /login: Clerk handles the configured methods; offline sample mode uses a clearly labeled demo code. */
 export function LoginView() {
   return clerkEnabled ? <ClerkLogin /> : <SampleLogin />;
 }
@@ -41,7 +41,7 @@ function destination(next: string | null, role: "owner" | "gigster") {
 }
 
 /**
- * Clerk's sign-in (email code, as configured in the Clerk dashboard), themed with our tokens and sitting in
+ * Clerk's sign-in (password and other methods configured in the Clerk dashboard), themed with our tokens and sitting in
  * the same brand frame. Once Clerk signs someone in, ClerkLayer opens their Between Gigs session and we route.
  */
 function ClerkLogin() {
@@ -55,7 +55,7 @@ function ClerkLogin() {
 
   return (
     <AuthShell eyebrow="Welcome back" title="Sign in to" accent="Between Gigs."
-      lead={<p>Use your email and your existing sign-in method.</p>}>
+      lead={<p>Use the email and password you created. Existing Google or email-code accounts can use their original sign-in method.</p>}>
       <div className="grid gap-6">
         {params.get("signedOut") && <Banner tone="success" title="You're signed out">See you next time.</Banner>}
         <ClerkSlot label="Loading sign-in">
@@ -63,7 +63,7 @@ function ClerkLogin() {
             initialValues={{ emailAddress: params.get("email") ?? undefined }}
             fallbackRedirectUrl={`${basePath}/login/${params.get("next") ? `?next=${encodeURIComponent(params.get("next")!)}` : ""}`} />
         </ClerkSlot>
-        <p className="text-center text-body-sm text-ink-muted">New here? <Link href="/join/" className="text-link underline underline-offset-2">Create an account</Link>.</p>
+        <p className="text-center text-body-sm text-ink-muted">Need to create a password? <Link href="/join/" className="text-link underline underline-offset-2">Create an account</Link>. Already have an account? Use your original sign-in method or Clerk's account recovery.</p>
       </div>
     </AuthShell>
   );
@@ -135,7 +135,7 @@ function SampleLogin() {
 
   return (
     <AuthShell eyebrow="Welcome back" title="Sign in to" accent="Between Gigs."
-      lead={<p>We'll email you a 6-digit code. No password to remember.</p>}>
+      lead={<p>Offline sample mode: this demo uses a visible 6-digit code and sends no email. Password accounts use Clerk when it is configured.</p>}>
       <div ref={stage} className="vt-page">
         {params.get("signedOut") && step === "email" && <Banner tone="success" className="mb-6" title="You're signed out">See you next time.</Banner>}
 

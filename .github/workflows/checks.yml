@@ -30,3 +30,7 @@ jobs:
         env:
           NEXT_PUBLIC_BASE_PATH: /between-gig-2.0
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Z2xhZC1tb25rZXktNjkwOC5jbGVyay5hY2NvdW50cy5kZXYk
+      - name: Check password handoff and offline recovery (Clerk requests blocked)
+        run: |
+          export CHROMIUM_PATH=$(node --input-type=module -e 'import { chromium } from "playwright-core"; console.log(chromium.executablePath())')
+          node scripts/qa/clerk-entry.mjs
