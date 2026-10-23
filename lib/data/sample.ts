@@ -451,16 +451,23 @@ export const sampleSource: DataSource = {
       const waitlist = Object.fromEntries(inviteStatuses.map((st) => [st, 0])) as Record<InviteStatus, number> & { total: number };
       for (const w of state.waitlist ?? []) waitlist[inviteStatusOf(state, w.email).status]++;
       waitlist.total = state.waitlist?.length ?? 0;
+      // Every invitation-funnel stage uses the same waitlist + actual-invitation cohort.
+      // Open signup records remain in the global counts/review queue, but cannot inflate this funnel.
+      const waitlistEmails = new Set((state.waitlist ?? []).map((w) => w.email.toLowerCase()));
+      const invitedIds = new Set(state.invites.map((i) => i.personId));
+      const invited = state.people.filter((p) => waitlistEmails.has(p.email.toLowerCase()) && invitedIds.has(p.id));
+      const invitedCounts = Object.fromEntries(personStatuses.map((st) => [st, invited.filter((p) => p.status === st).length])) as Record<PersonStatus, number>;
+      const openedIds = new Set(state.invites.filter((i) => i.openedAt).map((i) => i.personId));
       const sent = ["submitted", "changes_requested", "approved"];
       const funnel = {
         signups: waitlist.total,
-        invited: waitlist.total - waitlist.not_invited,
-        opened: waitlist.opened + waitlist.registered,
-        accounts: waitlist.registered,
-        submitted: state.people.filter((p) => p.status !== "invited" && (sent.includes(p.status) || !!p.submittedAt)).length,
-        approved: counts.approved,
+        invited: invited.length,
+        opened: invited.filter((p) => p.status !== "invited" || openedIds.has(p.id)).length,
+        accounts: invited.filter((p) => p.status !== "invited").length,
+        submitted: invited.filter((p) => p.status !== "invited" && (sent.includes(p.status) || !!p.submittedAt)).length,
+        approved: invitedCounts.approved,
       };
-      return { counts, funnel, waitlist, reviewQueue: await sampleSource.owners.reviewQueue(), activity: clone((state.activity ?? []).slice(0, 12)) };
+      return { counts, invitedCounts, funnel, waitlist, reviewQueue: await sampleSource.owners.reviewQueue(), activity: clone((state.activity ?? []).slice(0, 12)) };
     },
     async activity(limit = 50) {
       await latency(0);

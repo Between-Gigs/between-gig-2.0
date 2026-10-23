@@ -292,7 +292,9 @@ export interface FunnelCounts {
 export interface DashboardSummary {
   /** People by their current status (each person counted once, where they are now). */
   counts: Record<PersonStatus, number>;
-  /** Cumulative stages, for the funnel. */
+  /** Current status counts for the invited waitlist cohort only (the funnel annotations). */
+  invitedCounts: Record<PersonStatus, number>;
+  /** Cumulative stages for that same invited waitlist cohort. */
   funnel: FunnelCounts;
   waitlist: Record<InviteStatus, number> & { total: number };
   /** Submitted profiles, oldest first. */

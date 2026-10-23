@@ -30,6 +30,8 @@ try {
     await page.goto(`${url}/login/?notInvited=old@example.com`);
     await page.locator("p:visible").filter({ hasText: "Use the email and password you created" }).first().waitFor();
     assert.equal(await page.getByText("That email isn't on the call sheet yet", { exact: true }).count(), 0);
+    assert.equal(await page.getByText("Need to create a password?", { exact: false }).count(), 0);
+    await page.locator("p:visible").filter({ hasText: "Already joined with Google or an email code? Use that same sign-in method" }).first().waitFor();
     await page.getByRole("link", { name: "Create an account", exact: true }).click();
     await page.getByRole("button", { name: "Continue to password", exact: true }).waitFor();
     assert.equal(new URL(page.url()).pathname, `${base}/join/`);

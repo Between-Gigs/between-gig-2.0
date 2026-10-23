@@ -76,3 +76,30 @@ assert.equal(ordinary.session.role, "gigster");
 const owner = await data.auth.syncExternal({ email: "trusted@example.com", role: "owner" });
 assert.equal(owner.session.role, "owner"); // represents trusted Clerk publicMetadata, never signup metadata
 console.log("Auth adapter passed: open signup, validation, optional invites, existing login, code checks, role mapping.");
+
+// Open accounts, including waitlist members who were never invited, do not inflate invite conversion.
+await data.demo.reset();
+const beforeOpen = await data.owners.dashboard();
+const openPerson = await data.auth.register({ email: "open-funnel@example.com", name: "Open Funnel", acceptTerms: true });
+assert.equal(openPerson.ok, true);
+assert.deepEqual((await data.owners.dashboard()).funnel, beforeOpen.funnel);
+await data.funnel.joinWaitlist({ email: "open-funnel@example.com", zip: "90026", placement: "qa" });
+const beforeSubmit = await data.owners.dashboard();
+assert.equal(beforeSubmit.funnel.invited, beforeOpen.funnel.invited);
+assert.equal(beforeSubmit.funnel.accounts, beforeOpen.funnel.accounts);
+const template = await data.profiles.getProfile("maya");
+await data.profiles.saveDraft(openPerson.person.id, { ...template.fields, name: "Open Funnel" }, 4);
+await data.profiles.submit(openPerson.person.id);
+const afterSubmit = await data.owners.dashboard();
+assert.deepEqual(afterSubmit.funnel, beforeSubmit.funnel);
+assert.equal(afterSubmit.counts.submitted, beforeSubmit.counts.submitted + 1);
+assert.equal(afterSubmit.reviewQueue.some((row) => row.person.id === openPerson.person.id), true);
+await data.demo.signInAs("owner");
+await data.owners.approve(openPerson.person.id);
+const afterApprove = await data.owners.dashboard();
+assert.deepEqual(afterApprove.funnel, beforeSubmit.funnel);
+assert.deepEqual(afterApprove.invitedCounts, beforeSubmit.invitedCounts);
+assert.equal(afterApprove.counts.approved, beforeSubmit.counts.approved + 1);
+const values = [afterApprove.funnel.invited, afterApprove.funnel.opened, afterApprove.funnel.accounts, afterApprove.funnel.submitted, afterApprove.funnel.approved];
+assert.equal(values.every((value, index) => index === 0 || value <= values[index - 1]), true);
+console.log("Open-account review/approval stays visible globally without distorting invitation-funnel stages.");
