@@ -28,13 +28,15 @@ export function DemoStart() {
   const [email, setEmail] = React.useState(SAMPLE);
   const [sentTo, setSentTo] = React.useState<string | null>(null);
   const [mail, setMail] = React.useState<OutboxEmail | null>(null);
+  const [ready, setReady] = React.useState(false);
   const [error, setError] = React.useState("");
   const [height, setHeight] = React.useState(1200);
   const frame = React.useRef<HTMLIFrameElement>(null);
 
   const send = React.useCallback(async (to: string) => {
+    setReady(false);
     setMail(null);
-    if (!data.demo) return;
+    if (!data.demo) { setReady(true); return; }
     // Start clean: end any Clerk session from earlier (an owner, or another email), or it would take over the demo.
     try { await (window as unknown as { Clerk?: { user?: unknown; signOut?: () => Promise<void> } }).Clerk?.signOut?.(); } catch { /* not loaded */ }
     await data.auth.signOut();
@@ -42,6 +44,7 @@ export function DemoStart() {
     setMail(await data.emails.get(r.outboxId));
     setSentTo(to);
     setDemoActive(true);
+    setReady(true);
   }, []);
 
   // Back from Clerk with an email the invite wasn't sent to: offer that email instead.
@@ -54,6 +57,7 @@ export function DemoStart() {
 
   const resend = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!ready) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError("Enter an email address, like name@example.com."); return; }
     setError("");
     void send(email.trim());
@@ -85,7 +89,9 @@ export function DemoStart() {
             <h1 className="mt-2 font-display text-display-sm text-balance text-ink">You&apos;ve got an invite.</h1>
             <p className="mt-3 text-body-md text-ink-muted">No invite is required to join. This is the optional email a Gigster gets from the waitlist. Press <b className="text-ink">Create your profile</b> in it to sign up, build a profile and see how it looks.</p>
           </div>
-          <ButtonLink href="/join/" variant="primary" iconEnd={<ArrowRight />}>Sign up without an invite</ButtonLink>
+          {ready
+            ? <ButtonLink href="/join/" variant="primary" iconEnd={<ArrowRight />}>Sign up without an invite</ButtonLink>
+            : <Button variant="primary" disabled loading>Preparing signup</Button>}
           {clerkEmail && (
             <Banner tone="warning" title="Try signing up again">
               The previous sign-in used {clerkEmail}. You can sign up with any email above, or preview an optional invite below.
@@ -96,7 +102,7 @@ export function DemoStart() {
               hint={clerkEnabled ? "Use your real email to get the real sign-in code. Keep the sample, and you can skip sign-in on the next page." : "Any email works. Nothing is sent."}>
               <Input id="demo-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} start={<Mail />} autoComplete="email" />
             </Field>
-            <Button type="submit" variant="secondary" iconStart={<Send />}>Send the invite</Button>
+            <Button type="submit" variant="secondary" disabled={!ready} loading={!ready} iconStart={<Send />}>Send the invite</Button>
           </form>
           <p className="text-body-sm text-ink-subtle">Everything saves in this browser only. Nothing reaches our team yet, and no email leaves this page except Clerk&apos;s sign-in code.</p>
         </div>
