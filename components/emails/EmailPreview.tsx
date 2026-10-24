@@ -59,6 +59,7 @@ function Preview({ name }: { name: EmailTemplate }) {
       <OwnerPage title={t.label} description={t.when}
         breadcrumbs={<Breadcrumbs items={[{ label: "Emails", href: `${basePath}/emails/` }, { label: t.label }]} />}
         actions={email && <Button size="sm" iconStart={<Copy />} onClick={() => copy(email.html, "HTML")}>Copy HTML</Button>}>
+      {!queued && name === "invite" && <Banner tone="info" title="Start the walkthrough here">This is the invite Riley Park receives. Press Create your profile in the email to continue as Riley.</Banner>}
       {queued && <Banner tone="info" title="From the sample outbox">Showing the email queued for {queued.to}. Nothing was sent.</Banner>}
 
       <div className="grid gap-6 lg:grid-cols-12">
