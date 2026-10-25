@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { breakpoints } from "@/lib/studio/pages";
+import { breakpoints, findEl } from "@/lib/studio/pages";
 import { viewRecords } from "@/lib/studio/query";
 import { StudioProvider, useStudio } from "@/lib/studio/store";
 import type { Breakpoint, CellValue } from "@/lib/studio/types";
@@ -158,7 +158,8 @@ function Shell() {
 
   const design: DesignState = {
     page, setPageId: (id) => { setPageId(id); setSelectedId(null); setEditingId(null); setArea("design"); setNavOpen(false); },
-    selectedId, select: (id) => { setSelectedId(id); if (id) setInspectorOpen(true); }, hoverId, setHover: setHoverId, bp, setBp, editingId, setEditingId, drag, setDrag,
+    // Like Webflow, something is always selected: the Body when nothing else is.
+    selectedId: selectedId && findEl(page.root, selectedId) ? selectedId : page.root.id, select: (id) => { setSelectedId(id); if (id) setInspectorOpen(true); }, hoverId, setHover: setHoverId, bp, setBp, editingId, setEditingId, drag, setDrag,
     tick, remeasure: () => setTick((n) => n + 1), openCms: () => { setArea("cms"); setTool("cms"); },
   };
 
@@ -235,7 +236,7 @@ function Shell() {
                 {breakpoints.map((b) => {
                   const BIcon = bpIcons[b.id];
                   return (
-                    <button key={b.id} type="button" role="radio" aria-checked={bp === b.id} aria-label={`${b.label}: ${b.hint}`} title={`${b.label}: ${b.hint}`} onClick={() => setBp(b.id)}
+                    <button key={b.id} type="button" role="radio" aria-checked={bp === b.id} aria-label={b.label} title={`${b.label}: ${b.hint}`} onClick={() => setBp(b.id)}
                       className={cx("inline-flex h-7 w-9 items-center justify-center rounded-sm transition-colors duration-fast", bp === b.id ? "bg-surface text-info shadow-xs" : "text-ink-muted hover:text-ink")}>
                       <BIcon className="size-4" />
                     </button>
@@ -256,7 +257,11 @@ function Shell() {
               <IconButton size="sm" variant="ghost" label={rightShown ? "Hide the right panel" : "Show the right panel"} icon={<PanelRight />} pressed={rightShown}
                 onClick={() => { if (window.matchMedia("(min-width: 80rem)").matches) setRightShown((s) => !s); else setInspectorOpen(true); }} />
               <span className="hidden sm:inline-flex"><Button size="sm" variant="ghost" iconStart={<Share2 />} onClick={() => setSharing(true)}>Share</Button></span>
-              <Button size="sm" variant="strong" iconStart={<Rocket />} onClick={() => setPublishing(true)}>Publish</Button>
+              {/* Webflow's blue Publish, in the same blue as the canvas selection. */}
+              <button type="button" onClick={() => setPublishing(true)}
+                className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-info px-3 text-label-sm text-bg transition-opacity duration-fast hover:opacity-90 [&_svg]:size-4">
+                <Rocket aria-hidden="true" />Publish
+              </button>
             </div>
           </header>
 
@@ -281,7 +286,7 @@ function Shell() {
               </nav>
             )}
             {!preview && panel && (
-              <aside aria-label={panelLabel} className="hidden w-64 shrink-0 flex-col border-r border-line bg-surface lg:flex">{panel}</aside>
+              <aside aria-label={panelLabel} className="hidden w-72 shrink-0 flex-col border-r border-line bg-surface lg:flex">{panel}</aside>
             )}
 
             <main id="main" className="flex min-w-0 flex-1 flex-col">

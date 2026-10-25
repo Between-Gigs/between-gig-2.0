@@ -164,9 +164,11 @@ export function Toolbar({ onNew }: { onNew: () => void }) {
   const v = ui.view, c = ui.collection;
   const groupable = c.fields.filter((f) => f.type === "select" || f.type === "checkbox");
   return (
-    <div className="flex items-center gap-1.5 overflow-x-auto border-b border-line px-3 py-2 sm:px-4">
+    <div className="flex items-center gap-2 border-b border-line px-3 py-2 sm:px-4">
+      {/* The controls scroll sideways when space runs out; New item stays in view. */}
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
       <Input type="search" value={ui.search} onChange={(e) => ui.setSearch(e.target.value)} placeholder={`Search ${c.name.toLowerCase()}`} aria-label={`Search ${c.name}`} start={<Search />}
-        className="w-44 shrink-0 sm:w-60" end={ui.search ? <button type="button" aria-label="Clear search" onClick={() => ui.setSearch("")} className="inline-flex size-6 items-center justify-center rounded-xs hover:bg-surface-hover"><X /></button> : undefined} />
+        className="w-40 shrink-0 2xl:w-60" end={ui.search ? <button type="button" aria-label="Clear search" onClick={() => ui.setSearch("")} className="inline-flex size-6 items-center justify-center rounded-xs hover:bg-surface-hover"><X /></button> : undefined} />
       <Popover label="Filter" title="Filter" width="md" trigger={<Button size="sm" variant="ghost" iconStart={<ListFilter />} className="shrink-0">Filter<Count n={v.filters.length} /></Button>}>
         <FilterPanel view={v} />
       </Popover>
@@ -186,7 +188,7 @@ export function Toolbar({ onNew }: { onNew: () => void }) {
           <FieldsPanel view={v} />
         </Popover>
       )}
-      <span className="ml-auto shrink-0" />
+      </div>
       <span className="hidden shrink-0 sm:inline-flex"><Button size="sm" variant="secondary" iconStart={<Plus />} onClick={onNew}>New item</Button></span>
     </div>
   );

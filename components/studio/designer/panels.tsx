@@ -1,7 +1,7 @@
 "use client";
 import { Button, ConfirmDialog, IconButton, Input, Menu, cx } from "@ds/components";
 import {
-  AppWindow, Box, ChevronDown, ChevronRight, Columns2, Copy, Database, FileText, Heading, Home, Image as ImageIcon, Link, Minus, MousePointerClick,
+  AppWindow, Box, ChevronDown, Ellipsis, ChevronRight, Columns2, Copy, Database, FileText, Heading, Home, Image as ImageIcon, Link, Minus, MousePointerClick,
   Pencil, Pilcrow, Plus, RectangleHorizontal, Square, SquareDashed, Trash2, Type,
 } from "lucide-react";
 import * as React from "react";
@@ -132,8 +132,8 @@ export function NavigatorPanel() {
           ) : <span className="size-5 shrink-0" />}
           <button type="button" onClick={() => d.select(el.id)} className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
             <Icon className={cx("size-3.5 shrink-0", on ? "text-info" : el.bind ? "text-cat-5" : "text-ink-subtle")} />
-            <span className="truncate">{elementName(el)}</span>
-            {el.cls && <span className="truncate text-caption text-ink-subtle">.{el.cls}</span>}
+            <span className="min-w-0 truncate">{elementName(el)}</span>
+            {el.cls && <span className="min-w-0 shrink-3 truncate text-caption text-ink-subtle">.{el.cls}</span>}
           </button>
         </div>
         {kids.length > 0 && open && <ul role="group">{kids.map((k) => row(k, depth + 1))}</ul>}
@@ -176,7 +176,7 @@ export function PagesPanel() {
                   <span className="truncate text-caption text-ink-subtle">/{p.slug}</span>
                 </button>
               )}
-              <Menu align="end" trigger={<button type="button" aria-label={`${p.name} options`} className="inline-flex size-8 shrink-0 items-center justify-center rounded-xs text-ink-subtle hover:text-ink"><Pencil className="size-3.5" /></button>}
+              <Menu align="end" trigger={<button type="button" aria-label={`${p.name} options`} className="inline-flex size-8 shrink-0 items-center justify-center rounded-xs text-ink-subtle hover:text-ink"><Ellipsis className="size-4" /></button>}
                 items={[
                   { label: "Rename", icon: <Pencil />, onSelect: () => setRenaming(p.id) },
                   { label: "Duplicate", icon: <Copy />, onSelect: () => d.setPageId(actions.duplicatePage(p.id)) },

@@ -44,7 +44,7 @@ function Value({ ctl, prop, placeholder, className, label }: { ctl: Ctl; prop: s
         const m = /^(-?\d*\.?\d+)(.*)$/.exec(draft);
         if (m && (e.key === "ArrowUp" || e.key === "ArrowDown")) { e.preventDefault(); const step = e.shiftKey ? 10 : 1; const n = `${Number(m[1]) + (e.key === "ArrowUp" ? step : -step)}${m[2] || (unitless.has(prop) ? "" : "px")}`; setDraft(n); ctl.set(prop, n); }
       }}
-      className={cx("h-8 w-full min-w-0 rounded-sm border border-line bg-surface px-2 text-body-sm text-ink tabular-nums outline-none placeholder:text-ink-subtle focus-visible:border-focus", className)} />
+      className={cx("min-w-0 rounded-sm border bg-surface text-ink tabular-nums outline-none placeholder:text-ink-subtle focus-visible:border-focus", className ?? "h-8 w-full border-line px-2 text-body-sm")} />
   );
 }
 
@@ -126,23 +126,23 @@ function Group({ title, children, open: initial = true }: { title: string; child
 /** Margin outside, padding inside, like a site builder's box model. */
 function SpacingBox({ ctl }: { ctl: Ctl }) {
   const cell = (prop: string, label: string) => (
-    <div className="grid justify-items-center gap-0.5">
-      <Value ctl={ctl} prop={prop} label={label} placeholder="0" className={cx("h-7 w-12 px-0.5 text-center text-caption", ctl.source(prop) === "here" ? "border-info text-info" : ctl.source(prop) === "inherited" ? "border-warning" : "")} />
+    <div className="grid shrink-0 justify-items-center gap-0.5">
+      <Value ctl={ctl} prop={prop} label={label} placeholder="0" className={cx("h-8 w-12 px-0.5 text-center text-caption", ctl.source(prop) === "here" ? "border-info text-info" : ctl.source(prop) === "inherited" ? "border-warning" : "border-line")} />
     </div>
   );
   return (
     <div className="grid gap-1 rounded-md border border-dashed border-line-strong p-2">
       <span className="text-caption text-ink-subtle">Margin</span>
       <div className="justify-self-center">{cell("marginTop", "Margin top")}</div>
-      <div className="grid grid-cols-6 items-center gap-1">
-        <div className="col-span-1">{cell("marginLeft", "Margin left")}</div>
-        <div className="col-span-4 grid gap-1 rounded-sm border border-line bg-surface-sunken p-2">
+      <div className="flex items-center gap-1">
+        <div className="shrink-0">{cell("marginLeft", "Margin left")}</div>
+        <div className="grid min-w-0 flex-1 gap-1 rounded-sm border border-line bg-surface-sunken p-2">
           <span className="text-caption text-ink-subtle">Padding</span>
           <div className="justify-self-center">{cell("paddingTop", "Padding top")}</div>
           <div className="flex items-center justify-between gap-1">{cell("paddingLeft", "Padding left")}<span className="h-6 flex-1 rounded-xs bg-surface" aria-hidden="true" />{cell("paddingRight", "Padding right")}</div>
           <div className="justify-self-center">{cell("paddingBottom", "Padding bottom")}</div>
         </div>
-        <div className="col-span-1">{cell("marginRight", "Margin right")}</div>
+        <div className="shrink-0">{cell("marginRight", "Margin right")}</div>
       </div>
       <div className="justify-self-center">{cell("marginBottom", "Margin bottom")}</div>
     </div>

@@ -57,7 +57,10 @@ export function SettingsPanel() {
   const coll = list?.source ? ui.base.collections.find((c) => c.id === list.source!.collectionId) : undefined;
   const fields = coll && bindable[el.type] ? coll.fields.filter((f) => bindable[el.type].includes(f.type)) : [];
   const bound = el.bind ? coll?.fields.find((f) => f.id === el.bind) : undefined;
-  const src = el.source;
+  // A Collection Item edits its list's settings too: that's what people look for after clicking a card.
+  const listEl = el.type === "collection" ? el : el.type === "item" ? findParent(d.page.root, el.id)?.parent ?? null : null;
+  const setList = (patch: Partial<PageElement>, label?: string) => { if (listEl) actions.updateElement(d.page.id, listEl.id, patch, label); };
+  const src = listEl?.source;
   const source = src ? ui.base.collections.find((c) => c.id === src.collectionId) : undefined;
   const filterable = source?.fields.filter((f) => f.type === "select" || f.type === "checkbox") ?? [];
   const filterField = src?.filterField ? source?.fields.find((f) => f.id === src.filterField) : undefined;
@@ -112,30 +115,31 @@ export function SettingsPanel() {
         </Section>
       )}
 
-      {el.type === "collection" && (
-        <Section title="Collection list">
+      {listEl && (
+        <Section title={el.type === "item" ? "Collection List (this item's list)" : "Collection list"}>
+          {el.type === "item" && <Button size="sm" variant="secondary" className="justify-self-start" onClick={() => d.select(listEl.id)}>Select the Collection List</Button>}
           <Labelled label="Get items from">
-            <Select size="sm" value={src?.collectionId ?? ""} aria-label="Collection" onValueChange={(id) => set({ source: { collectionId: id, limit: src?.limit ?? 6 } }, "Changed the list's collection")}
+            <Select size="sm" value={src?.collectionId ?? ""} aria-label="Collection" onValueChange={(id) => setList({ source: { collectionId: id, limit: src?.limit ?? 6 } }, "Changed the list's collection")}
               options={ui.base.collections.map((c) => ({ value: c.id, label: c.name }))} />
           </Labelled>
-          <Labelled label="Show up to"><Text label="Limit" value={String(src?.limit ?? 6)} onSave={(v) => set({ source: { ...src!, limit: Math.max(1, Math.min(100, Number(v) || 1)) } })} /></Labelled>
+          <Labelled label="Show up to"><Text label="Limit" value={String(src?.limit ?? 6)} onSave={(v) => setList({ source: { ...src!, limit: Math.max(1, Math.min(100, Number(v) || 1)) } })} /></Labelled>
           {source && (
             <>
               <div className="grid grid-cols-2 gap-2">
                 <Labelled label="Sort by">
-                  <Select size="sm" value={src?.sortField ?? ""} aria-label="Sort by" onValueChange={(v) => set({ source: { ...src!, sortField: v || undefined } })} options={[{ value: "", label: "Collection order" }, ...source.fields.map((f) => ({ value: f.id, label: f.name }))]} />
+                  <Select size="sm" value={src?.sortField ?? ""} aria-label="Sort by" onValueChange={(v) => setList({ source: { ...src!, sortField: v || undefined } })} options={[{ value: "", label: "Collection order" }, ...source.fields.map((f) => ({ value: f.id, label: f.name }))]} />
                 </Labelled>
                 <Labelled label="Order">
-                  <Select size="sm" value={src?.sortDir ?? "asc"} aria-label="Order" onValueChange={(v) => set({ source: { ...src!, sortDir: v as "asc" | "desc" } })} options={[{ value: "asc", label: "A → Z" }, { value: "desc", label: "Z → A" }]} />
+                  <Select size="sm" value={src?.sortDir ?? "asc"} aria-label="Order" onValueChange={(v) => setList({ source: { ...src!, sortDir: v as "asc" | "desc" } })} options={[{ value: "asc", label: "A → Z" }, { value: "desc", label: "Z → A" }]} />
                 </Labelled>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <Labelled label="Only show where">
-                  <Select size="sm" value={src?.filterField ?? ""} aria-label="Filter field" onValueChange={(v) => set({ source: { ...src!, filterField: v || undefined, filterValue: undefined } })} options={[{ value: "", label: "Show all" }, ...filterable.map((f) => ({ value: f.id, label: f.name }))]} />
+                  <Select size="sm" value={src?.filterField ?? ""} aria-label="Filter field" onValueChange={(v) => setList({ source: { ...src!, filterField: v || undefined, filterValue: undefined } })} options={[{ value: "", label: "Show all" }, ...filterable.map((f) => ({ value: f.id, label: f.name }))]} />
                 </Labelled>
                 {filterField && (
                   <Labelled label="is">
-                    <Select size="sm" value={src?.filterValue ?? ""} placeholder="Choose…" aria-label="Filter value" onValueChange={(v) => set({ source: { ...src!, filterValue: v } })}
+                    <Select size="sm" value={src?.filterValue ?? ""} placeholder="Choose…" aria-label="Filter value" onValueChange={(v) => setList({ source: { ...src!, filterValue: v } })}
                       options={filterField.type === "checkbox" ? [{ value: "true", label: "Checked" }] : (filterField.choices ?? []).map((o) => ({ value: o.id, label: o.label }))} />
                   </Labelled>
                 )}

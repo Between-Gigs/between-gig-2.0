@@ -29,10 +29,15 @@ function RecordCard({ r, cover = true, dense = false, className }: { r: StudioRe
       <span className={cx("grid gap-2", dense ? "p-3" : "p-4")}>
         <span className={cx("line-clamp-2 text-ink", dense ? "text-label-md" : "text-heading-sm")}>{recordTitle(c, r)}</span>
         {shown.map((f) => (
-          <span key={f.id} className="grid justify-items-start gap-0.5">
-            {!dense && <span className="text-caption text-ink-subtle">{f.name}</span>}
-            <CellView field={f} value={r.values[f.id]} lookup={ui.lookup} rows={dense ? "short" : "medium"} className="text-body-sm text-ink-muted" />
-          </span>
+          dense && !["select", "multiSelect", "link", "image"].includes(f.type)
+            // Small cards: a bare "4" means nothing, so values that aren't tags say what they are.
+            ? <span key={f.id} className="flex min-w-0 items-baseline gap-1.5 text-body-sm"><span className="shrink-0 text-ink-subtle">{f.name}</span><CellView field={f} value={r.values[f.id]} lookup={ui.lookup} rows="short" className="min-w-0 truncate text-ink" /></span>
+            : (
+              <span key={f.id} className="grid justify-items-start gap-0.5">
+                {!dense && <span className="text-caption text-ink-subtle">{f.name}</span>}
+                <CellView field={f} value={r.values[f.id]} lookup={ui.lookup} rows={dense ? "short" : "medium"} className="text-body-sm text-ink-muted" />
+              </span>
+            )
         ))}
       </span>
     </button>

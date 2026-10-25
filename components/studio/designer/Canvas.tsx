@@ -169,9 +169,12 @@ export function Canvas() {
   };
 
   const path = d.selectedId ? pathTo(root, d.selectedId) : [];
+  const [coarse, setCoarse] = React.useState(false);
+  React.useEffect(() => { setCoarse(window.matchMedia("(pointer: coarse)").matches); }, []); // eslint-disable-line react-hooks/set-state-in-effect
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      <p className="border-b border-line bg-info-soft px-3 py-2 text-body-sm text-ink md:hidden">The Designer works best on a larger screen. You can still select, edit text and change styles here.</p>
       <div ref={stage} onScroll={() => d.remeasure()}
         className={cx("relative min-h-0 flex-1 overflow-auto bg-surface-sunken", d.bp !== "base" && "sm:px-6 sm:py-6")}>
         <div ref={frame} role="application" aria-label={`Canvas: ${d.page.name}`} tabIndex={0} onKeyDown={onKey}
@@ -202,7 +205,7 @@ export function Canvas() {
           <RenderElement el={root} opts={{ base: ui.base, bp: d.bp, mode: "canvas", editingId: d.editingId, onTextCommit: (id, text) => { d.setEditingId(null); const el = findEl(root, id); if (el && el.text !== text) actions.updateElement(d.page.id, id, { text: text.trim() }, "Edited text"); } }} />
         </div>
         {hovered && hover && !d.drag && tag(hovered, hover, false)}
-        {selected && sel && !d.editingId && tag(selected, sel, true)}
+        {selected && sel && !d.editingId && !d.drag && tag(selected, sel, true)}
         {drop?.line && <div aria-hidden="true" className="pointer-events-none absolute z-raised rounded-full bg-info" style={drop.line} />}
         {drop?.box && <div aria-hidden="true" className="pointer-events-none absolute z-raised border-2 border-dashed border-info bg-info/10" style={drop.box} />}
       </div>
@@ -216,7 +219,7 @@ export function Canvas() {
               {elementName(el)}{el.cls ? ` .${el.cls}` : ""}
             </button>
           </React.Fragment>
-        )) : <span className="truncate px-1.5 text-caption text-ink-subtle">Click anything on the canvas to select it. Double-click text to edit it.</span>}
+        )) : <span className="truncate px-1.5 text-caption text-ink-subtle">{coarse ? "Tap anything to select it. Double-tap text to edit it." : "Click anything on the canvas to select it. Double-click text to edit it."}</span>}
       </nav>
     </div>
   );
