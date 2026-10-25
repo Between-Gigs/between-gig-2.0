@@ -1,7 +1,7 @@
 "use client";
 import { Badge, Banner, Button, Drawer, Field, IconButton, Input, RadioGroup, Skeleton, Stepper, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
-import { AlertCircle, ArrowLeft, ArrowRight, Check, CloudCheck, Eye, Film, GripVertical, Inbox, Link2, LoaderCircle, MapPin, MessageSquareWarning, Pencil, Pin, PinOff, Plus, Sparkles, Trash2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, CloudCheck, Eye, Film, GripVertical, Inbox, Link2, LoaderCircle, MapPin, MessageSquareWarning, Pencil, Pin, PinOff, Plus, Sparkles, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -417,6 +417,10 @@ function Review({ d, notes, onEdit }: { d: ProfileFields; notes: { section: Prof
     [["About me", d.about || none], ["Languages", d.languages || none], ["Insurance", insuranceLabel[d.insurance]], ["Work mode", modeLabel[d.mode]], ["Tools", d.tools || none], ["Transport", d.transport || none]],
   ];
   const ready = Object.keys(problems).length === 0;
+  // Each section folds away once checked. Sections that need something stay open.
+  const [closed, setClosed] = React.useState<Set<number>>(new Set());
+  const toggle = (i: number) => setClosed((c) => { const n = new Set(c); if (n.has(i)) n.delete(i); else n.add(i); return n; });
+  const allClosed = closed.size === SECTIONS.length;
   return (
     <div className="grid gap-4">
       {notes.length > 0 ? (
@@ -426,20 +430,30 @@ function Review({ d, notes, onEdit }: { d: ProfileFields; notes: { section: Prof
       ) : ready
         ? <Banner tone="success" title="Ready for review">Go back and edit anything. When it looks right, submit it to the Between Gigs team.</Banner>
         : <Banner tone="warning" title="A few things to finish">The steps marked below need attention before you can submit.</Banner>}
+      <div className="flex justify-end">
+        <Button size="sm" variant="ghost" iconStart={allClosed ? <ChevronsUpDown /> : <ChevronsDownUp />}
+          onClick={() => setClosed(allClosed ? new Set() : new Set(SECTIONS.map((_, i) => i)))}>{allClosed ? "Expand all" : "Collapse all"}</Button>
+      </div>
       {SECTIONS.map((section, i) => {
         const missing = problems[i];
         const note = notes.find((n) => n.section === section);
+        const open = !closed.has(i);
         return (
           <section key={section} aria-labelledby={`review-${section}`} className={cx("rounded-xl border p-4", missing || note ? "border-warning" : "border-line")}>
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <h3 id={`review-${section}`} className="flex items-center gap-2 font-display text-heading-md text-ink">
-                <span className="text-label-md text-ink-subtle tabular-nums">0{i + 1}</span>{sectionLabel[section]}
-                {note
-                  ? <Badge tone="warning" size="sm" icon={<MessageSquareWarning />}>Needs changes</Badge>
-                  : missing ? <Badge tone="warning" size="sm" icon={<AlertCircle />}>Needs attention</Badge> : <Badge tone="success" size="sm" icon={<Check />}>Complete</Badge>}
+            <div className={cx("flex flex-wrap items-center justify-between gap-2", open && "mb-2")}>
+              <h3 id={`review-${section}`} className="font-display text-heading-md text-ink">
+                <button type="button" aria-expanded={open} aria-controls={`review-body-${section}`} onClick={() => toggle(i)}
+                  className="-my-1 -ml-1 flex min-h-11 items-center gap-2 rounded-md py-1 pr-2 pl-1 text-left hover:bg-surface-hover">
+                  <ChevronDown aria-hidden="true" className={cx("size-5 shrink-0 text-ink-subtle transition-transform duration-fast", !open && "-rotate-90")} />
+                  <span className="text-label-md text-ink-subtle tabular-nums">0{i + 1}</span>{sectionLabel[section]}
+                  {note
+                    ? <Badge tone="warning" size="sm" icon={<MessageSquareWarning />}>Needs changes</Badge>
+                    : missing ? <Badge tone="warning" size="sm" icon={<AlertCircle />}>Needs attention</Badge> : <Badge tone="success" size="sm" icon={<Check />}>Complete</Badge>}
+                </button>
               </h3>
               <Button size="sm" variant="ghost" iconStart={<Pencil />} aria-label={`Edit ${sectionLabel[section]}`} onClick={(e) => onEdit(i, e.currentTarget)}>Edit</Button>
             </div>
+            <div id={`review-body-${section}`} hidden={!open}>
             {note && <p className="mb-3 flex gap-2 rounded-md bg-warning-soft p-2.5 text-body-sm text-ink"><MessageSquareWarning className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" /><span><b>Team note:</b> {note.note}</span></p>}
             {missing && <ul className="mb-3 grid gap-1 text-body-sm text-warning">{Object.entries(missing).map(([k, m]) => <li key={k}>{fieldLabel[k as keyof ProfileFields]}: {m}</li>)}</ul>}
             <dl className="grid gap-2">
@@ -447,6 +461,7 @@ function Review({ d, notes, onEdit }: { d: ProfileFields; notes: { section: Prof
                 <div key={k} className="grid gap-1 sm:grid-cols-4"><dt className="text-label-sm text-ink-subtle">{k}</dt><dd className="text-body-md break-words text-ink sm:col-span-3">{v}</dd></div>
               ))}
             </dl>
+            </div>
           </section>
         );
       })}
