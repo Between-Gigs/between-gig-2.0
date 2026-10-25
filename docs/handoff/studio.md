@@ -1,10 +1,29 @@
-# Studio: the no-code editor and CMS
+# Studio: the no-code designer and CMS
 
-`/studio` is a prototype of the Between Gigs content manager, meant to become its own service later. The frame
-follows site builders (Webflow, Wix): a tool rail and navigator on the left, the canvas in the middle and an
-inspector on the right. Data and views work like Airtable.
+`/studio` is a prototype of the Between Gigs site designer and content manager, meant to become its own service
+later. The shell follows Webflow so it feels familiar: a left tool bar (Add `A`, Navigator `Z`, Pages `P`, CMS `J`,
+Assets `F`, Settings `S`) with flyout panels, the canvas in the middle with breakpoints, a Style / Settings panel on
+the right, and Publish at the top right. The CMS works like Airtable.
 
-## What works
+## Designer
+
+- **Pages** of elements: Section, Container, Div Block, Columns, Heading, Paragraph, Text Block, Text Link,
+  Button, Image, Divider and Collection List. The sample Home and About pages are built from Between Gigs content.
+- **On the canvas:** click to select (blue outline and name tag), hover to see outlines, double-click text to edit
+  it, drag elements from Add or by their name tag to move them (a blue line shows where they land), Delete,
+  Ctrl/Cmd+D to duplicate, Ctrl/Cmd+C and V to copy and paste, Escape to select the parent. The breadcrumb at the
+  bottom shows where the selection sits.
+- **Navigator:** the layer tree; drag rows to reorder or nest.
+- **Style panel:** a selector with Webflow-style classes (shared styles; type a name to create or apply one), then
+  Layout (block, flex, grid), Spacing (margin and padding box), Size, Typography, Backgrounds, Borders and
+  Effects. Labels turn blue when set at this breakpoint and amber when inherited; click a blue label to clear it.
+- **Breakpoints:** Desktop, Tablet (768) and Phone (390). Desktop styles cascade down; tablet and phone override.
+- **Settings panel:** text, heading level, links (with page shortcuts and new tab), images and alt text, and
+  Collection List sources (collection, limit, sort and a filter). Elements inside a list connect to CMS fields.
+- **Preview** (eye icon) and **Publish**, which opens `/studio/site/`: the site as visitors see it, from this
+  browser. Publishing to a domain needs hosting and isn't built.
+
+## CMS
 
 - **Collections** (tables) with fields, records and saved views. Seeded from the app's sample data: Gigsters,
   Journal, Storyboard, Services and the Waitlist.
@@ -24,8 +43,9 @@ inspector on the right. Data and views work like Airtable.
 ## Not built yet
 
 Accounts, sharing and a hosted database (it saves in the browser only; Share says so), real-time collaboration,
-file storage for uploads (they're resized to 800px and kept as data URLs), formulas and rollups, form views,
-publishing collections to site pages, permissions and an activity history.
+file storage for uploads (they're resized to 800px and kept as data URLs), publishing to a domain, CMS template
+pages (one page per record), interactions and animations, components (symbols), custom code, formulas and rollups,
+form views, permissions and an activity history.
 
 ## Code
 
@@ -33,9 +53,12 @@ publishing collections to site pages, permissions and an activity history.
 - `lib/studio/query.ts`: filtering, searching, sorting, grouping and the plain-language type lists.
 - `lib/studio/store.tsx`: state, persistence (`localStorage` key `bg-studio-v1`) and undoable actions. A backend
   replaces `load` and the save effect; the actions keep their shape.
+- `lib/studio/pages.ts`: the Designer's element catalog, tree helpers, the style cascade, CSS output and the
+  sample pages and classes.
 - `lib/studio/seed.ts`: the only file that imports Between Gigs code. A standalone Studio swaps it for templates.
-- `components/studio/`: the shell (`Studio.tsx`), navigator, toolbar, inspector, dialogs, cell editors and
-  `views/`.
+- `components/studio/`: the shell (`Studio.tsx`), CMS navigator, toolbar, inspector, dialogs, cell editors,
+  `views/` (CMS) and `designer/` (canvas, renderer, Add / Navigator / Pages panels, Style and Settings panels and
+  the site preview).
 
 To lift it out, move `lib/studio` and `components/studio` into their own package and keep the design system as
 a dependency.

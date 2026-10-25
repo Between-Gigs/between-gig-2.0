@@ -87,9 +87,56 @@ export interface Collection {
   views: View[];
 }
 
+/* Pages: the Designer's canvas, built from elements like a site builder. */
+
+export type Breakpoint = "base" | "tablet" | "phone";
+
+/** CSS properties by camelCase name, as strings ("24px", "flex", "token:ink"). Colours may name a token. */
+export type StyleProps = Partial<Record<string, string>>;
+
+/** Styles per breakpoint. Tablet inherits from base, phone from tablet. */
+export type Styles = Partial<Record<Breakpoint, StyleProps>>;
+
+export type ElementType =
+  | "body" | "section" | "container" | "div" | "columns" | "heading" | "paragraph" | "text" | "link" | "button"
+  | "image" | "divider" | "collection" | "item";
+
+export interface PageElement {
+  id: string;
+  type: ElementType;
+  /** The name in the navigator, if renamed. */
+  label?: string;
+  /** Shared style: every element with this class looks the same. */
+  cls?: string;
+  /** Styles for this element only, on top of its class. */
+  styles: Styles;
+  text?: string;
+  /** heading: 1 to 6. */
+  level?: number;
+  src?: string;
+  alt?: string;
+  href?: string;
+  newTab?: boolean;
+  /** Inside a collection list: the field this element shows (text, image or link). */
+  bind?: string;
+  /** collection: which records, how many and in what order. */
+  source?: { collectionId: string; limit: number; sortField?: string; sortDir?: "asc" | "desc"; filterField?: string; filterValue?: string };
+  children?: PageElement[];
+}
+
+export interface Page {
+  id: string;
+  name: string;
+  slug: string;
+  root: PageElement;
+}
+
 export interface Base {
   id: string;
   name: string;
   version: 1;
   collections: Collection[];
+  pages: Page[];
+  /** Named styles shared by elements (Webflow-style classes). */
+  classes: Record<string, Styles>;
 }

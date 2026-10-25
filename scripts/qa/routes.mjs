@@ -1,8 +1,9 @@
-// Studio: opens a collection from the navigator, or from its drawer on narrow screens.
-const studioOpen = async (page, name) => {
-  const menu = page.getByRole("button", { name: "Open collections" });
-  if (await menu.isVisible()) { await menu.click(); await page.getByRole("dialog").getByRole("button", { name: new RegExp(`^${name}`) }).first().click(); }
-  else await page.getByRole("complementary").getByRole("button", { name: new RegExp(`^${name}`) }).first().click();
+// Studio: opens the CMS and a collection, from the tool bar or, on narrow screens, the panels drawer.
+const studioCms = async (page, name) => {
+  const menu = page.getByRole("button", { name: "Open panels" });
+  if (await menu.isVisible()) { await menu.click(); await page.getByRole("dialog").getByRole("button", { name: "CMS", exact: true }).click(); if (name) await page.getByRole("dialog").getByRole("button", { name: new RegExp(`^${name}`) }).first().click(); else await page.keyboard.press("Escape"); }
+  else { await page.getByRole("button", { name: "CMS (J)" }).click(); if (name) await page.getByRole("complementary", { name: "CMS" }).getByRole("button", { name: new RegExp(`^${name}`) }).first().click(); }
+  await page.locator("main [role=tablist]").waitFor();
 };
 
 // Every route QA visits, with the sample state it needs. `setup` runs in the page with window.bgSample
@@ -15,15 +16,19 @@ export const routes = [
   { name: "preview-guide", path: "/preview/", ready: "h1" },
   { name: "preview-cursors", path: "/preview/cursors/", ready: "h1" },
   { name: "preview-curtain", path: "/preview/curtain/", ready: "h1" },
-  // Studio: the no-code editor and CMS.
-  { name: "studio-table", path: "/studio/", ready: "[role=grid]" },
-  { name: "studio-kanban", path: "/studio/", ready: "[role=grid]", act: async (page) => { await page.getByRole("tab", { name: "Review pipeline" }).click(); await page.locator("main section").first().waitFor(); } },
-  { name: "studio-gallery", path: "/studio/", ready: "[role=grid]", act: async (page) => { await page.getByRole("tab", { name: "Directory" }).click(); await page.waitForTimeout(200); } },
+  // Studio: the Webflow-style designer and the CMS.
+  { name: "studio-designer", path: "/studio/", ready: "[data-el]" },
+  { name: "studio-designer-selected", path: "/studio/", ready: "[data-el]", act: async (page) => { await page.locator("[data-el] h1").first().click(); await page.waitForTimeout(200); } },
+  { name: "studio-designer-add", path: "/studio/", ready: "[data-el]", act: async (page) => { await page.locator("body").press("a"); await page.waitForTimeout(200); } },
+  { name: "studio-table", path: "/studio/", ready: "[data-el]", act: async (page) => { await studioCms(page); } },
+  { name: "studio-kanban", path: "/studio/", ready: "[data-el]", act: async (page) => { await studioCms(page); await page.getByRole("tab", { name: "Review pipeline" }).click(); await page.locator("main section").first().waitFor(); } },
+  { name: "studio-gallery", path: "/studio/", ready: "[data-el]", act: async (page) => { await studioCms(page); await page.getByRole("tab", { name: "Directory" }).click(); await page.waitForTimeout(200); } },
   {
-    name: "studio-record", path: "/studio/", ready: "[role=grid]",
-    act: async (page) => { await studioOpen(page, "Journal"); await page.getByRole("tab", { name: "Covers" }).click(); await page.locator("main ul li button").first().click(); await page.waitForTimeout(200); },
+    name: "studio-record", path: "/studio/", ready: "[data-el]",
+    act: async (page) => { await studioCms(page, "Journal"); await page.getByRole("tab", { name: "Covers" }).click(); await page.locator("main ul li button").first().click(); await page.waitForTimeout(200); },
   },
-  { name: "studio-calendar", path: "/studio/", ready: "[role=grid]", act: async (page) => { await studioOpen(page, "Journal"); await page.getByRole("tab", { name: "Publishing calendar" }).click(); await page.waitForTimeout(200); } },
+  { name: "studio-calendar", path: "/studio/", ready: "[data-el]", act: async (page) => { await studioCms(page, "Journal"); await page.getByRole("tab", { name: "Publishing calendar" }).click(); await page.waitForTimeout(200); } },
+  { name: "studio-site", path: "/studio/site/", ready: "main h1" },
   // Milestone 5b: home page proposals.
   { name: "proposal-visitor", path: "/proposals/home/", setup: reset, ready: "#proposal-h" },
   { name: "proposal-gigster", path: "/proposals/home/?view=gigster", setup: reset, ready: "#g-hello" },

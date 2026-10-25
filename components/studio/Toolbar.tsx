@@ -187,7 +187,7 @@ export function Toolbar({ onNew }: { onNew: () => void }) {
         </Popover>
       )}
       <span className="ml-auto shrink-0" />
-      <span className="hidden shrink-0 sm:inline-flex"><Button size="sm" variant="primary" iconStart={<Plus />} onClick={onNew}>New record</Button></span>
+      <span className="hidden shrink-0 sm:inline-flex"><Button size="sm" variant="secondary" iconStart={<Plus />} onClick={onNew}>New item</Button></span>
     </div>
   );
 }

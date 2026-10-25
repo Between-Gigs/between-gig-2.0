@@ -8,6 +8,7 @@ import { buildWaitlist, seedPeople } from "@/lib/data/seed";
 import { offSetServices, onSetSkills, waitlistCategories } from "@/lib/data/taxonomy";
 import { scenePages } from "@/lib/storyboard";
 import type { Person } from "@/lib/data/types";
+import { seedClasses, seedPages } from "./pages";
 import { newView } from "./query";
 import type { Base, CellValue, Choice, Collection, Field, StudioRecord, View } from "./types";
 
@@ -143,5 +144,5 @@ function waitlist(): Collection {
 export function seedBase(): Base {
   const svc = services();
   const ids = new Map(svc.records.map((r) => [String(r.values.name), r.id]));
-  return { id: "between-gigs", name: "Between Gigs", version: 1, collections: [gigsters(ids), journal(), storyboard(), svc, waitlist()] };
+  return { id: "between-gigs", name: "Between Gigs", version: 1, collections: [gigsters(ids), journal(), storyboard(), svc, waitlist()], pages: seedPages(), classes: seedClasses() };
 }

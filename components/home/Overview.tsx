@@ -33,7 +33,7 @@ const pages = [
   { href: "/emails/", thumb: "emails", title: "Emails", body: "Every email, and the sample outbox." },
   { href: "/preview/cursors/", thumb: "cursors", title: "Mouse effects", body: "Try five mouse effects and pick one for the site." },
   { href: "/preview/curtain/", thumb: "home", title: "Curtain tuner", body: "Tune the home page curtain live and copy your favourite settings." },
-  { href: "/studio/", thumb: "studio", title: "Studio", body: "The no-code editor and CMS: tables, galleries, kanban, lists and calendars." },
+  { href: "/studio/", thumb: "studio", title: "Studio", body: "A Webflow-style page designer with a CMS: tables, galleries, kanban, lists and calendars." },
 ];
 
 /**

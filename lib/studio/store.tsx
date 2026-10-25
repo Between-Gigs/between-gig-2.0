@@ -5,8 +5,9 @@
  */
 import * as React from "react";
 import { blankValue, newView, uid } from "./query";
+import { cloneEl, findEl, findParent, insertEl, moveEl, newElement, removeEl, seedClasses, seedPages } from "./pages";
 import { seedBase } from "./seed";
-import type { Base, CellValue, Collection, CollectionIcon, Field, StudioRecord, View, ViewType } from "./types";
+import type { Base, Breakpoint, CellValue, Collection, CollectionIcon, ElementType, Field, Page, PageElement, StudioRecord, View, ViewType } from "./types";
 
 const KEY = "bg-studio-v1";
 const LIMIT = 60;
@@ -14,7 +15,15 @@ const LIMIT = 60;
 function load(): Base {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) { const b = JSON.parse(raw) as Base; if (b.version === 1 && Array.isArray(b.collections)) return b; }
+    if (raw) {
+      const b = JSON.parse(raw) as Base;
+      if (b.version === 1 && Array.isArray(b.collections)) {
+        // Bases saved before the Designer existed get the sample pages and classes.
+        if (!Array.isArray(b.pages)) { b.pages = seedPages(); b.classes = { ...seedClasses(), ...(b.classes ?? {}) }; }
+        b.classes ??= {};
+        return b;
+      }
+    }
   } catch { /* blocked or corrupt: start from the seed */ }
   return seedBase();
 }
@@ -39,6 +48,21 @@ export interface StudioActions {
   addView: (collectionId: string, type: ViewType) => string;
   updateView: (collectionId: string, viewId: string, patch: Partial<View>) => void;
   deleteView: (collectionId: string, viewId: string) => void;
+  /* Designer. */
+  addPage: (name: string) => string;
+  updatePage: (pageId: string, patch: Partial<Omit<Page, "id" | "root">>) => void;
+  deletePage: (pageId: string) => void;
+  duplicatePage: (pageId: string) => string;
+  /** Adds a new element of a type at a place; returns its id. */
+  addElement: (pageId: string, type: ElementType, parentId: string, index: number) => string;
+  moveElement: (pageId: string, id: string, parentId: string, index: number) => void;
+  duplicateElement: (pageId: string, id: string) => string | null;
+  deleteElement: (pageId: string, id: string) => void;
+  updateElement: (pageId: string, id: string, patch: Partial<PageElement>, label?: string) => void;
+  /** Sets one style on the element's class (or the element itself when it has none) at a breakpoint. Empty clears it. */
+  setStyle: (pageId: string, id: string, bp: Breakpoint, prop: string, value: string, target?: "class" | "element") => void;
+  /** Gives an element a class; an unknown name becomes a new class holding the element's current styles. */
+  setClass: (pageId: string, id: string, cls: string | undefined) => void;
 }
 
 interface StudioState {
@@ -57,6 +81,19 @@ export function useStudio() {
   if (!s) throw new Error("useStudio needs <StudioProvider>");
   return s;
 }
+
+const page = (b: Base, id: string) => {
+  const p = b.pages.find((x) => x.id === id);
+  if (!p) throw new Error(`No page ${id}`);
+  return p;
+};
+
+const slugify = (name: string, pages: Page[]) => {
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "page";
+  let s = base;
+  for (let n = 2; pages.some((p) => p.slug === s); n++) s = `${base}-${n}`;
+  return s;
+};
 
 const coll = (b: Base, id: string) => {
   const c = b.collections.find((x) => x.id === id);
@@ -187,6 +224,70 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
       deleteView: (cid, vid) => change("Deleted a view", (b) => {
         const c = coll(b, cid);
         if (c.views.length > 1) c.views = c.views.filter((v) => v.id !== vid);
+      }),
+      addPage: (name) => {
+        const id = uid("page");
+        change(`Added the page ${name}`, (b) => {
+          const root = newElement("body");
+          root.cls = b.classes.page ? "page" : undefined;
+          const section = newElement("section");
+          const container = newElement("container");
+          const heading = newElement("heading");
+          heading.text = name; heading.level = 1;
+          container.children = [heading];
+          section.children = [container];
+          root.children = [section];
+          b.pages.push({ id, name, slug: slugify(name, b.pages), root });
+        });
+        return id;
+      },
+      updatePage: (pid, patch) => change("Changed page settings", (b) => { const p = b.pages.find((x) => x.id === pid); if (p) Object.assign(p, patch); }),
+      deletePage: (pid) => change("Deleted a page", (b) => { if (b.pages.length > 1) b.pages = b.pages.filter((p) => p.id !== pid); }),
+      duplicatePage: (pid) => {
+        const id = uid("page");
+        change("Duplicated a page", (b) => {
+          const p = b.pages.find((x) => x.id === pid);
+          if (p) b.pages.push({ id, name: `${p.name} copy`, slug: slugify(`${p.name} copy`, b.pages), root: cloneEl(p.root) });
+        });
+        return id;
+      },
+      addElement: (pid, type, parentId, index) => {
+        const el = newElement(type);
+        change(`Added a ${type === "collection" ? "collection list" : type}`, (b) => { const p = page(b, pid); insertEl(p.root, parentId, index, el); });
+        return el.id;
+      },
+      moveElement: (pid, id, parentId, index) => change("Moved an element", (b) => moveEl(page(b, pid).root, id, parentId, index)),
+      duplicateElement: (pid, id) => {
+        let out: string | null = null;
+        change("Duplicated an element", (b) => {
+          const root = page(b, pid).root;
+          const el = findEl(root, id), at = findParent(root, id);
+          if (!el || !at || el.type === "item") return;
+          const copy = cloneEl(el);
+          out = copy.id;
+          at.parent.children!.splice(at.index + 1, 0, copy);
+        });
+        return out;
+      },
+      deleteElement: (pid, id) => change("Deleted an element", (b) => {
+        const root = page(b, pid).root;
+        const el = findEl(root, id);
+        if (el && el.type !== "body" && el.type !== "item") removeEl(root, id);
+      }),
+      updateElement: (pid, id, patch, label = "Changed an element") => change(label, (b) => { const el = findEl(page(b, pid).root, id); if (el) Object.assign(el, patch); }),
+      setStyle: (pid, id, bp, prop, value, target) => change("Changed a style", (b) => {
+        const el = findEl(page(b, pid).root, id);
+        if (!el) return;
+        const onClass = (target ?? (el.cls ? "class" : "element")) === "class" && el.cls;
+        const styles = onClass ? (b.classes[el.cls!] ??= {}) : el.styles;
+        const props = (styles[bp] ??= {});
+        if (value === "") delete props[prop]; else props[prop] = value;
+      }),
+      setClass: (pid, id, cls) => change(cls ? `Applied the class ${cls}` : "Removed a class", (b) => {
+        const el = findEl(page(b, pid).root, id);
+        if (!el) return;
+        if (cls && !b.classes[cls]) { b.classes[cls] = structuredClone(el.styles); el.styles = {}; }
+        el.cls = cls || undefined;
       }),
     };
   }, []);
