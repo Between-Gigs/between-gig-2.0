@@ -1,3 +1,10 @@
+// Studio: opens a collection from the navigator, or from its drawer on narrow screens.
+const studioOpen = async (page, name) => {
+  const menu = page.getByRole("button", { name: "Open collections" });
+  if (await menu.isVisible()) { await menu.click(); await page.getByRole("dialog").getByRole("button", { name: new RegExp(`^${name}`) }).first().click(); }
+  else await page.getByRole("complementary").getByRole("button", { name: new RegExp(`^${name}`) }).first().click();
+};
+
 // Every route QA visits, with the sample state it needs. `setup` runs in the page with window.bgSample
 // (the sample DataSource's demo controls); `ready` waits for content; `act` interacts before the shot.
 const reset = () => window.bgSample.reset();
@@ -8,6 +15,15 @@ export const routes = [
   { name: "preview-guide", path: "/preview/", ready: "h1" },
   { name: "preview-cursors", path: "/preview/cursors/", ready: "h1" },
   { name: "preview-curtain", path: "/preview/curtain/", ready: "h1" },
+  // Studio: the no-code editor and CMS.
+  { name: "studio-table", path: "/studio/", ready: "[role=grid]" },
+  { name: "studio-kanban", path: "/studio/", ready: "[role=grid]", act: async (page) => { await page.getByRole("tab", { name: "Review pipeline" }).click(); await page.locator("main section").first().waitFor(); } },
+  { name: "studio-gallery", path: "/studio/", ready: "[role=grid]", act: async (page) => { await page.getByRole("tab", { name: "Directory" }).click(); await page.waitForTimeout(200); } },
+  {
+    name: "studio-record", path: "/studio/", ready: "[role=grid]",
+    act: async (page) => { await studioOpen(page, "Journal"); await page.getByRole("tab", { name: "Covers" }).click(); await page.locator("main ul li button").first().click(); await page.waitForTimeout(200); },
+  },
+  { name: "studio-calendar", path: "/studio/", ready: "[role=grid]", act: async (page) => { await studioOpen(page, "Journal"); await page.getByRole("tab", { name: "Publishing calendar" }).click(); await page.waitForTimeout(200); } },
   // Milestone 5b: home page proposals.
   { name: "proposal-visitor", path: "/proposals/home/", setup: reset, ready: "#proposal-h" },
   { name: "proposal-gigster", path: "/proposals/home/?view=gigster", setup: reset, ready: "#g-hello" },

@@ -32,6 +32,8 @@
   html { scroll-padding-top: --spacing(20); }
   /* Anchor targets clear the sticky header. */
   :target { scroll-margin-top: --spacing(24); }
+  /* Search fields bring their own clear button (Studio's toolbar); hide the browser's second one. */
+  input[type=search]::-webkit-search-cancel-button { appearance: none; }
 }
 
 /* Mouse-effect colours (lib/cursor-fx.ts): forest ink by day, mint by night. */
