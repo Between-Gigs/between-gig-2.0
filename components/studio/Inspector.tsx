@@ -17,7 +17,7 @@ export function InspectorBody({ onClose }: { onClose?: () => void }) {
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center gap-2 border-b border-line px-3 py-2">
         <SegmentedControl size="sm" label="Inspector" className="flex-1" value={ui.mode} onChange={(m) => ui.inspect(m as InspectorMode, m === "record" ? ui.recordId : m === "field" ? ui.fieldId : null)}
-          options={[{ value: "record", label: "Record" }, { value: "field", label: "Field" }, { value: "view", label: "View" }]} />
+          options={[{ value: "record", label: "Item" }, { value: "field", label: "Field" }, { value: "view", label: "View" }]} />
         {onClose && <IconButton size="sm" variant="ghost" label="Close panel" icon={<X />} onClick={onClose} />}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -42,7 +42,7 @@ function RecordPanel() {
   const [confirm, setConfirm] = React.useState(false);
   const c = ui.collection;
   const r = c.records.find((x) => x.id === ui.recordId);
-  if (!r) return <Nothing title="No record selected" text="Click a row, card or day to see and edit every field of a record here." />;
+  if (!r) return <Nothing title="No item selected" text="Click a row, card or day to see and edit every field of an item here." />;
   const rows = viewRecords(c, ui.view, ui.search, ui.lookup);
   const i = rows.findIndex((x) => x.id === r.id);
   const go = (d: number) => { const n = rows[i + d]; if (n) ui.inspect("record", n.id); };
@@ -55,8 +55,8 @@ function RecordPanel() {
           <span className="text-caption text-ink-subtle">Added {formatDate(r.createdAt)}</span>
         </div>
         <div className="flex shrink-0">
-          <IconButton size="sm" variant="ghost" label="Previous record" icon={<ChevronLeft />} onClick={() => go(-1)} disabled={i <= 0} title={i <= 0 ? "This is the first record" : "Previous record"} />
-          <IconButton size="sm" variant="ghost" label="Next record" icon={<ChevronRight />} onClick={() => go(1)} disabled={i < 0 || i >= rows.length - 1} title={i >= rows.length - 1 ? "This is the last record" : "Next record"} />
+          <IconButton size="sm" variant="ghost" label="Previous item" icon={<ChevronLeft />} onClick={() => go(-1)} disabled={i <= 0} title={i <= 0 ? "This is the first item" : "Previous item"} />
+          <IconButton size="sm" variant="ghost" label="Next item" icon={<ChevronRight />} onClick={() => go(1)} disabled={i < 0 || i >= rows.length - 1} title={i >= rows.length - 1 ? "This is the last item" : "Next item"} />
         </div>
       </div>
       <form className="grid gap-4 px-4 py-3" onSubmit={(e) => e.preventDefault()}>
@@ -78,7 +78,7 @@ function RecordPanel() {
         <Button size="sm" variant="ghost" iconStart={<Copy />} onClick={() => ui.inspect("record", actions.duplicateRecord(c.id, r.id))}>Duplicate</Button>
         <Button size="sm" variant="ghost" iconStart={<Trash2 />} className="text-danger" onClick={() => setConfirm(true)}>Delete</Button>
       </div>
-      <ConfirmDialog open={confirm} onCancel={() => setConfirm(false)} tone="danger" confirmLabel="Delete record"
+      <ConfirmDialog open={confirm} onCancel={() => setConfirm(false)} tone="danger" confirmLabel="Delete item"
         title={`Delete ${recordTitle(c, r)}?`} description="It disappears from every view and any links to it are removed. You can undo this."
         onConfirm={() => { actions.deleteRecords(c.id, [r.id]); setConfirm(false); ui.inspect("record", rows[i + 1]?.id ?? rows[i - 1]?.id ?? null); }} />
     </div>
@@ -162,7 +162,7 @@ function FieldPanel() {
         <div className="flex flex-wrap gap-2">
           {!primary && <Button size="sm" variant="secondary" onClick={() => actions.updateView(c.id, ui.view.id, { hidden: ui.view.hidden.includes(f.id) ? ui.view.hidden.filter((x) => x !== f.id) : [...ui.view.hidden, f.id] })}>{ui.view.hidden.includes(f.id) ? "Show" : "Hide"}</Button>}
           {!primary && ["text", "email", "url", "number", "date"].includes(f.type) && <Button size="sm" variant="ghost" onClick={() => actions.change("Changed the title field", (b) => { const x = b.collections.find((y) => y.id === c.id); if (x) x.primaryField = f.id; })}>Use as title</Button>}
-          {primary && <span className="text-body-sm text-ink-muted">This is the title field: it names each record on cards and in links.</span>}
+          {primary && <span className="text-body-sm text-ink-muted">This is the title field: it names each item on cards and in links.</span>}
         </div>
       </Section>
       {!primary && (
@@ -171,7 +171,7 @@ function FieldPanel() {
         </Section>
       )}
       <ConfirmDialog open={confirm} onCancel={() => setConfirm(false)} tone="danger" confirmLabel="Delete field" title={`Delete ${f.name}?`}
-        description={`${used} record${used === 1 ? "" : "s"} have a value in it. The values go with the field. You can undo this.`}
+        description={`${used} item${used === 1 ? "" : "s"} have a value in it. The values go with the field. You can undo this.`}
         onConfirm={() => { actions.deleteField(c.id, f.id); setConfirm(false); ui.inspect("field", null); }} />
     </div>
   );
@@ -228,7 +228,7 @@ function ViewPanel() {
       {v.type !== "calendar" && <Section title="Fields"><FieldsPanel view={v} /></Section>}
       <Section title="Shown">
         <div className="flex flex-wrap gap-1.5">
-          {v.filters.length ? <Chip label={`${v.filters.length} filter${v.filters.length > 1 ? "s" : ""}`} color={6} /> : <span className="text-body-sm text-ink-muted">Every record, no filters.</span>}
+          {v.filters.length ? <Chip label={`${v.filters.length} filter${v.filters.length > 1 ? "s" : ""}`} color={6} /> : <span className="text-body-sm text-ink-muted">Every item, no filters.</span>}
           {v.sorts.length > 0 && <Chip label={`Sorted by ${v.sorts.map((s) => c.fields.find((f) => f.id === s.fieldId)?.name).join(", ")}`} color={4} />}
         </div>
       </Section>

@@ -420,7 +420,10 @@ function Review({ d, notes, onEdit }: { d: ProfileFields; notes: { section: Prof
   // Each section folds away once checked. Sections that need something stay open.
   const [closed, setClosed] = React.useState<Set<number>>(new Set());
   const toggle = (i: number) => setClosed((c) => { const n = new Set(c); if (n.has(i)) n.delete(i); else n.add(i); return n; });
-  const allClosed = closed.size === SECTIONS.length;
+  // Collapse all only folds sections that are done; anything needing changes stays in view.
+  const needs = (i: number) => !!problems[i] || notes.some((n) => n.section === SECTIONS[i]);
+  const foldable = SECTIONS.map((_, i) => i).filter((i) => !needs(i));
+  const allClosed = foldable.length > 0 && foldable.every((i) => closed.has(i));
   return (
     <div className="grid gap-4">
       {notes.length > 0 ? (
@@ -430,14 +433,15 @@ function Review({ d, notes, onEdit }: { d: ProfileFields; notes: { section: Prof
       ) : ready
         ? <Banner tone="success" title="Ready for review">Go back and edit anything. When it looks right, submit it to the Between Gigs team.</Banner>
         : <Banner tone="warning" title="A few things to finish">The steps marked below need attention before you can submit.</Banner>}
-      <div className="flex justify-end">
+      {foldable.length > 0 && <div className="flex justify-end">
         <Button size="sm" variant="ghost" iconStart={allClosed ? <ChevronsUpDown /> : <ChevronsDownUp />}
-          onClick={() => setClosed(allClosed ? new Set() : new Set(SECTIONS.map((_, i) => i)))}>{allClosed ? "Expand all" : "Collapse all"}</Button>
-      </div>
+          onClick={() => setClosed(allClosed ? new Set() : new Set(foldable))}>{allClosed ? "Expand all" : foldable.length < SECTIONS.length ? "Collapse finished sections" : "Collapse all"}</Button>
+      </div>}
       {SECTIONS.map((section, i) => {
         const missing = problems[i];
         const note = notes.find((n) => n.section === section);
         const open = !closed.has(i);
+        const summary = [note && "1 team note", missing && `${Object.keys(missing).length} to finish`].filter(Boolean).join(" · ");
         return (
           <section key={section} aria-labelledby={`review-${section}`} className={cx("rounded-xl border p-4", missing || note ? "border-warning" : "border-line")}>
             <div className={cx("flex flex-wrap items-center justify-between gap-2", open && "mb-2")}>
@@ -451,6 +455,7 @@ function Review({ d, notes, onEdit }: { d: ProfileFields; notes: { section: Prof
                     : missing ? <Badge tone="warning" size="sm" icon={<AlertCircle />}>Needs attention</Badge> : <Badge tone="success" size="sm" icon={<Check />}>Complete</Badge>}
                 </button>
               </h3>
+              {!open && summary && <span className="ml-auto text-body-sm text-warning">{summary}</span>}
               <Button size="sm" variant="ghost" iconStart={<Pencil />} aria-label={`Edit ${sectionLabel[section]}`} onClick={(e) => onEdit(i, e.currentTarget)}>Edit</Button>
             </div>
             <div id={`review-body-${section}`} hidden={!open}>

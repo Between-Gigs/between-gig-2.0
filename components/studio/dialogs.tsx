@@ -46,7 +46,7 @@ export function AddFieldDialog() {
     ui.inspect("field", id);
   };
   return (
-    <Modal open={ui.addFieldOpen} onClose={() => ui.setAddFieldOpen(false)} size="lg" title="Add a field" description={`Fields are the details every record in ${ui.collection.name} can have.`}
+    <Modal open={ui.addFieldOpen} onClose={() => ui.setAddFieldOpen(false)} size="lg" title="Add a field" description={`Fields are the details every item in ${ui.collection.name} can have.`}
       footer={<><Button variant="ghost" onClick={() => ui.setAddFieldOpen(false)}>Cancel</Button><Button variant="primary" onClick={save} disabled={type === "link" && !target}>Add field</Button></>}>
       <form className="grid gap-5" onSubmit={(e) => { e.preventDefault(); save(); }}>
         <FormField label="Name"><Input value={name} onChange={(e) => setName(e.target.value)} placeholder={label} autoFocus /></FormField>

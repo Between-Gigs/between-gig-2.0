@@ -10,7 +10,7 @@ import { Chip, Thumb, colorCount } from "./ui";
 export function makeLookup(base: Base) {
   const titles = new Map<string, string>();
   for (const c of base.collections) for (const r of c.records) titles.set(r.id, recordTitle(c, r));
-  return (id: string) => titles.get(id) ?? "Removed record";
+  return (id: string) => titles.get(id) ?? "Removed item";
 }
 
 /** Every picture already in the base, for the image picker's library. */

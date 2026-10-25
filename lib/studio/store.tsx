@@ -144,7 +144,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
               ? [{ id: "name", name: "Name", type: "text" }, { id: "photo", name: "Photo", type: "image" }, { id: "role", name: "Role", type: "text" }, { id: "email", name: "Email", type: "email" }, { id: "phone", name: "Phone", type: "text" }]
               : [{ id: "name", name: "Name", type: "text" }, { id: "notes", name: "Notes", type: "longText" }];
           const c: Collection = { id, name, icon, primaryField: fields[0].id, fields, records: [], views: [] };
-          c.views = [newView("grid", c, "All records")];
+          c.views = [newView("grid", c, "All items")];
           if (template === "content") c.views.push(newView("gallery", c, "Gallery"));
           b.collections.push(c);
         });
@@ -152,7 +152,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
       },
       addRecord: (cid, values = {}) => {
         const id = uid("rec");
-        change("Added a record", (b) => {
+        change("Added an item", (b) => {
           const c = coll(b, cid);
           const v: Record<string, CellValue> = {};
           for (const f of c.fields) v[f.id] = values[f.id] ?? blankValue(f.type);
@@ -164,7 +164,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
         const r = coll(b, cid).records.find((x) => x.id === rid);
         if (r) r.values[fid] = value;
       }),
-      deleteRecords: (cid, ids) => change(ids.length === 1 ? "Deleted a record" : `Deleted ${ids.length} records`, (b) => {
+      deleteRecords: (cid, ids) => change(ids.length === 1 ? "Deleted an item" : `Deleted ${ids.length} items`, (b) => {
         const c = coll(b, cid);
         c.records = c.records.filter((r) => !ids.includes(r.id));
         // Links to deleted records go with them.
@@ -173,7 +173,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
       }),
       duplicateRecord: (cid, rid) => {
         const id = uid("rec");
-        change("Duplicated a record", (b) => {
+        change("Duplicated an item", (b) => {
           const c = coll(b, cid);
           const i = c.records.findIndex((r) => r.id === rid);
           if (i < 0) return;

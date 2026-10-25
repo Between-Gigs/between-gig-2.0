@@ -39,6 +39,13 @@ export function listRecords(base: Base, el: PageElement): { collection: Collecti
   return { collection, records: records.slice(0, Math.max(1, s.limit || 1)) };
 }
 
+/** Inside an empty box on the canvas: a quiet prompt, so people know it takes elements. */
+const dropHint = (
+  <span aria-hidden="true" style={{ display: "flex", minHeight: "64px", alignItems: "center", justifyContent: "center", color: "var(--ink-subtle)", fontSize: "13px", fontFamily: "var(--font-sans)", pointerEvents: "none" }}>
+    Drop elements here
+  </span>
+);
+
 const placeholder: React.CSSProperties = { outline: "1px dashed var(--line-strong)", outlineOffset: "-1px", minHeight: "64px" };
 
 /** Draws one element and its children, with the record a collection list hands down. */
@@ -64,9 +71,9 @@ export function RenderElement({ el, opts, ctx }: { el: PageElement; opts: Render
     case "body":
       return <div {...data} style={{ ...style, ...(canvas && !el.children?.length ? placeholder : {}) }}>{kids()}</div>;
     case "section":
-      return <section {...data} style={{ ...style, ...(empty ? placeholder : {}) }}>{kids()}</section>;
+      return <section {...data} style={{ ...style, ...(empty ? placeholder : {}) }}>{empty ? dropHint : kids()}</section>;
     case "container": case "div": case "columns":
-      return <div {...data} style={{ ...style, ...(empty ? placeholder : {}) }}>{kids()}</div>;
+      return <div {...data} style={{ ...style, ...(empty ? placeholder : {}) }}>{empty ? dropHint : kids()}</div>;
     case "item":
       return <div role="listitem" {...data} style={{ ...style, ...(empty ? placeholder : {}) }}>{kids()}</div>;
     case "heading": {

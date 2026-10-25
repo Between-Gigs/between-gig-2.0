@@ -55,11 +55,11 @@ export function GalleryView({ rows, onNew }: { rows: StudioRecord[]; onNew: () =
         {rows.map((r) => <li key={r.id}><RecordCard r={r} dense={ui.view.cardSize === "sm"} /></li>)}
         <li>
           <button type="button" onClick={onNew} className="flex h-full min-h-40 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line-strong text-label-md text-ink-muted hover:bg-surface-hover hover:text-ink">
-            <Plus className="size-5" aria-hidden="true" /> New record
+            <Plus className="size-5" aria-hidden="true" /> New item
           </button>
         </li>
       </ul>
-      {!rows.length && <p className="pt-4 text-body-md text-ink-muted">No records match. Clear the search or filters to see everything.</p>}
+      {!rows.length && <p className="pt-4 text-body-md text-ink-muted">No items match. Clear the search or filters to see everything.</p>}
     </div>
   );
 }
@@ -86,14 +86,14 @@ export function KanbanView({ rows, onNew }: { rows: StudioRecord[]; onNew: (valu
   return (
     <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto p-4 sm:p-6">
       {groups.map((g) => (
-        <section key={g.id} aria-label={`${g.label}, ${g.rows.length} records`}
+        <section key={g.id} aria-label={`${g.label}, ${g.rows.length} items`}
           onDragOver={(e) => { if (drag) { e.preventDefault(); setOver(g.id); } }} onDragLeave={() => setOver((o) => (o === g.id ? null : o))}
           onDrop={() => { if (drag) moveTo(drag, g.id); setDrag(null); setOver(null); }}
           className={cx("flex max-h-full w-72 shrink-0 flex-col rounded-lg border-t-4 bg-surface-sunken", rail(g.color), over === g.id && "ring-2 ring-action")}>
           <header className="flex items-center gap-2 px-3 pt-3 pb-2">
             <Chip label={g.label} color={g.color} />
             <span className="text-label-sm text-ink-subtle">{g.rows.length}</span>
-            <button type="button" onClick={() => onNew({ [field.id]: valueFor(g.id) })} aria-label={`New record in ${g.label}`} className="ml-auto inline-flex size-7 items-center justify-center rounded-md text-ink-muted hover:bg-surface-hover hover:text-ink"><Plus className="size-4" /></button>
+            <button type="button" onClick={() => onNew({ [field.id]: valueFor(g.id) })} aria-label={`New item in ${g.label}`} className="ml-auto inline-flex size-7 items-center justify-center rounded-md text-ink-muted hover:bg-surface-hover hover:text-ink"><Plus className="size-4" /></button>
           </header>
           <ul className="grid min-h-16 content-start gap-2 overflow-y-auto px-2 pb-2">
             {g.rows.map((r) => (
@@ -147,7 +147,7 @@ export function ListView({ rows, onNew }: { rows: StudioRecord[]; onNew: () => v
           );
         })}
       </ul>
-      {!rows.length && <p className="pt-4 text-center text-body-md text-ink-muted">No records match. Clear the search or filters to see everything.</p>}
+      {!rows.length && <p className="pt-4 text-center text-body-md text-ink-muted">No items match. Clear the search or filters to see everything.</p>}
     </div>
   );
 }

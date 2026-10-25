@@ -1,8 +1,8 @@
 "use client";
 import { cx, useToast } from "@ds/components";
-import { ChevronRight, GripVertical } from "lucide-react";
+import { ChevronRight, GripVertical, X } from "lucide-react";
 import * as React from "react";
-import { accepts, cloneEl, contains, elementInfo, elementName, findEl, findParent, pathTo } from "@/lib/studio/pages";
+import { accepts, cloneEl, contains, elementInfo, elementName, findEl, findParent, pathTo, stepMove } from "@/lib/studio/pages";
 import { useStudio } from "@/lib/studio/store";
 import type { PageElement } from "@/lib/studio/types";
 import { useUi } from "../context";
@@ -122,6 +122,7 @@ export function Canvas() {
       const parent = findParent(root, selected.id)?.parent.id ?? null;
       actions.deleteElement(d.page.id, selected.id);
       d.select(parent);
+      toast({ message: `Deleted ${elementName(selected)}`, action: { label: "Undo", onClick: () => { actions.undo(); d.select(selected.id); } } });
     } else if (mod && e.key.toLowerCase() === "d") {
       e.preventDefault();
       const id = actions.duplicateElement(d.page.id, selected.id);
@@ -142,7 +143,20 @@ export function Canvas() {
         if (parent) { parent.children ??= []; parent.children.splice(at.index, 0, copy); }
       });
       d.select(copy.id);
-    } else if (e.key === "Escape") {
+    } else if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+      // Alt+arrows move the element among its siblings: the keyboard (and touch) way to reorder.
+      e.preventDefault();
+      const to = stepMove(root, selected.id, e.key === "ArrowUp" ? -1 : 1);
+      if (to) actions.moveElement(d.page.id, selected.id, to.parentId, to.index);
+    } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      e.preventDefault();
+      const at = findParent(root, selected.id);
+      const next = at?.parent.children?.[at.index + (e.key === "ArrowUp" ? -1 : 1)];
+      if (next) d.select(next.id);
+    } else if (e.key === "ArrowRight" && selected.children?.length) {
+      e.preventDefault();
+      d.select(selected.children[0].id);
+    } else if (e.key === "Escape" || e.key === "ArrowLeft") {
       d.select(findParent(root, selected.id)?.parent.id ?? null);
     } else if (e.key === "Enter" && ["heading", "paragraph", "text", "link", "button"].includes(selected.type) && !selected.bind) {
       e.preventDefault();
@@ -173,7 +187,8 @@ export function Canvas() {
   React.useEffect(() => { setCoarse(window.matchMedia("(pointer: coarse)").matches); }, []); // eslint-disable-line react-hooks/set-state-in-effect
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      <FirstRunTip />
       <p className="border-b border-line bg-info-soft px-3 py-2 text-body-sm text-ink md:hidden">The Designer works best on a larger screen. You can still select, edit text and change styles here.</p>
       <div ref={stage} onScroll={() => d.remeasure()}
         className={cx("relative min-h-0 flex-1 overflow-auto bg-surface-sunken", d.bp !== "base" && "sm:px-6 sm:py-6")}>
@@ -222,5 +237,29 @@ export function Canvas() {
         )) : <span className="truncate px-1.5 text-caption text-ink-subtle">{coarse ? "Tap anything to select it. Double-tap text to edit it." : "Click anything on the canvas to select it. Double-click text to edit it."}</span>}
       </nav>
     </div>
+  );
+}
+
+const TIP_KEY = "studio-tip-dismissed";
+
+/** Three steps for someone who has never used a site builder. Shown until dismissed, once per browser. */
+function FirstRunTip() {
+  const [show, setShow] = React.useState(false);
+  React.useEffect(() => { try { setShow(localStorage.getItem(TIP_KEY) !== "1"); } catch { /* ignore */ } }, []); // eslint-disable-line react-hooks/set-state-in-effect
+  if (!show) return null;
+  const close = () => { setShow(false); try { localStorage.setItem(TIP_KEY, "1"); } catch { /* ignore */ } };
+  return (
+    <section aria-labelledby="tip-h" className="absolute bottom-12 left-4 z-dropdown hidden w-80 rounded-lg border border-line bg-surface-raised p-4 shadow-lg md:block">
+      <div className="flex items-start justify-between gap-2">
+        <h2 id="tip-h" className="text-label-md text-ink">New to Studio? Three steps</h2>
+        <button type="button" onClick={close} aria-label="Dismiss the tips" className="-mt-1 -mr-1 inline-flex size-8 items-center justify-center rounded-md text-ink-muted hover:bg-surface-hover"><X className="size-4" /></button>
+      </div>
+      <ol className="mt-2 grid gap-1.5 text-body-sm text-ink-muted">
+        <li><b className="font-semibold text-ink">1. Add</b>: press A (or +) and drag an element onto the page.</li>
+        <li><b className="font-semibold text-ink">2. Select</b>: click anything; double-click text to edit it.</li>
+        <li><b className="font-semibold text-ink">3. Style</b>: change it on the right. Everything can be undone.</li>
+      </ol>
+      <button type="button" onClick={close} className="mt-3 inline-flex min-h-8 items-center text-label-sm text-link underline underline-offset-2">Got it</button>
+    </section>
   );
 }

@@ -25,7 +25,7 @@ export function CalendarView({ rows, onNew }: { rows: StudioRecord[]; onNew: (va
     return (
       <div className="grid flex-1 place-content-center gap-2 p-10 text-center">
         <h2 className="font-display text-heading-lg text-ink">Add a Date field</h2>
-        <p className="max-w-sm text-body-md text-ink-muted">The calendar places records on a date. Add a Date field to {c.name}, then choose it in the view settings.</p>
+        <p className="max-w-sm text-body-md text-ink-muted">The calendar places items on a date. Add a Date field to {c.name}, then choose it in the view settings.</p>
       </div>
     );
   }
@@ -55,7 +55,7 @@ export function CalendarView({ rows, onNew }: { rows: StudioRecord[]; onNew: (va
               className={cx("group/day flex min-h-28 flex-col gap-1 p-1.5", inMonth ? "bg-surface" : "bg-surface-sunken")}>
               <div className="flex items-center justify-between">
                 <span className={cx("inline-flex size-6 items-center justify-center rounded-full text-label-sm", key === today ? "bg-action text-on-action" : inMonth ? "text-ink" : "text-ink-subtle")}>{d.getUTCDate()}</span>
-                <button type="button" aria-label={`New record on ${key}`} onClick={() => onNew({ [field.id]: key })}
+                <button type="button" aria-label={`New item on ${key}`} onClick={() => onNew({ [field.id]: key })}
                   className="inline-flex size-6 items-center justify-center rounded-xs text-ink-subtle opacity-0 group-hover/day:opacity-100 hover:bg-surface-hover hover:text-ink focus-visible:opacity-100"><Plus className="size-3.5" /></button>
               </div>
               {list.slice(0, 3).map((r) => {

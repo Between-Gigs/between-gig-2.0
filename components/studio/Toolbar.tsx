@@ -58,7 +58,7 @@ function FilterPanel({ view }: { view: View }) {
   const add = () => { const f = c.fields[0]; set([...view.filters, { id: uid("flt"), fieldId: f.id, op: filterOps(f.type)[0].op, value: "" }]); };
   return (
     <div className="grid gap-3">
-      {!view.filters.length && <p className="text-body-sm text-ink-muted">Show only the records that match. Nothing is deleted.</p>}
+      {!view.filters.length && <p className="text-body-sm text-ink-muted">Show only the items that match. Nothing is deleted.</p>}
       {view.filters.length > 1 && (
         <Select size="sm" value={view.match} onValueChange={(m) => set(view.filters, m as View["match"])} aria-label="Match"
           options={[{ value: "and", label: "Match every condition" }, { value: "or", label: "Match any condition" }]} />
@@ -100,7 +100,7 @@ function SortPanel({ view }: { view: View }) {
   const unused = c.fields.filter((f) => !view.sorts.some((s) => s.fieldId === f.id));
   return (
     <div className="grid gap-2">
-      {!view.sorts.length && <p className="text-body-sm text-ink-muted">Order records by one or more fields.</p>}
+      {!view.sorts.length && <p className="text-body-sm text-ink-muted">Order items by one or more fields.</p>}
       {view.sorts.map((s, i) => (
         <div key={s.fieldId} className="flex gap-1.5">
           <Select size="sm" className="min-w-0 flex-1" value={s.fieldId} aria-label="Sort by" onValueChange={(id) => set(view.sorts.map((x, j) => (j === i ? { ...x, fieldId: id } : x)))}

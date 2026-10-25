@@ -176,7 +176,7 @@ export function GridView({ rows, onNew }: { rows: StudioRecord[]; onNew: (values
                 <td colSpan={fields.length + 2} className="sticky left-0 border-b border-line bg-surface p-0">
                   <button type="button" onClick={() => onNew(group && g.id ? { [group.id]: group.type === "checkbox" ? g.id === "yes" : g.id } : undefined)}
                     className="flex h-10 items-center gap-2 px-3 text-label-sm text-ink-muted hover:text-ink">
-                    <Plus className="size-4" aria-hidden="true" /> New record{group && g.id ? ` in ${g.label}` : ""}
+                    <Plus className="size-4" aria-hidden="true" /> New item{group && g.id ? ` in ${g.label}` : ""}
                   </button>
                 </td>
               </tr>
@@ -184,7 +184,7 @@ export function GridView({ rows, onNew }: { rows: StudioRecord[]; onNew: (values
           </tbody>
         ))}
       </table>
-      {!rows.length && <p className="px-4 py-6 text-body-md text-ink-muted">No records match. Clear the search or filters to see everything.</p>}
+      {!rows.length && <p className="px-4 py-6 text-body-md text-ink-muted">No items match. Clear the search or filters to see everything.</p>}
     </div>
   );
 }
@@ -226,8 +226,8 @@ export function Empty({ name, onNew }: { name: string; onNew: () => void }) {
     <div className="grid flex-1 place-content-center justify-items-center gap-3 p-10 text-center">
       <span className="inline-flex size-12 items-center justify-center rounded-xl bg-surface-sunken text-ink-subtle"><Plus className="size-6" aria-hidden="true" /></span>
       <h2 className="font-display text-heading-lg text-ink">{name} is empty</h2>
-      <p className="max-w-sm text-body-md text-ink-muted">Add your first record with <strong className="font-semibold text-ink">New record</strong>, or add fields to shape what each record holds.</p>
-      <button type="button" onClick={onNew} className="text-label-md text-link underline underline-offset-2">Add a record</button>
+      <p className="max-w-sm text-body-md text-ink-muted">Add your first item with <strong className="font-semibold text-ink">New item</strong>, or add fields to shape what each item holds.</p>
+      <button type="button" onClick={onNew} className="text-label-md text-link underline underline-offset-2">Add an item</button>
     </div>
   );
 }

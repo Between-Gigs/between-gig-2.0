@@ -1,8 +1,8 @@
 "use client";
-import { Button, Input, Popover, Select, Switch, Textarea } from "@ds/components";
-import { Copy, Database, Trash2 } from "lucide-react";
+import { Button, Input, Popover, Select, Switch, Textarea, useToast } from "@ds/components";
+import { ArrowDown, ArrowUp, Copy, Database, Trash2 } from "lucide-react";
 import * as React from "react";
-import { elementInfo, elementName, findEl, findParent, pathTo } from "@/lib/studio/pages";
+import { elementInfo, elementName, findEl, findParent, pathTo, stepMove } from "@/lib/studio/pages";
 import { useStudio } from "@/lib/studio/store";
 import type { FieldType, PageElement } from "@/lib/studio/types";
 import { ImagePicker } from "../cells";
@@ -50,6 +50,7 @@ export function SettingsPanel() {
   const ui = useUi();
   const d = useDesign();
   const { actions } = useStudio();
+  const toast = useToast();
   const el = d.selectedId ? findEl(d.page.root, d.selectedId) : null;
   if (!el) return <p className="p-5 text-body-sm text-ink-muted">Select an element to change its content and settings.</p>;
   const set = (patch: Partial<PageElement>, label?: string) => actions.updateElement(d.page.id, el.id, patch, label);
@@ -78,7 +79,7 @@ export function SettingsPanel() {
 
       {coll && fields.length > 0 && (
         <Section title="Get content from the CMS">
-          <Labelled label={`Field in ${coll.name}`} hint={bound ? "Each item shows its own value." : "Pick a field to fill this from each record."}>
+          <Labelled label={`Field in ${coll.name}`} hint={bound ? "Each item shows its own value." : "Pick a field to fill this from each item."}>
             <Select size="sm" value={el.bind ?? ""} aria-label="Bound field" onValueChange={(v) => set({ bind: v || undefined }, v ? "Connected a field" : "Disconnected a field")}
               options={[{ value: "", label: "Not connected" }, ...fields.map((f) => ({ value: f.id, label: f.name }))]} />
           </Labelled>
@@ -152,9 +153,18 @@ export function SettingsPanel() {
       )}
 
       {el.type !== "body" && el.type !== "item" && (
-        <section className="flex gap-2 p-3">
+        <section className="flex flex-wrap gap-2 p-3">
+          {(() => {
+            const up = stepMove(d.page.root, el.id, -1), down = stepMove(d.page.root, el.id, 1);
+            return (
+              <>
+                <Button size="sm" variant="ghost" iconStart={<ArrowUp />} disabled={!up} title={up ? "Move up (Alt+↑)" : "Already first"} onClick={() => up && actions.moveElement(d.page.id, el.id, up.parentId, up.index)}>Move up</Button>
+                <Button size="sm" variant="ghost" iconStart={<ArrowDown />} disabled={!down} title={down ? "Move down (Alt+↓)" : "Already last"} onClick={() => down && actions.moveElement(d.page.id, el.id, down.parentId, down.index)}>Move down</Button>
+              </>
+            );
+          })()}
           <Button size="sm" variant="ghost" iconStart={<Copy />} onClick={() => { const id = actions.duplicateElement(d.page.id, el.id); if (id) d.select(id); }}>Duplicate</Button>
-          <Button size="sm" variant="ghost" iconStart={<Trash2 />} className="text-danger" onClick={() => { const p = findParent(d.page.root, el.id)?.parent.id ?? null; actions.deleteElement(d.page.id, el.id); d.select(p); }}>Delete</Button>
+          <Button size="sm" variant="ghost" iconStart={<Trash2 />} className="text-danger" onClick={() => { const p = findParent(d.page.root, el.id)?.parent.id ?? null; actions.deleteElement(d.page.id, el.id); d.select(p); toast({ message: `Deleted ${elementName(el)}`, action: { label: "Undo", onClick: () => { actions.undo(); d.select(el.id); } } }); }}>Delete</Button>
         </section>
       )}
     </div>

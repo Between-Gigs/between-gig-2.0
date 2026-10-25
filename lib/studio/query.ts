@@ -16,7 +16,7 @@ export const fieldTypes: { type: FieldType; label: string; hint: string }[] = [
   { type: "rating", label: "Rating", hint: "One to five stars" },
   { type: "url", label: "Web link", hint: "A website address" },
   { type: "email", label: "Email", hint: "An email address" },
-  { type: "link", label: "Link to collection", hint: "Connect to records in another collection" },
+  { type: "link", label: "Link to collection", hint: "Connect to items in another collection" },
 ];
 export const fieldTypeLabel = (t: FieldType) => fieldTypes.find((f) => f.type === t)?.label ?? t;
 
@@ -25,7 +25,7 @@ export const viewTypes: { type: ViewType; label: string; hint: string }[] = [
   { type: "gallery", label: "Gallery", hint: "Cards with a big image" },
   { type: "kanban", label: "Kanban", hint: "Columns by status; drag cards across" },
   { type: "list", label: "List", hint: "A clean list, like a content library" },
-  { type: "calendar", label: "Calendar", hint: "Records on the days they happen" },
+  { type: "calendar", label: "Calendar", hint: "Items on the days they happen" },
 ];
 export const viewTypeLabel = (t: ViewType) => viewTypes.find((v) => v.type === t)?.label ?? t;
 

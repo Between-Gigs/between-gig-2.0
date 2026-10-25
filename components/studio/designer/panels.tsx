@@ -125,12 +125,12 @@ export function NavigatorPanel() {
           {mark === "before" && <span aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-info" />}
           {mark === "after" && <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 bg-info" />}
           {kids.length ? (
-            <button type="button" aria-label={open ? `Collapse ${elementName(el)}` : `Expand ${elementName(el)}`} onClick={() => setClosed((s) => { const n = new Set(s); if (n.has(el.id)) n.delete(el.id); else n.add(el.id); return n; })}
+            <button type="button" tabIndex={-1} aria-label={open ? `Collapse ${elementName(el)}` : `Expand ${elementName(el)}`} onClick={() => setClosed((s) => { const n = new Set(s); if (n.has(el.id)) n.delete(el.id); else n.add(el.id); return n; })}
               className="inline-flex size-5 shrink-0 items-center justify-center text-ink-subtle hover:text-ink">
               {open ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
             </button>
           ) : <span className="size-5 shrink-0" />}
-          <button type="button" onClick={() => d.select(el.id)} className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
+          <button type="button" data-row={el.id} tabIndex={(d.selectedId ?? root.id) === el.id ? 0 : -1} onClick={() => d.select(el.id)} className="flex min-w-0 flex-1 items-center gap-1.5 rounded-xs text-left">
             <Icon className={cx("size-3.5 shrink-0", on ? "text-info" : el.bind ? "text-cat-5" : "text-ink-subtle")} />
             <span className="min-w-0 truncate">{elementName(el)}</span>
             {el.cls && <span className="min-w-0 shrink-3 truncate text-caption text-ink-subtle">.{el.cls}</span>}
@@ -144,7 +144,25 @@ export function NavigatorPanel() {
   return (
     <>
       <Head title="Navigator" />
-      <ul role="tree" aria-label={`Elements on ${d.page.name}`} className="min-h-0 flex-1 overflow-y-auto p-2">{row(root, 0)}</ul>
+      {/* One tab stop; arrows move through the tree, like a file list. */}
+      <ul role="tree" aria-label={`Elements on ${d.page.name}`} className="min-h-0 flex-1 overflow-y-auto p-2" onKeyDown={(e) => {
+        const rows = [...e.currentTarget.querySelectorAll<HTMLButtonElement>("[data-row]")];
+        const i = rows.indexOf(document.activeElement as HTMLButtonElement);
+        if (i < 0) return;
+        const id = rows[i].dataset.row!;
+        const go = (j: number) => { const r = rows[Math.max(0, Math.min(rows.length - 1, j))]; r.focus(); d.select(r.dataset.row!); };
+        if (e.key === "ArrowDown") { e.preventDefault(); go(i + 1); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); go(i - 1); }
+        else if (e.key === "Home") { e.preventDefault(); go(0); }
+        else if (e.key === "End") { e.preventDefault(); go(rows.length - 1); }
+        else if (e.key === "ArrowRight") { e.preventDefault(); if (closed.has(id)) setClosed((s) => { const n = new Set(s); n.delete(id); return n; }); else go(i + 1); }
+        else if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          const el = findEl(root, id);
+          if (el?.children?.length && !closed.has(id)) setClosed((s) => new Set(s).add(id));
+          else { const p = findParent(root, id)?.parent.id; const r = rows.find((x) => x.dataset.row === p); if (r) { r.focus(); d.select(p!); } }
+        }
+      }}>{row(root, 0)}</ul>
     </>
   );
 }

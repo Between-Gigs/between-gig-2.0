@@ -9,8 +9,8 @@ import type { Breakpoint, ElementType, Page, PageElement, StyleProps, Styles } f
 
 export const breakpoints: { id: Breakpoint; label: string; width: number | null; hint: string }[] = [
   { id: "base", label: "Desktop", width: null, hint: "Base styles; tablet and phone inherit them" },
-  { id: "tablet", label: "Tablet", width: 768, hint: "768px and below" },
-  { id: "phone", label: "Phone", width: 390, hint: "478px and below" },
+  { id: "tablet", label: "Tablet", width: 768, hint: "Shown at 768px; applies to screens 991px and narrower" },
+  { id: "phone", label: "Phone", width: 390, hint: "Shown at 390px; applies to screens 478px and narrower" },
 ];
 const order: Breakpoint[] = ["base", "tablet", "phone"];
 
@@ -27,8 +27,8 @@ export const elementInfo: Record<ElementType, { label: string; container: boolea
   button: { label: "Button", container: false, hint: "A call to action" },
   image: { label: "Image", container: false, hint: "A photo or picture" },
   divider: { label: "Divider", container: false, hint: "A thin rule between things" },
-  collection: { label: "Collection List", container: false, hint: "Repeats a design for each record in a collection" },
-  item: { label: "Collection Item", container: true, hint: "The design repeated for each record" },
+  collection: { label: "Collection List", container: false, hint: "Repeats a design for each item in a collection" },
+  item: { label: "Collection Item", container: true, hint: "The design repeated for each item" },
 };
 
 export const addable: { group: string; types: ElementType[] }[] = [
@@ -266,4 +266,14 @@ export function seedPages(): Page[] {
     ]),
   };
   return [home, about];
+}
+
+/** Where an element can move by one step among its siblings, for Move up / Move down and Alt+arrows. */
+export function stepMove(root: PageElement, id: string, dir: -1 | 1): { parentId: string; index: number } | null {
+  const at = findParent(root, id);
+  if (!at || at.parent.type === "collection") return null;
+  const n = at.parent.children!.length;
+  if (dir === -1 ? at.index === 0 : at.index === n - 1) return null;
+  // moveEl removes first, so moving down one lands at index + 2 before the removal.
+  return { parentId: at.parent.id, index: dir === -1 ? at.index - 1 : at.index + 2 };
 }

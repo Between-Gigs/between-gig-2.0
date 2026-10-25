@@ -227,7 +227,7 @@ function Shell() {
                     { label: "Manage pages", icon: <Settings />, onSelect: () => setTool("pages") },
                   ]} />
               ) : (
-                <span className="inline-flex min-w-0 items-center gap-1.5 px-1 text-label-md text-ink"><Database className="size-4 shrink-0 text-ink-subtle" aria-hidden="true" /><span className="truncate">CMS · {collection.name}</span></span>
+                <span className="inline-flex min-w-0 items-center gap-1.5 px-1 text-label-md text-ink"><Database className="hidden size-4 shrink-0 text-ink-subtle sm:block" aria-hidden="true" /><span className="truncate"><span className="hidden sm:inline">CMS · </span>{collection.name}</span></span>
               )}
             </div>
 
@@ -247,8 +247,12 @@ function Shell() {
             )}
 
             <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5 sm:gap-1">
-              <span className="mr-1 hidden items-center gap-1.5 text-caption text-ink-subtle 2xl:flex" role="status" aria-live="polite">
-                <CloudCheck className="size-4" aria-hidden="true" />{lastChange ? `${lastChange} · saved` : "Saved in this browser"}
+              {/* Always say it's saved: the icon on every screen, the words where there's room. */}
+              <span className="mr-1 hidden items-center gap-1.5 text-caption text-ink-subtle sm:flex" role="status" aria-live="polite"
+                title={lastChange ? `${lastChange} · saved in this browser` : "Saved in this browser"}>
+                <CloudCheck className="size-4 text-success" aria-hidden="true" />
+                <span className="hidden 2xl:inline">{lastChange ? `${lastChange} · saved` : "Saved in this browser"}</span>
+                <span className="sr-only 2xl:hidden">{lastChange ? `${lastChange}, saved` : "Saved in this browser"}</span>
               </span>
               <IconButton size="sm" variant="ghost" label="Undo" icon={<Undo2 />} onClick={actions.undo} disabled={!canUndo} title={canUndo ? "Undo (Ctrl+Z)" : "Nothing to undo yet"} />
               <IconButton size="sm" variant="ghost" label="Redo" icon={<Redo2 />} onClick={actions.redo} disabled={!canRedo} title={canRedo ? "Redo (Ctrl+Shift+Z)" : "Nothing to redo"} />
@@ -341,7 +345,7 @@ function Shell() {
             {navOpen && <div className="flex min-h-0 flex-col border-t border-line">{panel ?? <p className="p-5 text-body-sm text-ink-muted">Pick a tool above.</p>}</div>}
           </div>
         </Drawer>
-        <RightDrawer title={area === "design" ? (rightTab === "style" ? "Style" : "Settings") : mode === "record" ? "Record" : mode === "field" ? "Field" : "View settings"}
+        <RightDrawer title={area === "design" ? (rightTab === "style" ? "Style" : "Settings") : mode === "record" ? "Item" : mode === "field" ? "Field" : "View settings"}
           open={inspectorOpen} onClose={() => setInspectorOpen(false)}>{right}</RightDrawer>
 
         <AddFieldDialog />
