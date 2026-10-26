@@ -72,7 +72,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
   ];
 
   return (
-    <div ref={root} className="relative">
+    <div ref={root} data-client-locked="" className="relative approved-type">
       {/* Ambient glow from the person's own work. */}
       {portfolio[0] && (
         <div aria-hidden="true" className="pointer-events-none absolute -top-8 left-1/2 -z-0 h-96 w-screen -translate-x-1/2 overflow-hidden">
@@ -123,7 +123,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
           </nav>
 
           <Section name="overview" title="About me">
-            <p className="max-w-prose font-serif text-editorial-lg whitespace-pre-line text-ink">{f.about}</p>
+            <p className="font-serif text-editorial-lg whitespace-pre-line text-ink">{f.about}</p>
             {sample && <p className="mt-2 text-caption text-ink-subtle">Illustrative biography for this fictional profile.</p>}
             <h3 className="mt-10 font-display text-heading-lg text-ink">What I can help you with</h3>
             <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
@@ -186,7 +186,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
               </div>
               <div className="rounded-2xl border border-line bg-surface p-5">
                 <h3 className="text-label-md text-ink">What's been checked</h3>
-                <p className="mt-1 text-body-md text-ink-muted">Profile details and credits are self-reported. The Between Gigs team reviews each profile before it goes live; no identity, qualification or insurance checks are claimed.</p>
+                <p className="mt-1 text-body-sm text-ink-muted">Profile details and credits are self-reported. The Between Gigs team reviews each profile before it goes live; no identity, qualification or insurance checks are claimed.</p>
                 <h3 className="mt-5 text-label-md text-ink">Languages</h3>
                 <p className="mt-1 text-body-sm text-ink-muted">{f.languages || "Not specified."}</p>
               </div>

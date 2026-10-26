@@ -23,6 +23,23 @@
   --text-caption--line-height: 18px;
 }
 
+/*
+ * The profile template as the client approved it (Oct 21): the design system's own type scale (13/15/17px) instead
+ * of the larger site-wide one above, so its lines wrap and its sections line up exactly as approved. Paired with
+ * data-client-locked for the readability checks.
+ */
+@utility approved-type {
+  --text-body-lg: 1.0625rem;
+  --text-body-lg--line-height: 26px;
+  --text-body-md: 0.9375rem;
+  --text-body-md--line-height: 22px;
+  --text-body-sm: 0.8125rem;
+  --text-body-sm--line-height: 18px;
+  --text-caption--line-height: 16px;
+  font-size: var(--text-body-md);
+  line-height: var(--text-body-md--line-height);
+}
+
 /* The owner sidebar collapsed to a rail: <html data-owner-nav="collapsed">, set before first paint. */
 @custom-variant nav-collapsed (&:where([data-owner-nav=collapsed] *));
 
