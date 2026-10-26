@@ -7,7 +7,7 @@
  */
 import { Badge, Button, Drawer, IconButton, Logo, Menu, Modal, SegmentedControl, Skeleton, ThemeToggle, cx } from "@ds/components";
 import {
-  Check, ChevronDown, CloudCheck, Database, Eye, EyeOff, FileText, Globe, Images, Layers, Menu as MenuIcon, Monitor, PanelRight, Plus,
+  AppWindow, Check, ChevronDown, CloudCheck, Code2, Database, Eye, EyeOff, FileText, Globe, Images, Layers, Menu as MenuIcon, Monitor, PanelRight, Plus,
   Redo2, Rocket, Settings, Share2, Smartphone, Tablet, Undo2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -17,7 +17,9 @@ import { viewRecords } from "@/lib/studio/query";
 import { StudioProvider, useStudio } from "@/lib/studio/store";
 import type { Breakpoint, CellValue } from "@/lib/studio/types";
 import { basePath } from "@/lib/site";
+import { appPages, collectionFor } from "@/lib/studio/app-pages";
 import { makeLookup } from "./cells";
+import { PageCode } from "./code/PageCode";
 import { UiContext, type InspectorMode, type UiState } from "./context";
 import { Canvas } from "./designer/Canvas";
 import { DesignContext, type DesignState, type DragItem } from "./designer/context";
@@ -27,6 +29,7 @@ import { SettingsPanel } from "./designer/SettingsPanel";
 import { StylePanel } from "./designer/StylePanel";
 import { AddFieldDialog } from "./dialogs";
 import { InspectorBody } from "./Inspector";
+import { AppDetails, AppInspector, AppPagesPanel, appTabs, type AppTab } from "./inspect/AppInspector";
 import { PanelBody } from "./Navigator";
 import { Toolbar, ViewTabs } from "./Toolbar";
 import { collectionIcons } from "./ui";
@@ -44,12 +47,17 @@ export function Studio() {
 
 const PLACE = "studio-place";
 
-type Tool = "add" | "navigator" | "pages" | "cms" | "assets" | "settings";
+type Tool = "add" | "navigator" | "pages" | "cms" | "site" | "code" | "assets" | "settings";
+type Area = "design" | "cms" | "site" | "code";
+type CodeFile = "html" | "css" | "custom";
 const tools: { id: Tool; label: string; key: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "add", label: "Add elements", key: "A", icon: Plus },
   { id: "navigator", label: "Navigator", key: "Z", icon: Layers },
   { id: "pages", label: "Pages", key: "P", icon: FileText },
   { id: "cms", label: "CMS", key: "J", icon: Database },
+  // The pages behind the pages: each Between Gigs page with its design, data, code and API.
+  { id: "site", label: "Site pages", key: "G", icon: AppWindow },
+  { id: "code", label: "Code", key: "C", icon: Code2 },
   { id: "assets", label: "Assets", key: "F", icon: Images },
 ];
 const bpIcons: Record<Breakpoint, React.ComponentType<{ className?: string }>> = { base: Monitor, tablet: Tablet, phone: Smartphone };
@@ -67,7 +75,11 @@ function Shell() {
   const [inspectorOpen, setInspectorOpen] = React.useState(false);
   const [addFieldOpen, setAddFieldOpen] = React.useState(false);
   // Designer state.
-  const [area, setArea] = React.useState<"design" | "cms">("design");
+  const [area, setArea] = React.useState<Area>("design");
+  // Site pages and Code.
+  const [appId, setAppId] = React.useState("public-maya");
+  const [appTab, setAppTab] = React.useState<AppTab>("design");
+  const [codeFile, setCodeFile] = React.useState<CodeFile>("html");
   const [tool, setTool] = React.useState<Tool | null>("navigator");
   const [pageId, setPageId] = React.useState("page_home");
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
@@ -91,17 +103,25 @@ function Shell() {
       const s = JSON.parse(localStorage.getItem(PLACE) ?? "{}");
       if (s.c) setCollectionId(s.c); // eslint-disable-line react-hooks/set-state-in-effect
       if (s.v) setViewIds(s.v);
-      if (s.a === "cms" || s.a === "design") setArea(s.a);
+      if (["cms", "design", "site", "code"].includes(s.a)) setArea(s.a);
       if (s.p) setPageId(s.p);
+      if (appPages.some((x) => x.id === s.s)) setAppId(s.s);
+      if (appTabs.some((x) => x.id === s.t)) setAppTab(s.t);
     } catch { /* ignore */ }
+    // Links straight to a tool: ?site=public-maya&tab=code, or ?code=css.
+    const q = new URLSearchParams(window.location.search);
+    const site = q.get("site"), tab = q.get("tab") as AppTab | null, code = q.get("code") as CodeFile | null;
+    if (site && appPages.some((x) => x.id === site)) { setArea("site"); setAppId(site); setTool("site"); if (tab && appTabs.some((x) => x.id === tab)) setAppTab(tab); }
+    if (code && ["html", "css", "custom"].includes(code)) { setArea("code"); setCodeFile(code); setTool("code"); }
     // On a tablet or phone, design at that size.
     if (window.innerWidth <= 478) setBp("phone"); else if (window.innerWidth <= 991) setBp("tablet");
     setRestored(true);
   }, []);
-  React.useEffect(() => { if (restored) try { localStorage.setItem(PLACE, JSON.stringify({ c: collectionId, v: viewIds, a: area, p: pageId })); } catch { /* ignore */ } }, [restored, collectionId, viewIds, area, pageId]);
+  React.useEffect(() => { if (restored) try { localStorage.setItem(PLACE, JSON.stringify({ c: collectionId, v: viewIds, a: area, p: pageId, s: appId, t: appTab })); } catch { /* ignore */ } }, [restored, collectionId, viewIds, area, pageId, appId, appTab]);
 
   const openTool = React.useCallback((t: Tool) => {
     if (t === "cms") { setArea("cms"); setTool((x) => (x === "cms" ? null : "cms")); setPreview(false); return; }
+    if (t === "site" || t === "code") { setArea(t); setTool((x) => (x === t ? null : t)); setPreview(false); return; }
     if (t === "add" || t === "navigator" || t === "pages") setArea("design");
     setTool((x) => (x === t ? null : t));
   }, []);
@@ -124,6 +144,12 @@ function Shell() {
   }, [actions, openTool]);
 
   const lookup = React.useMemo(() => (base ? makeLookup(base) : () => ""), [base]);
+  const appPage = appPages.find((x) => x.id === appId) ?? appPages[0];
+  // Site pages → Data shows the collection the page reads, in the CMS's own views.
+  const dataCollection = area === "site" && appTab === "data" ? collectionFor(appPage) : null;
+  React.useEffect(() => {
+    if (dataCollection && dataCollection !== collectionId) { setCollectionId(dataCollection); setSearch(""); setRecordId(null); setFieldId(null); } // eslint-disable-line react-hooks/set-state-in-effect
+  }, [dataCollection, collectionId]);
 
   if (!base) {
     return (
@@ -175,7 +201,42 @@ function Shell() {
     : view.type === "list" ? <ListView rows={rows} onNew={() => onNew()} />
     : <CalendarView rows={rows} onNew={onNew} />;
 
+  const cmsView = (
+    <>
+      <div className="flex items-start gap-3 px-3 pt-4 pb-3 sm:px-4">
+        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-selected text-ink-brand"><Icon className="size-5" /></span>
+        <div className="grid min-w-0 gap-0.5">
+          {React.createElement(area === "site" ? "h2" : "h1", { className: "font-display text-heading-lg text-ink" }, collection.name)}
+          <p className="truncate text-body-sm text-ink-muted">
+            {rows.length === collection.records.length ? `${collection.records.length} item${collection.records.length === 1 ? "" : "s"}` : `${rows.length} of ${collection.records.length} items`}
+            {collection.description ? ` · ${collection.description}` : ""}
+          </p>
+        </div>
+        <span className="ml-auto shrink-0 sm:hidden"><Button size="sm" variant="secondary" iconStart={<Plus />} onClick={() => onNew()}>New</Button></span>
+      </div>
+      <ViewTabs />
+      <Toolbar onNew={() => onNew()} />
+      <div className="flex min-h-0 flex-1 flex-col">{cmsBody}</div>
+    </>
+  );
+  const openApp = (id: string) => { setAppId(id); setArea("site"); setNavOpen(false); };
+  const codePages = (
+    <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
+      <p className="px-2 pt-2 pb-1 text-body-sm text-ink-muted">The code for each page you design: generated HTML and CSS, plus your own custom CSS.</p>
+      <ul className="grid gap-0.5">
+        {base.pages.map((p) => (
+          <li key={p.id}>
+            <button type="button" onClick={() => { setPageId(p.id); setNavOpen(false); }} aria-current={p.id === page.id ? "page" : undefined}
+              className={cx("flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-label-md", p.id === page.id ? "bg-info/15 text-info" : "text-ink hover:bg-surface-hover")}>
+              <FileText className="size-4 shrink-0 text-ink-subtle" aria-hidden="true" /><span className="truncate">{p.name}</span><span className="ml-auto truncate font-mono text-data-sm text-ink-subtle">/{p.slug}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
   const panel = tool === "add" ? <AddPanel /> : tool === "navigator" ? <NavigatorPanel /> : tool === "pages" ? <PagesPanel />
+    : tool === "site" ? <AppPagesPanel current={appPage.id} onOpen={openApp} /> : tool === "code" ? codePages
     : tool === "cms" ? <PanelBody panel="data" /> : tool === "assets" ? <PanelBody panel="assets" /> : tool === "settings" ? <PanelBody panel="settings" /> : null;
   const panelLabel = tool === "settings" ? "Settings" : tools.find((t) => t.id === tool)?.label;
 
@@ -187,7 +248,7 @@ function Shell() {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">{rightTab === "style" ? <StylePanel /> : <SettingsPanel />}</div>
     </div>
-  ) : <InspectorBody />;
+  ) : area === "site" && appTab !== "data" ? <AppDetails page={appPage} onTab={setAppTab} /> : <InspectorBody />;
 
   const pageHref = (href: string) => {
     const target = base.pages.find((p) => `/${p.slug}` === href || (href === "/" && p.slug === ""));
@@ -220,23 +281,25 @@ function Shell() {
                 ]} />
               <span className="hidden xl:inline-flex"><Badge size="sm" tone="brand">Prototype</Badge></span>
               <span aria-hidden="true" className="mx-0.5 hidden h-5 w-px bg-line sm:block" />
-              {area === "design" ? (
+              {area === "design" || area === "code" ? (
                 <Menu align="start" trigger={
                   <button type="button" aria-label={`Page: ${page.name}`} className="inline-flex h-8 min-w-0 items-center gap-1.5 rounded-md px-2 text-label-md text-ink hover:bg-surface-hover">
                     <FileText className="hidden size-4 shrink-0 text-ink-subtle xs:block" aria-hidden="true" /><span className="truncate">{page.name}</span><ChevronDown className="size-3.5 shrink-0 text-ink-subtle" aria-hidden="true" />
                   </button>}
                   items={[
                     { heading: "Pages" },
-                    ...base.pages.map((p) => ({ label: p.name, description: `/${p.slug}`, checked: p.id === page.id, icon: <FileText />, onSelect: () => design.setPageId(p.id) })),
+                    ...base.pages.map((p) => ({ label: p.name, description: `/${p.slug}`, checked: p.id === page.id, icon: <FileText />, onSelect: () => (area === "code" ? setPageId(p.id) : design.setPageId(p.id)) })),
                     "separator",
                     { label: "Manage pages", icon: <Settings />, onSelect: () => setTool("pages") },
                   ]} />
+              ) : area === "site" ? (
+                <span className="inline-flex min-w-0 items-center gap-1.5 px-1 text-label-md text-ink"><AppWindow className="hidden size-4 shrink-0 text-ink-subtle sm:block" aria-hidden="true" /><span className="truncate"><span className="hidden sm:inline">Site · </span>{appPage.title}</span></span>
               ) : (
                 <span className="inline-flex min-w-0 items-center gap-1.5 px-1 text-label-md text-ink"><Database className="hidden size-4 shrink-0 text-ink-subtle sm:block" aria-hidden="true" /><span className="truncate"><span className="hidden sm:inline">CMS · </span>{collection.name}</span></span>
               )}
             </div>
 
-            {area === "design" && (
+            {(area === "design" || (area === "site" && appTab === "design")) && (
               <div role="radiogroup" aria-label="Breakpoint" className="hidden shrink-0 items-center gap-0.5 rounded-md bg-surface-sunken p-0.5 md:flex">
                 {breakpoints.map((b) => {
                   const BIcon = bpIcons[b.id];
@@ -266,8 +329,8 @@ function Shell() {
               </span>
               <span className="hidden lg:inline-flex"><ThemeToggle size="sm" showLabel={false} className="pr-0.5!" /></span>
               {area === "design" && <IconButton size="sm" variant="ghost" label={preview ? "Exit preview" : "Preview"} icon={preview ? <EyeOff /> : <Eye />} pressed={preview} onClick={() => { setPreview(!preview); setEditingId(null); }} />}
-              <IconButton size="sm" variant="ghost" label={rightShown ? "Hide the right panel" : "Show the right panel"} icon={<PanelRight />} pressed={rightShown}
-                onClick={() => { if (window.matchMedia("(min-width: 80rem)").matches) setRightShown((s) => !s); else setInspectorOpen(true); }} />
+              {area !== "code" && <IconButton size="sm" variant="ghost" label={rightShown ? "Hide the right panel" : "Show the right panel"} icon={<PanelRight />} pressed={rightShown}
+                onClick={() => { if (window.matchMedia("(min-width: 80rem)").matches) setRightShown((s) => !s); else setInspectorOpen(true); }} />}
               <span className="hidden xl:inline-flex"><Button size="sm" variant="ghost" iconStart={<Share2 />} onClick={() => setSharing(true)}>Share</Button></span>
               {/* Webflow's blue Publish, in the same blue as the canvas selection. */}
               <button type="button" onClick={() => setPublishing(true)} aria-label="Publish"
@@ -306,32 +369,19 @@ function Shell() {
                 preview ? (
                   <div className="min-h-0 flex-1 overflow-auto bg-surface-sunken">
                     <div className={cx("mx-auto min-h-full max-w-full bg-bg shadow-md", bp === "base" ? "w-full" : bp === "tablet" ? "w-192" : "w-98")}>
-                      <RenderElement el={page.root} opts={{ base, bp, mode: "preview", href: pageHref }} />
+                      <RenderElement el={page.root} opts={{ base, bp, mode: "preview", href: pageHref, customCss: page.customCss }} />
                     </div>
                   </div>
                 ) : <Canvas />
-              ) : (
-                <>
-                  <div className="flex items-start gap-3 px-3 pt-4 pb-3 sm:px-4">
-                    <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-selected text-ink-brand"><Icon className="size-5" /></span>
-                    <div className="grid min-w-0 gap-0.5">
-                      <h1 className="font-display text-heading-lg text-ink">{collection.name}</h1>
-                      <p className="truncate text-body-sm text-ink-muted">
-                        {rows.length === collection.records.length ? `${collection.records.length} item${collection.records.length === 1 ? "" : "s"}` : `${rows.length} of ${collection.records.length} items`}
-                        {collection.description ? ` · ${collection.description}` : ""}
-                      </p>
-                    </div>
-                    <span className="ml-auto shrink-0 sm:hidden"><Button size="sm" variant="secondary" iconStart={<Plus />} onClick={() => onNew()}>New</Button></span>
-                  </div>
-                  <ViewTabs />
-                  <Toolbar onNew={() => onNew()} />
-                  <div className="flex min-h-0 flex-1 flex-col">{cmsBody}</div>
-                </>
-              )}
+              ) : area === "site" ? (
+                <AppInspector page={appPage} tab={appTab} onTab={setAppTab} bp={bp} renderData={() => cmsView} />
+              ) : area === "code" ? (
+                <PageCode page={page} file={codeFile} onFile={setCodeFile} />
+              ) : cmsView}
             </main>
 
-            {!preview && rightShown && (
-              <aside aria-label={area === "design" ? "Style and settings" : "Inspector"} className="hidden w-72 shrink-0 flex-col border-l border-line bg-surface xl:flex">{right}</aside>
+            {!preview && rightShown && area !== "code" && !(area === "site" && (appTab === "design" || appTab === "code")) && (
+              <aside aria-label={area === "design" ? "Style and settings" : area === "site" && appTab !== "data" ? "Page details" : "Inspector"} className="hidden w-72 shrink-0 flex-col border-l border-line bg-surface xl:flex">{right}</aside>
             )}
           </div>
         </div>
@@ -353,7 +403,7 @@ function Shell() {
             {navOpen && <div className="flex min-h-0 flex-col border-t border-line">{panel ?? <p className="p-5 text-body-sm text-ink-muted">Pick a tool above.</p>}</div>}
           </div>
         </Drawer>
-        <RightDrawer title={area === "design" ? (rightTab === "style" ? "Style" : "Settings") : mode === "record" ? "Item" : mode === "field" ? "Field" : "View settings"}
+        <RightDrawer title={area === "design" ? (rightTab === "style" ? "Style" : "Settings") : area === "site" && appTab !== "data" ? "Page details" : mode === "record" ? "Item" : mode === "field" ? "Field" : "View settings"}
           open={inspectorOpen} onClose={() => setInspectorOpen(false)}>{right}</RightDrawer>
 
         <AddFieldDialog />

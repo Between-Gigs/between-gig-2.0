@@ -217,7 +217,7 @@ export function Canvas() {
             if (item.kind === "new") d.select(actions.addElement(d.page.id, item.type, at.parentId, at.index));
             else { actions.moveElement(d.page.id, item.id, at.parentId, at.index); d.select(item.id); }
           }}>
-          <RenderElement el={root} opts={{ base: ui.base, bp: d.bp, mode: "canvas", editingId: d.editingId, onTextCommit: (id, text) => { d.setEditingId(null); const el = findEl(root, id); if (el && el.text !== text) actions.updateElement(d.page.id, id, { text: text.trim() }, "Edited text"); } }} />
+          <RenderElement el={root} opts={{ base: ui.base, bp: d.bp, mode: "canvas", customCss: d.page.customCss, editingId: d.editingId, onTextCommit: (id, text) => { d.setEditingId(null); const el = findEl(root, id); if (el && el.text !== text) actions.updateElement(d.page.id, id, { text: text.trim() }, "Edited text"); } }} />
         </div>
         {hovered && hover && !d.drag && tag(hovered, hover, false)}
         {selected && sel && !d.editingId && !d.drag && tag(selected, sel, true)}

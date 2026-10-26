@@ -29,6 +29,12 @@ export const routes = [
   },
   { name: "studio-calendar", path: "/studio/", ready: "[data-el]", act: async (page) => { await studioCms(page, "Journal"); await page.getByRole("tab", { name: "Publishing calendar" }).click(); await page.waitForTimeout(200); } },
   { name: "studio-site", path: "/studio/site/", ready: "main h1" },
+  // Site pages: each Between Gigs page with the design, data, code and API behind it.
+  { name: "studio-pages-design", path: "/studio/?site=public-maya&tab=design", ready: "[role=tabpanel] iframe" },
+  { name: "studio-pages-data", path: "/studio/?site=owner-review&tab=data", ready: "[role=grid]" },
+  { name: "studio-pages-code", path: "/studio/?site=public-maya&tab=code", ready: ".cm-content" },
+  { name: "studio-pages-api", path: "/studio/?site=owner-review&tab=api", ready: "main code" },
+  { name: "studio-code", path: "/studio/?code=css", ready: ".cm-content" },
   // Milestone 5b: home page proposals.
   { name: "proposal-visitor", path: "/proposals/home/", setup: reset, ready: "#proposal-h" },
   { name: "proposal-gigster", path: "/proposals/home/?view=gigster", setup: reset, ready: "#g-hello" },

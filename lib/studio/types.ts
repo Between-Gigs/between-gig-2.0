@@ -129,6 +129,8 @@ export interface Page {
   name: string;
   slug: string;
   root: PageElement;
+  /** Custom CSS for this page (Code tool). Class selectors match elements' classes; scoped to the page. */
+  customCss?: string;
 }
 
 export interface Base {

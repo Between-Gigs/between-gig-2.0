@@ -4,6 +4,7 @@ import { resolveStyles, toCss } from "@/lib/studio/pages";
 import { cellText, isEmpty } from "@/lib/studio/query";
 import type { Base, Breakpoint, Collection, PageElement, StudioRecord } from "@/lib/studio/types";
 import { asset } from "@/lib/site";
+import { scopeCss } from "@/lib/studio/export";
 
 export interface RenderOptions {
   base: Base;
@@ -14,6 +15,8 @@ export interface RenderOptions {
   onTextCommit?: (id: string, text: string) => void;
   /** preview: turns an element's link into a real URL. */
   href?: (href: string) => string;
+  /** The page's custom CSS (Code tool), scoped to the page. */
+  customCss?: string;
 }
 
 /** The records a collection list shows: its filter, sort and limit. */
@@ -52,7 +55,7 @@ const placeholder: React.CSSProperties = { outline: "1px dashed var(--line-stron
 export function RenderElement({ el, opts, ctx }: { el: PageElement; opts: RenderOptions; ctx?: { collection: Collection; record: StudioRecord; lookup: (id: string) => string } }) {
   const canvas = opts.mode === "canvas";
   const style = toCss(resolveStyles(el, opts.base.classes, opts.bp));
-  const data = canvas ? { "data-el": el.id } : {};
+  const data = { ...(canvas ? { "data-el": el.id } : {}), ...(el.cls ? { "data-cls": el.cls } : {}) };
   const kids = (list = el.children ?? []) => list.map((c) => <RenderElement key={c.id} el={c} opts={opts} ctx={ctx} />);
   const field = ctx && el.bind ? ctx.collection.fields.find((f) => f.id === el.bind) : undefined;
   const bound = field ? ctx!.record.values[field.id] : undefined;
@@ -69,7 +72,12 @@ export function RenderElement({ el, opts, ctx }: { el: PageElement; opts: Render
 
   switch (el.type) {
     case "body":
-      return <div {...data} style={{ ...style, ...(canvas && !el.children?.length ? placeholder : {}) }}>{kids()}</div>;
+      return (
+        <div {...data} data-studio-page="" style={{ ...style, ...(canvas && !el.children?.length ? placeholder : {}) }}>
+          {opts.customCss && <style>{scopeCss(opts.customCss, "[data-studio-page]")}</style>}
+          {kids()}
+        </div>
+      );
     case "section":
       return <section {...data} style={{ ...style, ...(empty ? placeholder : {}) }}>{empty ? dropHint : kids()}</section>;
     case "container": case "div": case "columns":

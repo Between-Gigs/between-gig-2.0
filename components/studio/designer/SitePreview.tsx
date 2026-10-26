@@ -30,7 +30,7 @@ function Site() {
   };
   return (
     <>
-      <main id="main"><RenderElement el={page.root} opts={{ base, bp, mode: "preview", href }} /></main>
+      <main id="main"><RenderElement el={page.root} opts={{ base, bp, mode: "preview", href, customCss: page.customCss }} /></main>
       <nav aria-label="Studio" className="fixed right-4 bottom-4 z-toast">
         <a href={`${basePath}/studio/`} className="inline-flex h-11 items-center gap-2 rounded-md border border-line-strong bg-surface px-4 text-label-md text-ink shadow-md hover:bg-surface-hover">
           <ArrowLeft className="size-4" aria-hidden="true" />Back to Studio
