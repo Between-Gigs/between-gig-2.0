@@ -42,6 +42,13 @@
   line-height: var(--text-body-md--line-height);
 }
 
+/* Studio's canvas behind a previewed page: the sunken surface with a faint dot grid, like a design tool's board. */
+@utility studio-canvas {
+  background-color: var(--surface-sunken);
+  background-image: radial-gradient(color-mix(in oklab, var(--ink-subtle) 30%, transparent) 1px, transparent 1.4px);
+  background-size: 18px 18px;
+}
+
 /* The owner sidebar collapsed to a rail: <html data-owner-nav="collapsed">, set before first paint. */
 @custom-variant nav-collapsed (&:where([data-owner-nav=collapsed] *));
 

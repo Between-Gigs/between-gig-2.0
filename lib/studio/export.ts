@@ -40,7 +40,8 @@ function tagOf(el: PageElement) {
   }
 }
 
-export function exportPage(base: Base, page: Page): { html: string; css: string } {
+/** origin: prefix image paths with the site's address, so a downloaded copy still shows them. */
+export function exportPage(base: Base, page: Page, origin = ""): { html: string; css: string } {
   const own = new Map<string, string>();
   let n = 0;
   // Elements with styles of their own get a generated combo class, like "heading-3".
@@ -82,7 +83,7 @@ export function exportPage(base: Base, page: Page): { html: string; css: string 
     }
     if (el.type === "image") {
       const src = field ? (typeof bound === "string" ? bound : "") : el.src ?? "";
-      return `${pad}<img${attr} src="${esc(src ? asset(src) : "")}" alt="${esc(el.alt ?? "")}">`;
+      return `${pad}<img${attr} src="${esc(src ? (/^(data:|https?:)/.test(src) ? src : origin + asset(src)) : "")}" alt="${esc(el.alt ?? "")}">`;
     }
     if (el.type === "divider") return `${pad}<hr${attr}>`;
     if (el.type === "link" || el.type === "button") {
@@ -120,6 +121,14 @@ export function exportPage(base: Base, page: Page): { html: string; css: string 
  * "container" can't pick up the site's own styles), so `.name` in a selector becomes [data-cls~="name"], scoped to
  * the page. At-rules (media queries) keep their condition and have their rules rewritten.
  */
+/** The classes a page uses, for custom CSS suggestions. */
+export function pageClasses(page: Page): string[] {
+  const out = new Set<string>();
+  const walk = (el: PageElement) => { if (el.cls) out.add(el.cls); el.children?.forEach(walk); };
+  walk(page.root);
+  return [...out];
+}
+
 export function scopeCss(css: string, scope: string) {
   let out = "", prelude = "", depth = 0;
   for (const ch of css.replace(/\/\*[\s\S]*?\*\//g, "")) {

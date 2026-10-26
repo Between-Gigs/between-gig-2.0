@@ -29,7 +29,7 @@ import { SettingsPanel } from "./designer/SettingsPanel";
 import { StylePanel } from "./designer/StylePanel";
 import { AddFieldDialog } from "./dialogs";
 import { InspectorBody } from "./Inspector";
-import { AppDetails, AppInspector, AppPagesPanel, appTabs, type AppTab } from "./inspect/AppInspector";
+import { AppDetails, AppInspector, AppPagesPanel, appPageMenu, appTabs, laneDot, type AppTab } from "./inspect/AppInspector";
 import { PanelBody } from "./Navigator";
 import { Toolbar, ViewTabs } from "./Toolbar";
 import { collectionIcons } from "./ui";
@@ -55,8 +55,8 @@ const tools: { id: Tool; label: string; key: string; icon: React.ComponentType<{
   { id: "navigator", label: "Navigator", key: "Z", icon: Layers },
   { id: "pages", label: "Pages", key: "P", icon: FileText },
   { id: "cms", label: "CMS", key: "J", icon: Database },
-  // The pages behind the pages: each Between Gigs page with its design, data, code and API.
-  { id: "site", label: "Site pages", key: "G", icon: AppWindow },
+  // The live site: each real Between Gigs page with the design, data, code and API behind it.
+  { id: "site", label: "Live site", key: "G", icon: AppWindow },
   { id: "code", label: "Code", key: "C", icon: Code2 },
   { id: "assets", label: "Assets", key: "F", icon: Images },
 ];
@@ -76,7 +76,7 @@ function Shell() {
   const [addFieldOpen, setAddFieldOpen] = React.useState(false);
   // Designer state.
   const [area, setArea] = React.useState<Area>("design");
-  // Site pages and Code.
+  // Live site and Code.
   const [appId, setAppId] = React.useState("public-maya");
   const [appTab, setAppTab] = React.useState<AppTab>("design");
   const [codeFile, setCodeFile] = React.useState<CodeFile>("html");
@@ -145,7 +145,7 @@ function Shell() {
 
   const lookup = React.useMemo(() => (base ? makeLookup(base) : () => ""), [base]);
   const appPage = appPages.find((x) => x.id === appId) ?? appPages[0];
-  // Site pages → Data shows the collection the page reads, in the CMS's own views.
+  // Live site → Data shows the collection the page reads, in the CMS's own views.
   const dataCollection = area === "site" && appTab === "data" ? collectionFor(appPage) : null;
   React.useEffect(() => {
     if (dataCollection && dataCollection !== collectionId) { setCollectionId(dataCollection); setSearch(""); setRecordId(null); setFieldId(null); } // eslint-disable-line react-hooks/set-state-in-effect
@@ -248,7 +248,7 @@ function Shell() {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">{rightTab === "style" ? <StylePanel /> : <SettingsPanel />}</div>
     </div>
-  ) : area === "site" && appTab !== "data" ? <AppDetails page={appPage} onTab={setAppTab} /> : <InspectorBody />;
+  ) : area === "site" && !dataCollection ? <AppDetails page={appPage} onTab={setAppTab} /> : <InspectorBody />;
 
   const pageHref = (href: string) => {
     const target = base.pages.find((p) => `/${p.slug}` === href || (href === "/" && p.slug === ""));
@@ -293,7 +293,11 @@ function Shell() {
                     { label: "Manage pages", icon: <Settings />, onSelect: () => setTool("pages") },
                   ]} />
               ) : area === "site" ? (
-                <span className="inline-flex min-w-0 items-center gap-1.5 px-1 text-label-md text-ink"><AppWindow className="hidden size-4 shrink-0 text-ink-subtle sm:block" aria-hidden="true" /><span className="truncate"><span className="hidden sm:inline">Site · </span>{appPage.title}</span></span>
+                <Menu align="start" items={appPageMenu(appPage.id, openApp)} trigger={
+                  <button type="button" aria-label={`Live site page: ${appPage.title}`} className="inline-flex h-8 min-w-0 items-center gap-1.5 rounded-md px-2 text-label-md text-ink hover:bg-surface-hover">
+                    <span aria-hidden="true" className={cx("hidden size-2 shrink-0 rounded-full xs:block", laneDot[appPage.lane])} />
+                    <span className="truncate"><span className="hidden text-ink-subtle sm:inline">Live · </span>{appPage.title}</span><ChevronDown className="size-3.5 shrink-0 text-ink-subtle" aria-hidden="true" />
+                  </button>} />
               ) : (
                 <span className="inline-flex min-w-0 items-center gap-1.5 px-1 text-label-md text-ink"><Database className="hidden size-4 shrink-0 text-ink-subtle sm:block" aria-hidden="true" /><span className="truncate"><span className="hidden sm:inline">CMS · </span>{collection.name}</span></span>
               )}
@@ -381,7 +385,7 @@ function Shell() {
             </main>
 
             {!preview && rightShown && area !== "code" && !(area === "site" && (appTab === "design" || appTab === "code")) && (
-              <aside aria-label={area === "design" ? "Style and settings" : area === "site" && appTab !== "data" ? "Page details" : "Inspector"} className="hidden w-72 shrink-0 flex-col border-l border-line bg-surface xl:flex">{right}</aside>
+              <aside aria-label={area === "design" ? "Style and settings" : area === "site" && !dataCollection ? "Page details" : "Inspector"} className="hidden w-72 shrink-0 flex-col border-l border-line bg-surface xl:flex">{right}</aside>
             )}
           </div>
         </div>
@@ -403,7 +407,7 @@ function Shell() {
             {navOpen && <div className="flex min-h-0 flex-col border-t border-line">{panel ?? <p className="p-5 text-body-sm text-ink-muted">Pick a tool above.</p>}</div>}
           </div>
         </Drawer>
-        <RightDrawer title={area === "design" ? (rightTab === "style" ? "Style" : "Settings") : area === "site" && appTab !== "data" ? "Page details" : mode === "record" ? "Item" : mode === "field" ? "Field" : "View settings"}
+        <RightDrawer title={area === "design" ? (rightTab === "style" ? "Style" : "Settings") : area === "site" && !dataCollection ? "Page details" : mode === "record" ? "Item" : mode === "field" ? "Field" : "View settings"}
           open={inspectorOpen} onClose={() => setInspectorOpen(false)}>{right}</RightDrawer>
 
         <AddFieldDialog />

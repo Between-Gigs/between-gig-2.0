@@ -2,8 +2,10 @@
 /*
  * A code editor (CodeMirror 6) dressed in the design system: token colours for the syntax, so it follows Day and
  * Night. Line numbers, folding, search (Ctrl/Cmd+F), bracket matching and the usual editing keys. Read-only unless
- * the caller hands it an onChange.
+ * the caller hands it an onChange. Optional: class-name completions (type "." in CSS), a placeholder for an empty file,
+ * and a handle to append text.
  */
+import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap, type CompletionContext } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { css } from "@codemirror/lang-css";
 import { html } from "@codemirror/lang-html";
@@ -12,7 +14,7 @@ import { HighlightStyle, bracketMatching, foldGutter, foldKeymap, indentOnInput,
 import { highlightSelectionMatches, search, searchKeymap } from "@codemirror/search";
 import { EditorState, type Extension } from "@codemirror/state";
 import {
-  EditorView, drawSelection, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers,
+  EditorView, drawSelection, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, placeholder as placeholderExt,
 } from "@codemirror/view";
 import { tags as t } from "@lezer/highlight";
 import * as React from "react";
@@ -55,17 +57,32 @@ const theme = EditorView.theme({
   ".cm-panels": { backgroundColor: "var(--surface-sunken)", color: "var(--ink)", borderColor: "var(--line)" },
   ".cm-panel input, .cm-panel button": { fontFamily: "var(--font-sans)", fontSize: "13px" },
   ".cm-foldGutter span": { color: "var(--ink-subtle)" },
+  ".cm-placeholder": { color: "var(--ink-subtle)", fontStyle: "italic" },
+  ".cm-tooltip": { backgroundColor: "var(--surface-raised)", color: "var(--ink)", border: "1px solid var(--line)", borderRadius: "8px", boxShadow: "var(--elev-md)", overflow: "hidden" },
+  ".cm-tooltip-autocomplete > ul > li": { padding: "4px 10px", fontFamily: "var(--font-mono)" },
+  ".cm-tooltip-autocomplete > ul > li[aria-selected]": { backgroundColor: "var(--surface-selected)", color: "var(--ink)" },
+  ".cm-completionDetail": { color: "var(--ink-subtle)", fontStyle: "normal", marginLeft: "8px" },
   "&.cm-focused": { outline: "none" },
 });
 
-export function CodeEditor({ value, language, onChange, label, className }: {
+/** append: text at the end of the file; caret, if given, is where the cursor lands within it. */
+export interface CodeEditorHandle { append: (text: string, caret?: number) => void }
+
+export function CodeEditor({ value, language, onChange, label, className, completions, placeholder, handleRef }: {
   value: string; language: CodeLanguage; onChange?: (value: string) => void; label: string; className?: string;
+  /** Class names offered after a "." (CSS). */
+  completions?: string[];
+  /** Shown while the file is empty. */
+  placeholder?: string;
+  handleRef?: React.RefObject<CodeEditorHandle | null>;
 }) {
   const host = React.useRef<HTMLDivElement>(null);
   const view = React.useRef<EditorView | null>(null);
   const change = React.useRef(onChange);
   React.useEffect(() => { change.current = onChange; });
   const readOnly = !onChange;
+  const classes = React.useRef(completions ?? []);
+  React.useEffect(() => { classes.current = completions ?? []; });
 
   // One editor per language and mode; the text is swapped in below without rebuilding it.
   React.useEffect(() => {
@@ -77,7 +94,16 @@ export function CodeEditor({ value, language, onChange, label, className }: {
         extensions: [
           lineNumbers(), highlightActiveLineGutter(), foldGutter(), history(), drawSelection(), indentOnInput(), bracketMatching(),
           highlightActiveLine(), highlightSelectionMatches(), search({ top: true }), syntaxHighlighting(highlight), theme, lang(language),
-          keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, ...foldKeymap, indentWithTab]),
+          keymap.of([...closeBracketsKeymap, ...completionKeymap, ...defaultKeymap, ...historyKeymap, ...searchKeymap, ...foldKeymap, indentWithTab]),
+          ...(readOnly ? [] : [closeBrackets(), autocompletion({ override: [
+            (ctx: CompletionContext) => {
+              // A dot that starts a selector (not the one in 1.5em).
+              const m = ctx.matchBefore(/(^|[\s,{}>+~(])\.[\w-]*/);
+              if (!m || !classes.current.length) return null;
+              return { from: m.from + m.text.indexOf(".") + 1, options: classes.current.map((c) => ({ label: c, type: "class", detail: "used on this page" })), validFor: /^[\w-]*$/ };
+            },
+          ] })]),
+          ...(placeholder ? [placeholderExt(placeholder)] : []),
           EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly),
           EditorView.contentAttributes.of({ "aria-label": label, ...(readOnly ? { "aria-readonly": "true" } : {}) }),
           EditorView.updateListener.of((u) => { if (u.docChanged) change.current?.(u.state.doc.toString()); }),
@@ -87,6 +113,13 @@ export function CodeEditor({ value, language, onChange, label, className }: {
     // Read-only code still scrolls with the keyboard: the scroller takes focus.
     if (readOnly) { v.scrollDOM.tabIndex = 0; v.scrollDOM.setAttribute("aria-label", label); }
     view.current = v;
+    if (handleRef) handleRef.current = {
+      append: (text, caret = text.length) => {
+        const at = v.state.doc.length;
+        v.dispatch({ changes: { from: at, insert: text }, selection: { anchor: at + caret } });
+        v.focus();
+      },
+    };
     return () => { v.destroy(); view.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the text follows in the next effect
   }, [language, readOnly, label]);

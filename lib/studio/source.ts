@@ -34,6 +34,9 @@ const DRAFTS = "studio-code-drafts";
 type Drafts = Record<string, string>;
 const readDrafts = (): Drafts => { try { return JSON.parse(localStorage.getItem(DRAFTS) ?? "{}"); } catch { return {}; } };
 
+/** Every file with a browser-only edit. */
+export const draftPaths = (): string[] => Object.keys(readDrafts()).sort();
+
 /** A browser-only edit of a source file, or undefined if it's untouched. */
 export const draftOf = (path: string): string | undefined => readDrafts()[path];
 export function saveDraft(path: string, text: string | undefined) {

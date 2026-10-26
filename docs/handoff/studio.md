@@ -2,7 +2,7 @@
 
 `/studio` is a prototype of the Between Gigs site designer and content manager, meant to become its own service
 later. The shell follows Webflow so it feels familiar: a left tool bar (Add `A`, Navigator `Z`, Pages `P`, CMS `J`,
-Site pages `G`, Code `C`, Assets `F`, Settings `S`) with flyout panels, the canvas in the middle with breakpoints, a Style / Settings panel on
+Live site `G`, Code `C`, Assets `F`, Settings `S`) with flyout panels, the canvas in the middle with breakpoints, a Style / Settings panel on
 the right, and Publish at the top right. The CMS works like Airtable.
 
 ## Designer
@@ -40,21 +40,27 @@ the right, and Publish at the top right. The CMS works like Airtable.
   to the sample.
 - Day and night themes and phone layouts: the navigator and inspector become drawers.
 
-## Site pages: the pages behind the pages
+## Live site: the pages behind the pages
 
-`G` (or `/studio/?site=<page>&tab=design|data|code|api`) lists every Between Gigs page, by who it's for, with the
-tooling that makes it. The 3D build map stacks these four screens behind each page and links to them.
+`G` (or `/studio/?site=<page>&tab=design|data|code|api`) lists every real Between Gigs page, by who it's for, with
+the tooling that makes it. Switch pages from the panel or the top bar's picker. The 3D build map stacks these four
+screens behind each page and links to them.
 
-- **Design**: the real page in a frame at Desktop (1440), Tablet (768) or Phone (390), scaled to fit, with its
-  structure (landmarks, sections, headings, forms, lists) beside it. Hover a row to outline it on the page; click to
-  scroll to it and read its computed styles. In sample mode the page opens as the person it's for (Maya, the owner,
-  an invited visitor), which signs this browser into that sample account.
-- **Data**: the CMS collection the page reads, in the CMS's own views (Gigsters, Waitlist, Storyboard, Services).
-- **Code**: the page's source files in the code editor, plus every file in the app to browse. Read-only; Edit keeps
-  a draft in this browser only (marked as edited) and never changes the site or the repository. GitHub opens the
-  real file.
-- **API**: each data call, the route it becomes on the backend, its state (to build, live, Clerk, sample) and the
-  tables underneath, new ones marked.
+- **Design**: the real page in a device frame (browser chrome at Desktop 1440 and Tablet 768, a phone at 390) on a
+  dotted canvas. The floating toolbar has Inspect (on: hover outlines, click selects without following links),
+  zoom (Fit, 25–100%, actual size), the width and Reload. Beside it, the structure tree (one tab stop, arrow keys,
+  levels for screen readers) and the selected element's style: font, size, colour swatches and a box model. Below
+  1024px the structure opens in a drawer.
+- **Who it's shown as**: the frame is named `bg-preview:<who>` (owner, visitor, invited, gigster:<id>), and the
+  sample data layer gives that frame its own session and never stores it (`lib/data/sample.ts`), so looking at Maya's
+  page never signs the browser out of the owner account.
+- **Data**: the CMS collection the page reads, in the CMS's own views, under a note saying which. Crew Call and the
+  professionals pages read Services.
+- **Code**: the page's source files as editor tabs, every file in the app (with a filter), and a status bar.
+  Read-only; Edit keeps a draft in this browser only. **Changes** shows every draft as a diff and copies them all as a
+  unified patch for `git apply`.
+- **API**: totals (calls, routes to build, new tables), then each data call → the route it becomes (state badge) →
+  the tables underneath, new ones marked. Routes wrap at their slashes.
 
 The pages, calls, routes and tables live in `lib/studio/app-pages.ts`; keep it in step with the 3D map.
 
@@ -63,7 +69,8 @@ The pages, calls, routes and tables live in `lib/studio/app-pages.ts`; keep it i
 `C` (or `/studio/?code=html|css|custom`) shows the Designer page as code: `index.html` and `styles.css` are
 generated from the canvas (read-only, with Copy and Download, like a site builder's export; collection lists come
 out filled with their items), and `custom.css` is yours: saved with the page (undoable), applied on the canvas and in
-the preview. Elements carry `data-cls` rather than `class`, so `.hero` in custom CSS is rewritten to match them and
+the preview. The page's classes sit above the editor (click one to add a rule) and come up as you type a `.`.
+Download .zip saves all three, with images pointing at the live site so the copy shows them. Elements carry `data-cls` rather than `class`, so `.hero` in custom CSS is rewritten to match them and
 scoped to the page, and a class called `container` never picks up the site's own styles. Style-panel values are
 inline, so custom CSS needs `!important` to override them.
 

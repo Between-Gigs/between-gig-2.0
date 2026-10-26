@@ -101,13 +101,19 @@ export const apiStateLabel: Record<ApiState, string> = { build: "To build", live
 
 /** The Studio collection that holds a page's content, if any. */
 export function collectionFor(p: AppPage): string | null {
+  // Pages whose content is the service catalogue, whatever they also send.
+  if (p.id === "crew-call" || p.id === "professionals" || p.id === "proposal-visitor") return "services";
   const c = p.calls.join(" ");
   if (/people\.|profiles\.|owners\.(reviewQueue|approve|requestChanges|undoReview|dashboard)/.test(c)) return "gigsters";
   if (/owners\.(waitlist|invite)|funnel\.(joinWaitlist|addDetails)/.test(c)) return "waitlist";
   if (/funnel\.submitSketch/.test(c)) return "storyboard";
-  if (p.id === "professionals" || p.id === "proposal-visitor") return "services";
   return null;
 }
 
 /** Where a source file lives on GitHub. */
+/** Who a preview frame shows the page as (see the bg-preview frame name in lib/data/sample.ts). */
+export const previewAs = (p: AppPage) => !p.as ? "visitor" : p.as.role === "gigster" ? `gigster:${p.as.id}` : p.as.role;
+export const previewLabel = (p: AppPage) => !p.as ? "Visitor, signed out" : p.as.role === "owner" ? "The owner" : p.as.role === "invited" ? "Invited visitor"
+  : `${(p.as.id ?? "").split("-")[0].replace(/^./, (c) => c.toUpperCase())}, a Gigster`;
+
 export const githubUrl = (file: string) => `https://github.com/between-gigs/between-gig-2.0/blob/main/${file}`;

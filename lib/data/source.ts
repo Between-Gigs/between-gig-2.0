@@ -96,6 +96,8 @@ export interface DataSource {
   demo?: {
     reset(): Promise<void>;
     signInAs(role: Role | "invited", personId?: string): Promise<{ inviteToken?: string }>;
+    /** Makes the demo invite usable again without touching who is signed in (Studio's Live site preview). */
+    rearmInvite(): Promise<void>;
     /** The code the sample "sent", so the login page can show it in place of an inbox. */
     peekCode(email: string): Promise<string | null>;
     /** Makes the pending code expire now, to show the expired state. */

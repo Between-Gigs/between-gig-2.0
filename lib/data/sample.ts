@@ -64,6 +64,20 @@ const ownerName = (state: State) => (state.session?.role === "owner" ? state.ses
 
 let memory: State | null = null;
 
+/*
+ * Studio's Live site previews a page as someone else in a frame named "bg-preview:<who>" (owner, visitor, invited, or
+ * gigster:<personId>). That frame gets its own session, never stored, so the browser's own sign-in stays as it was.
+ */
+const preview = (() => {
+  try { return typeof window !== "undefined" && window.name.startsWith("bg-preview:") ? window.name.slice("bg-preview:".length) : null; } catch { return null; }
+})();
+function previewSession(state: State): Session | null {
+  if (preview === "owner") return ownerSession();
+  const id = preview?.startsWith("gigster:") ? preview.slice("gigster:".length) : null;
+  const person = id ? state.people.find((p) => p.id === id) : undefined;
+  return person ? sessionFor(person) : null;
+}
+
 function load(): State {
   if (memory) return memory;
   try {
@@ -72,12 +86,18 @@ function load(): State {
   } catch {
     memory = fresh();
   }
+  if (preview) memory.session = previewSession(memory);
   return memory;
 }
 
 function save(state: State, sessionChanged = false) {
   memory = state;
-  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* storage full or blocked: keep the in-memory copy */ }
+  let stored: State = state;
+  // A preview frame writes the data it changes, but keeps the browser's own session in storage.
+  if (preview) {
+    try { stored = { ...state, session: (JSON.parse(localStorage.getItem(KEY) ?? "null") as State | null)?.session ?? null }; } catch { /* keep state */ }
+  }
+  try { localStorage.setItem(KEY, JSON.stringify(stored)); } catch { /* storage full or blocked: keep the in-memory copy */ }
   if (sessionChanged && typeof window !== "undefined") window.dispatchEvent(new Event(CHANGE));
 }
 
@@ -133,6 +153,23 @@ function queue(state: State, template: EmailTemplate, to: string, props: Record<
 
 function sessionFor(person: Person): Session {
   return { personId: person.id, email: person.email, role: "gigster", name: person.name, startedAt: now() };
+}
+
+/** Re-arms the demo invite so "invited Gigster" always works, even after a run-through. Leaves the session alone. */
+function rearmInvite(state: State) {
+  const invite = state.invites.find((i) => i.token === DEMO_TOKENS.valid) as Invite;
+  const person = state.people.find((p) => p.id === invite.personId)!;
+  if (invite.usedAt) {
+    invite.usedAt = undefined;
+    Object.assign(person, { name: "", slug: "", status: "invited", registeredAt: undefined, submittedAt: undefined, approvedAt: undefined, reviewNotes: undefined });
+    state.drafts = state.drafts.filter((d) => d.personId !== person.id);
+    state.profiles = state.profiles.filter((p) => p.personId !== person.id);
+  }
+  // The invite email this person would have received.
+  if (!state.outbox.some((e) => e.template === "invite" && e.to === person.email)) {
+    queue(state, "invite", person.email, { inviteUrl: absoluteUrl(`/join/?invite=${invite.token}`), email: person.email });
+  }
+  return invite.token;
 }
 
 const ownerSession = (): Session => ({ personId: null, email: SAMPLE_OWNER.email, role: "owner", name: SAMPLE_OWNER.name, startedAt: now() });
@@ -572,6 +609,11 @@ export const sampleSource: DataSource = {
   },
 
   demo: {
+    async rearmInvite() {
+      const state = load();
+      rearmInvite(state);
+      save(state);
+    },
     async reset() {
       memory = null;
       try { localStorage.removeItem(KEY); } catch { /* ignore */ }
@@ -582,21 +624,9 @@ export const sampleSource: DataSource = {
       if (role === "owner") { state.session = ownerSession(); save(state, true); return {}; }
       if (role === "invited") {
         state.session = null;
-        const invite = state.invites.find((i) => i.token === DEMO_TOKENS.valid) as Invite;
-        // Re-arm the demo invite so "invited Gigster" always works, even after a run-through.
-        const person = state.people.find((p) => p.id === invite.personId)!;
-        if (invite.usedAt) {
-          invite.usedAt = undefined;
-          Object.assign(person, { name: "", slug: "", status: "invited", registeredAt: undefined, submittedAt: undefined, approvedAt: undefined, reviewNotes: undefined });
-          state.drafts = state.drafts.filter((d) => d.personId !== person.id);
-          state.profiles = state.profiles.filter((p) => p.personId !== person.id);
-        }
-        // The invite email this person would have received.
-        if (!state.outbox.some((e) => e.template === "invite" && e.to === person.email)) {
-          queue(state, "invite", person.email, { inviteUrl: absoluteUrl(`/join/?invite=${invite.token}`), email: person.email });
-        }
+        const inviteToken = rearmInvite(state);
         save(state, true);
-        return { inviteToken: invite.token };
+        return { inviteToken };
       }
       const person = state.people.find((p) => p.id === personId) ?? state.people.find((p) => p.status === "draft")!;
       state.session = sessionFor(person);
