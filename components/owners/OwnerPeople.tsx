@@ -142,7 +142,7 @@ function People() {
           aside={
             <>
               {filtered && <Button size="sm" variant="ghost" onClick={reset}>Reset filters</Button>}
-              <Select aria-label="Sort" size="sm" value={query.sort} onValueChange={(v) => setQuery((q) => ({ ...q, sort: v as PeopleSort }))} className="w-44"
+              <Select aria-label="Sort" size="sm" value={query.sort} onValueChange={(v) => setQuery((q) => ({ ...q, sort: v as PeopleSort }))} className="w-40 xs:w-44"
                 options={[{ value: "updated", label: "Recently active" }, { value: "status", label: "Furthest along" }, { value: "name", label: "Name, A to Z" }]} />
               <SegmentedControl label="View" size="sm" value={view} onChange={changeView}
                 options={[{ value: "list", label: "List", icon: <List /> }, { value: "grid", label: "Grid", icon: <LayoutGrid /> }]} />
@@ -186,7 +186,7 @@ function PersonRow({ row }: { row: PersonSummary }) {
       leading={<Avatar row={row} className="size-10 rounded-md" />}
       badge={<PersonStatusBadge status={p.status} size="sm" />}
       subtitle={f?.position ? [f.position, f.areas.join(" · ")].filter(Boolean).join(" · ") : p.name ? p.email : `Waitlist · ZIP ${p.waitlistZip}`}
-      meta={<>{progress(row)}<span className="w-28 text-right">Active {ago(p.updatedAt).toLowerCase()}</span></>} />
+      meta={<>{progress(row)}<span className="w-36 text-right">Active {ago(p.updatedAt).toLowerCase()}</span></>} />
   );
 }
 

@@ -204,21 +204,26 @@ function Shell() {
               <IconButton size="sm" variant="ghost" label="Open panels" icon={<MenuIcon />} className="lg:hidden" onClick={() => setNavOpen(true)} />
               <Menu align="start" trigger={
                 <button type="button" aria-label="Studio menu" className="inline-flex h-8 min-w-11 shrink-0 items-center gap-1.5 rounded-md px-1.5 hover:bg-surface-hover">
-                  <Logo layout="mark" height={20} /><span className="hidden text-label-md text-ink sm:inline">Studio</span><ChevronDown className="size-3.5 text-ink-subtle" aria-hidden="true" />
+                  <Logo layout="mark" height={20} /><span className="hidden text-label-md text-ink sm:inline">Studio</span><ChevronDown className="hidden size-3.5 text-ink-subtle xs:block" aria-hidden="true" />
                 </button>}
                 items={[
                   { heading: base.name },
+                  // Undo and Redo are here too: on phones the top bar drops their buttons to keep room for the page name.
+                  { label: "Undo", icon: <Undo2 />, shortcut: "Ctrl+Z", disabled: !canUndo, onSelect: actions.undo },
+                  { label: "Redo", icon: <Redo2 />, shortcut: "Ctrl+Shift+Z", disabled: !canRedo, onSelect: actions.redo },
+                  "separator",
                   { label: "Workspace settings", icon: <Settings />, onSelect: () => setTool("settings") },
                   { label: "Open the site preview", icon: <Globe />, onSelect: () => window.open(`${basePath}/studio/site/?p=${page.slug}`, "_blank") },
+                  { label: "Share", icon: <Share2 />, onSelect: () => setSharing(true) },
                   "separator",
                   { label: "Back to Between Gigs", onSelect: () => router.push("/") },
                 ]} />
-              <span className="hidden sm:inline-flex"><Badge size="sm" tone="brand">Prototype</Badge></span>
+              <span className="hidden xl:inline-flex"><Badge size="sm" tone="brand">Prototype</Badge></span>
               <span aria-hidden="true" className="mx-0.5 hidden h-5 w-px bg-line sm:block" />
               {area === "design" ? (
                 <Menu align="start" trigger={
                   <button type="button" aria-label={`Page: ${page.name}`} className="inline-flex h-8 min-w-0 items-center gap-1.5 rounded-md px-2 text-label-md text-ink hover:bg-surface-hover">
-                    <FileText className="size-4 shrink-0 text-ink-subtle" aria-hidden="true" /><span className="truncate">{page.name}</span><ChevronDown className="size-3.5 shrink-0 text-ink-subtle" aria-hidden="true" />
+                    <FileText className="hidden size-4 shrink-0 text-ink-subtle xs:block" aria-hidden="true" /><span className="truncate">{page.name}</span><ChevronDown className="size-3.5 shrink-0 text-ink-subtle" aria-hidden="true" />
                   </button>}
                   items={[
                     { heading: "Pages" },
@@ -246,7 +251,8 @@ function Shell() {
               </div>
             )}
 
-            <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5 sm:gap-1">
+            {/* min-w-max: the controls never squeeze under each other; the page name on the left truncates instead. */}
+            <div className="flex min-w-max flex-1 items-center justify-end gap-0.5 sm:gap-1">
               {/* Always say it's saved: the icon on every screen, the words where there's room. */}
               <span className="mr-1 hidden items-center gap-1.5 text-caption text-ink-subtle sm:flex" role="status" aria-live="polite"
                 title={lastChange ? `${lastChange} · saved in this browser` : "Saved in this browser"}>
@@ -254,17 +260,19 @@ function Shell() {
                 <span className="hidden 2xl:inline">{lastChange ? `${lastChange} · saved` : "Saved in this browser"}</span>
                 <span className="sr-only 2xl:hidden">{lastChange ? `${lastChange}, saved` : "Saved in this browser"}</span>
               </span>
-              <IconButton size="sm" variant="ghost" label="Undo" icon={<Undo2 />} onClick={actions.undo} disabled={!canUndo} title={canUndo ? "Undo (Ctrl+Z)" : "Nothing to undo yet"} />
-              <IconButton size="sm" variant="ghost" label="Redo" icon={<Redo2 />} onClick={actions.redo} disabled={!canRedo} title={canRedo ? "Redo (Ctrl+Shift+Z)" : "Nothing to redo"} />
-              <span className="hidden sm:inline-flex"><ThemeToggle size="sm" showLabel={false} className="pr-0.5!" /></span>
+              <span className="hidden items-center gap-0.5 sm:inline-flex sm:gap-1">
+                <IconButton size="sm" variant="ghost" label="Undo" icon={<Undo2 />} onClick={actions.undo} disabled={!canUndo} title={canUndo ? "Undo (Ctrl+Z)" : "Nothing to undo yet"} />
+                <IconButton size="sm" variant="ghost" label="Redo" icon={<Redo2 />} onClick={actions.redo} disabled={!canRedo} title={canRedo ? "Redo (Ctrl+Shift+Z)" : "Nothing to redo"} />
+              </span>
+              <span className="hidden lg:inline-flex"><ThemeToggle size="sm" showLabel={false} className="pr-0.5!" /></span>
               {area === "design" && <IconButton size="sm" variant="ghost" label={preview ? "Exit preview" : "Preview"} icon={preview ? <EyeOff /> : <Eye />} pressed={preview} onClick={() => { setPreview(!preview); setEditingId(null); }} />}
               <IconButton size="sm" variant="ghost" label={rightShown ? "Hide the right panel" : "Show the right panel"} icon={<PanelRight />} pressed={rightShown}
                 onClick={() => { if (window.matchMedia("(min-width: 80rem)").matches) setRightShown((s) => !s); else setInspectorOpen(true); }} />
-              <span className="hidden sm:inline-flex"><Button size="sm" variant="ghost" iconStart={<Share2 />} onClick={() => setSharing(true)}>Share</Button></span>
+              <span className="hidden xl:inline-flex"><Button size="sm" variant="ghost" iconStart={<Share2 />} onClick={() => setSharing(true)}>Share</Button></span>
               {/* Webflow's blue Publish, in the same blue as the canvas selection. */}
-              <button type="button" onClick={() => setPublishing(true)}
-                className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-info px-3 text-label-sm text-bg transition-opacity duration-fast hover:opacity-90 [&_svg]:size-4">
-                <Rocket aria-hidden="true" />Publish
+              <button type="button" onClick={() => setPublishing(true)} aria-label="Publish"
+                className="inline-flex h-8 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-md bg-info px-2.5 text-label-sm sm:px-3 text-bg transition-opacity duration-fast hover:opacity-90 [&_svg]:size-4">
+                <Rocket aria-hidden="true" /><span className="hidden sm:inline">Publish</span>
               </button>
             </div>
           </header>

@@ -12,6 +12,8 @@
  * adopts this (docs/design-system-requests.md).
  */
 @theme {
+  /* Small phones (under 360px, e.g. iPhone SE 1st gen at 320): the header swaps the wordmark for the BG mark. */
+  --breakpoint-xs: 22.5rem;
   --color-ink-deep: var(--ink-deep);
   --color-ink-deep-hover: var(--ink-deep-hover);
   --text-body-lg: 1.125rem;
@@ -47,6 +49,12 @@
   body { min-height: 100dvh; }
   /* Focus and scroll-into-view (e.g. Clerk focusing its email field) stop below the sticky header, not under it. */
   html { scroll-padding-top: --spacing(20); }
+  /*
+   * Grid items may shrink to their track. Without this, a grid with no explicit columns (grid gap-4 …) grows to
+   * its widest child (a long email, a URL, a row of chips) and its content runs off small screens behind
+   * overflow-hidden cards. Utilities (min-w-*) still win: this sits in the base layer.
+   */
+  .grid > * { min-width: 0; }
   /* Anchor targets clear the sticky header. */
   :target { scroll-margin-top: --spacing(24); }
   /* Search fields bring their own clear button (Studio's toolbar); hide the browser's second one. */

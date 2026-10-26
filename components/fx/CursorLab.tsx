@@ -92,7 +92,7 @@ export function CursorLab() {
         {cursorEffects.map((e, i) => (
           <li key={e.id} className="grid content-start gap-3 rounded-2xl border border-line bg-surface p-4 shadow-sm">
             <Stage kind={e.id} />
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="font-display text-heading-md text-ink"><span className="mr-2 text-label-md text-ink-subtle tabular-nums">{String(i + 1).padStart(2, "0")}</span>{e.name}</h3>
               {current === e.id && <Badge tone="success" size="sm" icon={<Check />}>On</Badge>}
             </div>

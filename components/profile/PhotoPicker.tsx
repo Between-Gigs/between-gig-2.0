@@ -120,7 +120,7 @@ export function PhotoPicker({ value, name, onChange, error, id }: { value: strin
   };
   const message = problem ?? error;
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-line bg-surface-sunken p-4">
+    <div className="flex flex-col items-start gap-4 rounded-xl border border-line bg-surface-sunken p-4 xs:flex-row xs:items-center">
       {value
         ? <PersonPhoto id="self" name={name} src={value} alt="Your profile photo" className="size-20 shrink-0 rounded-xl shadow-md" />
         : <span className="grid size-20 shrink-0 place-items-center rounded-xl border border-dashed border-line-strong text-ink-subtle"><ImagePlus aria-hidden="true" /></span>}

@@ -447,7 +447,7 @@ function Review({ d, notes, onEdit }: { d: ProfileFields; notes: { section: Prof
             <div className={cx("flex flex-wrap items-center justify-between gap-2", open && "mb-2")}>
               <h3 id={`review-${section}`} className="font-display text-heading-md text-ink">
                 <button type="button" aria-expanded={open} aria-controls={`review-body-${section}`} onClick={() => toggle(i)}
-                  className="-my-1 -ml-1 flex min-h-11 items-center gap-2 rounded-md py-1 pr-2 pl-1 text-left hover:bg-surface-hover">
+                  className="-my-1 -ml-1 flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 rounded-md py-1 pr-2 pl-1 text-left hover:bg-surface-hover">
                   <ChevronDown aria-hidden="true" className={cx("size-5 shrink-0 text-ink-subtle transition-transform duration-fast", !open && "-rotate-90")} />
                   <span className="text-label-md text-ink-subtle tabular-nums">0{i + 1}</span>{sectionLabel[section]}
                   {note

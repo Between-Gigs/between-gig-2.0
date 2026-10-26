@@ -149,7 +149,7 @@ export function PersonDrawer({ rows, index, onIndex, onClose, onChanged }: {
 
             {f ? (
               <>
-                <ul aria-label="Their answers" className="grid grid-cols-2 gap-3">
+                <ul aria-label="Their answers" className="grid grid-cols-1 gap-3 xs:grid-cols-2">
                   {([
                     [Wallet, "Rate", f.rate ? `$${f.rate}/${basisShort[f.basis]}` : "On request"],
                     [CalendarDays, "This month", monthStatusLabel[f.monthStatus]],

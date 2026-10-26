@@ -82,12 +82,12 @@ function Person({ id }: { id: string }) {
       </div>
       <ol aria-label="Timeline" className="grid grid-cols-4 lg:col-span-6">
         {timeline.map(([k, v], i) => (
-          <li key={k} className="relative grid gap-1.5 pr-2">
+          <li key={k} className="relative grid gap-1.5 pr-1 xs:pr-2">
             <span aria-hidden="true" className="flex items-center">
               <span className={cx("size-2.5 shrink-0 rounded-full", v ? "bg-action" : "border-2 border-line-strong")} />
               {i < timeline.length - 1 && <span className={cx("h-0.5 flex-1", timeline[i + 1][1] ? "bg-action" : "bg-line")} />}
             </span>
-            <span className="text-label-sm text-ink-muted">{k}</span>
+            <span className="text-caption text-ink-muted xs:text-label-sm">{k}</span>
             <span className="text-body-sm whitespace-nowrap text-ink tabular-nums">{v ?? <span className="text-ink-subtle">Not yet</span>}</span>
           </li>
         ))}

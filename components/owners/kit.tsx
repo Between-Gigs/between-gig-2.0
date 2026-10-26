@@ -104,7 +104,7 @@ export function Panel({ title, id, aside, footer, flush = false, landmark = true
               </button>
             </h2>
           ) : <h2 id={hid} className="font-display text-heading-sm text-ink">{title}</h2>}
-          {aside && open && <div className="flex items-center gap-3 text-body-sm text-ink-muted">{aside}</div>}
+          {aside && open && <div className="flex min-w-0 flex-wrap items-center gap-3 text-body-sm text-ink-muted">{aside}</div>}
         </header>
       )}
       <div id={body} hidden={!open} className={cx("min-w-0 flex-1", !flush && "p-5", bodyClassName)}>{children}</div>
@@ -152,7 +152,7 @@ export function Row({ href, onOpen, leading, title, subtitle, meta, badge, class
 }) {
   const target = "min-w-0 truncate text-left text-label-md text-ink after:absolute after:inset-0";
   return (
-    <li data-fit="" className={cx("row-lift group relative flex min-h-16 min-w-0 items-center gap-4 border-t border-line px-5 py-3 first:border-t-0 hover:bg-surface-hover", className)}>
+    <li data-fit="" className={cx("row-lift group @container relative flex min-h-16 min-w-0 items-center gap-4 border-t border-line px-5 py-3 first:border-t-0 hover:bg-surface-hover", className)}>
       <span className="shrink-0">{leading}</span>
       <span className="grid min-w-0 flex-1 gap-0.5">
         <span className="flex min-w-0 items-center gap-2">
@@ -161,7 +161,8 @@ export function Row({ href, onOpen, leading, title, subtitle, meta, badge, class
         </span>
         {subtitle && <span className="truncate text-body-sm text-ink-muted">{subtitle}</span>}
       </span>
-      {meta && <span className="hidden shrink-0 items-center gap-4 text-body-sm whitespace-nowrap text-ink-subtle tabular-nums sm:flex">{meta}</span>}
+      {/* By the row's own width, not the screen's: in a narrow panel the name keeps the room. */}
+      {meta && <span className="hidden shrink-0 items-center gap-4 text-body-sm whitespace-nowrap text-ink-subtle tabular-nums @md:flex">{meta}</span>}
       <ChevronRight className="size-4 shrink-0 text-ink-subtle transition-transform duration-fast group-hover:translate-x-0.5 group-hover:text-ink" aria-hidden="true" />
     </li>
   );

@@ -51,7 +51,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
     <header className={cx("sticky top-0 z-sticky border-b border-line", app ? "bg-surface" : "bg-bg/85 backdrop-blur-md")}>
       <div className={cx("mx-auto flex h-16 items-center gap-4 px-4 sm:px-6", app ? "max-w-none gap-2 lg:px-5" : "max-w-7xl")}>
         {onOpenNav && <IconButton label="Open owner menu" variant="ghost" icon={<MenuIcon />} onClick={onOpenNav} className="lg:hidden" />}
-        <Link href="/" aria-label="Between Gigs home" className="inline-flex min-h-11 items-center rounded-md"><Logo height={28} /></Link>
+        <Link href="/" aria-label="Between Gigs home" className="inline-flex min-h-11 shrink-0 items-center rounded-md"><Logo height={28} className="hidden xs:block" /><Logo layout="mark" height={28} className="xs:hidden" /></Link>
         {links.length > 0 && (
           <nav aria-label="Main" className={cx("ml-4 hidden items-center gap-1", links.length > 3 ? "lg:flex" : "md:flex")}>
             {links.map((l) => (
@@ -63,7 +63,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
             ))}
           </nav>
         )}
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-2 xs:gap-3">
           <ThemeToggle size="sm" showLabel={false} className="pr-0.5!" />
           {app ? null : loading ? <span className="h-8 w-20" aria-hidden="true" /> : session ? (
             <Menu align="end" items={menu}
