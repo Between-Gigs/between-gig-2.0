@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Between Gigs Artifacts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600&family=Figtree:wght@400;600&display=swap">
+<style>
+  :root { --bg: #f5f8f4; --surface: #fff; --line: #dae3d8; --ink: #0e1a13; --muted: #3b4a3e; --link: #086c42; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #071a11; --surface: #0e2419; --line: #1f3d2d; --ink: #eaf4ee; --muted: #a9c2b3; --link: #5cf2b2; color-scheme: dark; } }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.6 Figtree, system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 48px 16px 80px; display: grid; gap: 20px; }
+  h1 { font: 600 32px/1.15 Sora, system-ui, sans-serif; margin: 0; }
+  p { margin: 0; color: var(--muted); }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+  a.card { display: grid; gap: 4px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); text-decoration: none; }
+  a.card:hover, a.card:focus-visible { border-color: var(--link); outline: none; }
+  a.card b { font-weight: 600; color: var(--link); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Between Gigs artifacts</h1>
+  <p>Static copies of the pages shared during the 2.0 build, hosted with the preview. All people shown are fictional sample data.</p>
+  <ul>
+    <li><a class="card" href="build-map/"><b>Build map</b><span>The 3D map of every page, with screenshots and its Design, Code, Data and API layers.</span></a></li>
+    <li><a class="card" href="backend-handoff/"><b>Backend handoff</b><span>What to connect to the backend: architecture, data model, endpoints, emails and build order.</span></a></li>
+    <li><a class="card" href="showcase/"><b>Design system showcase</b><span>Tokens, components and templates, plus the clickable prototype.</span></a></li>
+    <li><a class="card" href="showcase/app/"><b>Prototype</b><span>Search, profile and Gigster onboarding.</span></a></li>
+  </ul>
+</main>
+</body>
+</html>

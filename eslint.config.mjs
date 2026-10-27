@@ -6,7 +6,7 @@ const config = [
   ...nextTs,
   {
     // The vendored design system is linted upstream; the reference templates are not built here.
-    ignores: ["packages/design-system/**", ".next/**", "out/**", "qa/**", "next-env.d.ts"],
+    ignores: ["packages/design-system/**", ".next/**", "out/**", "qa/**", "public/artifacts/**", "next-env.d.ts"],
   },
   {
     rules: {
