@@ -1,6 +1,6 @@
 /*
  * The workspace's own data, kept in this browser until there's a backend: comments pinned on pages, changes to
- * projects (renamed, moved, duplicated, archived, in the trash), published versions, notifications and the team in view.
+ * projects (renamed, moved, duplicated, archived, in the trash), published versions and notifications.
  * One small store with a subscribe, so every part of the shell sees a change at once.
  */
 import * as React from "react";
@@ -32,11 +32,10 @@ interface State {
   versions: Record<string, Version[]>;
   events: WsEvent[];
   readAt: string;
-  team: "studio" | "between-gigs";
 }
 
 const KEY = "bg-ws-local";
-const empty = (): State => ({ threads: [], edits: {}, made: [], folders: [], versions: {}, events: [], readAt: "1970-01-01T00:00:00Z", team: "studio" });
+const empty = (): State => ({ threads: [], edits: {}, made: [], folders: [], versions: {}, events: [], readAt: "1970-01-01T00:00:00Z" });
 let cache: State | null = null;
 const subs = new Set<() => void>();
 const load = (): State => {
@@ -143,7 +142,6 @@ export const versionsStore = {
 };
 
 export const notifications = { markRead() { save((st) => ({ ...st, readAt: now() })); } };
-export const teamStore = { set(team: State["team"]) { save((st) => ({ ...st, team })); } };
 
 /** "3 min ago", "2 h ago", "Oct 27". */
 export function ago(iso: string) {

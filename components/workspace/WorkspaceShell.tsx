@@ -1,19 +1,14 @@
 "use client";
 import { Button, CommandPalette, Drawer, IconButton, Kbd, Logo, Menu, Modal, Popover, ThemeToggle, cx, useCommandShortcut, type Command, type MenuEntry } from "@ds/components";
-import { Bell, Building2, CalendarClock, Check, ChevronsUpDown, CircleHelp, FileText, FolderOpen, FolderPlus, History, LayoutGrid, LayoutTemplate, MessageSquare, Moon, PanelLeft, PanelRight, Rocket, RotateCcw, Search, Star, Users } from "lucide-react";
+import { Bell, Check, ChevronsUpDown, CircleHelp, FileText, FolderOpen, FolderPlus, History, LayoutGrid, MessageSquare, Moon, PanelLeft, PanelRight, Rocket, RotateCcw, Search, Star } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { data } from "@/lib/data";
 import { asset } from "@/lib/site";
-import { shortDate, useClients } from "@/lib/workspace/clients";
-import { ago, allFolders, mergedProjects, notifications, projectHref, teamStore, useLocal, type WsEvent } from "@/lib/workspace/local";
+import { ago, allFolders, mergedProjects, notifications, projectHref, useLocal, type WsEvent } from "@/lib/workspace/local";
 import { type Project } from "@/lib/workspace/projects";
 
-export const teams = [
-  { id: "studio", name: "Our studio", sub: "Every client and project" },
-  { id: "between-gigs", name: "Between Gigs team", sub: "Only the Between Gigs client" },
-] as const;
 
 /*
  * The workspace shell: one frame around everything we're building. Top bar with the project switcher and ⌘K search,
@@ -55,7 +50,6 @@ export function WorkspaceShell({ project, crumb, sidebar, sidebarTitle, inspecto
   const { s } = useLocal();
   const projects = mergedProjects(s).filter((p) => !p.archived && !p.trashed);
   const folders = allFolders(s);
-  const team = teams.find((t) => t.id === s.team) ?? teams[0];
   React.useEffect(() => { setLeft(read(SIDEBAR_KEY, true)); setRight(read(INSPECTOR_KEY, true)); }, []); // eslint-disable-line react-hooks/set-state-in-effect
   useCommandShortcut(React.useCallback(() => setPalette(true), []));
   // The palette's field is a search box; say so, so it isn't read as a placeholder-only text field
@@ -92,11 +86,7 @@ export function WorkspaceShell({ project, crumb, sidebar, sidebarTitle, inspecto
   const all: Command[] = [
     ...commands,
     { id: "home", label: "All projects", group: "Go to", icon: <LayoutGrid />, onRun: () => router.push("/workspace/") },
-    { id: "clients", label: "Clients", group: "Go to", icon: <Users />, keywords: "client management crm board tasks milestones", onRun: () => router.push("/workspace/clients/") },
-    { id: "templates", label: "Templates", group: "Go to", icon: <LayoutTemplate />, keywords: "start gallery new", onRun: () => router.push("/workspace/templates/") },
-    { id: "new-project", label: "New project from the template", group: "Actions", icon: <FolderPlus />, keywords: "create start client template", onRun: () => router.push("/workspace/clients/?new=1") },
     { id: "shortcuts", label: "Keyboard shortcuts", group: "Help", icon: <CircleHelp />, shortcut: ["?"], onRun: () => setHelp(true) },
-    ...teams.map((t) => ({ id: `team-${t.id}`, label: `Switch to ${t.name}`, group: "Team", icon: <Building2 />, onRun: () => teamStore.set(t.id) })),
     ...folders.map((f) => ({ id: `folder-${f.id}`, label: f.name, group: "Folders", icon: <FolderOpen />, keywords: f.sub, onRun: () => router.push(`/workspace/?folder=${f.id}`) })),
     ...projects.map((p) => ({ id: `project-${p.id}`, label: p.name, group: "Projects", keywords: [p.summary, folders.find((f) => f.id === p.folder)?.name, ...p.pages.map((pg) => `${pg.title} ${pg.path}`)].join(" "), icon: <Cover project={p} size="sm" />, onRun: () => router.push(projectHref(p)) })),
     ...projects.flatMap((p) => p.pages.length > 1 ? p.pages.map((pg) => ({ id: `page-${p.id}-${pg.id}`, label: `${pg.title} · ${p.name}`, group: "Pages", icon: <FileText />, keywords: `${pg.path} ${pg.group ?? ""}`, onRun: () => router.push(projectHref(p, pg.id)) })) : []),
@@ -118,12 +108,7 @@ export function WorkspaceShell({ project, crumb, sidebar, sidebarTitle, inspecto
     <div className="flex h-dvh flex-col overflow-hidden bg-bg text-ink">
       <header className="flex h-14 shrink-0 items-center gap-1.5 border-b border-line bg-surface px-2 sm:gap-2 sm:px-3">
         <IconButton label="Open the left bar" variant="ghost" icon={<PanelLeft />} className="lg:hidden" onClick={() => setLeftDrawer(true)} />
-        <Link href="/workspace/" aria-label="Workspace home" className="inline-flex min-h-11 shrink-0 items-center rounded-md px-1"><Logo layout="mark" height={24} /></Link>
-        <Menu align="start" header={<span className="text-caption text-ink-subtle">Team</span>} items={teams.map((t) => ({ label: t.name, description: t.sub, icon: <Building2 />, checked: team.id === t.id, onSelect: () => teamStore.set(t.id) }))} trigger={
-          <button type="button" aria-label={`Switch team. Now: ${team.name}`} className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md px-2 text-label-md text-ink hover:bg-surface-hover max-md:px-1">
-            <span className="max-md:sr-only">{team.name}</span><ChevronsUpDown className="size-4 text-ink-subtle" aria-hidden="true" />
-          </button>
-        } />
+        <Link href="/workspace/" aria-label="Workspace home" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md px-1"><Logo layout="mark" height={24} /><span className="text-label-md text-ink max-md:sr-only">Workspace</span></Link>
         <span aria-hidden="true" className="h-6 w-px shrink-0 bg-line max-sm:hidden" />
         <Menu align="start" items={switcher} trigger={
           <button type="button" className="inline-flex h-10 min-w-0 items-center gap-2 rounded-md px-2 text-label-md text-ink hover:bg-surface-hover" aria-label={`Switch project. Now: ${project?.name ?? "All projects"}`}>
@@ -200,14 +185,11 @@ const eventIcon: Record<WsEvent["kind"], React.ReactNode> = {
   comment: <MessageSquare />, reply: <MessageSquare />, resolve: <Check />, publish: <Rocket />, restore: <History />, project: <FolderPlus />,
 };
 
-/** The bell: what changed in the workspace (this browser) and client tasks due within three days. */
+/** The bell: what changed in the workspace: comments, publishes and project changes (this browser). */
 function Notifications() {
   const router = useRouter();
   const { s } = useLocal();
-  const { clients } = useClients();
   const [open, setOpen] = React.useState(false);
-  const [soon] = React.useState(() => new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10));
-  const due = clients.flatMap((c) => c.tasks.filter((t) => !t.done && t.due && t.due <= soon).map((t) => ({ c, t }))).sort((a, b) => (a.t.due ?? "").localeCompare(b.t.due ?? "")).slice(0, 6);
   const unread = s.events.filter((e) => e.at > s.readAt).length;
   const go = (href: string) => { setOpen(false); router.push(href); };
   const row = "flex min-h-11 w-full items-start gap-3 rounded-md px-2 py-2 text-left hover:bg-surface-hover [&_svg]:mt-0.5 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-ink-subtle";
@@ -224,18 +206,7 @@ function Notifications() {
           <p className="text-label-md text-ink">Notifications</p>
           {unread > 0 && <Button size="sm" variant="ghost" iconStart={<Check />} onClick={() => notifications.markRead()}>Mark all read</Button>}
         </div>
-        {due.length > 0 && (
-          <section className="grid gap-0.5">
-            <h3 className="px-2 text-eyebrow text-ink-subtle uppercase">Due soon</h3>
-            {due.map(({ c, t }) => (
-              <button key={t.id} type="button" className={row} onClick={() => go(`/workspace/clients/?c=${c.id}&tab=tasks`)}>
-                <CalendarClock /><span className="grid min-w-0"><span className="text-body-sm text-ink">{t.title}</span><span className="text-caption text-ink-subtle">{c.name} · due {shortDate(t.due!)}{t.owner ? ` · ${t.owner}` : ""}</span></span>
-              </button>
-            ))}
-          </section>
-        )}
-        <section className="grid gap-0.5">
-          <h3 className="px-2 text-eyebrow text-ink-subtle uppercase">Activity</h3>
+        <section aria-label="Activity" className="grid gap-0.5">
           {s.events.length === 0 ? <p className="px-2 text-body-sm text-ink-muted">Comments, publishes and project changes show up here.</p>
             : s.events.slice(0, 12).map((e) => (
               <button key={e.id} type="button" className={cx(row, e.at > s.readAt && "bg-surface-selected")} onClick={() => go(e.href)}>

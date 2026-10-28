@@ -24,7 +24,6 @@ const gigsters = [
 
 /** Every page the guide links to, with a thumbnail of where it goes (scripts/preview-thumbs.mjs makes them). */
 const pages = [
-  { href: "/workspace/clients/", thumb: "clients", title: "Clients", body: "Client management: every client by stage, their projects, tasks, milestones and notes." },
   { href: "/workspace/", thumb: "workspace", title: "Workspace", body: "Every project in one shell: switcher, ⌘K, folders, and each page live inside it." },
   { href: "/", thumb: "home", title: "Home today", body: "The Los Angeles call sheet: coming soon." },
   { href: "/proposals/home/", thumb: "proposals", title: "Home once we open", body: "Three proposals: visitor, Gigster, owner." },

@@ -75,12 +75,7 @@ export const routes = [
   { name: "workspace-list", path: "/workspace/?folder=onboarding", setup: reset, ready: "main h1", act: async (page) => { await page.getByRole("radio", { name: "List" }).click(); } },
   { name: "workspace-open", path: "/workspace/owners/", setup: reset, ready: "main iframe" },
   { name: "workspace-search", path: "/workspace/", setup: reset, ready: "main h1", act: async (page) => { await page.getByRole("button", { name: "Search projects and pages" }).click(); await page.keyboard.type("review"); } },
-  { name: "clients", path: "/workspace/clients/", setup: reset, ready: "main h1" },
-  { name: "clients-list", path: "/workspace/clients/", setup: reset, ready: "main h1", act: async (page) => { await page.getByRole("radio", { name: "List" }).click(); } },
-  { name: "client-page", path: "/workspace/clients/?c=between-gigs", setup: reset, ready: "main h1" },
-  { name: "client-tasks", path: "/workspace/clients/?c=between-gigs&tab=tasks", setup: reset, ready: "main h1" },
-  { name: "new-project", path: "/workspace/clients/?new=1", setup: reset, ready: "main h1" },
-  // Workspace gaps: project menu, trash, comments, publish, notifications, shortcuts, assignees, portal, templates.
+  // Workspace: project menu, trash, comments, publish, notifications, shortcuts.
   { name: "workspace-menu", path: "/workspace/", setup: reset, ready: "main h1", act: async (page) => { await page.getByRole("button", { name: /^More for/ }).first().click(); await page.getByRole("menuitem", { name: "Open" }).waitFor(); } },
   { name: "workspace-trash", path: "/workspace/?folder=trash", setup: reset, ready: "main h1" },
   {
@@ -97,9 +92,6 @@ export const routes = [
   { name: "workspace-publish", path: "/workspace/site/", setup: reset, ready: "main iframe", act: async (page) => { await page.getByRole("button", { name: "Publish", exact: true }).click(); await page.locator("dialog[open]").waitFor(); } },
   { name: "workspace-notifications", path: "/workspace/", setup: reset, ready: "main h1", act: async (page) => { await page.getByRole("button", { name: /^Notifications/ }).click(); await page.getByText("Due soon").waitFor().catch(() => {}); } },
   { name: "workspace-shortcuts", path: "/workspace/", setup: reset, ready: "main h1", act: async (page) => { await page.locator("main").press("?"); await page.locator("dialog[open]").waitFor(); } },
-  { name: "client-assignee", path: "/workspace/clients/?c=between-gigs&tab=tasks", setup: reset, ready: "main h1", act: async (page) => { await page.getByRole("button", { name: /assigned to/ }).first().click(); await page.getByRole("menuitemradio", { name: /Anu/ }).or(page.getByRole("menuitem", { name: /Anu/ })).first().waitFor(); } },
-  { name: "workspace-templates", path: "/workspace/templates/", setup: reset, ready: "main h1" },
-  { name: "workspace-portal", path: "/workspace/portal/?c=between-gigs", setup: reset, ready: "main h1" },
   { name: "canvas-intro", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "dialog[open]" },
   { name: "canvas-blank", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "[data-spot]", act: async (page) => { await page.getByRole("button", { name: "Look around first" }).click(); await page.waitForTimeout(2400); } },
   { name: "canvas-editing", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "[data-spot]", act: async (page) => {

@@ -1,6 +1,6 @@
 "use client";
 import { Badge, Button, ConfirmDialog, Field, IconButton, Input, Menu, Modal, SegmentedControl, Select, cx, useToast, type MenuEntry } from "@ds/components";
-import { Archive, ArchiveRestore, ArrowUpRight, Clock, Copy, Folder, FolderInput, FolderOpen, FolderPlus, Layers, LayoutGrid, LayoutTemplate, List, MoreHorizontal, Pencil, Plus, RotateCcw, Search, Star, Trash2, Users } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowUpRight, Clock, Copy, Folder, FolderInput, FolderOpen, FolderPlus, Layers, LayoutGrid, List, MoreHorizontal, Pencil, RotateCcw, Search, Star, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -82,8 +82,6 @@ export function WorkspaceHome() {
       <SideSection title="Workspace">
         <SideLink href="/workspace/" label="All projects" icon={<LayoutGrid />} count={active.length} active={!folder} />
         <SideLink href="/workspace/?folder=favorites" label="Favourites" icon={<Star />} count={favorites.length} active={folder === "favorites"} />
-        <SideLink href="/workspace/clients/" label="Clients" icon={<Users />} />
-        <SideLink href="/workspace/templates/" label="Templates" icon={<LayoutTemplate />} />
       </SideSection>
       <SideSection title="Folders" action={<IconButton size="sm" variant="ghost" label="New folder" icon={<FolderPlus />} onClick={() => setNewFolder(true)} />}>
         {folderList.map((f) => (
@@ -126,12 +124,7 @@ export function WorkspaceHome() {
           <p className="max-w-2xl text-body-md text-ink-muted">{sub}</p>
         </div>
         {folder !== "trash" && folder !== "archive" && (
-          <Menu align="end" items={[
-            { label: "Client project from a template", description: "Phases, checks and a working example", icon: <LayoutTemplate />, onSelect: () => router.push("/workspace/templates/") },
-            { label: "Blank client project", description: "Add it to a client's plan", icon: <Plus />, onSelect: () => router.push("/workspace/clients/?new=1") },
-            "separator",
-            { label: "New folder", icon: <FolderPlus />, onSelect: () => setNewFolder(true) },
-          ]} trigger={<Button variant="primary" iconStart={<Plus />}>New</Button>} />
+          <Button variant="primary" iconStart={<FolderPlus />} onClick={() => setNewFolder(true)}>New folder</Button>
         )}
       </div>
       <div className="mt-6 flex flex-wrap items-center gap-2">
