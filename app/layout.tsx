@@ -1,8 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { Providers } from "@/components/site/Providers";
+import { share, siteOrigin } from "@/lib/og";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  // Pages without their own share image use the call sheet's.
+  ...share("home"),
+  metadataBase: new URL(siteOrigin),
   title: { default: "Between Gigs", template: "%s · Between Gigs" },
   description: "Extraordinary talent. Everyday solutions. Hollywood professionals between productions, for projects in everyday life.",
   robots: { index: false, follow: false },

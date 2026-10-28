@@ -20,6 +20,7 @@
     "qa:flow": "node scripts/qa/run.mjs flow",
     "qa:rules": "node scripts/qa/run.mjs rules",
     "thumbs": "node scripts/preview-thumbs.mjs",
+    "og": "node scripts/og-images.mjs",
     "check": "pnpm typecheck && pnpm lint && pnpm lint:values && pnpm build && pnpm qa",
     "sync:ds": "scripts/sync-design-system.sh"
   },

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { PolicyPage } from "@/components/policy/PolicyPage";
 import { PrivacyRequest } from "@/components/policy/PrivacyRequest";
+import { share } from "@/lib/og";
 
-export const metadata: Metadata = { title: "Privacy Policy" };
+export const metadata: Metadata = { ...share("privacy"), title: "Privacy Policy" };
 
 export default function Page() {
   return (

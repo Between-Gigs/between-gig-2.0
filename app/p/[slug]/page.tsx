@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { PublicProfile } from "@/components/profile/PublicProfile";
 import { seedPeople } from "@/lib/data/seed";
+import { share, type OgName } from "@/lib/og";
+import ogPages from "@/lib/og-pages.json";
 
 /*
  * Static export: seed slugs are prerendered. A slug created later (someone who registers in the demo)
@@ -9,7 +11,12 @@ import { seedPeople } from "@/lib/data/seed";
  */
 export const dynamicParams = false;
 export const generateStaticParams = () => seedPeople.map((p) => ({ slug: p.id }));
-export const metadata: Metadata = { title: "Gigster profile" };
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  // Approved sample people have their own share image; anyone else gets the call sheet's.
+  const name = `p-${slug}`;
+  return name in ogPages ? { ...share(name as OgName), title: ogPages[name as OgName].title } : { ...share("home"), title: "Gigster profile" };
+}
 
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

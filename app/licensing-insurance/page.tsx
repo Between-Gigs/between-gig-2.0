@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { PolicyPage } from "@/components/policy/PolicyPage";
+import { share } from "@/lib/og";
 
-export const metadata: Metadata = { title: "Licensing and insurance" };
+export const metadata: Metadata = { ...share("licensing-insurance"), title: "Licensing and insurance" };
 
 export default function Page() {
   return (

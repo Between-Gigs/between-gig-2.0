@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PolicyPage } from "@/components/policy/PolicyPage";
+import { share } from "@/lib/og";
 
-export const metadata: Metadata = { title: "Terms of Use" };
+export const metadata: Metadata = { ...share("terms"), title: "Terms of Use" };
 
 export default function Page() {
   return (

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { WorkspaceProject } from "@/components/workspace/WorkspaceProject";
+import { share } from "@/lib/og";
 
-export const metadata: Metadata = { title: "Project · Workspace" };
+export const metadata: Metadata = { ...share("workspace-open"), title: "Project · Workspace" };
 
 export default function Page() {
   return <Suspense><WorkspaceProject /></Suspense>;
