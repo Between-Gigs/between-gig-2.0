@@ -67,8 +67,17 @@ export const routes = [
   { name: "workspace-list", path: "/workspace/?folder=onboarding", setup: reset, ready: "main h1", act: async (page) => { await page.getByRole("radio", { name: "List" }).click(); } },
   { name: "workspace-open", path: "/workspace/owners/", setup: reset, ready: "main iframe" },
   { name: "workspace-search", path: "/workspace/", setup: reset, ready: "main h1", act: async (page) => { await page.getByRole("button", { name: "Search projects and pages" }).click(); await page.keyboard.type("review"); } },
-  { name: "canvas-blank", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "[data-spot]" },
+  { name: "clients", path: "/workspace/clients/", setup: reset, ready: "main h1" },
+  { name: "clients-list", path: "/workspace/clients/", setup: reset, ready: "main h1", act: async (page) => { await page.getByRole("radio", { name: "List" }).click(); } },
+  { name: "client-page", path: "/workspace/clients/?c=between-gigs", setup: reset, ready: "main h1" },
+  { name: "client-tasks", path: "/workspace/clients/?c=between-gigs&tab=tasks", setup: reset, ready: "main h1" },
+  { name: "new-project", path: "/workspace/clients/?new=1", setup: reset, ready: "main h1" },
+  { name: "canvas-intro", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "dialog[open]" },
+  { name: "canvas-blank", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "[data-spot]", act: async (page) => { await page.getByRole("button", { name: "Look around first" }).click(); await page.waitForTimeout(2400); } },
   { name: "canvas-editing", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "[data-spot]", act: async (page) => {
+    // First visit opens the welcome; step past it.
+    const welcome = page.getByRole("button", { name: "Look around first" });
+    if (await welcome.isVisible()) { await welcome.click(); await page.waitForTimeout(400); }
     // Desktop: Next spot in the stage bar. Phones: the Next button in the bottom dock.
     const spot = page.getByRole("button", { name: "Next spot" });
     if (await spot.isVisible()) await spot.click(); else await page.getByRole("button", { name: /^Next:/ }).first().click();

@@ -38,11 +38,11 @@ export function GigsterHome({ personId }: { personId: string }) {
 
   const next = {
     invited: { title: "Create your account", body: "Use the link in your invite email.", href: "/login/", cta: "Sign in" },
-    registered: { title: "Start your profile", body: "Five short steps. It saves as you go.", href: "/profile/edit/", cta: "Start your profile" },
-    draft: { title: "Finish your profile", body: `You're ${Math.round(completeness * 100)}% of the way there. Submit it when it feels like you.`, href: "/profile/edit/", cta: "Continue your profile" },
+    registered: { title: "Start your profile", body: "Fill it in right where clients will see it. It saves as you go.", href: "/profile/canvas/", cta: "Start your profile" },
+    draft: { title: "Finish your profile", body: `You're ${Math.round(completeness * 100)}% of the way there. Submit it when it feels like you.`, href: "/profile/canvas/", cta: "Continue your profile" },
     submitted: { title: "We're reviewing your profile", body: "Nothing to do right now. We'll email you when it's approved or if we suggest a change.", href: "/profile/", cta: "See my profile" },
-    changes_requested: { title: "Make the suggested edits", body: `${p.reviewNotes?.length ?? 0} short ${p.reviewNotes?.length === 1 ? "note" : "notes"} from the Between Gigs team.`, href: "/profile/edit/?step=review", cta: "Make the changes" },
-    approved: { title: "Keep your availability fresh", body: `Confirm you're free in ${f?.month ?? "this month"} so clients know when to ask.`, href: "/profile/edit/", cta: "Update availability" },
+    changes_requested: { title: "Make the suggested edits", body: `${p.reviewNotes?.length ?? 0} short ${p.reviewNotes?.length === 1 ? "note" : "notes"} from the Between Gigs team.`, href: "/profile/canvas/", cta: "Make the changes" },
+    approved: { title: "Keep your availability fresh", body: `Confirm you're free in ${f?.month ?? "this month"} so clients know when to ask.`, href: "/profile/canvas/", cta: "Update availability" },
   }[p.status];
 
   return (
@@ -96,7 +96,7 @@ export function GigsterHome({ personId }: { personId: string }) {
           <Progress value={Math.round(completeness * 100)} label="Complete" size="md" />
           <ul className="grid gap-2 text-body-sm">
             <li><Link href="/profile/" className="inline-flex min-h-11 items-center gap-2 text-ink hover:text-ink-brand sm:min-h-8"><Eye className="size-4 text-ink-brand" aria-hidden="true" />See it as clients will</Link></li>
-            <li><Link href="/profile/edit/" className="inline-flex min-h-11 items-center gap-2 text-ink hover:text-ink-brand sm:min-h-8"><PencilLine className="size-4 text-ink-brand" aria-hidden="true" />Edit your answers</Link></li>
+            <li><Link href="/profile/canvas/" className="inline-flex min-h-11 items-center gap-2 text-ink hover:text-ink-brand sm:min-h-8"><PencilLine className="size-4 text-ink-brand" aria-hidden="true" />Edit your profile</Link></li>
             {p.status === "approved" && <li><Link href={`/p/${p.slug}/`} className="inline-flex min-h-11 items-center gap-2 text-ink hover:text-ink-brand sm:min-h-8"><Link2 className="size-4 text-ink-brand" aria-hidden="true" />Your public page to share</Link></li>}
           </ul>
           {p.status === "approved" && <Banner tone="success" title="You're live">Clients across Los Angeles can find you.</Banner>}

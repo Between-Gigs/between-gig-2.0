@@ -48,9 +48,9 @@ export async function flow({ browser, base, outDir }) {
       await page.getByLabel("Full name").fill("Riley Park");
       await page.getByRole("checkbox").check();
       await page.getByRole("button", { name: "Create my profile" }).click();
-      await page.waitForURL(/\/profile\/edit\/?$/);
-      // A brand-new account goes straight to the first step.
-      await page.locator("[data-step='0']").waitFor();
+      await page.waitForURL(/\/profile\/canvas\/?$/);
+      // A brand-new account lands on its own blank profile, with the welcome.
+      await page.locator("dialog[open]").getByText("This is your page.").waitFor();
     })
     && await step("used-invite", async () => {
       await page.goto(`${base}/join/?invite=riley-7q2m`);
@@ -76,7 +76,9 @@ export async function flow({ browser, base, outDir }) {
       await expectText("behind the experience.");
     })
     && await step("builder-about", async () => {
-      await page.getByRole("link", { name: "Start your profile" }).click();
+      // Start your profile now opens Edit on your profile; this flow walks the step-by-step questionnaire.
+      await page.getByRole("link", { name: "Start your profile" }).waitFor();
+      await page.getByRole("link", { name: "Prefer questions, step by step?" }).click();
       await page.locator("[data-step='0']").waitFor();
       // Steps never block: Next moves on with nothing filled in; required answers are checked on Submit.
       await page.getByRole("button", { name: /^Next/ }).click();

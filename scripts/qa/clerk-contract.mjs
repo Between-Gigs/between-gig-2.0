@@ -51,10 +51,12 @@ try {
     await page.getByRole("alert").getByText("Password must have at least 8 characters", { exact: true }).waitFor();
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Create test account" }).click();
-    await page.waitForURL(new RegExp(`${basePath}/profile/edit/$`));
-    await page.locator("[data-step='0']").waitFor();
+    await page.waitForURL(new RegExp(`${basePath}/profile/canvas/$`));
+    // A new account lands on its own blank profile (Edit on your profile), welcome first.
+    await page.locator("dialog[open]").waitFor();
+    await page.locator("[data-spot]").first().waitFor();
     await page.waitForTimeout(450); // allow delayed SDK initialization and role effects to settle
-    assert.equal(new URL(page.url()).pathname, `${basePath}/profile/edit/`, "signup callback must reach profile creation without a login bounce");
+    assert.equal(new URL(page.url()).pathname, `${basePath}/profile/canvas/`, "signup callback must reach profile creation without a login bounce");
     assert.equal(navigations.includes(`${basePath}/login/`), false, "role gate must wait for SDK/session initialization");
     const state = await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")));
     assert.equal(state.session.role, "gigster");
@@ -107,7 +109,7 @@ try {
     await page.getByText("Agree to the Terms of Use and Privacy Policy to continue.", { exact: true }).waitFor();
     await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Finish setup", exact: true }).click();
-    await page.waitForURL(new RegExp(`${basePath}/profile/edit/$`));
+    await page.waitForURL(new RegExp(`${basePath}/profile/canvas/$`));
     await page.getByRole("button", { name: /Account: Existing Google/ }).waitFor();
     const googleAfter = await page.evaluate(() => ({ active: JSON.parse(localStorage.getItem("qa-clerk-active")), users: JSON.parse(localStorage.getItem("qa-clerk-identities")) }));
     assert.equal(googleAfter.active.id, googleBefore.id);

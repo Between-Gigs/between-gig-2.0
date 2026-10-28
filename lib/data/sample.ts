@@ -401,7 +401,7 @@ export const sampleSource: DataSource = {
       queue(state, "profile-submitted", person.email, {
         firstName: person.name.split(" ")[0] ?? "",
         profileUrl: absoluteUrl("/profile/"),
-        editUrl: absoluteUrl("/profile/edit/"),
+        editUrl: absoluteUrl("/profile/canvas/"),
       });
       if (state.session?.personId === personId) state.session.name = person.name;
       save(state, true);
@@ -527,7 +527,7 @@ export const sampleSource: DataSource = {
       Object.assign(person, { status: "approved", approvedAt: t, updatedAt: t, reviewNotes: undefined });
       log(state, "approved", { personId, name: person.name, email: person.email }, ownerName(state));
       queue(state, "approved", person.email, {
-        firstName: person.name.split(" ")[0] ?? "", profileUrl: absoluteUrl(`/p/${person.slug}/`), editUrl: absoluteUrl("/profile/edit/"),
+        firstName: person.name.split(" ")[0] ?? "", profileUrl: absoluteUrl(`/p/${person.slug}/`), editUrl: absoluteUrl("/profile/canvas/"),
       });
       save(state);
       return clone(person);
@@ -547,7 +547,7 @@ export const sampleSource: DataSource = {
         firstName: person.name.split(" ")[0] ?? "",
         // Email props are strings: one note per line, "section|note".
         notes: clean.map((n) => `${n.section}|${n.note.replace(/\n/g, " ")}`).join("\n"),
-        editUrl: absoluteUrl("/profile/edit/?step=review"),
+        editUrl: absoluteUrl("/profile/canvas/"),
       });
       save(state);
       return clone(person);

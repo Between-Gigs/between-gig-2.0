@@ -23,14 +23,14 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
   const links: NavLink[] = app ? [] : session?.role === "owner"
     ? [{ href: "/owners/", label: "Dashboard" }, { href: "/owners/review/", label: "Review" }, { href: "/owners/people/", label: "People" }, { href: "/owners/waitlist/", label: "Waitlist" }, { href: "/emails/", label: "Emails" }]
     : session?.role === "gigster"
-      ? [{ href: "/profile/", label: "My profile" }, { href: "/profile/edit/", label: "Edit profile" }]
+      ? [{ href: "/profile/", label: "My profile" }, { href: "/profile/canvas/", label: "Edit profile" }]
       : [{ href: "/professionals/", label: "For professionals" }, { href: "/storyboard/", label: "Storyboard" }];
 
-  // Only the most specific matching link is current: on /profile/edit/ that's "Edit profile", not "My profile";
+  // Only the most specific matching link is current: on /profile/canvas/ that's "Edit profile", not "My profile";
   // on /owners/review/ it's "Review", not "Dashboard".
   const raw = pathname.endsWith("/") ? pathname : `${pathname}/`;
-  // Edit on your profile is another way to edit it.
-  const path = raw.startsWith("/profile/canvas/") ? "/profile/edit/" : raw;
+  // The step-by-step questionnaire is the other way to edit it.
+  const path = raw.startsWith("/profile/edit/") ? "/profile/canvas/" : raw;
   const best = links.map((l) => l.href).filter((h) => path.startsWith(h)).sort((a, b) => b.length - a.length)[0];
   const current = (href: string) => href === best;
 
@@ -44,7 +44,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
     { heading: session.role === "owner" ? "Signed in as owner" : "Signed in" },
     ...(session.role === "owner"
       ? links.map((l) => ({ label: l.label, icon: l.href === "/owners/people/" ? <Users /> : undefined, checked: current(l.href) || undefined, onSelect: () => router.push(l.href) }))
-      : [{ label: "My profile", icon: <UserRound />, onSelect: () => router.push("/profile/") }, { label: "Edit profile", icon: <PencilLine />, onSelect: () => router.push("/profile/edit/") }]),
+      : [{ label: "My profile", icon: <UserRound />, onSelect: () => router.push("/profile/") }, { label: "Edit profile", icon: <PencilLine />, onSelect: () => router.push("/profile/canvas/") }]),
     "separator",
     { label: "Sign out", icon: <LogOut />, onSelect: () => void signOut() },
   ] : [];

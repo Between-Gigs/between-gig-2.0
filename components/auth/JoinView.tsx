@@ -77,7 +77,7 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
       setBusy(true);
       try {
         await auth.onboarding.finish({ name, acceptTerms: terms });
-        router.replace("/profile/edit/");
+        router.replace("/profile/canvas/");
       } catch { setBusy(false); setErrors({ form: "We couldn't finish your setup. Try again." }); }
       return;
     }
@@ -90,7 +90,7 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
       return;
     }
     toast({ message: "Account created", tone: "success" });
-    router.push("/profile/edit/");
+    router.push("/profile/canvas/");
   };
 
   if (verify) return <ClerkAccount token={matchingToken} email={email.trim().toLowerCase()} name={name.trim()} />;
@@ -135,7 +135,7 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
 function ClerkAccount({ token, email, name }: { token?: string; email?: string; name?: string }) {
   const router = useRouter();
   const { session, loading } = useSession();
-  React.useEffect(() => { if (!loading && session?.via === "clerk") router.replace("/profile/edit/"); }, [session, loading, router]);
+  React.useEffect(() => { if (!loading && session?.via === "clerk") router.replace("/profile/canvas/"); }, [session, loading, router]);
   const [firstName, ...rest] = (name ?? "").split(" ");
   return (
     <AuthShell eyebrow="Professional onboarding" title="Your next chapter" accent="starts here."
@@ -147,7 +147,7 @@ function ClerkAccount({ token, email, name }: { token?: string; email?: string; 
           <SignUp routing="hash" signInUrl={`${basePath}/login/`}
             initialValues={email ? { emailAddress: email, firstName, lastName: rest.join(" ") || undefined } : undefined}
             unsafeMetadata={email ? { inviteToken: token, name, acceptedTerms: true } : undefined}
-            fallbackRedirectUrl={`${basePath}/profile/edit/`} />
+            fallbackRedirectUrl={`${basePath}/profile/canvas/`} />
         </ClerkSlot>
       </div>
     </AuthShell>

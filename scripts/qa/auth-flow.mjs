@@ -22,7 +22,7 @@ try {
     await page.screenshot({ path: `qa/output/auth/open-signup-${width}.png`, fullPage: true });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await page.getByRole("button", { name: "Create my profile" }).click();
-    await page.waitForURL(/\/profile\/edit\/$/);
+    await page.waitForURL(/\/profile\/canvas\/$/);
     const state = await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")));
     assert.equal(state.session.role, "gigster");
     await page.goto(`${url}/owners/`);
@@ -42,7 +42,7 @@ try {
     await page.getByLabel("Full name").fill("Edited Email");
     await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Create my profile" }).click();
-    await page.waitForURL(/\/profile\/edit\/$/);
+    await page.waitForURL(/\/profile\/canvas\/$/);
     const changed = await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")));
     assert.equal(changed.invites.find((i) => i.token === "riley-7q2m").usedAt, undefined);
     await page.goto(`${url}/login/`);

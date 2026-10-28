@@ -37,7 +37,7 @@ export const emailTemplates = {
   } satisfies TemplateInfo<SignInCodeProps>,
   "profile-submitted": {
     name: "profile-submitted", label: "Profile submitted", when: "Right after a Gigster submits their profile for review.",
-    render: profileSubmitted, sample: { firstName: "Maya", profileUrl: "https://between-gigs.com/profile", editUrl: "https://between-gigs.com/profile/edit" },
+    render: profileSubmitted, sample: { firstName: "Maya", profileUrl: "https://between-gigs.com/profile", editUrl: "https://between-gigs.com/profile/canvas" },
   } satisfies TemplateInfo<ProfileSubmittedProps>,
   welcome: {
     name: "welcome", label: "Welcome", when: "When someone joins the call sheet on /professionals.",
@@ -49,11 +49,11 @@ export const emailTemplates = {
   } satisfies TemplateInfo<ComingSoonProps>,
   approved: {
     name: "approved", label: "Profile approved", when: "When an owner approves a submitted profile.",
-    render: approved, sample: { firstName: "Imani", profileUrl: "https://between-gigs.com/p/imani-carter", editUrl: "https://between-gigs.com/profile/edit" },
+    render: approved, sample: { firstName: "Imani", profileUrl: "https://between-gigs.com/p/imani-carter", editUrl: "https://between-gigs.com/profile/canvas" },
   } satisfies TemplateInfo<ApprovedProps>,
   "changes-requested": {
     name: "changes-requested", label: "Changes requested", when: "When an owner suggests edits, one note per section.",
-    render: changesRequested, sample: { firstName: "Hana", notes: "about|Please add a profile photo that shows your face clearly.\nstory|Tell clients a little more about what a session with you looks like.", editUrl: "https://between-gigs.com/profile/edit?step=review" },
+    render: changesRequested, sample: { firstName: "Hana", notes: "about|Please add a profile photo that shows your face clearly.\nstory|Tell clients a little more about what a session with you looks like.", editUrl: "https://between-gigs.com/profile/canvas" },
   } satisfies TemplateInfo<ChangesRequestedProps>,
 } as const;
 

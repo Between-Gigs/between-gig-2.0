@@ -1,6 +1,6 @@
 "use client";
 import { Banner, Button, Skeleton, Switch, useToast } from "@ds/components";
-import { ArrowRight, Copy, Eye, PartyPopper, PencilLine, Share2 } from "lucide-react";
+import { ArrowRight, Copy, Eye, ListChecks, PartyPopper, PencilLine, Share2 } from "lucide-react";
 import * as React from "react";
 import { data, type Person, type PersonSummary, type Profile, type ProfileFields } from "@/lib/data";
 import { blankFields } from "@/lib/data/seed";
@@ -52,11 +52,11 @@ export function MyProfile() {
     registered: null,
     draft: fields && <Banner tone="warning" title="Draft · not submitted yet">
       Only you can see this. Finish the questionnaire and submit it for review when you're ready.
-      <div className="mt-3"><ButtonLink href="/profile/edit/" size="sm" variant="primary" iconEnd={<ArrowRight />}>{editLabel}</ButtonLink></div>
+      <div className="mt-3"><ButtonLink href="/profile/canvas/" size="sm" variant="primary" iconEnd={<ArrowRight />}>{editLabel}</ButtonLink></div>
     </Banner>,
     submitted: <Banner tone="info" title="Submitted for review">
       Thanks, {first}. Our team is reviewing your profile{person.submittedAt && ` (sent ${when(person.submittedAt)})`}. We'll email you when it's approved or if we suggest a change.
-      <div className="mt-3"><ButtonLink href="/profile/edit/?step=review" size="sm" iconStart={<PencilLine />}>Edit</ButtonLink></div>
+      <div className="mt-3"><ButtonLink href="/profile/canvas/" size="sm" iconStart={<PencilLine />}>Edit</ButtonLink></div>
     </Banner>,
     changes_requested: <Banner tone="warning" title="Changes requested">
       <p>The Between Gigs team looked at your profile and asked for a few changes. Update them, then submit again.</p>
@@ -65,7 +65,7 @@ export function MyProfile() {
           <li key={n.note} className="rounded-md border border-line bg-surface p-3 text-body-sm text-ink"><b className="block text-label-sm text-ink-muted">{sectionLabel[n.section]}</b>{n.note}</li>
         ))}
       </ul>
-      <div className="mt-3"><ButtonLink href="/profile/edit/?step=review" size="sm" variant="primary" iconEnd={<ArrowRight />}>{editLabel}</ButtonLink></div>
+      <div className="mt-3"><ButtonLink href="/profile/canvas/" size="sm" variant="primary" iconEnd={<ArrowRight />}>{editLabel}</ButtonLink></div>
     </Banner>,
     approved: null,
   }[person.status];
@@ -80,7 +80,7 @@ export function MyProfile() {
             <PersonStatusBadge status={person.status} audience="gigster" />
           </div>
         </div>
-        {started && person.status === "approved" && <ButtonLink href="/profile/edit/" iconStart={<PencilLine />}>{editLabel}</ButtonLink>}
+        {started && person.status === "approved" && <ButtonLink href="/profile/canvas/" iconStart={<PencilLine />}>{editLabel}</ButtonLink>}
       </div>
 
       {banner && <div className="mt-6">{banner}</div>}
@@ -105,7 +105,7 @@ function NotStarted({ person }: { person: Person }) {
       <div className="lg:col-span-7">
         <p className="text-label-md text-ink-brand">Good work. Great people. Your next chapter.</p>
         <h2 id="start-h" className="mt-3 font-display text-display-sm text-balance text-ink sm:text-display-md">Let's meet the person <span className="glow-text text-ink-brand">behind the experience.</span></h2>
-        <p className="mt-3 max-w-prose text-body-lg text-ink-muted">Bring your on-set know-how to everyday life. Five short steps, about 10 minutes, and it saves as you go.</p>
+        <p className="mt-3 max-w-prose text-body-lg text-ink-muted">Bring your on-set know-how to everyday life. You'll fill in your profile right where clients will see it: about 10 minutes, and it saves as you go.</p>
         <ol className="mt-6 grid gap-4">
           {STEPS.map((step, i) => (
             <li key={step} className="flex items-start gap-4">
@@ -115,14 +115,14 @@ function NotStarted({ person }: { person: Person }) {
           ))}
         </ol>
         <div className="mt-8 flex flex-wrap items-center gap-3">
-          <ButtonLink href="/profile/edit/" variant="primary" size="lg" iconEnd={<ArrowRight />}>Start your profile</ButtonLink>
-          <ButtonLink href="/profile/canvas/" size="lg" iconStart={<PencilLine />}>Or fill it in on the page itself</ButtonLink>
+          <ButtonLink href="/profile/canvas/" variant="primary" size="lg" iconEnd={<ArrowRight />}>Start your profile</ButtonLink>
+          <ButtonLink href="/profile/edit/" size="lg" iconStart={<ListChecks />}>Prefer questions, step by step?</ButtonLink>
         </div>
       </div>
       <div className="lg:col-span-5">
         <p className="mb-3 text-label-md text-ink-muted">What clients will see</p>
         <ProfilePreviewCard fields={blankFields(person.name)} personId={person.id} badge="Your card" />
-        <p className="mt-3 text-body-sm text-ink-subtle">It fills in as you answer each step.</p>
+        <p className="mt-3 text-body-sm text-ink-subtle">It fills in as you go.</p>
       </div>
     </section>
   );

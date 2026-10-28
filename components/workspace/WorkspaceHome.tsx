@@ -1,6 +1,6 @@
 "use client";
 import { Badge, Input, SegmentedControl, Select, cx } from "@ds/components";
-import { ArrowUpRight, Clock, FolderOpen, Layers, LayoutGrid, List, Search, Star } from "lucide-react";
+import { ArrowUpRight, Clock, FolderOpen, Layers, LayoutGrid, List, Search, Star, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -37,6 +37,7 @@ export function WorkspaceHome() {
       <SideSection title="Workspace">
         <SideLink href="/workspace/" label="All projects" icon={<LayoutGrid />} count={projects.length} active={!folder} />
         <SideLink href="/workspace/?folder=favorites" label="Favourites" icon={<Star />} count={favorites.length} active={folder === "favorites"} />
+        <SideLink href="/workspace/clients/" label="Clients" icon={<Users />} />
       </SideSection>
       <SideSection title="Folders">
         {folders.map((f) => <SideLink key={f.id} href={`/workspace/?folder=${f.id}`} label={f.name} icon={<FolderOpen />} count={projects.filter((p) => p.folder === f.id).length} active={folder === f.id} />)}

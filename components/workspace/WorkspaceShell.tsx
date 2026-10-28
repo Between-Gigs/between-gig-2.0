@@ -1,6 +1,6 @@
 "use client";
 import { CommandPalette, Drawer, IconButton, Kbd, Logo, Menu, ThemeToggle, cx, useCommandShortcut, type Command, type MenuEntry } from "@ds/components";
-import { ChevronsUpDown, FileText, FolderOpen, LayoutGrid, Moon, PanelLeft, PanelRight, RotateCcw, Search, Star } from "lucide-react";
+import { ChevronsUpDown, FileText, FolderOpen, FolderPlus, Users, LayoutGrid, Moon, PanelLeft, PanelRight, RotateCcw, Search, Star } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -79,6 +79,8 @@ export function WorkspaceShell({ project, crumb, sidebar, sidebarTitle, inspecto
   const all: Command[] = [
     ...commands,
     { id: "home", label: "All projects", group: "Go to", icon: <LayoutGrid />, onRun: () => router.push("/workspace/") },
+    { id: "clients", label: "Clients", group: "Go to", icon: <Users />, keywords: "client management crm board tasks milestones", onRun: () => router.push("/workspace/clients/") },
+    { id: "new-project", label: "New project from the template", group: "Actions", icon: <FolderPlus />, keywords: "create start client template", onRun: () => router.push("/workspace/clients/?new=1") },
     ...folders.map((f) => ({ id: `folder-${f.id}`, label: f.name, group: "Folders", icon: <FolderOpen />, keywords: f.sub, onRun: () => router.push(`/workspace/?folder=${f.id}`) })),
     ...projects.map((p) => ({ id: `project-${p.id}`, label: p.name, group: "Projects", keywords: [p.summary, folders.find((f) => f.id === p.folder)?.name, ...p.pages.map((pg) => `${pg.title} ${pg.path}`)].join(" "), icon: <Cover project={p} size="sm" />, onRun: () => router.push(openHref(p.id)) })),
     ...projects.flatMap((p) => p.pages.length > 1 ? p.pages.map((pg) => ({ id: `page-${p.id}-${pg.id}`, label: `${pg.title} · ${p.name}`, group: "Pages", icon: <FileText />, keywords: `${pg.path} ${pg.group ?? ""}`, onRun: () => router.push(openHref(p.id, pg.id)) })) : []),

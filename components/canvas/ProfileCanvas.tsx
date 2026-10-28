@@ -1,13 +1,13 @@
 "use client";
-import { Badge, Banner, Button, Field, Input, RadioGroup, SegmentedControl, Skeleton, Slider, Textarea, cx, useToast } from "@ds/components";
+import { Badge, Banner, Button, Field, Input, Modal, RadioGroup, SegmentedControl, Skeleton, Slider, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
-import { ArrowRight, Calendar, Check, Eye, ListChecks, MapPin, MessageSquareWarning, PartyPopper, PenLine, Pencil, Plus, Sparkles, Wallet, WandSparkles } from "lucide-react";
+import { ArrowRight, Calendar, Check, Copy, Eye, Link2, ListChecks, MapPin, MessageSquareWarning, PartyPopper, PenLine, Pencil, Plus, Share2, Sparkles, Wallet, WandSparkles } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
 import { basisLabel, basisShort, insuranceLabel, laServiceAreas, modeLabel, monthStatusLabel, offSetServices, onSetSkills } from "@/lib/data/taxonomy";
 import { useRequireRole } from "@/lib/guard";
-import { asset } from "@/lib/site";
+import { absoluteUrl, asset } from "@/lib/site";
 import { ABOUT_MAX, completeness, pinnedCredits, sectionLabel, validateAll, type FieldErrors } from "@/lib/profile/validate";
 import { Credits, SaveIndicator, type SaveState } from "@/components/builder/ProfileBuilder";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
@@ -92,6 +92,10 @@ interface Ctx {
   open: (id: SpotId) => void;
   close: () => void;
   advance: (from: SpotId) => void;
+  /** The photo just went in: play the reveal. */
+  portrait: boolean;
+  /** The page just opened for the first time: the spots light up in turn. */
+  rise: boolean;
 }
 const CanvasCtx = React.createContext<Ctx | null>(null);
 const useCanvas = () => React.useContext(CanvasCtx)!;
@@ -136,6 +140,9 @@ function Canvas({ personId }: { personId: string }) {
   const [submitting, setSubmitting] = React.useState(false);
   const [sent, setSent] = React.useState(false);
   const [party, setParty] = React.useState(0);
+  const [intro, setIntro] = React.useState(false);
+  const [rise, setRise] = React.useState(false);
+  const [portrait, setPortrait] = React.useState(false);
   const stage = React.useRef<HTMLDivElement>(null);
   const dirty = React.useRef(false);
   const step = React.useRef(0);
@@ -173,6 +180,31 @@ function Canvas({ personId }: { personId: string }) {
     return () => window.clearTimeout(t);
   }, [d, flush]);
   React.useEffect(() => () => { void flush(); }, [flush]);
+
+  // The opening moment, once per person: a short welcome, then the blank page lights up spot by spot.
+  const INTRO = `bg-canvas-intro-${personId}`;
+  const loaded = !!d;
+  React.useEffect(() => {
+    if (!loaded) return;
+    let seen = true;
+    try { seen = localStorage.getItem(INTRO) === "1"; } catch { /* storage blocked: skip the intro */ }
+    if (!seen && latest.current && REQUIRED.filter((id) => isFilled(id, latest.current!)).length <= 1) setIntro(true);  
+  }, [loaded, INTRO]);
+  const endIntro = () => {
+    try { localStorage.setItem(INTRO, "1"); } catch { /* ignore */ }
+    setIntro(false);
+    setRise(true);
+    window.setTimeout(() => setRise(false), 2200);
+  };
+
+  // The portrait reveal: the moment a photo goes in, it opens like an iris, here and on the search card.
+  const hadPhoto = React.useRef<boolean | null>(null);
+  React.useEffect(() => {
+    if (!d) return;
+    const has = !!d.photo;
+    if (hadPhoto.current === false && has) { setPortrait(true); toast({ message: "Looking good. That's the first thing clients see.", tone: "success" }); window.setTimeout(() => setPortrait(false), 2400); }  
+    hadPhoto.current = has;
+  }, [d, toast]);
 
   const done = d ? REQUIRED.filter((id) => isFilled(id, d)).length : 0;
   const ready = done === REQUIRED.length;
@@ -279,14 +311,14 @@ function Canvas({ personId }: { personId: string }) {
 
   const resubmit = person.status === "submitted" || person.status === "approved" || notes.length > 0;
   const first = d.name.split(" ")[0] || "there";
-  const ctx: Ctx = { d, editing, next, fresh, errors, noted, open, close, advance };
+  const ctx: Ctx = { d, editing, next, fresh, errors, noted, open, close, advance, portrait, rise };
 
   return (
     <Page bare>
       <Band>
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
           <div className="grid gap-1">
-            <p className="text-eyebrow text-ink-brand uppercase">New editor</p>
+            <p className="text-eyebrow text-ink-brand uppercase">Edit on your profile</p>
             <h1 className="font-display text-heading-lg text-ink sm:text-display-sm">{done <= 1 && !sent ? `This is your profile, ${first}. Make it yours.` : sent ? "Sent to the Between Gigs team" : `Your profile, ${first}`}</h1>
             <p className="max-w-2xl text-body-md text-ink-muted">{sent
               ? "We review every profile before it goes live and email you when it's approved or if we suggest a change."
@@ -306,14 +338,7 @@ function Canvas({ personId }: { personId: string }) {
         {view === "client" ? (
           <div className="grid gap-6">
             {sent ? (
-              <Reveal effect="scale-in" className="flex flex-wrap items-center gap-4 rounded-2xl border border-line bg-surface p-5 shadow-lg">
-                <span className="grid size-12 shrink-0 place-items-center rounded-full bg-action text-on-action"><PartyPopper className="size-6" aria-hidden="true" /></span>
-                <div className="min-w-0 flex-1">
-                  <h2 tabIndex={-1} className="font-display text-heading-lg text-ink outline-none">You're in the queue, {first}.</h2>
-                  <p className="text-body-md text-ink-muted">This is the page clients will see once it's approved. You can still edit it; changes save as a draft until you send them again.</p>
-                </div>
-                <ButtonLink href="/profile/" iconEnd={<ArrowRight />}>Go to My profile</ButtonLink>
-              </Reveal>
+              <ReadyCard first={first} slug={person.slug} d={d} personId={personId} />
             ) : (
               <Banner tone="info" title="Client view">This is exactly what clients will see. Switch back to Edit to change anything.</Banner>
             )}
@@ -333,6 +358,18 @@ function Canvas({ personId }: { personId: string }) {
           </CanvasCtx.Provider>
         )}
       </div>
+      <Modal open={intro} onClose={endIntro} size="md" title={`Welcome, ${first}. This is your page.`}
+        description="It's blank for now: fill it in right where clients will see it. About ten minutes, and it saves as you go."
+        footer={<><Button variant="ghost" onClick={endIntro}>Look around first</Button><Button variant="primary" iconEnd={<ArrowRight />} onClick={() => { endIntro(); if (next) window.setTimeout(() => open(next), 900); }}>{next ? `Start with ${LABEL[next].toLowerCase()}` : "Start"}</Button></>}>
+        <ol className="grid gap-3">
+          {([[Plus, "Tap any dashed spot to fill it in"], [Sparkles, "The glowing one is next; Next carries you through"], [Eye, "Client view shows exactly what clients will see"]] as const).map(([Icon, text], i) => (
+            <li key={text} className="flex items-center gap-3 text-body-md text-ink">
+              <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-selected text-ink-brand"><Icon className="size-4" /></span>
+              <span><span className="sr-only">{i + 1}. </span>{text}</span>
+            </li>
+          ))}
+        </ol>
+      </Modal>
       {!sent && !editing && view === "edit" && (
         <Dock done={done} total={REQUIRED.length} next={next} ready={ready} resubmit={resubmit} submitting={submitting} onNext={() => next && open(next)} onSubmit={submit} />
       )}
@@ -393,14 +430,14 @@ function StageBar({ done, total, ready, missing, save, view, editing, sent, subm
 
 /** The profile, laid out like the public page (ProfileView), with every part a spot. */
 function EditView({ d, set, personId }: { d: ProfileFields; set: <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K]) => void; personId: string }) {
-  const { open, next, editing } = useCanvas();
+  const { open, next, editing, portrait, rise } = useCanvas();
   const rate = d.rate ? `$${d.rate}/${basisShort[d.basis]}` : null;
   const where = d.market === "la" ? (d.areas.length ? `${d.areas.join(" · ")}, Los Angeles area` : "") : d.otherCity;
   const credits = pinnedCredits(d);
   const done = REQUIRED.filter((id) => isFilled(id, d)).length;
 
   return (
-    <div data-client-locked="" className="approved-type relative grid gap-10 lg:grid-cols-12">
+    <div data-client-locked="" className={cx("approved-type relative grid gap-10 lg:grid-cols-12", rise && "canvas-rise")}>
       {/* Spotlight: while a spot is open the rest of the page steps back, except the search card, which updates as they type. */}
       {editing && <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-raised bg-bg/50" />}
       <div className="min-w-0 lg:col-span-8">
@@ -563,7 +600,7 @@ function EditView({ d, set, personId }: { d: ProfileFields; set: <K extends keyo
           </section>
           <section aria-labelledby="canvas-card-h" className="grid gap-3">
             <h2 id="canvas-card-h" className="text-label-md text-ink-subtle">How you'll appear in search</h2>
-            <ProfilePreviewCard fields={d} personId={personId} badge={completeness(d) === 1 ? "Ready" : "Live preview"} />
+            <div className={cx("rounded-2xl", portrait && "portrait-reveal")}><ProfilePreviewCard fields={d} personId={personId} badge={completeness(d) === 1 ? "Ready" : "Live preview"} /></div>
           </section>
         </div>
       </aside>
@@ -590,7 +627,8 @@ function Block({ title, hint, children }: { title: string; hint: string; childre
 function Spot({ id, children, empty, editor, inline = false, className, round = inline ? "rounded-lg" : "rounded-2xl" }: {
   id: SpotId; children: React.ReactNode; empty: React.ReactNode; editor: React.ReactNode; inline?: boolean; className?: string; round?: string; icon?: React.ReactNode;
 }) {
-  const { d, editing, next, fresh, errors, noted, open, close, advance } = useCanvas();
+  const { d, editing, next, fresh, errors, noted, open, close, advance, portrait } = useCanvas();
+  const order = { "--i": ORDER.indexOf(id) } as React.CSSProperties;
   const filled = isFilled(id, d);
   const err = errors[id];
   const note = noted[id];
@@ -621,7 +659,7 @@ function Spot({ id, children, empty, editor, inline = false, className, round = 
   const flag = note ? "Team note" : null;
   if (!filled) {
     return (
-      <div data-spot={id} className={cx("relative", className)}>
+      <div data-spot={id} style={order} className={cx("relative", className)}>
         <button type="button" data-spot-edit="" onClick={() => open(id)} aria-label={`Add ${LABEL[id].toLowerCase()}${required ? "" : " (optional)"}`}
           className={cx("group block w-full border-dashed text-left transition duration-base hover:border-ink-brand hover:bg-surface-selected focus-visible:border-ink-brand",
             // Small parts (a line in the hero) are a dashed underline; the big ones a dashed box.
@@ -639,8 +677,8 @@ function Spot({ id, children, empty, editor, inline = false, className, round = 
     );
   }
   return (
-    <div data-spot={id} className={cx("group relative", inline && "flex min-h-8 w-fit max-w-full items-center", className)}>
-      <div className={cx("transition duration-base", round, fresh === id && "spot-filled")}>{children}</div>
+    <div data-spot={id} style={order} className={cx("group relative", inline && "flex min-h-8 w-fit max-w-full items-center", className)}>
+      <div className={cx("transition duration-base", round, id === "photo" && portrait ? "portrait-reveal" : fresh === id && "spot-filled")}>{children}</div>
       <button type="button" data-spot-edit="" onClick={() => open(id)} aria-label={`Edit ${LABEL[id].toLowerCase()}`}
         className={cx("absolute -inset-1.5 outline-2 outline-transparent transition duration-fast hover:outline-dashed hover:outline-ink-brand focus-visible:outline-solid focus-visible:outline-focus", round,
           (err || note) && "outline-dashed outline-warning")}>
@@ -735,6 +773,39 @@ function AboutEditor({ d, onChange }: { d: ProfileFields; onChange: (v: string) 
         <Textarea key={drafted ? "drafted" : "own"} id="f-about" rows={7} showCount maxLength={ABOUT_MAX} value={d.about} onChange={(e) => onChange(e.target.value)} />
       </Field>
     </div>
+  );
+}
+
+/** After Send: the page is ready. Its future link to copy or share, and the card clients will find in search. */
+function ReadyCard({ first, slug, d, personId }: { first: string; slug: string; d: ProfileFields; personId: string }) {
+  const toast = useToast();
+  const url = absoluteUrl(`/p/${slug}/`);
+  const [canShare, setCanShare] = React.useState(false);
+  React.useEffect(() => { setCanShare(typeof navigator !== "undefined" && "share" in navigator); }, []); // eslint-disable-line react-hooks/set-state-in-effect
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(url); toast({ message: "Link copied", tone: "success" }); } catch { toast({ message: "Couldn't copy. Select the link and copy it.", tone: "danger" }); }
+  };
+  return (
+    <Reveal effect="scale-in" className="grid gap-6 overflow-hidden rounded-2xl border border-line bg-surface p-5 shadow-lg sm:p-8 lg:grid-cols-12 lg:items-center">
+      <div className="grid gap-4 lg:col-span-7">
+        <span className="grid size-12 place-items-center rounded-full bg-action text-on-action"><PartyPopper className="size-6" aria-hidden="true" /></span>
+        <h2 tabIndex={-1} className="font-display text-display-sm text-balance text-ink outline-none">Your page is ready, {first}.</h2>
+        <p className="max-w-prose text-body-lg text-ink-muted">It's with the Between Gigs team now. Once they approve it, this is where clients will find you. Changes you make from here save as a draft until you send them again.</p>
+        <div className="flex min-w-0 items-center gap-2 rounded-xl border border-line bg-surface-sunken p-2 pl-3">
+          <Link2 className="size-4 shrink-0 text-ink-subtle" aria-hidden="true" />
+          <span className="min-w-0 flex-1 truncate font-mono text-data-sm text-ink" title={url}>{url.replace(/^https?:\/\//, "")}</span>
+          <Button size="sm" variant="primary" iconStart={<Copy />} onClick={copy}>Copy link</Button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {canShare && <Button variant="secondary" iconStart={<Share2 />} onClick={() => { void navigator.share({ title: `${d.name} · Between Gigs`, url }).catch(() => {}); }}>Share</Button>}
+          <ButtonLink href="/profile/" variant="ghost" iconEnd={<ArrowRight />}>Go to My profile</ButtonLink>
+        </div>
+      </div>
+      <div className="lg:col-span-5">
+        <p className="mb-3 text-label-md text-ink-muted">How you'll appear in search</p>
+        <ProfilePreviewCard fields={d} personId={personId} badge="Ready" />
+      </div>
+    </Reveal>
   );
 }
 
