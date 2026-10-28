@@ -29,6 +29,7 @@ export const thumbs = [
   { name: "invite", path: "/join/?invite=riley-7q2m", setup: "window.bgSample.reset()" },
   { name: "grace", path: "/profile/", setup: as("gigster", "grace-liu") },
   { name: "elena", path: "/profile/edit/", setup: as("gigster", "elena-petrova") },
+  { name: "workspace", path: "/workspace/" },
   { name: "canvas", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair") },
   { name: "imani", path: "/profile/", setup: as("gigster", "imani-carter") },
   { name: "hana", path: "/profile/", setup: as("gigster", "hana-kim") },

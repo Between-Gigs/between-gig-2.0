@@ -1,0 +1,207 @@
+"use client";
+import { CommandPalette, Drawer, IconButton, Kbd, Logo, Menu, ThemeToggle, cx, useCommandShortcut, type Command, type MenuEntry } from "@ds/components";
+import { ChevronsUpDown, FolderOpen, LayoutGrid, Moon, PanelLeft, PanelRight, RotateCcw, Search, Star } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import * as React from "react";
+import { data } from "@/lib/data";
+import { asset } from "@/lib/site";
+import { folders, openHref, projects, type Project } from "@/lib/workspace/projects";
+
+/*
+ * The workspace shell: one frame around everything we're building. Top bar with the project switcher and ⌘K search,
+ * a left bar for where you are, the work in the middle, a right bar for details, and a status bar along the bottom.
+ * [ and ] toggle the side bars; on phones and tablets they open as drawers.
+ */
+
+const SIDEBAR_KEY = "bg-ws-sidebar";
+const INSPECTOR_KEY = "bg-ws-inspector";
+const read = (k: string, d: boolean) => { try { const v = localStorage.getItem(k); return v === null ? d : v === "1"; } catch { return d; } };
+const write = (k: string, v: boolean) => { try { localStorage.setItem(k, v ? "1" : "0"); } catch { /* ignore */ } };
+
+interface ShellProps {
+  /** The open project, if any. Drives the switcher and breadcrumb. */
+  project?: Project;
+  /** Breadcrumb after the project: the open page. */
+  crumb?: string;
+  sidebar: React.ReactNode;
+  sidebarTitle: string;
+  inspector?: React.ReactNode;
+  inspectorTitle?: string;
+  /** Left side of the status bar. */
+  status?: React.ReactNode;
+  /** Extra commands for ⌘K, on top of every project and page. */
+  commands?: Command[];
+  /** Full-bleed work area (a page preview) instead of a padded, scrolling one. */
+  bleed?: boolean;
+  children: React.ReactNode;
+}
+
+export function WorkspaceShell({ project, crumb, sidebar, sidebarTitle, inspector, inspectorTitle = "Details", status, commands = [], bleed = false, children }: ShellProps) {
+  const router = useRouter();
+  const [left, setLeft] = React.useState(true);
+  const [right, setRight] = React.useState(true);
+  const [leftDrawer, setLeftDrawer] = React.useState(false);
+  const [rightDrawer, setRightDrawer] = React.useState(false);
+  const [palette, setPalette] = React.useState(false);
+  React.useEffect(() => { setLeft(read(SIDEBAR_KEY, true)); setRight(read(INSPECTOR_KEY, true)); }, []); // eslint-disable-line react-hooks/set-state-in-effect
+  useCommandShortcut(React.useCallback(() => setPalette(true), []));
+  // The palette's field is a search box; say so, so it isn't read as a placeholder-only text field
+  // (requested upstream in docs/design-system-requests.md).
+  // React clears the attribute on every keystroke, so keep it set.
+  React.useEffect(() => {
+    const el = document.querySelector("dialog input[aria-label='Search commands']");
+    if (!el) return;
+    const fix = () => { if (el.getAttribute("type") !== "search") el.setAttribute("type", "search"); };
+    fix();
+    const mo = new MutationObserver(fix);
+    mo.observe(el, { attributes: true, attributeFilter: ["type"] });
+    return () => mo.disconnect();
+  }, []);
+
+  const wide = () => typeof window !== "undefined" && window.matchMedia("(min-width: 64rem)").matches;
+  const xl = () => typeof window !== "undefined" && window.matchMedia("(min-width: 80rem)").matches;
+  const toggleLeft = React.useCallback(() => { if (wide()) setLeft((v) => { write(SIDEBAR_KEY, !v); return !v; }); else setLeftDrawer((v) => !v); }, []);
+  const toggleRight = React.useCallback(() => { if (xl()) setRight((v) => { write(INSPECTOR_KEY, !v); return !v; }); else setRightDrawer((v) => !v); }, []);
+
+  // [ and ] toggle the side bars, unless someone is typing.
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      if (e.metaKey || e.ctrlKey || e.altKey || t.closest("input, textarea, select, [contenteditable=true]")) return;
+      if (e.key === "[") { e.preventDefault(); toggleLeft(); }
+      if (e.key === "]" && inspector) { e.preventDefault(); toggleRight(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [toggleLeft, toggleRight, inspector]);
+
+  const all: Command[] = [
+    ...commands,
+    { id: "home", label: "All projects", group: "Go to", icon: <LayoutGrid />, onRun: () => router.push("/workspace/") },
+    ...folders.map((f) => ({ id: `folder-${f.id}`, label: f.name, group: "Folders", icon: <FolderOpen />, keywords: f.sub, onRun: () => router.push(`/workspace/?folder=${f.id}`) })),
+    ...projects.map((p) => ({ id: `project-${p.id}`, label: p.name, group: "Projects", keywords: p.summary, icon: <Cover project={p} size="sm" />, onRun: () => router.push(openHref(p.id)) })),
+    ...projects.flatMap((p) => p.pages.length > 1 ? p.pages.map((pg) => ({ id: `page-${p.id}-${pg.id}`, label: `${pg.title} · ${p.name}`, group: "Pages", keywords: `${pg.path} ${pg.group ?? ""}`, onRun: () => router.push(openHref(p.id, pg.id)) })) : []),
+    { id: "sidebar", label: "Show or hide the left bar", group: "View", icon: <PanelLeft />, shortcut: ["["], onRun: toggleLeft },
+    ...(inspector ? [{ id: "inspector", label: "Show or hide details", group: "View", icon: <PanelRight />, shortcut: ["]"], onRun: toggleRight }] : []),
+    { id: "theme", label: "Switch day or night", group: "View", icon: <Moon />, onRun: () => document.querySelector<HTMLElement>("[data-ws-theme] button")?.click() },
+    ...(data.demo ? [{ id: "reset", label: "Reset the sample data", group: "Actions", icon: <RotateCcw />, onRun: () => { void data.demo?.reset().then(() => window.location.reload()); } }] : []),
+  ];
+
+  const switcher: MenuEntry[] = [
+    { label: "All projects", icon: <LayoutGrid />, onSelect: () => router.push("/workspace/"), checked: !project },
+    ...folders.flatMap((f) => {
+      const ps = projects.filter((p) => p.folder === f.id);
+      return ps.length ? ["separator" as const, { heading: f.name }, ...ps.map((p) => ({ label: p.name, icon: <Cover project={p} size="sm" />, checked: project?.id === p.id, onSelect: () => router.push(openHref(p.id)) }))] : [];
+    }),
+  ];
+
+  return (
+    <div className="flex h-dvh flex-col overflow-hidden bg-bg text-ink">
+      <header className="flex h-14 shrink-0 items-center gap-1.5 border-b border-line bg-surface px-2 sm:gap-2 sm:px-3">
+        <IconButton label="Open the left bar" variant="ghost" icon={<PanelLeft />} className="lg:hidden" onClick={() => setLeftDrawer(true)} />
+        <Link href="/workspace/" aria-label="Workspace home" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md px-1"><Logo layout="mark" height={24} /><span className="text-label-md text-ink max-md:sr-only">Workspace</span></Link>
+        <span aria-hidden="true" className="h-6 w-px shrink-0 bg-line max-sm:hidden" />
+        <Menu align="start" items={switcher} trigger={
+          <button type="button" className="inline-flex h-10 min-w-0 items-center gap-2 rounded-md px-2 text-label-md text-ink hover:bg-surface-hover" aria-label={`Switch project. Now: ${project?.name ?? "All projects"}`}>
+            {project ? <Cover project={project} size="sm" /> : <LayoutGrid className="size-4 text-ink-subtle" aria-hidden="true" />}
+            <span className="max-w-40 truncate sm:max-w-56">{project?.name ?? "All projects"}</span>
+            <ChevronsUpDown className="size-4 shrink-0 text-ink-subtle" aria-hidden="true" />
+          </button>
+        } />
+        {crumb && <span className="min-w-0 truncate text-label-md text-ink-muted max-md:hidden"><span aria-hidden="true" className="mr-2 text-ink-subtle">/</span>{crumb}</span>}
+        <button type="button" onClick={() => setPalette(true)} aria-label="Search projects and pages" aria-keyshortcuts="Meta+K Control+K"
+          className="ml-auto inline-flex h-10 min-w-10 items-center justify-center gap-2 rounded-md border border-line bg-surface-sunken px-2.5 text-body-sm text-ink-subtle transition-colors hover:border-line-strong hover:text-ink md:w-72 md:justify-start lg:w-80">
+          <Search className="size-4 shrink-0" aria-hidden="true" /><span className="flex-1 text-left max-md:hidden">Search or jump to…</span><Kbd keys={["⌘", "K"]} className="max-md:hidden" />
+        </button>
+        <IconButton label={left ? "Hide the left bar ([)" : "Show the left bar ([)"} variant="ghost" icon={<PanelLeft />} pressed={left} className="max-lg:hidden" onClick={toggleLeft} />
+        {inspector && <IconButton label={right ? "Hide details (])" : "Show details (])"} variant="ghost" icon={<PanelRight />} pressed={right} className="max-xl:hidden" onClick={toggleRight} />}
+        {inspector && <IconButton label="Show details" variant="ghost" icon={<PanelRight />} className="xl:hidden" onClick={() => setRightDrawer(true)} />}
+        <span data-ws-theme="" className="inline-flex max-sm:hidden"><ThemeToggle size="sm" showLabel={false} /></span>
+      </header>
+
+      <div className="flex min-h-0 flex-1">
+        {left && (
+          <aside aria-label={sidebarTitle} className="hidden w-64 shrink-0 flex-col overflow-y-auto border-r border-line bg-surface lg:flex">
+            <nav aria-label={sidebarTitle} className="grid content-start gap-5 p-3">{sidebar}</nav>
+          </aside>
+        )}
+        <main id="main" tabIndex={-1} className={cx("relative min-w-0 flex-1 outline-none", bleed ? "flex flex-col overflow-hidden" : "overflow-y-auto")}>
+          {bleed ? children : <div className="mx-auto w-full max-w-7xl px-4 pt-6 pb-16 sm:px-6 lg:px-8">{children}</div>}
+        </main>
+        {inspector && right && (
+          <aside aria-label={inspectorTitle} className="hidden w-80 shrink-0 flex-col overflow-y-auto border-l border-line bg-surface xl:flex">{inspector}</aside>
+        )}
+      </div>
+
+      <footer className="flex h-9 shrink-0 items-center gap-3 border-t border-line bg-surface px-3 text-caption text-ink-subtle">
+        <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden whitespace-nowrap">{status}</div>
+        <span className="flex shrink-0 items-center gap-3 max-md:hidden">
+          <span className="flex items-center gap-1.5"><Kbd keys={["⌘", "K"]} />Search</span>
+          <span className="flex items-center gap-1.5"><Kbd keys={["["]} />Left</span>
+          {inspector && <span className="flex items-center gap-1.5"><Kbd keys={["]"]} />Details</span>}
+        </span>
+      </footer>
+
+      <Drawer side="left" open={leftDrawer} onClose={() => setLeftDrawer(false)} title={sidebarTitle}>
+        <nav aria-label={sidebarTitle} className="grid gap-5" onClick={(e) => { if ((e.target as HTMLElement).closest("a")) setLeftDrawer(false); }}>{sidebar}</nav>
+      </Drawer>
+      {inspector && <Drawer side="right" size="md" open={rightDrawer} onClose={() => setRightDrawer(false)} title={inspectorTitle}><div className="-mx-5">{inspector}</div></Drawer>}
+      <CommandPalette open={palette} onClose={() => setPalette(false)} commands={all} placeholder="Search projects, pages and actions…" />
+    </div>
+  );
+}
+
+/** A project's cover, as a small square (switcher, lists) or the card's 16:10 image. */
+export function Cover({ project, size = "md", className }: { project: Project; size?: "sm" | "md"; className?: string }) {
+  if (size === "sm") return <img src={asset(project.cover)} alt="" className={cx("size-5 shrink-0 rounded-xs object-cover object-top ring-1 ring-line", className)} />;
+  return <img src={asset(project.cover)} alt="" loading="lazy" decoding="async" className={cx("aspect-video w-full object-cover object-top", className)} />;
+}
+
+/** A sidebar row: NavItem's look, as a client-side link. */
+export function SideLink({ href, label, icon, count, active, trailing }: { href: string; label: string; icon?: React.ReactNode; count?: number; active?: boolean; trailing?: React.ReactNode }) {
+  return (
+    <Link href={href} aria-current={active ? "page" : undefined}
+      className={cx("group flex min-h-10 items-center gap-3 rounded-md px-3 text-label-md transition-colors duration-fast [&_svg]:size-4.5 [&_svg]:shrink-0",
+        active ? "bg-surface-selected text-ink" : "text-ink-muted hover:bg-surface-hover hover:text-ink")}>
+      {icon && <span className={active ? "text-ink-brand" : "text-ink-subtle group-hover:text-ink-muted"}>{icon}</span>}
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {trailing}
+      {count !== undefined && <span className="text-caption text-ink-subtle tabular-nums">{count}</span>}
+    </Link>
+  );
+}
+
+export function SideSection({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <div className="grid gap-0.5">
+      <div className="flex min-h-7 items-center justify-between px-3 pb-1"><span className="text-eyebrow text-ink-subtle uppercase">{title}</span>{action}</div>
+      {children}
+    </div>
+  );
+}
+
+/* Favourites and recents: per browser conveniences. */
+const FAV = "bg-ws-favorites";
+const RECENT = "bg-ws-recent";
+const readList = (k: string): string[] => { try { return JSON.parse(localStorage.getItem(k) ?? "[]"); } catch { return []; } };
+const writeList = (k: string, v: string[]) => { try { localStorage.setItem(k, JSON.stringify(v)); window.dispatchEvent(new Event("bg-ws-lists")); } catch { /* ignore */ } };
+
+export function useWorkspaceLists() {
+  const [favorites, setFavorites] = React.useState<string[]>([]);
+  const [recent, setRecent] = React.useState<string[]>([]);
+  React.useEffect(() => {
+    const sync = () => { setFavorites(readList(FAV)); setRecent(readList(RECENT)); };
+    sync();
+    window.addEventListener("bg-ws-lists", sync);
+    return () => window.removeEventListener("bg-ws-lists", sync);
+  }, []);
+  const toggleFavorite = (id: string) => writeList(FAV, favorites.includes(id) ? favorites.filter((x) => x !== id) : [...favorites, id]);
+  const visit = React.useCallback((id: string) => writeList(RECENT, [id, ...readList(RECENT).filter((x) => x !== id)].slice(0, 5)), []);
+  return { favorites, recent, toggleFavorite, visit };
+}
+
+export function FavoriteButton({ on, name, onToggle, className }: { on: boolean; name: string; onToggle: () => void; className?: string }) {
+  return <IconButton label={on ? `Remove ${name} from favourites` : `Add ${name} to favourites`} pressed={on} variant="ghost" size="sm" className={cx(on ? "text-warning" : "text-ink-subtle", className)}
+    icon={<Star className={cx(on && "fill-current")} />} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggle(); }} />;
+}

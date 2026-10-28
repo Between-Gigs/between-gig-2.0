@@ -62,6 +62,11 @@ export const routes = [
   { name: "builder-where", path: "/profile/edit/", setup: as("gigster", "elena-petrova"), ready: "[data-step]" },
   { name: "builder-review", path: "/profile/edit/?step=review", setup: as("gigster", "hana-kim"), ready: "[data-step]" },
   // Edit on your profile: blank, with a spot open (spotlight), part-filled, and the client view.
+  // The workspace: every project in one shell, and one project open inside it.
+  { name: "workspace", path: "/workspace/", setup: reset, ready: "main h1" },
+  { name: "workspace-list", path: "/workspace/?folder=onboarding", setup: reset, ready: "main h1", act: async (page) => { await page.getByRole("radio", { name: "List" }).click(); } },
+  { name: "workspace-open", path: "/workspace/open/?p=owners", setup: reset, ready: "main iframe" },
+  { name: "workspace-search", path: "/workspace/", setup: reset, ready: "main h1", act: async (page) => { await page.getByRole("button", { name: "Search projects and pages" }).click(); await page.keyboard.type("review"); } },
   { name: "canvas-blank", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "[data-spot]" },
   { name: "canvas-editing", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "[data-spot]", act: async (page) => { await page.getByRole("button", { name: "Next spot" }).click(); await page.getByRole("button", { name: /^Next:/ }).click(); await page.waitForTimeout(300); } },
   { name: "canvas-draft", path: "/profile/canvas/", setup: as("gigster", "elena-petrova"), ready: "[data-spot]" },

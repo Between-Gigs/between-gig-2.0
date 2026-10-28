@@ -64,3 +64,8 @@ real font, which can set any words but won't be his handwriting).
 
 - **ThemeToggle** (`size="sm"`, `showLabel={false}`) gets both `pr-3` and `pr-0.5`, so the switch sits off-centre with a gap on its right. The app passes `className="pr-0.5!"` until the component drops `pr-3` when there's no label.
 - **backdrop-europium** is dark-only and paints its dots as one flat sheet. The home page now draws its dots on a canvas as a gravity well around the pointer (`lib/gravity-field.ts`) over the app's `depth-field` ground, in Day and Night. A system-level version would replace it.
+
+## From the workspace round (28 Oct)
+
+- **CommandPalette**'s field is `type="text"` with only a placeholder and an aria-label, which `pnpm qa:rules` reads as a placeholder-only field. It is a search box: please give it `type="search"`. The workspace shell (`components/workspace/WorkspaceShell.tsx`) sets the type when the palette opens until then.
+- **AppShell** has no status bar and pads its main area, so a full-bleed preview can't sit in it. The workspace shell lays out its own top bar, side bars, work area and bottom status bar with the system's pieces. A system `AppShell` with an optional `statusBar` and a `bleed` main would let the owner tools, Studio and the workspace share one shell.
