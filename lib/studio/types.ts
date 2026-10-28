@@ -131,6 +131,8 @@ export interface Page {
   root: PageElement;
   /** Custom CSS for this page (Code tool). Class selectors match elements' classes; scoped to the page. */
   customCss?: string;
+  /** Search and sharing: title, description and the image a shared link carries. Empty uses the page name. */
+  seo?: { title?: string; description?: string; image?: string };
 }
 
 export interface Base {
@@ -141,4 +143,6 @@ export interface Base {
   pages: Page[];
   /** Named styles shared by elements (Webflow-style classes). */
   classes: Record<string, Styles>;
+  /** Images uploaded to the asset library, beyond those the collections use. */
+  assets?: string[];
 }

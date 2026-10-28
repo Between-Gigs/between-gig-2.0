@@ -333,5 +333,17 @@
   "as": "reset",
   "title": "Between Gigs · Client",
   "description": "A client's page: next step, milestones, projects, tasks and notes."
+ },
+ "workspace-templates": {
+  "path": "/workspace/templates/",
+  "as": "reset",
+  "title": "Templates",
+  "description": "Start a client project from a template: the phases, the checks and a working example."
+ },
+ "workspace-portal": {
+  "path": "/workspace/portal/?c=between-gigs",
+  "as": "reset",
+  "title": "Client portal",
+  "description": "What the client sees: progress, what's waiting on them, milestones to approve and the latest updates."
  }
 }

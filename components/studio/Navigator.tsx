@@ -130,23 +130,62 @@ function Collections() {
   );
 }
 
-/** Every image used in the base, and where. */
+/** The asset library: uploads first, then every image the collections use. */
+export const studioAssets = (base: Base): string[] => Array.from(new Set([...(base.assets ?? []), ...baseImages(base)]));
+
+/** Reads an image into a JPEG data URL no wider than 1600px. */
+async function readImage(file: File): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
+    const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext("2d")?.drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.86);
+  } finally { URL.revokeObjectURL(url); }
+}
+
+/** Every image in the base and where it's used; upload more, remove uploads. */
 function Assets() {
   const ui = useUi();
-  const images = React.useMemo(() => baseImages(ui.base), [ui.base]);
+  const { actions } = useStudio();
+  const toast = useToast();
+  const file = React.useRef<HTMLInputElement>(null);
+  const images = React.useMemo(() => studioAssets(ui.base), [ui.base]);
+  const uploaded = new Set(ui.base.assets ?? []);
   const usedIn = (src: string) => ui.base.collections.filter((c) => c.fields.some((f) => f.type === "image" && c.records.some((r) => r.values[f.id] === src))).map((c) => c.name);
+  const upload = async (files: FileList | null) => {
+    if (!files?.length) return;
+    try {
+      const urls = await Promise.all(Array.from(files).filter((f) => f.type.startsWith("image/")).map(readImage));
+      actions.change(urls.length === 1 ? "Uploaded an image" : `Uploaded ${urls.length} images`, (b) => { b.assets = [...urls, ...(b.assets ?? [])]; });
+      toast({ message: urls.length === 1 ? "Image added to your assets" : `${urls.length} images added`, tone: "success" });
+    } catch { toast({ message: "That file couldn't be read as an image.", tone: "danger" }); }
+  };
   return (
     <>
-      <Head title={`Assets · ${images.length}`} />
-      <p className="px-4 pt-3 text-body-sm text-ink-muted">Pictures used across your collections. Add new ones from any image field.</p>
-      <ul className="grid grid-cols-2 gap-2 overflow-y-auto p-3">
+      <Head title={`Assets · ${images.length}`} action={<IconButton size="sm" variant="ghost" label="Upload images" icon={<Upload />} onClick={() => file.current?.click()} />} />
+      <input ref={file} type="file" accept="image/*" multiple className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(e) => { void upload(e.target.files); e.target.value = ""; }} />
+      <div className="grid gap-3 px-3 pt-3">
+        <Button size="sm" variant="secondary" iconStart={<Upload />} onClick={() => file.current?.click()}>Upload images</Button>
+        <p className="rounded-md bg-surface-sunken p-2.5 text-body-sm text-ink-muted">Generated images arrive here once the studio connects an image generator (Figma credits). Until then, upload or reuse what's here.</p>
+      </div>
+      {/* The list scrolls on its own; focusable so keyboard users can scroll it too. */}
+      <div role="region" aria-label="Asset library" tabIndex={0} className="overflow-y-auto outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus">
+      <ul className="grid grid-cols-2 gap-2 p-3">
         {images.map((src) => (
-          <li key={src} className="grid gap-1">
+          <li key={src} className="group relative grid gap-1">
             <Thumb src={src} className="aspect-square w-full rounded-md" />
-            <span className="truncate text-caption text-ink-subtle" title={src}>{usedIn(src).join(", ")}</span>
+            <span className="truncate text-caption text-ink-subtle" title={src.startsWith("data:") ? "Uploaded" : src}>{uploaded.has(src) ? "Uploaded" : usedIn(src).join(", ") || "Not used yet"}</span>
+            {uploaded.has(src) && (
+              <IconButton size="sm" variant="secondary" label="Remove this upload" icon={<Trash2 />} className="absolute top-1 right-1 opacity-0 shadow-sm group-hover:opacity-100 group-focus-within:opacity-100"
+                onClick={() => actions.change("Removed an image", (b) => { b.assets = (b.assets ?? []).filter((x) => x !== src); })} />
+            )}
           </li>
         ))}
       </ul>
+      </div>
     </>
   );
 }

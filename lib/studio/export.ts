@@ -41,6 +41,16 @@ function tagOf(el: PageElement) {
 }
 
 /** origin: prefix image paths with the site's address, so a downloaded copy still shows them. */
+/** Search and sharing tags for the page's head, from its settings (Pages → Search and sharing). */
+function seoTags(page: Page, origin: string) {
+  const s = page.seo ?? {};
+  const tags: string[] = [];
+  if (s.description) tags.push(`<meta name="description" content="${esc(s.description)}">`, `<meta property="og:description" content="${esc(s.description)}">`);
+  tags.push(`<meta property="og:title" content="${esc(s.title || page.name)}">`);
+  if (s.image) { const img = /^(data:|https?:)/.test(s.image) ? s.image : `${origin}/${s.image.replace(/^\//, "")}`; tags.push(`<meta property="og:image" content="${esc(img)}">`, `<meta name="twitter:card" content="summary_large_image">`); }
+  return tags.map((t) => `  ${t}\n`).join("");
+}
+
 export function exportPage(base: Base, page: Page, origin = ""): { html: string; css: string } {
   const own = new Map<string, string>();
   let n = 0;
@@ -99,7 +109,7 @@ export function exportPage(base: Base, page: Page, origin = ""): { html: string;
   };
 
   const body = render(page.root, 1);
-  const html = `<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <title>${esc(page.name)}</title>\n  <link rel="stylesheet" href="styles.css">${page.customCss ? '\n  <link rel="stylesheet" href="custom.css">' : ""}\n</head>\n${body.replace(/^ {2}/gm, "")}\n</html>\n`;
+  const html = `<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <title>${esc(page.seo?.title || page.name)}</title>\n${seoTags(page, origin)}  <link rel="stylesheet" href="styles.css">${page.customCss ? '\n  <link rel="stylesheet" href="custom.css">' : ""}\n</head>\n${body.replace(/^ {2}/gm, "")}\n</html>\n`;
 
   const out: Record<Breakpoint, string[]> = { base: [], tablet: [], phone: [] };
   const used = new Set<string>();

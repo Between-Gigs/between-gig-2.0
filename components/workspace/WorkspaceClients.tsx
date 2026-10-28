@@ -1,13 +1,23 @@
 "use client";
-import { Badge, Button, Field, IconButton, Input, Menu, Modal, RadioGroup, SegmentedControl, Select, Skeleton, Tab, TabList, TabPanel, Tabs, Textarea, cx, useToast } from "@ds/components";
-import { ArrowLeft, ArrowRight, Briefcase, CalendarClock, Check, CircleCheck, Columns3, ExternalLink, FileText, FolderPlus, LayoutGrid, List, ListTodo, MessageSquare, MoreHorizontal, Plus, RotateCcw, Users } from "lucide-react";
+import { Avatar, Badge, Button, Field, IconButton, Input, Menu, Modal, RadioGroup, SegmentedControl, Select, Skeleton, Tab, TabList, TabPanel, Tabs, Textarea, cx, useToast } from "@ds/components";
+import { ArrowLeft, ArrowRight, Briefcase, CalendarClock, Check, CircleCheck, Columns3, ExternalLink, FileText, FolderPlus, GripVertical, LayoutGrid, LayoutTemplate, List, ListTodo, MessageSquare, MonitorSmartphone, MoreHorizontal, Plus, RotateCcw, UserRound, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { shortDate, stageTone, stages, uid, useClients, type Client, type ClientStage } from "@/lib/workspace/clients";
-import { openHref, projectById, projects, type Project } from "@/lib/workspace/projects";
+import { openHref, projectById, type Project } from "@/lib/workspace/projects";
 import { progressOf, projectTypes, templateFor, type LocalProject, type ProjectType } from "@/lib/workspace/template";
-import { Cover, SideLink, SideSection, WorkspaceShell } from "./WorkspaceShell";
+import { mergedProjects, useLocal } from "@/lib/workspace/local";
+import { Cover, SideLink, SideSection, WorkspaceShell, teams } from "./WorkspaceShell";
+
+/** Who a task can be assigned to. "Studio" is us; "Client" shows in their portal under Waiting on you. */
+const people = [
+  { id: "Studio", name: "Studio", sub: "Us, the team" },
+  { id: "Anu", name: "Anu", sub: "Design lead" },
+  { id: "Justin", name: "Justin", sub: "Product" },
+  { id: "Client", name: "Client", sub: "Shows in their portal" },
+];
+const DRAG = "application/x-bg-client";
 
 /*
  * /workspace/clients/: the studio's client management, inside the workspace shell. A board (or list) of clients by
@@ -21,7 +31,12 @@ export function WorkspaceClients() {
   const params = useSearchParams();
   const router = useRouter();
   const toast = useToast();
-  const { clients, ready, update, add, reset, addProject } = useClients();
+  const { clients: everyone, ready, update, add, reset, addProject } = useClients();
+  const { s } = useLocal();
+  // The team switcher scopes the clients in view: the Between Gigs team sees only its own.
+  const clients = s.team === "between-gigs" ? everyone.filter((c) => c.id === "between-gigs") : everyone;
+  const team = teams.find((t) => t.id === s.team) ?? teams[0];
+  const liveCount = mergedProjects(s).filter((p) => !p.archived && !p.trashed).length;
   const id = params.get("c");
   const client = clients.find((c) => c.id === id);
   const [view, setView] = React.useState<"board" | "list">("board");
@@ -32,8 +47,9 @@ export function WorkspaceClients() {
   const sidebar = (
     <>
       <SideSection title="Workspace">
-        <SideLink href="/workspace/" label="All projects" icon={<LayoutGrid />} count={projects.length} />
+        <SideLink href="/workspace/" label="All projects" icon={<LayoutGrid />} count={liveCount} />
         <SideLink href="/workspace/clients/" label="Clients" icon={<Users />} count={clients.length || undefined} active={!client} />
+        <SideLink href="/workspace/templates/" label="Templates" icon={<LayoutTemplate />} />
       </SideSection>
       <SideSection title="Clients">
         {clients.map((c) => <SideLink key={c.id} href={`/workspace/clients/?c=${c.id}`} label={c.name} icon={<Monogram name={c.name} />} active={client?.id === c.id}
@@ -59,7 +75,8 @@ export function WorkspaceClients() {
             <div className="grid gap-1">
               <p className="text-eyebrow text-ink-brand uppercase">Workspace</p>
               <h1 className="font-display text-display-sm text-ink">Clients</h1>
-              <p className="max-w-2xl text-body-md text-ink-muted">Every client and where things stand: stage, next step, open tasks and the next milestone. Open one for its projects and notes.</p>
+              <p className="max-w-2xl text-body-md text-ink-muted">Every client and where things stand: stage, next step, open tasks and the next milestone. Drag a card to change its stage; open one for its projects and notes.</p>
+              {s.team !== "studio" && <p className="text-caption text-ink-subtle">Showing {team.name} only. Switch team from the top bar.</p>}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="secondary" iconStart={<Plus />} onClick={() => setNewClient(true)}>Add client</Button>
@@ -75,6 +92,7 @@ export function WorkspaceClients() {
         </>
       )}
       <NewProjectDialog open={newProject} onClose={() => setNewProject(false)} clients={clients} defaultClient={client?.id}
+        defaultType={(projectTypes.find((t) => t.id === params.get("type"))?.id)} defaultName={params.get("name") ?? undefined}
         onCreate={(clientId, p) => {
           const project = addProject(clientId, p);
           setNewProject(false);
@@ -101,18 +119,31 @@ function Board({ clients, update }: { clients: Client[]; update: (id: string, fn
         {stages.map((s) => {
           const here = clients.filter((c) => c.stage === s.id);
           return (
-            <li key={s.id} className="flex w-64 shrink-0 flex-col gap-3 rounded-2xl bg-surface-sunken p-3">
+            <Column key={s.id} name={s.name} onDrop={(id) => { const c = clients.find((x) => x.id === id); if (c && c.stage !== s.id) update(id, (x) => ({ ...x, stage: s.id })); }}>
               <div className="flex items-baseline justify-between gap-2 px-1">
                 <h2 className="text-label-md text-ink">{s.name} <span className="text-ink-subtle tabular-nums">{here.length}</span></h2>
                 <span className="text-caption text-ink-subtle">{s.sub}</span>
               </div>
               {here.length === 0 && <p className="rounded-xl border border-dashed border-line-strong p-4 text-center text-body-sm text-ink-subtle">No clients here</p>}
               {here.map((c) => <ClientCard key={c.id} c={c} update={update} />)}
-            </li>
+            </Column>
           );
         })}
       </ol>
     </div>
+  );
+}
+
+/** A board column that takes a dragged client card. */
+function Column({ name, onDrop, children }: { name: string; onDrop: (id: string) => void; children: React.ReactNode }) {
+  const [over, setOver] = React.useState(false);
+  return (
+    <li data-stage={name} className={cx("flex w-64 shrink-0 flex-col gap-3 rounded-2xl bg-surface-sunken p-3 transition-shadow duration-fast", over && "ring-2 ring-ink-brand")}
+      onDragOver={(e) => { if (e.dataTransfer.types.includes(DRAG)) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setOver(true); } }}
+      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOver(false); }}
+      onDrop={(e) => { e.preventDefault(); setOver(false); const id = e.dataTransfer.getData(DRAG); if (id) onDrop(id); }}>
+      {children}
+    </li>
   );
 }
 
@@ -121,7 +152,9 @@ function ClientCard({ c, update }: { c: Client; update: (id: string, fn: (c: Cli
   const m = nextMilestone(c);
   const count = c.projectIds.length + c.local.length;
   return (
-    <article className="relative grid gap-2 rounded-xl border border-line bg-surface p-4 shadow-xs transition duration-base hover:shadow-md">
+    <article draggable onDragStart={(e) => { e.dataTransfer.setData(DRAG, c.id); e.dataTransfer.effectAllowed = "move"; }}
+      className="group relative grid cursor-grab gap-2 rounded-xl border border-line bg-surface p-4 shadow-xs transition duration-base hover:shadow-md active:cursor-grabbing">
+      <GripVertical aria-hidden="true" className="absolute top-2 left-1 size-4 text-ink-subtle opacity-0 transition-opacity group-hover:opacity-100" />
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-display text-heading-md text-ink">
           <Link href={`/workspace/clients/?c=${c.id}`} className="inline-flex min-h-11 items-center rounded-xs underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-focus sm:min-h-8">{c.name}</Link>
@@ -183,6 +216,7 @@ function ClientPage({ client: c, update, onNewProject }: { client: Client; updat
           </div>
           <div className="flex flex-wrap items-end gap-2">
             <Field label="Stage"><Select value={c.stage} onChange={(e) => set((x) => ({ ...x, stage: e.target.value as ClientStage }))} className="w-40" options={stages.map((s) => ({ value: s.id, label: s.name }))} /></Field>
+            <Link href={`/workspace/portal/?c=${c.id}`} className="inline-flex h-10 items-center gap-2 rounded-md border border-line-strong px-3 text-label-md text-ink hover:bg-surface-hover"><MonitorSmartphone className="size-4" aria-hidden="true" />Client portal</Link>
             <Button variant="primary" iconStart={<FolderPlus />} onClick={onNewProject}>New project</Button>
           </div>
         </div>
@@ -343,13 +377,28 @@ function Tasks({ c, set }: { c: Client; set: (fn: (c: Client) => Client) => void
           {list.map((t) => (
             <li key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 py-1">
               <div className="min-w-0 flex-1"><Tick label={t.title} done={t.done} onToggle={() => set((x) => ({ ...x, tasks: x.tasks.map((y) => (y.id === t.id ? { ...y, done: !y.done } : y)) }))} /></div>
-              {t.owner && <Badge tone="neutral" size="sm">{t.owner}</Badge>}
-              {t.due && <span className="text-caption text-ink-subtle tabular-nums">Due {shortDate(t.due)}</span>}
+              <Assignee owner={t.owner} task={t.title} onPick={(owner) => set((x) => ({ ...x, tasks: x.tasks.map((y) => (y.id === t.id ? { ...y, owner } : y)) }))} />
+              <Input type="date" aria-label={`Due date for ${t.title}`} value={t.due ?? ""} className="w-40" onChange={(e) => set((x) => ({ ...x, tasks: x.tasks.map((y) => (y.id === t.id ? { ...y, due: e.target.value || undefined } : y)) }))} />
             </li>
           ))}
         </ul>
       )}
     </div>
+  );
+}
+
+/** Who's on a task: their avatar, and a menu to hand it to someone else. */
+function Assignee({ owner, task, onPick }: { owner?: string; task: string; onPick: (owner: string | undefined) => void }) {
+  const who = people.find((p) => p.id === owner);
+  return (
+    <Menu align="end" header={<span className="text-caption text-ink-subtle">Assign to</span>}
+      items={[...people.map((p) => ({ label: p.name, description: p.sub, icon: <Avatar name={p.name} size="sm" />, checked: owner === p.id, onSelect: () => onPick(p.id) })), "separator" as const, { label: "Nobody", icon: <UserRound />, checked: !owner, onSelect: () => onPick(undefined) }]}
+      trigger={
+        <button type="button" aria-label={`${task}: assigned to ${who?.name ?? "nobody"}. Change`} className="inline-flex min-h-11 items-center gap-2 rounded-full py-1 pr-3 pl-1 text-label-sm text-ink-muted hover:bg-surface-hover hover:text-ink">
+          {who ? <Avatar name={who.name} size="sm" /> : <span aria-hidden="true" className="grid size-6 place-items-center rounded-full border border-dashed border-line-strong"><UserRound className="size-3.5" /></span>}
+          <span className="max-sm:sr-only">{who?.name ?? "Assign"}</span>
+        </button>
+      } />
   );
 }
 
@@ -419,8 +468,8 @@ function Week({ clients }: { clients: Client[] }) {
   );
 }
 
-function NewProjectDialog({ open, onClose, clients, defaultClient, onCreate }: {
-  open: boolean; onClose: () => void; clients: Client[]; defaultClient?: string;
+function NewProjectDialog({ open, onClose, clients, defaultClient, defaultType, defaultName, onCreate }: {
+  open: boolean; onClose: () => void; clients: Client[]; defaultClient?: string; defaultType?: ProjectType; defaultName?: string;
   onCreate: (clientId: string, p: { name: string; type: ProjectType; start: string }) => void;
 }) {
   const [clientId, setClientId] = React.useState(defaultClient ?? clients[0]?.id ?? "");
@@ -428,7 +477,13 @@ function NewProjectDialog({ open, onClose, clients, defaultClient, onCreate }: {
   const [type, setType] = React.useState<ProjectType>("website");
   const [start, setStart] = React.useState(() => new Date().toISOString().slice(0, 10));
   const [err, setErr] = React.useState<string>();
-  React.useEffect(() => { if (open) { setClientId(defaultClient ?? clients[0]?.id ?? ""); setErr(undefined); } }, [open, defaultClient, clients]); // eslint-disable-line react-hooks/set-state-in-effect
+  // From the template gallery, the type (and maybe a name) arrive chosen.
+  React.useEffect(() => {
+    if (!open) return;
+    setClientId(defaultClient ?? clients[0]?.id ?? ""); setErr(undefined); // eslint-disable-line react-hooks/set-state-in-effect
+    if (defaultType) setType(defaultType);
+    if (defaultName) setName(defaultName);
+  }, [open, defaultClient, defaultType, defaultName, clients]);
   const plan = templateFor(type);
   return (
     <Modal open={open} onClose={onClose} size="lg" title="New project" description="Starts from the standard client project template. You can tick things off as the project moves."

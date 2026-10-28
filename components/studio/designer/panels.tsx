@@ -2,7 +2,7 @@
 import { Button, ConfirmDialog, IconButton, Input, Menu, cx } from "@ds/components";
 import {
   AppWindow, Box, ChevronDown, Ellipsis, ChevronRight, Columns2, Copy, Database, FileText, Heading, Home, Image as ImageIcon, Link, Minus, MousePointerClick,
-  Pencil, Pilcrow, Plus, RectangleHorizontal, Square, SquareDashed, Trash2, Type,
+  Pencil, Pilcrow, Plus, RectangleHorizontal, Search, Square, SquareDashed, Trash2, Type,
 } from "lucide-react";
 import * as React from "react";
 import { accepts, addable, elementInfo, elementName, findEl, findParent } from "@/lib/studio/pages";
@@ -11,6 +11,7 @@ import type { ElementType, PageElement } from "@/lib/studio/types";
 import { useUi } from "../context";
 import { DRAG_MIME, useDesign, type DragItem } from "./context";
 import { readDrag } from "./Canvas";
+import { SeoDialog } from "./SeoDialog";
 
 export const elementIcons: Record<ElementType, React.ComponentType<{ className?: string }>> = {
   body: AppWindow, section: RectangleHorizontal, container: Box, div: Square, columns: Columns2, heading: Heading, paragraph: Pilcrow,
@@ -174,7 +175,9 @@ export function PagesPanel() {
   const { actions } = useStudio();
   const [renaming, setRenaming] = React.useState<string | null>(null);
   const [deleting, setDeleting] = React.useState<string | null>(null);
+  const [seo, setSeo] = React.useState<string | null>(null);
   const victim = ui.base.pages.find((p) => p.id === deleting);
+  const seoPage = ui.base.pages.find((p) => p.id === seo);
   return (
     <>
       <Head title="Pages" action={<IconButton size="sm" variant="ghost" label="New page" icon={<Plus />} onClick={() => { const id = actions.addPage(`Page ${ui.base.pages.length + 1}`); d.setPageId(id); setRenaming(id); }} />} />
@@ -197,6 +200,7 @@ export function PagesPanel() {
               <Menu align="end" trigger={<button type="button" aria-label={`${p.name} options`} className="inline-flex size-8 shrink-0 items-center justify-center rounded-xs text-ink-subtle hover:text-ink"><Ellipsis className="size-4" /></button>}
                 items={[
                   { label: "Rename", icon: <Pencil />, onSelect: () => setRenaming(p.id) },
+                  { label: "Search and sharing…", icon: <Search />, onSelect: () => setSeo(p.id) },
                   { label: "Duplicate", icon: <Copy />, onSelect: () => d.setPageId(actions.duplicatePage(p.id)) },
                   ...(p.slug === "" ? [] : [{ label: "Make home page", icon: <Home />, onSelect: () => actions.change("Changed the home page", (b) => { for (const x of b.pages) if (x.slug === "") x.slug = x.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "page"; const t = b.pages.find((x) => x.id === p.id); if (t) t.slug = ""; }) }]),
                   "separator",
@@ -208,13 +212,15 @@ export function PagesPanel() {
       </ul>
       <div className="mt-auto grid gap-2 border-t border-line p-3">
         <label className="grid gap-1.5"><span className="text-label-sm text-ink-muted">Address of {d.page.name}</span>
-          <Input size="sm" key={d.page.id + d.page.slug} defaultValue={d.page.slug} disabled={d.page.slug === ""} placeholder="home" aria-describedby="slug-hint"
+          <Input size="sm" className="max-md:h-11" key={d.page.id + d.page.slug} defaultValue={d.page.slug} disabled={d.page.slug === ""} placeholder="home" aria-describedby="slug-hint"
             onBlur={(e) => { const s = e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-|-$/g, ""); if (s && s !== d.page.slug && !ui.base.pages.some((x) => x.slug === s)) actions.updatePage(d.page.id, { slug: s }); }}
             start={<span className="text-body-sm text-ink-subtle">/</span>} />
           <span id="slug-hint" className="text-caption text-ink-subtle">{d.page.slug === "" ? "This is the home page." : "Letters, numbers and dashes."}</span>
         </label>
+        <Button size="sm" variant="ghost" iconStart={<Search />} className="justify-start" onClick={() => setSeo(d.page.id)}>Search and sharing{d.page.seo?.title || d.page.seo?.description ? "" : " · not set"}</Button>
         <Button size="sm" variant="secondary" iconStart={<Plus />} onClick={() => { const id = actions.addPage(`Page ${ui.base.pages.length + 1}`); d.setPageId(id); setRenaming(id); }}>New page</Button>
       </div>
+      {seoPage && <SeoDialog page={seoPage} open={!!seoPage} onClose={() => setSeo(null)} />}
       <ConfirmDialog open={!!victim} onCancel={() => setDeleting(null)} tone="danger" confirmLabel="Delete page" title={`Delete ${victim?.name}?`}
         description="The page and everything on it goes. You can undo this."
         onConfirm={() => { const id = deleting!; actions.deletePage(id); setDeleting(null); const next = ui.base.pages.find((x) => x.id !== id); if (next) d.setPageId(next.id); }} />

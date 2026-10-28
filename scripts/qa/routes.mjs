@@ -9,6 +9,12 @@ const studioCms = async (page, name) => {
 // Every route QA visits, with the sample state it needs. `setup` runs in the page with window.bgSample
 // (the sample DataSource's demo controls); `ready` waits for content; `act` interacts before the shot.
 const reset = () => window.bgSample.reset();
+// Opens a Studio left panel: from the tools rail, or on narrow screens through "Open panels".
+async function studioPanel(page, name) {
+  const open = page.getByRole("button", { name: "Open panels" });
+  if (await open.isVisible()) { await open.click(); await page.getByRole("dialog", { name: "Studio" }).waitFor(); }
+  await page.getByRole("button", { name }).filter({ visible: true }).first().click();
+}
 const as = (role, id) => new Function(`return window.bgSample.reset().then(() => window.bgSample.signInAs(${JSON.stringify(role)}, ${JSON.stringify(id)}))`);
 
 export const routes = [
@@ -35,6 +41,8 @@ export const routes = [
   { name: "studio-pages-code", path: "/studio/?site=public-maya&tab=code", ready: ".cm-content" },
   { name: "studio-pages-api", path: "/studio/?site=owner-review&tab=api", ready: "main code" },
   { name: "studio-code", path: "/studio/?code=css", ready: ".cm-content" },
+  { name: "studio-seo", path: "/studio/", ready: "[data-el]", act: async (page) => { await studioPanel(page, /^Pages/); await page.getByRole("button", { name: /^Search and sharing/ }).filter({ visible: true }).first().click(); await page.getByRole("dialog", { name: /^Search and sharing/ }).waitFor(); } },
+  { name: "studio-assets", path: "/studio/", ready: "[data-el]", act: async (page) => { await studioPanel(page, /^Assets/); await page.getByRole("button", { name: "Upload images" }).first().waitFor(); } },
   // Milestone 5b: home page proposals.
   { name: "proposal-visitor", path: "/proposals/home/", setup: reset, ready: "#proposal-h" },
   { name: "proposal-gigster", path: "/proposals/home/?view=gigster", setup: reset, ready: "#g-hello" },
@@ -72,6 +80,26 @@ export const routes = [
   { name: "client-page", path: "/workspace/clients/?c=between-gigs", setup: reset, ready: "main h1" },
   { name: "client-tasks", path: "/workspace/clients/?c=between-gigs&tab=tasks", setup: reset, ready: "main h1" },
   { name: "new-project", path: "/workspace/clients/?new=1", setup: reset, ready: "main h1" },
+  // Workspace gaps: project menu, trash, comments, publish, notifications, shortcuts, assignees, portal, templates.
+  { name: "workspace-menu", path: "/workspace/", setup: reset, ready: "main h1", act: async (page) => { await page.getByRole("button", { name: /^More for/ }).first().click(); await page.getByRole("menuitem", { name: "Open" }).waitFor(); } },
+  { name: "workspace-trash", path: "/workspace/?folder=trash", setup: reset, ready: "main h1" },
+  {
+    name: "workspace-comment", path: "/workspace/site/", setup: reset, ready: "main iframe",
+    act: async (page) => {
+      await page.getByRole("button", { name: /^Comment/ }).click();
+      const box = await page.locator("main iframe").boundingBox();
+      await page.mouse.click(box.x + box.width * 0.4, box.y + 240);
+      await page.getByRole("textbox", { name: "Your comment" }).fill("Can the headline be warmer here?");
+      await page.getByRole("button", { name: "Comment", exact: true }).click();
+      await page.getByRole("dialog", { name: "Comment 1" }).waitFor();
+    },
+  },
+  { name: "workspace-publish", path: "/workspace/site/", setup: reset, ready: "main iframe", act: async (page) => { await page.getByRole("button", { name: "Publish", exact: true }).click(); await page.locator("dialog[open]").waitFor(); } },
+  { name: "workspace-notifications", path: "/workspace/", setup: reset, ready: "main h1", act: async (page) => { await page.getByRole("button", { name: /^Notifications/ }).click(); await page.getByText("Due soon").waitFor().catch(() => {}); } },
+  { name: "workspace-shortcuts", path: "/workspace/", setup: reset, ready: "main h1", act: async (page) => { await page.locator("main").press("?"); await page.locator("dialog[open]").waitFor(); } },
+  { name: "client-assignee", path: "/workspace/clients/?c=between-gigs&tab=tasks", setup: reset, ready: "main h1", act: async (page) => { await page.getByRole("button", { name: /assigned to/ }).first().click(); await page.getByRole("menuitemradio", { name: /Anu/ }).or(page.getByRole("menuitem", { name: /Anu/ })).first().waitFor(); } },
+  { name: "workspace-templates", path: "/workspace/templates/", setup: reset, ready: "main h1" },
+  { name: "workspace-portal", path: "/workspace/portal/?c=between-gigs", setup: reset, ready: "main h1" },
   { name: "canvas-intro", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "dialog[open]" },
   { name: "canvas-blank", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "[data-spot]", act: async (page) => { await page.getByRole("button", { name: "Look around first" }).click(); await page.waitForTimeout(2400); } },
   { name: "canvas-editing", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "[data-spot]", act: async (page) => {
