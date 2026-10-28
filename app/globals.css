@@ -49,6 +49,10 @@
   background-size: 18px 18px;
 }
 
+/* A page shown inside the workspace shell: <html data-embedded>, set before first paint (app/layout.tsx). Its own
+   chrome (the site header and footer, the owner sidebar) steps aside with `embedded:hidden!`; `embedded:` adjusts the rest. */
+@custom-variant embedded (&:where([data-embedded] *));
+
 /* The owner sidebar collapsed to a rail: <html data-owner-nav="collapsed">, set before first paint. */
 @custom-variant nav-collapsed (&:where([data-owner-nav=collapsed] *));
 

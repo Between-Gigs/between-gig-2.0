@@ -69,3 +69,4 @@ real font, which can set any words but won't be his handwriting).
 
 - **CommandPalette**'s field is `type="text"` with only a placeholder and an aria-label, which `pnpm qa:rules` reads as a placeholder-only field. It is a search box: please give it `type="search"`. The workspace shell (`components/workspace/WorkspaceShell.tsx`) sets the type when the palette opens until then.
 - **AppShell** has no status bar and pads its main area, so a full-bleed preview can't sit in it. The workspace shell lays out its own top bar, side bars, work area and bottom status bar with the system's pieces. A system `AppShell` with an optional `statusBar` and a `bleed` main would let the owner tools, Studio and the workspace share one shell.
+- **Slider**'s range input is 20px tall (`h-5`), under the 44px touch target. The profile editor wraps it with `[&_input]:h-11` until the system makes the input itself the full target.

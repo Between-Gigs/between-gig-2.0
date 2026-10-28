@@ -7,6 +7,7 @@ import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
 import { basisLabel, basisShort, insuranceLabel, laServiceAreas, modeLabel, monthStatusLabel, offSetServices, onSetSkills } from "@/lib/data/taxonomy";
 import { useRequireRole } from "@/lib/guard";
+import { asset } from "@/lib/site";
 import { ABOUT_MAX, completeness, pinnedCredits, sectionLabel, validateAll, type FieldErrors } from "@/lib/profile/validate";
 import { Credits, SaveIndicator, type SaveState } from "@/components/builder/ProfileBuilder";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
@@ -30,8 +31,9 @@ const AUTOSAVE_MS = 700;
 const thisMonth = () => new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
 
 /** The order the page leads them through. Required spots first; optional ones only when tapped or reached by Next. */
-const ORDER: SpotId[] = ["photo", "name", "position", "years", "services", "skills", "where", "availability", "rate", "about", "credits", "imdb", "languages", "details"];
-const REQUIRED: SpotId[] = ["photo", "name", "position", "years", "services", "skills", "where", "availability", "about", "credits"];
+// Quick wins first; the photo comes last, once the page around it has taken shape.
+const ORDER: SpotId[] = ["name", "position", "years", "services", "skills", "where", "availability", "rate", "about", "credits", "photo", "imdb", "languages", "details"];
+const REQUIRED: SpotId[] = ["name", "position", "years", "services", "skills", "where", "availability", "about", "credits", "photo"];
 const LABEL: Record<SpotId, string> = {
   photo: "Your photo", name: "Your name", position: "Your department", years: "Years in the business", services: "Services you offer",
   skills: "On-set skills", where: "Where you work", availability: "This month", rate: "Starting rate", about: "About me",
@@ -63,6 +65,9 @@ function isFilled(id: SpotId, d: ProfileFields): boolean {
     case "details": return !!(d.tools.trim() || d.transport.trim());
   }
 }
+
+/** The first required part still empty, in the order the page leads them, other than `except`. */
+const firstEmpty = (d: ProfileFields, except?: SpotId): SpotId | null => ORDER.find((id) => id !== except && REQUIRED.includes(id) && !isFilled(id, d)) ?? null;
 
 /** A first About me written from their own answers, offered when the box is empty. They edit it from there. */
 function starterAbout(d: ProfileFields): string {
@@ -183,6 +188,17 @@ function Canvas({ personId }: { personId: string }) {
     else if (before < REQUIRED.length / 2 && done >= REQUIRED.length / 2) toast({ message: "Halfway there. Your profile is taking shape.", tone: "success" });
   }, [done, d, toast]);
 
+  // A click outside the open spot (and outside the search card) closes it; a click on another spot opens that one.
+  React.useEffect(() => {
+    if (!editing) return;
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as HTMLElement;
+      if (t.closest(`[data-spot="${editing}"], aside, [role=dialog], header, [data-stage]`)) return;
+      setEditing(null);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [editing]);
   if (!person || !d) return <Page bare><Band /><CanvasSkeleton /></Page>;
 
   const set = <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K]) => {
@@ -191,11 +207,8 @@ function Canvas({ personId }: { personId: string }) {
     setFieldErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
   };
 
-  const nextOf = (from?: SpotId): SpotId | null => {
-    const start = from ? ORDER.indexOf(from) + 1 : 0;
-    const rest = [...ORDER.slice(start), ...ORDER.slice(0, start)].filter((id) => id !== from);
-    return rest.find((id) => REQUIRED.includes(id) && !isFilled(id, d)) ?? null;
-  };
+  // Always the first required part still empty, so nothing earlier gets skipped.
+  const nextOf = (from?: SpotId): SpotId | null => firstEmpty(d, from);
   const next = nextOf();
 
   const reveal = (id: SpotId) => requestAnimationFrame(() => {
@@ -285,10 +298,10 @@ function Canvas({ personId }: { personId: string }) {
         </div>
       </Band>
 
-      <StageBar done={done} total={REQUIRED.length} ready={ready} save={save} view={view} editing={!!editing} sent={sent} submitting={submitting} resubmit={resubmit}
+      <StageBar done={done} total={REQUIRED.length} ready={ready} missing={Object.keys(fieldErrors).length} save={save} view={view} editing={!!editing} sent={sent} submitting={submitting} resubmit={resubmit}
         onRetry={() => { dirty.current = true; void flush(); }} onView={switchView} onNext={() => next && open(next)} onSubmit={submit} />
 
-      <div ref={stage} className="vt-page relative mx-auto max-w-7xl px-4 pt-8 pb-24 sm:px-6">
+      <div ref={stage} className="vt-page relative mx-auto max-w-7xl px-4 pt-8 pb-32 sm:px-6 sm:pb-24">
         {party > 0 && <Confetti key={party} />}
         {view === "client" ? (
           <div className="grid gap-6">
@@ -304,7 +317,7 @@ function Canvas({ personId }: { personId: string }) {
             ) : (
               <Banner tone="info" title="Client view">This is exactly what clients will see. Switch back to Edit to change anything.</Banner>
             )}
-            <ProfileView person={person} fields={d} mode="own" />
+            <ProfileView person={person} fields={d} mode="own" draft={!sent} />
           </div>
         ) : (
           <CanvasCtx.Provider value={ctx}>
@@ -320,18 +333,40 @@ function Canvas({ personId }: { personId: string }) {
           </CanvasCtx.Provider>
         )}
       </div>
+      {!sent && !editing && view === "edit" && (
+        <Dock done={done} total={REQUIRED.length} next={next} ready={ready} resubmit={resubmit} submitting={submitting} onNext={() => next && open(next)} onSubmit={submit} />
+      )}
     </Page>
   );
 }
 
-function StageBar({ done, total, ready, save, view, editing, sent, submitting, resubmit, onRetry, onView, onNext, onSubmit }: {
-  done: number; total: number; ready: boolean; save: SaveState; view: "edit" | "client"; editing: boolean; sent: boolean; submitting: boolean; resubmit: boolean;
+/** Phones: the progress and the one next step stay in reach at the bottom of the screen. */
+function Dock({ done, total, next, ready, resubmit, submitting, onNext, onSubmit }: {
+  done: number; total: number; next: SpotId | null; ready: boolean; resubmit: boolean; submitting: boolean; onNext: () => void; onSubmit: () => void;
+}) {
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-sticky border-t border-line bg-bg/95 px-4 py-3 shadow-lg backdrop-blur-md sm:hidden">
+      <div className="flex items-center gap-3">
+        <span role="img" aria-label={`${done} of ${total} required parts filled`} style={{ "--p": Math.round((done / total) * 100) } as React.CSSProperties}
+          className="progress-ring grid size-10 shrink-0 place-items-center rounded-full">
+          <span className="grid size-8 place-items-center rounded-full bg-bg text-caption text-ink tabular-nums">{done}/{total}</span>
+        </span>
+        {ready || !next
+          ? <Button variant="primary" fullWidth className="glow-hover" loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}>{resubmit ? "Send again" : "Send for review"}</Button>
+          : <Button variant="primary" fullWidth iconEnd={<ArrowRight />} onClick={onNext}>Next: {LABEL[next]}</Button>}
+      </div>
+    </div>
+  );
+}
+
+function StageBar({ done, total, ready, missing, save, view, editing, sent, submitting, resubmit, onRetry, onView, onNext, onSubmit }: {
+  done: number; total: number; ready: boolean; missing: number; save: SaveState; view: "edit" | "client"; editing: boolean; sent: boolean; submitting: boolean; resubmit: boolean;
   onRetry: () => void; onView: (v: string) => void; onNext: () => void; onSubmit: () => void;
 }) {
   const pct = Math.round((done / total) * 100);
   const line = ready ? "Ready to send" : done === 0 ? "Start anywhere" : done < total / 2 ? "Taking shape" : "Nearly there";
   return (
-    <div className="z-sticky border-b border-line bg-bg/90 backdrop-blur-md sm:sticky sm:top-16">
+    <div data-stage="" className="z-sticky border-b border-line bg-bg/90 backdrop-blur-md sm:sticky sm:top-16 embedded:sm:top-0">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <span role="img" aria-label={`${done} of ${total} required parts filled`} style={{ "--p": pct } as React.CSSProperties}
@@ -339,15 +374,15 @@ function StageBar({ done, total, ready, save, view, editing, sent, submitting, r
             <span className="grid size-9 place-items-center rounded-full bg-bg text-label-sm text-ink tabular-nums">{ready ? <Check className="size-4 text-ink-brand" aria-hidden="true" /> : `${done}/${total}`}</span>
           </span>
           <span className="grid">
-            <b className="text-label-md text-ink">{sent ? "Sent for review" : line}</b>
+            <b className={cx("text-label-md", missing && !sent ? "text-danger" : "text-ink")}>{sent ? "Sent for review" : missing ? `${missing} ${missing === 1 ? "thing" : "things"} to finish` : line}</b>
             <SaveIndicator state={save} onRetry={onRetry} />
           </span>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <SegmentedControl label="View" size="sm" value={view} onChange={onView}
             options={[{ value: "edit", label: "Edit", icon: <PenLine /> }, { value: "client", label: "Client view", icon: <Eye /> }]} />
-          {!ready && !sent && <Button size="sm" variant="secondary" iconStart={<Sparkles />} onClick={onNext}>Next spot</Button>}
-          {!sent && <Button size="sm" variant={ready && !editing ? "primary" : "secondary"} className={cx(ready && "glow-hover")} loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}>
+          {!ready && !sent && <Button size="sm" variant="secondary" iconStart={<Sparkles />} className="max-sm:hidden" onClick={onNext}>Next spot</Button>}
+          {!sent && <Button size="sm" variant={ready && !editing ? "primary" : "secondary"} className={cx("max-sm:hidden", ready && "glow-hover")} loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}>
             {resubmit ? "Send again" : "Send for review"}
           </Button>}
         </div>
@@ -358,7 +393,7 @@ function StageBar({ done, total, ready, save, view, editing, sent, submitting, r
 
 /** The profile, laid out like the public page (ProfileView), with every part a spot. */
 function EditView({ d, set, personId }: { d: ProfileFields; set: <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K]) => void; personId: string }) {
-  const { open, next, editing, close } = useCanvas();
+  const { open, next, editing } = useCanvas();
   const rate = d.rate ? `$${d.rate}/${basisShort[d.basis]}` : null;
   const where = d.market === "la" ? (d.areas.length ? `${d.areas.join(" · ")}, Los Angeles area` : "") : d.otherCity;
   const credits = pinnedCredits(d);
@@ -367,7 +402,7 @@ function EditView({ d, set, personId }: { d: ProfileFields; set: <K extends keyo
   return (
     <div data-client-locked="" className="approved-type relative grid gap-10 lg:grid-cols-12">
       {/* Spotlight: while a spot is open the rest of the page steps back, except the search card, which updates as they type. */}
-      {editing && <div aria-hidden="true" onClick={close} className="fixed inset-0 z-raised bg-bg/60 backdrop-blur-xs" />}
+      {editing && <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-raised bg-bg/50" />}
       <div className="min-w-0 lg:col-span-8">
         <section aria-label="Introduction" className="grid gap-6 sm:grid-cols-12 sm:items-end">
           <Spot id="photo" className="max-w-72 sm:col-span-5 sm:max-w-none" round="rounded-2xl"
@@ -375,7 +410,7 @@ function EditView({ d, set, personId }: { d: ProfileFields; set: <K extends keyo
               <PersonPhoto id={personId} name={d.name} fallback="brand" department={d.position} skills={d.skills} alt="" className="size-full" />
               <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 bg-surface-brand/80 p-3 text-label-md text-ink-on-brand backdrop-blur-sm"><Plus className="size-4" aria-hidden="true" />Add your photo</span>
             </span>}
-            editor={<PhotoPicker id="f-photo" value={d.photo} name={d.name} onChange={set("photo")} />}>
+            editor={<PhotoEditor d={d} onChange={set("photo")} />}>
             <span className="relative block">
               <PersonPhoto id={personId} name={d.name} src={d.photo} alt="" className="aspect-square w-full rounded-2xl shadow-lg ring-1 ring-line" />
               <Badge tone={d.monthStatus === "available" ? "success" : d.monthStatus === "limited" ? "info" : "neutral"} className="absolute top-3 left-3 shadow-sm">{monthStatusLabel[d.monthStatus]}</Badge>
@@ -501,7 +536,7 @@ function EditView({ d, set, personId }: { d: ProfileFields; set: <K extends keyo
       </div>
 
       <aside aria-label="Checklist and search card" className="relative lg:col-span-4" style={editing ? { zIndex: 20 } : undefined}>
-        <div className="grid gap-5 lg:sticky lg:top-36">
+        <div className="grid gap-5 lg:sticky lg:top-36 embedded:lg:top-20">
           <section aria-labelledby="canvas-list-h" className="rounded-2xl border border-line bg-surface p-5 shadow-lg">
             <div className="flex items-baseline justify-between gap-2">
               <h2 id="canvas-list-h" className="font-display text-heading-lg text-ink">Your profile</h2>
@@ -562,12 +597,12 @@ function Spot({ id, children, empty, editor, inline = false, className, round = 
   const required = REQUIRED.includes(id);
 
   if (editing === id) {
-    const after = ORDER.slice(ORDER.indexOf(id) + 1).find((x) => REQUIRED.includes(x) && !isFilled(x, d));
+    const after = firstEmpty(d, id);
     return (
       <div data-spot={id} role="group" aria-label={`Editing: ${LABEL[id]}`} onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); close(); } }}
         style={{ zIndex: 20 }} className={cx("relative grid gap-4 rounded-2xl border border-ink-brand bg-surface-raised p-4 shadow-lg sm:p-5", className)}>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="flex items-center gap-2 text-label-md text-ink-brand"><Pencil className="size-4" aria-hidden="true" />{LABEL[id]}{!required && <span className="font-normal text-ink-subtle">· optional</span>}</p>
+          <p className="flex items-center gap-2 text-label-md text-ink-brand"><Pencil className="size-4" aria-hidden="true" />{LABEL[id]}</p>
           <span className="text-caption text-ink-subtle max-sm:hidden">Esc to close</span>
         </div>
         {note && <p className="flex gap-2 rounded-md bg-warning-soft p-2.5 text-body-sm text-ink"><MessageSquareWarning className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" /><span><b>Team note:</b> {note}</span></p>}
@@ -582,17 +617,20 @@ function Spot({ id, children, empty, editor, inline = false, className, round = 
   }
 
   const glow = id === next && !editing;
-  const flag = err ? "Needs a fix" : note ? "Team note" : null;
+  // Submit's misses show as one count in the stage bar and a red edge here; only team notes get a tag.
+  const flag = note ? "Team note" : null;
   if (!filled) {
     return (
       <div data-spot={id} className={cx("relative", className)}>
         <button type="button" data-spot-edit="" onClick={() => open(id)} aria-label={`Add ${LABEL[id].toLowerCase()}${required ? "" : " (optional)"}`}
-          className={cx("group block w-full border-2 border-dashed text-left transition duration-base hover:border-ink-brand hover:bg-surface-selected focus-visible:border-ink-brand",
-            round, err ? "border-danger" : note ? "border-warning" : glow ? "border-ink-brand" : "border-line-strong",
-            glow && "spot-next", inline ? "px-3 py-2" : typeof empty === "string" ? "p-6" : "overflow-hidden")}>
+          className={cx("group block w-full border-dashed text-left transition duration-base hover:border-ink-brand hover:bg-surface-selected focus-visible:border-ink-brand",
+            // Small parts (a line in the hero) are a dashed underline; the big ones a dashed box.
+            inline ? "rounded-md border-b-2 px-1.5 py-1.5" : cx("border-2", round, typeof empty === "string" ? "p-6" : "overflow-hidden"),
+            err ? "border-danger" : note ? "border-warning" : glow ? "border-ink-brand" : "border-line-strong",
+            glow && "spot-next")}>
           {typeof empty === "string"
             ? <span className={cx("flex items-center gap-2 text-ink-muted group-hover:text-ink", inline ? "text-body-md" : "text-body-lg")}>
-                <span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-full bg-surface-selected text-ink-brand"><Plus className="size-4" /></span>{empty}
+                <span aria-hidden="true" className={cx("grid shrink-0 place-items-center rounded-full bg-surface-selected text-ink-brand", inline ? "size-6" : "size-7")}><Plus className="size-4" /></span>{empty}
               </span>
             : empty}
         </button>
@@ -601,15 +639,41 @@ function Spot({ id, children, empty, editor, inline = false, className, round = 
     );
   }
   return (
-    <div data-spot={id} className={cx("group relative", inline && "w-fit max-w-full", className)}>
+    <div data-spot={id} className={cx("group relative", inline && "flex min-h-8 w-fit max-w-full items-center", className)}>
       <div className={cx("transition duration-base", round, fresh === id && "spot-filled")}>{children}</div>
       <button type="button" data-spot-edit="" onClick={() => open(id)} aria-label={`Edit ${LABEL[id].toLowerCase()}`}
         className={cx("absolute -inset-1.5 outline-2 outline-transparent transition duration-fast hover:outline-dashed hover:outline-ink-brand focus-visible:outline-solid focus-visible:outline-focus", round,
           (err || note) && "outline-dashed outline-warning")}>
-        <span className="absolute -top-3 right-2 inline-flex items-center gap-1 rounded-full bg-action px-2 py-0.5 text-label-sm text-on-action opacity-0 shadow-sm transition-opacity duration-fast group-hover:opacity-100 group-focus-within:opacity-100">
+        {/* The Edit tag sits beside a line, or inside a block's corner, so it never covers a neighbour. */}
+        <span className={cx("absolute inline-flex items-center gap-1 rounded-full bg-action px-2 py-0.5 text-label-sm whitespace-nowrap text-on-action opacity-0 shadow-sm transition-opacity duration-fast group-hover:opacity-100 group-focus-within:opacity-100",
+          inline ? "top-1/2 left-full ml-3 -translate-y-1/2 max-sm:top-0 max-sm:right-0 max-sm:left-auto max-sm:-translate-y-full" : "top-3 right-3")}>
           <Pencil className="size-3" aria-hidden="true" />{flag ?? "Edit"}
         </span>
       </button>
+    </div>
+  );
+}
+
+const SAMPLE_PORTRAITS = ["img/people/priya.jpg", "img/people/sam.jpg", "img/people/morgan.jpg"];
+
+/** The photo picker, plus (in the sample only) a few fictional portraits, so a walkthrough isn't stuck without one. */
+function PhotoEditor({ d, onChange }: { d: ProfileFields; onChange: (v: string) => void }) {
+  return (
+    <div className="grid gap-4">
+      <PhotoPicker id="f-photo" value={d.photo} name={d.name} onChange={onChange} />
+      {data.demo && (
+        <div className="grid gap-2">
+          <p className="text-body-sm text-ink-muted">No photo to hand? Try a sample portrait. They're fictional, for this preview only.</p>
+          <div className="flex flex-wrap gap-2">
+            {SAMPLE_PORTRAITS.map((src, i) => (
+              <button key={src} type="button" aria-pressed={d.photo === src} aria-label={`Use sample portrait ${i + 1}`} onClick={() => onChange(src)}
+                className={cx("size-14 overflow-hidden rounded-xl border-2 transition-colors duration-fast", d.photo === src ? "border-ink-brand" : "border-transparent hover:border-line-strong")}>
+                <img src={asset(src)} alt="" className="size-full object-cover" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -631,7 +695,8 @@ function YearsEditor({ value, onChange }: { value: string; onChange: (v: string)
   const n = value === "" ? 0 : Number(value);
   return (
     <div className="grid gap-4">
-      <Slider label="Years in the business" min={0} max={40} value={n} onChange={(v) => onChange(String(v))} format={(v) => (v >= 40 ? "40+ years" : v === 1 ? "1 year" : `${v} years`)} />
+      {/* The system's range input is 20px tall; give it a full touch target here (docs/design-system-requests.md). */}
+      <Slider className="[&_input]:h-11" label="Years in the business" min={0} max={40} value={n} onChange={(v) => onChange(String(v))} format={(v) => (v >= 40 ? "40+ years" : v === 1 ? "1 year" : `${v} years`)} />
       <Field label="Or type it"><Input id="f-years" inputMode="numeric" value={value} placeholder="e.g. 6" className="max-w-32" onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, 2))} /></Field>
     </div>
   );

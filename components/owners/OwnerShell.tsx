@@ -108,7 +108,7 @@ export function OwnerFrame({ children, section: fixed, fit: fixedFit = false }: 
       <div className="flex h-dvh flex-col bg-bg text-ink">
         <SiteHeader app onOpenNav={() => setDrawer(true)} />
         <div className="flex min-h-0 flex-1">
-          <nav aria-label="Owner workspace" className="hidden w-62 shrink-0 flex-col border-r border-line bg-surface lg:flex nav-collapsed:w-16">
+          <nav aria-label="Owner workspace" className="hidden embedded:hidden! w-62 shrink-0 flex-col border-r border-line bg-surface lg:flex nav-collapsed:w-16">
             <OwnerNav counts={counts} section={section} searchRef={search} onOpenSearch={openSearch}
               toggle={
                 <>

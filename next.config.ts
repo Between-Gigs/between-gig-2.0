@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import type { NextConfig } from "next";
 
 /**
@@ -7,7 +8,11 @@ import type { NextConfig } from "next";
  */
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
+/** The build's commit and time, for the workspace status bar. */
+const sha = process.env.GITHUB_SHA ?? (() => { try { return execSync("git rev-parse HEAD").toString().trim(); } catch { return ""; } })();
+
 const config: NextConfig = {
+  env: { NEXT_PUBLIC_BUILD_SHA: sha, NEXT_PUBLIC_BUILD_TIME: new Date().toISOString() },
   output: "export",
   basePath: basePath || undefined,
   trailingSlash: true,

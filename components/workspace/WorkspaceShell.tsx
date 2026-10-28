@@ -1,6 +1,6 @@
 "use client";
 import { CommandPalette, Drawer, IconButton, Kbd, Logo, Menu, ThemeToggle, cx, useCommandShortcut, type Command, type MenuEntry } from "@ds/components";
-import { ChevronsUpDown, FolderOpen, LayoutGrid, Moon, PanelLeft, PanelRight, RotateCcw, Search, Star } from "lucide-react";
+import { ChevronsUpDown, FileText, FolderOpen, LayoutGrid, Moon, PanelLeft, PanelRight, RotateCcw, Search, Star } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -80,8 +80,8 @@ export function WorkspaceShell({ project, crumb, sidebar, sidebarTitle, inspecto
     ...commands,
     { id: "home", label: "All projects", group: "Go to", icon: <LayoutGrid />, onRun: () => router.push("/workspace/") },
     ...folders.map((f) => ({ id: `folder-${f.id}`, label: f.name, group: "Folders", icon: <FolderOpen />, keywords: f.sub, onRun: () => router.push(`/workspace/?folder=${f.id}`) })),
-    ...projects.map((p) => ({ id: `project-${p.id}`, label: p.name, group: "Projects", keywords: p.summary, icon: <Cover project={p} size="sm" />, onRun: () => router.push(openHref(p.id)) })),
-    ...projects.flatMap((p) => p.pages.length > 1 ? p.pages.map((pg) => ({ id: `page-${p.id}-${pg.id}`, label: `${pg.title} · ${p.name}`, group: "Pages", keywords: `${pg.path} ${pg.group ?? ""}`, onRun: () => router.push(openHref(p.id, pg.id)) })) : []),
+    ...projects.map((p) => ({ id: `project-${p.id}`, label: p.name, group: "Projects", keywords: [p.summary, folders.find((f) => f.id === p.folder)?.name, ...p.pages.map((pg) => `${pg.title} ${pg.path}`)].join(" "), icon: <Cover project={p} size="sm" />, onRun: () => router.push(openHref(p.id)) })),
+    ...projects.flatMap((p) => p.pages.length > 1 ? p.pages.map((pg) => ({ id: `page-${p.id}-${pg.id}`, label: `${pg.title} · ${p.name}`, group: "Pages", icon: <FileText />, keywords: `${pg.path} ${pg.group ?? ""}`, onRun: () => router.push(openHref(p.id, pg.id)) })) : []),
     { id: "sidebar", label: "Show or hide the left bar", group: "View", icon: <PanelLeft />, shortcut: ["["], onRun: toggleLeft },
     ...(inspector ? [{ id: "inspector", label: "Show or hide details", group: "View", icon: <PanelRight />, shortcut: ["]"], onRun: toggleRight }] : []),
     { id: "theme", label: "Switch day or night", group: "View", icon: <Moon />, onRun: () => document.querySelector<HTMLElement>("[data-ws-theme] button")?.click() },
@@ -136,6 +136,7 @@ export function WorkspaceShell({ project, crumb, sidebar, sidebarTitle, inspecto
 
       <footer className="flex h-9 shrink-0 items-center gap-3 border-t border-line bg-surface px-3 text-caption text-ink-subtle">
         <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden whitespace-nowrap">{status}</div>
+        <BuildStamp />
         <span className="flex shrink-0 items-center gap-3 max-md:hidden">
           <span className="flex items-center gap-1.5"><Kbd keys={["⌘", "K"]} />Search</span>
           <span className="flex items-center gap-1.5"><Kbd keys={["["]} />Left</span>
@@ -150,6 +151,18 @@ export function WorkspaceShell({ project, crumb, sidebar, sidebarTitle, inspecto
       <CommandPalette open={palette} onClose={() => setPalette(false)} commands={all} placeholder="Search projects, pages and actions…" />
     </div>
   );
+}
+
+/** Which build this is: its commit (linked) and when it was built, in UTC so every viewer reads the same. */
+function BuildStamp() {
+  const sha = process.env.NEXT_PUBLIC_BUILD_SHA ?? "";
+  const at = process.env.NEXT_PUBLIC_BUILD_TIME;
+  if (!sha && !at) return null;
+  const when = at ? `${new Date(at).toLocaleString("en-US", { timeZone: "UTC", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} UTC` : "";
+  const label = [sha && `Build ${sha.slice(0, 7)}`, when].filter(Boolean).join(" · ");
+  return sha
+    ? <a href={`https://github.com/between-gigs/between-gig-2.0/commit/${sha}`} target="_blank" rel="noreferrer" className="inline-flex min-h-6 shrink-0 items-center gap-1.5 whitespace-nowrap hover:text-ink max-sm:hidden"><span aria-hidden="true" className="size-2 rounded-full bg-success" />{label}</a>
+    : <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap max-sm:hidden"><span aria-hidden="true" className="size-2 rounded-full bg-success" />{label}</span>;
 }
 
 /** A project's cover, as a small square (switcher, lists) or the card's 16:10 image. */

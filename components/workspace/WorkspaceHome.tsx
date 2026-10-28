@@ -2,7 +2,7 @@
 import { Badge, Input, SegmentedControl, Select, cx } from "@ds/components";
 import { ArrowUpRight, Clock, FolderOpen, Layers, LayoutGrid, List, Search, Star } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { folderOf, folders, openHref, projectById, projects, statusLabel, updatedLabel, type FolderId, type Project, type ProjectStatus } from "@/lib/workspace/projects";
 import { Cover, FavoriteButton, SideLink, SideSection, WorkspaceShell, useWorkspaceLists } from "./WorkspaceShell";
@@ -14,6 +14,7 @@ const VIEW_KEY = "bg-ws-view";
 /** /workspace/: every project in one place, by folder, like a design tool's projects page. */
 export function WorkspaceHome() {
   const params = useSearchParams();
+  const router = useRouter();
   const folder = (params.get("folder") as FolderId | "favorites" | null) ?? null;
   const { favorites, recent, toggleFavorite } = useWorkspaceLists();
   const [q, setQ] = React.useState("");
@@ -29,6 +30,7 @@ export function WorkspaceHome() {
     .sort((a, b) => sort === "name" ? a.name.localeCompare(b.name) : sort === "status" ? a.status.localeCompare(b.status) || b.updated.localeCompare(a.updated) : b.updated.localeCompare(a.updated));
   const title = folder === "favorites" ? "Favourites" : folder ? folderOf(folder).name : "All projects";
   const sel = projectById(selected) ?? shown[0] ?? projects[0];
+  const pick = (e: React.MouseEvent, id: string) => { if (!(e.target as HTMLElement).closest("a, button")) setSelected(id); };
 
   const sidebar = (
     <>
@@ -49,7 +51,7 @@ export function WorkspaceHome() {
 
   return (
     <WorkspaceShell sidebar={sidebar} sidebarTitle="Projects" inspectorTitle="Project details" inspector={<ProjectDetails project={sel} />}
-      status={<><span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="size-2 rounded-full bg-success" />Preview build</span><span>{projects.length} projects · {projects.reduce((n, p) => n + p.pages.length, 0)} pages</span><span className="max-sm:hidden">Sample data, kept in this browser</span></>}>
+      status={<><span>{projects.length} projects · {projects.reduce((n, p) => n + p.pages.length, 0)} pages</span><span className="max-sm:hidden">Sample data, kept in this browser</span></>}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="grid gap-1">
           <p className="text-eyebrow text-ink-brand uppercase">Workspace</p>
@@ -75,21 +77,23 @@ export function WorkspaceHome() {
         <ul className="mt-6 grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
           {shown.map((p) => (
             <li key={p.id}>
-              <article onFocusCapture={() => setSelected(p.id)} onPointerEnter={() => setSelected(p.id)}
-                className={cx("group relative overflow-hidden rounded-2xl border bg-surface transition duration-base hover:-translate-y-0.5 hover:shadow-lg motion-reduce:hover:translate-y-0", sel.id === p.id ? "border-line-strong" : "border-line")}>
+              {/* A click picks the project for the details bar; its name, or a double click, opens it. */}
+              <article onFocusCapture={() => setSelected(p.id)} onClick={(e) => pick(e, p.id)} onDoubleClick={() => router.push(openHref(p.id))} aria-current={sel.id === p.id ? "true" : undefined}
+                className={cx("group relative cursor-pointer overflow-hidden rounded-2xl border bg-surface transition duration-base hover:-translate-y-0.5 hover:shadow-lg motion-reduce:hover:translate-y-0",
+                  sel.id === p.id ? "border-ink-brand ring-2 ring-ink-brand/25" : "border-line")}>
                 <div className="relative overflow-hidden border-b border-line">
                   <Cover project={p} className="transition-transform duration-slow group-hover:scale-102 motion-reduce:group-hover:scale-100" />
-                  <Badge tone={statusTone[p.status]} size="sm" className="absolute top-3 left-3 shadow-sm">{statusLabel[p.status]}</Badge>
                 </div>
                 <div className="grid gap-1 p-4">
                   <div className="flex items-start justify-between gap-2">
                     <h2 className="font-display text-heading-md text-ink">
-                      <Link href={openHref(p.id)} className="outline-none after:absolute after:inset-0 after:rounded-2xl focus-visible:after:outline-2 focus-visible:after:outline-focus">{p.name}</Link>
+                      <Link href={openHref(p.id)} className="inline-flex min-h-11 items-center rounded-xs underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-focus">{p.name}</Link>
                     </h2>
-                    <FavoriteButton on={favorites.includes(p.id)} name={p.name} onToggle={() => toggleFavorite(p.id)} className="relative z-raised -mt-1 -mr-2" />
+                    <FavoriteButton on={favorites.includes(p.id)} name={p.name} onToggle={() => toggleFavorite(p.id)} className="-mt-1 -mr-2" />
                   </div>
                   <p className="line-clamp-2 text-body-sm text-ink-muted">{p.summary}</p>
                   <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-ink-subtle">
+                    <Badge tone={statusTone[p.status]} size="sm">{statusLabel[p.status]}</Badge>
                     <span className="inline-flex items-center gap-1"><FolderOpen className="size-3.5" aria-hidden="true" />{folderOf(p.folder).name}</span>
                     <span className="inline-flex items-center gap-1"><Layers className="size-3.5" aria-hidden="true" />{p.pages.length} {p.pages.length === 1 ? "page" : "pages"}</span>
                     <span className="inline-flex items-center gap-1"><Clock className="size-3.5" aria-hidden="true" />{updatedLabel(p.updated)}</span>
@@ -102,16 +106,17 @@ export function WorkspaceHome() {
       ) : (
         <ul className="mt-6 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
           {shown.map((p) => (
-            <li key={p.id} onFocusCapture={() => setSelected(p.id)} onPointerEnter={() => setSelected(p.id)} className="row-lift relative flex items-center gap-4 p-3">
+            <li key={p.id} onFocusCapture={() => setSelected(p.id)} onClick={(e) => pick(e, p.id)} onDoubleClick={() => router.push(openHref(p.id))} aria-current={sel.id === p.id ? "true" : undefined}
+              className={cx("row-lift relative flex cursor-pointer items-center gap-4 p-3", sel.id === p.id && "bg-surface-selected")}>
               <span className="w-24 shrink-0 overflow-hidden rounded-md border border-line"><Cover project={p} /></span>
               <div className="min-w-0 flex-1">
-                <h2 className="text-label-md text-ink"><Link href={openHref(p.id)} className="outline-none after:absolute after:inset-0 focus-visible:after:outline-2 focus-visible:after:outline-focus">{p.name}</Link></h2>
+                <h2 className="text-label-md text-ink"><Link href={openHref(p.id)} className="inline-flex min-h-11 items-center rounded-xs underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-focus">{p.name}</Link></h2>
                 <p className="truncate text-body-sm text-ink-muted">{p.summary}</p>
               </div>
               <Badge tone={statusTone[p.status]} size="sm" className="max-sm:hidden">{statusLabel[p.status]}</Badge>
               <span className="w-28 shrink-0 text-caption text-ink-subtle max-md:hidden">{folderOf(p.folder).name}</span>
               <span className="w-16 shrink-0 text-caption text-ink-subtle tabular-nums max-md:hidden">{updatedLabel(p.updated)}</span>
-              <FavoriteButton on={favorites.includes(p.id)} name={p.name} onToggle={() => toggleFavorite(p.id)} className="relative z-raised" />
+              <FavoriteButton on={favorites.includes(p.id)} name={p.name} onToggle={() => toggleFavorite(p.id)} />
             </li>
           ))}
         </ul>

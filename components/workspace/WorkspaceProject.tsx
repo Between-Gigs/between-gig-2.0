@@ -14,10 +14,10 @@ const widths: Record<Device, number | null> = { desktop: null, tablet: 834, phon
 const whoLabel = (as?: string) => !as ? "Visitor, signed out" : as === "owner" ? "The owner" : as === "invited" ? "Invited visitor"
   : `${(as.split(":")[1] ?? "").split("-")[0].replace(/^./, (c) => c.toUpperCase())}, a Gigster`;
 
-/** /workspace/open/?p=…&page=…: one project inside the shell, its pages on the left and the open page in the middle. */
-export function WorkspaceProject() {
+/** /workspace/<project>/?page=… (or /workspace/open/?p=…&page=…): one project inside the shell, its pages on the left and the open page in the middle. */
+export function WorkspaceProject({ projectId }: { projectId?: string }) {
   const params = useSearchParams();
-  const project = projectById(params.get("p")) ?? projects[0];
+  const project = projectById(projectId ?? params.get("p")) ?? projects[0];
   const page = project.pages.find((pg) => pg.id === params.get("page")) ?? project.pages[0];
   const { favorites, toggleFavorite, visit } = useWorkspaceLists();
   const [device, setDevice] = React.useState<Device>("desktop");

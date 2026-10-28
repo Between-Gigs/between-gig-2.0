@@ -19,6 +19,8 @@ interface Props {
   /** public: what clients see. own: the Gigster's preview of it. owner: the team's view inside search. */
   mode: ProfileMode;
   similar?: { person: Person; profile: Profile }[];
+  /** A draft being previewed: empty parts show where they'll go instead of empty headings. */
+  draft?: boolean;
 }
 
 const availabilityTone = { available: "success", limited: "info", away: "neutral" } as const;
@@ -33,7 +35,7 @@ const faqs = (first: string) => [
  * public page, the Gigster's own preview and the owner's view, so all three always match.
  * No reviews section: there are no real reviews yet, and we don't show invented ones.
  */
-export function ProfileView({ person, fields: f, extras, mode, similar = [] }: Props) {
+export function ProfileView({ person, fields: f, extras, mode, similar = [], draft = false }: Props) {
   const first = f.name.split(" ")[0] || "this Gigster";
   const helps = extras?.helps ?? f.services;
   const portfolio = extras?.portfolio ?? [];
@@ -90,10 +92,10 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
               <Badge tone={availabilityTone[f.monthStatus]} className="absolute top-3 left-3 shadow-sm">{monthStatusLabel[f.monthStatus]}</Badge>
             </div>
             <div className="min-w-0 sm:col-span-7">
-              <Reveal effect="fade-up"><p className="text-eyebrow text-ink-brand uppercase">{f.services[0] ?? f.position}</p></Reveal>
+              <Reveal effect="fade-up"><p className="text-eyebrow text-ink-brand uppercase">{f.services[0] ?? f.position}{draft && !f.services[0] && !f.position && <Placeholder inline>Your department</Placeholder>}</p></Reveal>
               <Reveal effect="fade-up" delay={80}><Name className="mt-2 font-display text-display-md break-words text-ink sm:text-display-lg">{f.name}</Name></Reveal>
               <Reveal effect="fade-up" delay={160}>
-                <p className="mt-2 text-body-lg text-ink-muted">{helps.slice(0, 3).join(" · ")}</p>
+                <p className="mt-2 text-body-lg text-ink-muted">{helps.slice(0, 3).join(" · ")}{draft && !helps.length && <Placeholder inline>Your services</Placeholder>}</p>
                 <ul className="mt-5 grid gap-2 text-body-md text-ink">
                   <li className="flex items-start gap-2"><MapPin className="mt-0.5 size-4 shrink-0 text-ink-brand" aria-hidden="true" />{where}</li>
                   <li className="flex items-start gap-2"><Wallet className="mt-0.5 size-4 shrink-0 text-ink-brand" aria-hidden="true" />{rate ? <span>From <b>{rate}</b> · scope agreed together</span> : "Rate discussed per project"}</li>
@@ -101,14 +103,14 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
                 </ul>
                 <div className="mt-5 flex flex-wrap gap-2">
                   {sample && <Badge tone="neutral" size="sm">Fictional profile</Badge>}
-                  <Badge tone="neutral" size="sm">{f.position}{f.years && ` · ${f.years} years`}</Badge>
+                  {(f.position || f.years) && <Badge tone="neutral" size="sm">{[f.position, f.years && `${f.years} years`].filter(Boolean).join(" · ")}</Badge>}
                   <Badge tone="warning" size="sm">Credits not verified</Badge>
                 </div>
               </Reveal>
             </div>
           </section>
 
-          <nav aria-label="Profile sections" className="sticky top-16 z-sticky -mx-4 mt-10 border-b border-line bg-bg/90 px-4 backdrop-blur-md sm:mx-0 sm:px-0">
+          <nav aria-label="Profile sections" className="sticky top-16 z-sticky -mx-4 mt-10 embedded:top-0 border-b border-line bg-bg/90 px-4 backdrop-blur-md sm:mx-0 sm:px-0">
             <ul className="flex gap-1 overflow-x-auto">
               {sections.map(([id, label]) => (
                 <li key={id}>
@@ -123,9 +125,10 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
           </nav>
 
           <Section name="overview" title="About me">
-            <p className="font-serif text-editorial-lg whitespace-pre-line text-ink">{f.about}</p>
-            {sample && <p className="mt-2 text-caption text-ink-subtle">Illustrative biography for this fictional profile.</p>}
+            {f.about || !draft ? <p className="font-serif text-editorial-lg whitespace-pre-line text-ink">{f.about}</p> : <Placeholder>Your About me will show here: a few lines about you and the help you offer.</Placeholder>}
+            {sample && f.about && <p className="mt-2 text-caption text-ink-subtle">Illustrative biography for this fictional profile.</p>}
             <h3 className="mt-10 font-display text-heading-lg text-ink">What I can help you with</h3>
+            {draft && !helps.length && <div className="mt-4"><Placeholder>The services you pick will show here.</Placeholder></div>}
             <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
               {helps.map((h, i) => (
                 <li key={h}>
@@ -141,6 +144,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
           </Section>
 
           <Section name="services" title="Services" meta={rate ? "Starting rate; final scope agreed together" : undefined}>
+            {draft && !f.services.length && <Placeholder>Each service you offer gets a card here, with your starting rate.</Placeholder>}
             <ul className="grid gap-4 sm:grid-cols-2">
               {f.services.map((s, i) => (
                 <li key={s}>
@@ -177,7 +181,8 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-line bg-surface p-5">
                 <h3 className="text-label-md text-ink">On set</h3>
-                <p className="mt-1 text-body-md text-ink-muted">{[f.position, ...f.skills.filter((s) => s !== f.position)].join(" · ")}{f.years && ` · ${f.years} years in the business`}</p>
+                <p className="mt-1 text-body-md text-ink-muted">{[f.position, ...f.skills.filter((s) => s !== f.position)].filter(Boolean).join(" · ")}{f.years && ` · ${f.years} years in the business`}</p>
+                {draft && !f.position && !f.skills.length && <Placeholder inline>Your department and on-set skills</Placeholder>}
                 {pinnedCredits(f).length > 0 && <>
                   <h3 className="mt-5 text-label-md text-ink">Selected credits</h3>
                   <ul className="mt-1 grid gap-1 text-body-sm text-ink-muted">{pinnedCredits(f).map((c) => <li key={c}>{c}</li>)}</ul>
@@ -218,7 +223,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
         </div>
 
         <aside aria-label="Book and details" className="lg:col-span-4">
-          <div className="grid gap-5 lg:sticky lg:top-24">
+          <div className="grid gap-5 lg:sticky lg:top-24 embedded:lg:top-6">
             <div className="rounded-2xl border border-line bg-surface p-5 shadow-lg">
               <div className="flex items-start justify-between gap-3">
                 <p>
@@ -254,6 +259,13 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [] }: P
       <RequestModal first={first} open={request} onClose={() => setRequest(false)} />
     </div>
   );
+}
+
+/** Where a part of a draft will go, in the client view. */
+function Placeholder({ children, inline = false }: { children: React.ReactNode; inline?: boolean }) {
+  return inline
+    ? <span className="text-ink-subtle normal-case italic">{children}</span>
+    : <p className="rounded-xl border border-dashed border-line-strong p-4 text-body-md text-ink-subtle italic">{children}</p>;
 }
 
 function Section({ name, title, meta, children }: { name: string; title: string; meta?: string; children: React.ReactNode }) {

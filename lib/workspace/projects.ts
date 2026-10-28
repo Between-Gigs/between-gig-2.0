@@ -137,5 +137,5 @@ export const projectById = (id: string | null | undefined) => projects.find((p) 
 export const folderOf = (id: FolderId) => folders.find((f) => f.id === id)!;
 export const updatedLabel = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-/** The workspace URL for a project, optionally at one of its pages. */
-export const openHref = (project: string, page?: string) => `/workspace/open/?p=${project}${page ? `&page=${page}` : ""}`;
+/** The workspace URL for a project, optionally at one of its pages. Each project has its own path (and share image). */
+export const openHref = (project: string, page?: string) => `/workspace/${project}/${page ? `?page=${page}` : ""}`;

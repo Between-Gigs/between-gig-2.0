@@ -28,7 +28,9 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
 
   // Only the most specific matching link is current: on /profile/edit/ that's "Edit profile", not "My profile";
   // on /owners/review/ it's "Review", not "Dashboard".
-  const path = pathname.endsWith("/") ? pathname : `${pathname}/`;
+  const raw = pathname.endsWith("/") ? pathname : `${pathname}/`;
+  // Edit on your profile is another way to edit it.
+  const path = raw.startsWith("/profile/canvas/") ? "/profile/edit/" : raw;
   const best = links.map((l) => l.href).filter((h) => path.startsWith(h)).sort((a, b) => b.length - a.length)[0];
   const current = (href: string) => href === best;
 
@@ -48,7 +50,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
   ] : [];
 
   return (
-    <header className={cx("sticky top-0 z-sticky border-b border-line", app ? "bg-surface" : "bg-bg/85 backdrop-blur-md")}>
+    <header className={cx("sticky top-0 embedded:hidden! z-sticky border-b border-line", app ? "bg-surface" : "bg-bg/85 backdrop-blur-md")}>
       <div className={cx("mx-auto flex h-16 items-center gap-4 px-4 sm:px-6", app ? "max-w-none gap-2 lg:px-5" : "max-w-7xl")}>
         {onOpenNav && <IconButton label="Open owner menu" variant="ghost" icon={<MenuIcon />} onClick={onOpenNav} className="lg:hidden" />}
         <Link href="/" aria-label="Between Gigs home" className="inline-flex min-h-11 shrink-0 items-center rounded-md"><Logo height={28} className="hidden xs:block" /><Logo layout="mark" height={28} className="xs:hidden" /></Link>
