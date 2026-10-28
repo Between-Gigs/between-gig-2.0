@@ -222,13 +222,20 @@ function DropTarget({ dragging, label, onDrop, children }: { dragging: boolean; 
 
 function NameDialog({ open, title, label, initial, submit, onClose, onSubmit }: { open: boolean; title: string; label: string; initial: string; submit: string; onClose: () => void; onSubmit: (name: string) => void }) {
   const [name, setName] = React.useState(initial);
-  React.useEffect(() => { if (open) setName(initial); }, [open, initial]); // eslint-disable-line react-hooks/set-state-in-effect
+  const field = React.useRef<HTMLInputElement>(null);
+  // The dialog focuses its first control; put the cursor in the name instead, ready to type.
+  React.useEffect(() => {
+    if (!open) return;
+    setName(initial); // eslint-disable-line react-hooks/set-state-in-effect
+    const id = window.setTimeout(() => { field.current?.focus(); field.current?.select(); }, 60);
+    return () => window.clearTimeout(id);
+  }, [open, initial]);
   const go = () => { if (name.trim()) onSubmit(name.trim()); };
   return (
     <Modal open={open} onClose={onClose} size="sm" title={title}
       footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!name.trim()} onClick={go}>{submit}</Button></>}>
       <form onSubmit={(e) => { e.preventDefault(); go(); }}>
-        <Field label={label}><Input autoFocus value={name} onChange={(e) => setName(e.target.value)} /></Field>
+        <Field label={label}><Input ref={field} value={name} onChange={(e) => setName(e.target.value)} /></Field>
       </form>
     </Modal>
   );

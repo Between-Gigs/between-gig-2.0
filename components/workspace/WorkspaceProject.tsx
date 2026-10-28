@@ -36,6 +36,8 @@ export function WorkspaceProject({ projectId }: { projectId?: string }) {
   const [commenting, setCommenting] = React.useState(false);
   const [publishing, setPublishing] = React.useState(false);
   const [note, setNote] = React.useState("");
+  const noteField = React.useRef<HTMLTextAreaElement>(null);
+  React.useEffect(() => { if (!publishing) return; const id = window.setTimeout(() => noteField.current?.focus(), 60); return () => window.clearTimeout(id); }, [publishing]);
   const active = params.get("thread");
   const setActive = React.useCallback((id: string | null) => {
     const q = new URLSearchParams(params.toString());
@@ -179,7 +181,7 @@ export function WorkspaceProject({ projectId }: { projectId?: string }) {
       <Modal open={publishing} onClose={() => setPublishing(false)} title={`Publish ${project.name}`} description={live ? `Live now: v${live.n}, ${ago(live.at)}. This records v${live.n + 1}.` : "This records v1."}
         footer={<><Button variant="ghost" onClick={() => setPublishing(false)}>Cancel</Button><Button variant="primary" iconStart={<Rocket />} onClick={() => { versionsStore.publish(project.id, project.name, note.trim()); setPublishing(false); toast({ message: `Published v${(live?.n ?? 0) + 1}`, tone: "success" }); }}>Publish v{(live?.n ?? 0) + 1}</Button></>}>
         <div className="grid gap-3">
-          <Field label="What changed" optional hint="Shown in the version history and the team's notifications."><Textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} /></Field>
+          <Field label="What changed" optional hint="Shown in the version history and the team's notifications."><Textarea ref={noteField} rows={3} value={note} onChange={(e) => setNote(e.target.value)} /></Field>
           <p className="text-body-sm text-ink-muted">Versions are recorded in this browser for now. The site itself deploys from GitHub on every push, so this marks a checkpoint rather than shipping a build.</p>
         </div>
       </Modal>
