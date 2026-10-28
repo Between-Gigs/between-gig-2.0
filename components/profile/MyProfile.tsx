@@ -114,7 +114,10 @@ function NotStarted({ person }: { person: Person }) {
             </li>
           ))}
         </ol>
-        <div className="mt-8"><ButtonLink href="/profile/edit/" variant="primary" size="lg" iconEnd={<ArrowRight />}>Start your profile</ButtonLink></div>
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <ButtonLink href="/profile/edit/" variant="primary" size="lg" iconEnd={<ArrowRight />}>Start your profile</ButtonLink>
+          <ButtonLink href="/profile/canvas/" size="lg" iconStart={<PencilLine />}>Or fill it in on the page itself</ButtonLink>
+        </div>
       </div>
       <div className="lg:col-span-5">
         <p className="mb-3 text-label-md text-ink-muted">What clients will see</p>

@@ -15,6 +15,7 @@ const faces = ["maya", "jordan", "alex", "priya", "sam", "morgan"];
 /** One sample Gigster per status, so every screen a Gigster sees is one click away. `thumb` is in public/thumbs. */
 const gigsters = [
   { id: "grace-liu", name: "Grace", state: "Account created, profile not started", go: "/profile/", thumb: "grace" },
+  { id: "ava-sinclair", name: "Ava", state: "New: a blank profile, edited in place", go: "/profile/canvas/", thumb: "canvas" },
   { id: "elena-petrova", name: "Elena", state: "Profile in draft", go: "/profile/edit/", thumb: "elena" },
   { id: "imani-carter", name: "Imani", state: "Submitted, waiting for review", go: "/profile/", thumb: "imani" },
   { id: "hana-kim", name: "Hana", state: "Changes requested by the team", go: "/profile/", thumb: "hana" },

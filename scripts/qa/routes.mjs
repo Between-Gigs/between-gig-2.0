@@ -61,6 +61,12 @@ export const routes = [
   { name: "builder-start", path: "/profile/edit/", setup: as("gigster", "grace-liu"), ready: "[data-step]" },
   { name: "builder-where", path: "/profile/edit/", setup: as("gigster", "elena-petrova"), ready: "[data-step]" },
   { name: "builder-review", path: "/profile/edit/?step=review", setup: as("gigster", "hana-kim"), ready: "[data-step]" },
+  // Edit on your profile: blank, with a spot open (spotlight), part-filled, and the client view.
+  { name: "canvas-blank", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "[data-spot]" },
+  { name: "canvas-editing", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "[data-spot]", act: async (page) => { await page.getByRole("button", { name: "Next spot" }).click(); await page.getByRole("button", { name: /^Next:/ }).click(); await page.waitForTimeout(300); } },
+  { name: "canvas-draft", path: "/profile/canvas/", setup: as("gigster", "elena-petrova"), ready: "[data-spot]" },
+  { name: "canvas-changes", path: "/profile/canvas/", setup: as("gigster", "hana-kim"), ready: "[data-spot]" },
+  { name: "canvas-client", path: "/profile/canvas/", setup: as("gigster", "elena-petrova"), ready: "[data-spot]", act: async (page) => { await page.getByRole("radio", { name: "Client view" }).click(); await page.waitForTimeout(400); } },
   { name: "public-maya", path: "/p/maya/", setup: reset, ready: "h1" },
   { name: "public-monogram", path: "/p/dana-whitfield/", setup: reset, ready: "h1" },
   { name: "public-not-yet", path: "/p/imani-carter/", setup: reset, ready: "h1" },

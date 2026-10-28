@@ -1,6 +1,6 @@
 // Thumbnails for the Preview guide (/preview/): a small screenshot of every page its links open, so the
 // links show where they go. Run after `pnpm build` (uses out/ and the preinstalled Chromium):
-//   pnpm thumbs
+//   pnpm thumbs            (or: node scripts/preview-thumbs.mjs canvas elena  for just those)
 // Writes public/thumbs/<name>.jpg (640×400, dark theme, the site's default). Commit them; re-run when a
 // page changes enough that its thumbnail no longer matches.
 import fs from "node:fs";
@@ -29,6 +29,7 @@ export const thumbs = [
   { name: "invite", path: "/join/?invite=riley-7q2m", setup: "window.bgSample.reset()" },
   { name: "grace", path: "/profile/", setup: as("gigster", "grace-liu") },
   { name: "elena", path: "/profile/edit/", setup: as("gigster", "elena-petrova") },
+  { name: "canvas", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair") },
   { name: "imani", path: "/profile/", setup: as("gigster", "imani-carter") },
   { name: "hana", path: "/profile/", setup: as("gigster", "hana-kim") },
   { name: "maya", path: "/profile/", setup: as("gigster", "maya") },
@@ -39,7 +40,8 @@ fs.mkdirSync(OUT, { recursive: true });
 const { server, url } = await serve(path.join(ROOT, "out"));
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? "/opt/pw-browsers/chromium" });
 try {
-  for (const t of thumbs) {
+  const only = process.argv.slice(2);
+  for (const t of thumbs.filter((x) => !only.length || only.includes(x.name))) {
     // 1280×800 at half scale: a 640×400 image of what a laptop shows.
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 0.5, colorScheme: "dark", reducedMotion: "reduce" });
     await context.addInitScript(() => { try { localStorage.setItem("bg-theme", "dark"); } catch { /* ignore */ } });

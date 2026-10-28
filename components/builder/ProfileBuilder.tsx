@@ -27,7 +27,7 @@ const AUTOSAVE_MS = 700;
 const thisMonth = () => new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
-type SaveState = { status: "idle" | "saving" | "saved" | "error"; at?: string };
+export type SaveState = { status: "idle" | "saving" | "saved" | "error"; at?: string };
 
 /** /profile/edit: the questionnaire. Five steps, autosaved, resumable, checked once on Submit, with a live preview. */
 export function ProfileBuilder() {
@@ -41,7 +41,7 @@ function Intro() {
     <section data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
       <div className="relative z-raised mx-auto flex max-w-7xl flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-4 py-5 sm:px-6">
         <h1 className="font-display text-heading-lg text-ink">Build your profile</h1>
-        <p className="text-body-sm text-ink-muted">It saves as you go. Come back any time.</p>
+        <p className="text-body-sm text-ink-muted">It saves as you go. Come back any time. <Link href="/profile/canvas/" className="ml-1 inline-flex min-h-11 items-center underline underline-offset-2 hover:text-ink sm:min-h-6">Try editing right on your profile</Link></p>
       </div>
     </section>
   );
@@ -331,7 +331,7 @@ function Builder({ personId }: { personId: string }) {
  * Reorder by dragging the grip at the left (mouse or touch), or focus it and use the arrow keys. Pins run
  * parallel to the credits, so moving or removing a credit carries its pin with it.
  */
-function Credits({ credits, pins, error, onChange }: { credits: string[]; pins: boolean[]; error?: string; onChange: (credits: string[], pins: boolean[]) => void }) {
+export function Credits({ credits, pins, error, onChange }: { credits: string[]; pins: boolean[]; error?: string; onChange: (credits: string[], pins: boolean[]) => void }) {
   const pinned = (i: number) => pins[i] !== false;
   const all = credits.map((_, i) => pinned(i));
   const rows = React.useRef<(HTMLLIElement | null)[]>([]);
@@ -396,7 +396,7 @@ function Credits({ credits, pins, error, onChange }: { credits: string[]; pins: 
   );
 }
 
-function SaveIndicator({ state, onRetry }: { state: SaveState; onRetry: () => void }) {
+export function SaveIndicator({ state, onRetry }: { state: SaveState; onRetry: () => void }) {
   return (
     <p role="status" aria-live="polite" className={cx("flex shrink-0 items-center gap-1.5 text-body-sm", state.status === "error" ? "text-danger" : "text-ink-subtle")}>
       {state.status === "saving" && <><LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />Saving…</>}

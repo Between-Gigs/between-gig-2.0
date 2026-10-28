@@ -241,3 +241,41 @@
   color-scheme: light;
   color-scheme: light;
 }
+
+/*
+ * Edit on your profile (/profile/canvas/). A spot is a part of the profile the Gigster can fill in place: dashed while
+ * empty, outlined on hover once filled. The next spot to fill breathes a mint ring so the page leads the way.
+ */
+@utility spot-next {
+  box-shadow: 0 0 0 2px var(--action), 0 0 0 6px color-mix(in oklab, var(--action) 22%, transparent);
+  animation: spot-breathe 2.4s ease-in-out infinite;
+}
+@keyframes spot-breathe {
+  50% { box-shadow: 0 0 0 2px var(--action), 0 0 0 10px color-mix(in oklab, var(--action) 6%, transparent), 0 0 28px color-mix(in oklab, var(--action) 30%, transparent); }
+}
+/* The progress ring around the count: --p is the share done, 0 to 100. */
+@utility progress-ring {
+  background: conic-gradient(var(--action) calc(var(--p, 0) * 1%), color-mix(in oklab, var(--ink-subtle) 25%, transparent) 0);
+  transition: --p 600ms;
+}
+/* A spot that was just filled in glows once as it settles. */
+@utility spot-filled {
+  animation: spot-settle 900ms cubic-bezier(.2, .8, .2, 1);
+}
+@keyframes spot-settle {
+  from { box-shadow: 0 0 0 2px var(--action), 0 0 32px color-mix(in oklab, var(--action) 45%, transparent); transform: scale(1.01); }
+}
+/* Confetti for the moments that earn it: every bit falls from the top along its own --x, --r and --d. */
+@utility confetti-bit {
+  position: absolute; top: -12px; left: var(--x); width: 8px; height: 14px; border-radius: 2px;
+  animation: confetti-fall var(--d, 2.4s) cubic-bezier(.25, .6, .4, 1) var(--delay, 0s) forwards;
+}
+@keyframes confetti-fall {
+  to { transform: translate3d(var(--dx, 0px), 105vh, 0) rotate(var(--r, 540deg)); opacity: 0.2; }
+}
+@property --p { syntax: "<number>"; inherits: true; initial-value: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .spot-next, .spot-filled { animation: none; }
+  .progress-ring { transition: none; }
+  .confetti-bit { display: none; }
+}
