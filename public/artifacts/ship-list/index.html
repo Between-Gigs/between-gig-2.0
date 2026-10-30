@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>What goes live · Between Gigs</title>
+<meta name="description" content="For Anu: which Between Gigs 2.0 pages to connect and make live, which wait on the client, and which are internal tools to leave out.">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Between Gigs">
+<meta property="og:title" content="What goes live · Between Gigs"><meta property="og:description" content="For Anu: which Between Gigs 2.0 pages to connect and make live, which wait on the client, and which are internal tools to leave out.">
+<meta property="og:url" content="https://between-gigs.github.io/between-gig-2.0/artifacts/ship-list/">
+<meta property="og:image" content="https://between-gigs.github.io/between-gig-2.0/og/ship-list.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://between-gigs.github.io/between-gig-2.0/og/ship-list.jpg">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* One reading column under a brand band; three buckets, each a table of routes. Matches the backend handoff. */
+:root {
+  --bg: #f4f6f2; --surface: #ffffff; --sunken: #e9eee7; --line: #d6ded4;
+  --ink: #0d1f16; --muted: #4a5d51; --subtle: #6b7d71;
+  --brand: #0f3d2a; --brand-ink: #f2fbf6; --accent: #12a565; --accent-ink: #0b6b42; --mint: #2ee08e;
+  --code-bg: #eef3ec; --warn: #8a4d00; --warn-bg: #fff4e2; --off: #5d6670; --off-bg: #eceff3;
+  --display: "Sora", "Segoe UI", system-ui, sans-serif;
+  --body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #07140e; --surface: #0e2018; --sunken: #0a1912; --line: #21382c;
+  --ink: #e8f3ec; --muted: #a9bdb1; --subtle: #86998d;
+  --brand: #0d3424; --accent: #2ee08e; --accent-ink: #5ff0ab;
+  --code-bg: #0b1a13; --warn: #ffb44d; --warn-bg: #2a1d08; --off: #b4bcc6; --off-bg: #1b222b; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #07140e; --surface: #0e2018; --sunken: #0a1912; --line: #21382c;
+  --ink: #e8f3ec; --muted: #a9bdb1; --subtle: #86998d;
+  --brand: #0d3424; --accent: #2ee08e; --accent-ink: #5ff0ab;
+  --code-bg: #0b1a13; --warn: #ffb44d; --warn-bg: #2a1d08; --off: #b4bcc6; --off-bg: #1b222b; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.6 var(--body); }
+a { color: var(--accent-ink); text-underline-offset: 3px; }
+a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+code { font-family: var(--mono); font-size: .84em; background: var(--code-bg); border: 1px solid var(--line); padding: .05em .35em; border-radius: 5px; overflow-wrap: anywhere; }
+
+.band { background: var(--brand); color: var(--brand-ink); position: relative; overflow: hidden;
+  background-image: radial-gradient(rgba(255,255,255,.07) 1px, transparent 1.1px); background-size: 12px 12px; }
+.band::after { content: ""; position: absolute; left: -15%; right: -15%; bottom: -230px; height: 260px; border-radius: 50%;
+  border-top: 1.5px solid rgba(46,224,142,.55); box-shadow: 0 -20px 60px rgba(46,224,142,.16); pointer-events: none; }
+.wrap { max-width: 960px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.band .wrap { padding-block: 44px 64px; position: relative; z-index: 1; }
+.eyebrow { font: 700 12px/1 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--mint); }
+h1 { font: 600 clamp(32px, 5vw, 48px)/1.1 var(--display); letter-spacing: -.02em; margin: 14px 0 0; text-wrap: balance; }
+.lead { font-size: 19px; color: rgba(242,251,246,.86); margin: 14px 0 0; max-width: 46em; }
+.band a { color: #7df2bd; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 20px; font-size: 14px; color: rgba(242,251,246,.72); }
+
+main { padding-block: 40px 96px; display: grid; gap: 48px; }
+h2 { font: 600 26px/1.2 var(--display); letter-spacing: -.01em; margin: 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+h3 { font: 600 18px/1.3 var(--display); margin: 28px 0 4px; }
+section > p, .note { color: var(--muted); margin: 8px 0 0; max-width: 48em; }
+
+.summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.sum { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px; border-top: 4px solid var(--c); display: grid; gap: 6px; align-content: start; }
+.sum b { font: 600 18px/1.25 var(--display); }
+.sum span { color: var(--muted); font-size: 15px; }
+.sum a { font-weight: 600; font-size: 15px; }
+.ship { --c: var(--accent); } .wait { --c: var(--warn); } .off { --c: var(--off); }
+
+.tag { font: 700 12px/1 var(--body); letter-spacing: .06em; text-transform: uppercase; padding: 6px 10px; border-radius: 999px; }
+.tag.ship { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent-ink); }
+.tag.wait { background: var(--warn-bg); color: var(--warn); }
+.tag.off { background: var(--off-bg); color: var(--off); }
+
+.table { margin-top: 12px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface); }
+.row { display: grid; grid-template-columns: minmax(0, 14rem) minmax(0, 1fr) minmax(0, 15rem); gap: 6px 20px; padding: 14px 18px; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.row.head { background: var(--sunken); font: 700 12px/1.2 var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--subtle); padding-block: 10px; }
+.row .route { font-family: var(--mono); font-size: 14px; overflow-wrap: anywhere; }
+.row .what { color: var(--ink); }
+.row .what small { display: block; color: var(--muted); font-size: 14px; margin-top: 2px; }
+.row .calls { font-family: var(--mono); font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.row .why { font-family: var(--body); font-size: 15px; }
+
+.callout { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 12px; padding: 16px 20px; margin-top: 16px; }
+.callout.warn { border-left-color: var(--warn); }
+.callout p { margin: 0; color: var(--muted); } .callout p + p { margin-top: 8px; } .callout b { color: var(--ink); }
+
+ol.steps { margin: 12px 0 0; padding: 0; list-style: none; counter-reset: s; display: grid; gap: 12px; }
+ol.steps li { counter-increment: s; position: relative; padding: 14px 18px 14px 60px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+ol.steps li::before { content: counter(s); position: absolute; left: 16px; top: 13px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--brand); color: var(--brand-ink); font: 600 14px/1 var(--display); }
+ol.steps b { display: block; } ol.steps span { color: var(--muted); font-size: 15px; }
+ul.plain { margin: 10px 0 0; padding-left: 20px; color: var(--muted); } ul.plain li { margin-top: 6px; } ul.plain b { color: var(--ink); }
+
+@media (max-width: 760px) {
+  .summary { grid-template-columns: 1fr; }
+  .row { grid-template-columns: 1fr; }
+  .row.head { display: none; }
+  .row .calls:not(.why)::before { content: "Calls: "; font-family: var(--body); font-weight: 600; }
+}
+</style>
+</head>
+<body>
+<header class="band">
+  <div class="wrap">
+    <span class="eyebrow">For Anu · Between Gigs 2.0</span>
+    <h1>What goes live, and what stays internal</h1>
+    <p class="lead">The 2.0 repo holds the product and the tools we used to build it. This page sorts every route into three groups: ship it, wait for the client, or leave it out. How to connect the backend is in the <a href="../backend-handoff/">backend handoff</a>.</p>
+    <div class="meta"><span>Updated 30 Oct 2026</span><span>Repo: <a href="https://github.com/Between-Gigs/between-gig-2.0">Between-Gigs/between-gig-2.0</a>, main</span><span><a href="https://between-gigs.github.io/between-gig-2.0/preview/">Preview guide</a> (sign in as any role)</span></div>
+  </div>
+</header>
+
+<div class="wrap">
+<main>
+
+  <section aria-labelledby="sum-h">
+    <h2 id="sum-h">In short</h2>
+    <div class="summary" style="margin-top:16px">
+      <div class="sum ship"><b>Make live: 18 routes and 7 emails</b><span>The public funnel, Gigster sign-up and profile, and the owners' review tools. This is the product.</span><a href="#ship">See the list</a></div>
+      <div class="sum wait"><b>Waiting on the client: 3</b><span>Built, but not approved by Patti and Peter. Don't deploy them yet.</span><a href="#wait">See the list</a></div>
+      <div class="sum off"><b>Internal, never live: 10 routes</b><span>Our build tools: workspace, Studio, previews and handoff pages. They stay on the preview site only.</span><a href="#off">See the list</a></div>
+    </div>
+    <div class="callout">
+      <p><b>No new endpoints since the 22 Oct handoff.</b> Recent work (the new onboarding, photo cropping, pinned credits, share images) uses the same <code>DataSource</code> calls. The endpoint list and build order in the backend handoff still hold.</p>
+    </div>
+  </section>
+
+  <section id="ship" aria-labelledby="ship-h">
+    <h2 id="ship-h"><span class="tag ship">Make live</span> The product</h2>
+    <p>Connect these to the Worker API and deploy them to between-gigs.com. The calls column shows the <code>DataSource</code> methods each page uses (<code>lib/data/source.ts</code>).</p>
+
+    <h3>1. Public funnel (already live on the old app)</h3>
+    <p class="note">The 2.0 versions keep the approved copy and forms. Switch them over at launch and keep the existing endpoints <code>/api/professionals3</code> and <code>/api/sketches</code>.</p>
+    <div class="table" role="table" aria-label="Public funnel">
+      <div class="row head" role="row"><span role="columnheader">Route</span><span role="columnheader">What it is</span><span role="columnheader">Calls</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/</span><span class="what" role="cell">Coming-soon call sheet</span><span class="calls" role="cell">none</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/professionals/</span><span class="what" role="cell">The Gigster landing page, with the "Get on the call sheet" sign-up<small>Email + ZIP, then optional details. Sends the welcome email.</small></span><span class="calls" role="cell">funnel.joinWaitlist, funnel.addDetails</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/storyboard/</span><span class="what" role="cell">The Storyboard, with its talent and buyer forms<small>Sends the coming-soon email.</small></span><span class="calls" role="cell">funnel.submitSketch</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/privacy/ /terms/ /licensing-insurance/ /provider-standards/</span><span class="what" role="cell">Policies (4 routes)<small>The privacy page has a request form.</small></span><span class="calls" role="cell">funnel.privacyRequest</span></div>
+    </div>
+
+    <h3>2. Gigster onboarding (new)</h3>
+    <p class="note">Invite → join → build the profile → submit → approved, then a public page.</p>
+    <div class="table" role="table" aria-label="Gigster onboarding">
+      <div class="row head" role="row"><span role="columnheader">Route</span><span role="columnheader">What it is</span><span role="columnheader">Calls</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/join/?invite=…</span><span class="what" role="cell">Accept an invite and create an account (Clerk)</span><span class="calls" role="cell">invites.lookup, auth.register, auth.syncExternal</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/login/</span><span class="what" role="cell">Sign in with an email code</span><span class="calls" role="cell">auth.requestCode, auth.verifyCode, auth.session</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/profile/canvas/</span><span class="what" role="cell">Profile editor: edit on your own profile<small>Where new sign-ups land today. Autosaves as they go.</small></span><span class="calls" role="cell">profiles.getDraft, profiles.saveDraft, profiles.submit</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/profile/edit/</span><span class="what" role="cell">Profile editor: step by step<small>The same profile as questions. Linked as "Prefer questions, step by step?"</small></span><span class="calls" role="cell">same as above</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/profile/</span><span class="what" role="cell">My profile: status (draft, submitted, changes requested, approved) and what to do next</span><span class="calls" role="cell">profiles.getProfile, people.get</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/p/[slug]/</span><span class="what" role="cell">Public profile of an approved Gigster<small>Photos go to R2; see the handoff.</small></span><span class="calls" role="cell">people.getPublic, people.similar</span></div>
+    </div>
+
+    <h3>3. Owner tools (owners only)</h3>
+    <p class="note">Every request checks the owner role on the server. A signed-in Gigster gets 403.</p>
+    <div class="table" role="table" aria-label="Owner tools">
+      <div class="row head" role="row"><span role="columnheader">Route</span><span role="columnheader">What it is</span><span role="columnheader">Calls</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/owners/</span><span class="what" role="cell">Dashboard: the funnel numbers and recent activity</span><span class="calls" role="cell">owners.dashboard, owners.activity</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/owners/review/</span><span class="what" role="cell">Review queue: approve, suggest edits, undo</span><span class="calls" role="cell">owners.reviewQueue, approve, requestChanges, undoReview</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/owners/people/ and /owners/people/[id]/</span><span class="what" role="cell">Search everyone, open a person</span><span class="calls" role="cell">people.list, people.get</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/owners/waitlist/</span><span class="what" role="cell">Waitlist: filter and invite in batches</span><span class="calls" role="cell">owners.waitlist, owners.invite</span></div>
+    </div>
+
+    <h3>4. Emails (sent by the Worker, not pages)</h3>
+    <p class="note">Seven templates in <code>emails/*.ts</code>, rendered with <code>renderEmail()</code> and sent through the existing <code>welcome_email_outbox</code>: invite, sign-in code, profile submitted, approved, changes requested, welcome, coming soon. The <code>/emails/</code> gallery that shows them is internal.</p>
+  </section>
+
+  <section id="wait" aria-labelledby="wait-h">
+    <h2 id="wait-h"><span class="tag wait">Waiting on the client</span> Don't deploy yet</h2>
+    <p>These are built but not signed off. When Patti and Peter approve one, it moves to "Make live".</p>
+    <div class="table" role="table" aria-label="Waiting on the client">
+      <div class="row head" role="row"><span role="columnheader">Route</span><span role="columnheader">What it is</span><span role="columnheader">Blocked on</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/crew-call/</span><span class="what" role="cell">Crew Call: the page for people hiring Gigsters (the client's V15 design)</span><span class="calls why" role="cell">Approval, and real testimonials (the current ones are samples)</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/proposals/home/</span><span class="what" role="cell">Proposals for the signed-in home (visitor, Gigster, owner)</span><span class="calls why" role="cell">Choosing a direction</span></div>
+      <div class="row" role="row"><span class="route" role="cell">Journal (app/_journal)</span><span class="what" role="cell">Journal pages, parked<small>The underscore keeps them out of the build.</small></span><span class="calls why" role="cell">Content and approval</span></div>
+    </div>
+    <div class="callout warn"><p><b>Also open:</b> whether the step-by-step editor stays as an option once "edit on your own profile" is approved. It makes no difference to the backend: both editors save the same draft.</p></div>
+  </section>
+
+  <section id="off" aria-labelledby="off-h">
+    <h2 id="off-h"><span class="tag off">Internal</span> Never on between-gigs.com</h2>
+    <p>These are the tools we built the product with. They run on sample data in the browser and stay on the GitHub Pages preview. None of them need a backend.</p>
+    <div class="table" role="table" aria-label="Internal">
+      <div class="row head" role="row"><span role="columnheader">Route</span><span role="columnheader">What it is</span><span role="columnheader">Why it stays out</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/workspace/ (and /workspace/…)</span><span class="what" role="cell">Our project workspace: every page in one shell, comments, versions</span><span class="calls why" role="cell">Team tool; its data is kept in the browser</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/studio/ and /studio/site/</span><span class="what" role="cell">Studio: page designer, CMS views, code and page inspector</span><span class="calls why" role="cell">Design tool, not product</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/emails/ and /emails/[name]/</span><span class="what" role="cell">The email gallery and sample outbox</span><span class="calls why" role="cell">Preview only; the templates themselves ship</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/preview/</span><span class="what" role="cell">The preview guide: sign in as any role, reset the sample data</span><span class="calls why" role="cell">Test tool; would bypass auth</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/preview/cursors/ and /preview/curtain/</span><span class="what" role="cell">Motion and cursor experiments</span><span class="calls why" role="cell">Experiments</span></div>
+      <div class="row" role="row"><span class="route" role="cell">/artifacts/…</span><span class="what" role="cell">Build map, this page, the backend handoff, the design system showcase</span><span class="calls why" role="cell">Handoff documents</span></div>
+      <div class="row" role="row"><span class="route" role="cell">Client management</span><span class="what" role="cell">Clients, client portal, project templates</span><span class="calls why" role="cell">A separate project, now on its own branch (<code>client-management</code>)</span></div>
+    </div>
+    <div class="callout"><p><b>How to leave them out.</b> The production site should include only the "Make live" routes. Either deploy from a route allowlist, or we add a production build that drops <code>app/workspace</code>, <code>app/studio</code>, <code>app/preview</code>, <code>app/emails</code> and <code>public/artifacts</code>. Tell us which you prefer.</p>
+    <p>Sample-data controls hide themselves once the data source is the live API (no <code>demo</code> block). Nothing else in the "Make live" pages needs changing.</p></div>
+  </section>
+
+  <section aria-labelledby="order-h">
+    <h2 id="order-h">Order of work</h2>
+    <p>The same order as the handoff, here as the milestones that let each group go live.</p>
+    <ol class="steps">
+      <li><b>Worker, Clerk and the API client</b><span>Token check and owner role on every request; write <code>lib/data/api.ts</code> and switch the export in <code>lib/data/index.ts</code>.</span></li>
+      <li><b>Invite → join → profile → submit</b><span>Invites, drafts with autosave, and server-side checks on submit (<code>lib/profile/validate.ts</code>).</span></li>
+      <li><b>Owners review, and the emails</b><span>Review queue, approve, suggest edits and the waitlist invite, with emails through the outbox.</span></li>
+      <li><b>Public profiles and photos</b><span><code>/p/[slug]</code> for approved Gigsters, with photo storage on R2.</span></li>
+      <li><b>Launch: switch the public funnel to 2.0</b><span>Deploy the "Make live" routes to between-gigs.com, keeping <code>/api/professionals3</code> and <code>/api/sketches</code>.</span></li>
+    </ol>
+    <p class="note" style="margin-top:16px"><b>Done when:</b> the whole journey works on between-gigs.com with real emails, owner routes return 403 for Gigsters, no secrets are in the front-end bundle, and none of the internal routes respond. The full list is in the <a href="../backend-handoff/#done">backend handoff</a>.</p>
+  </section>
+
+</main>
+</div>
+</body>
+</html>

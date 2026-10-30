@@ -246,6 +246,11 @@
   "title": "Backend handoff",
   "description": "What to connect to the backend: architecture, data model, endpoints, emails and build order."
  },
+ "ship-list": {
+  "path": "/artifacts/ship-list/",
+  "title": "What goes live",
+  "description": "For Anu: which 2.0 pages to connect and make live, which wait on the client, and which are internal tools to leave out."
+ },
  "design-system": {
   "path": "/artifacts/showcase/",
   "title": "Design system",
