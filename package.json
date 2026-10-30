@@ -21,8 +21,9 @@
     "qa:rules": "node scripts/qa/run.mjs rules",
     "thumbs": "node scripts/preview-thumbs.mjs",
     "og": "node scripts/og-images.mjs",
-    "check": "pnpm typecheck && pnpm lint && pnpm lint:values && pnpm build && pnpm qa",
-    "sync:ds": "scripts/sync-design-system.sh"
+    "check": "pnpm typecheck && pnpm lint && pnpm lint:values && pnpm test && pnpm build && pnpm qa",
+    "sync:ds": "scripts/sync-design-system.sh",
+    "test": "vitest run"
   },
   "dependencies": {
     "@clerk/react": "6.18.0",
@@ -51,7 +52,8 @@
     "eslint-config-next": "16.3.8",
     "playwright-core": "1.56.1",
     "tailwindcss": "4.2.1",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "2.1.9"
   },
   "pnpm": {
     "onlyBuiltDependencies": []
