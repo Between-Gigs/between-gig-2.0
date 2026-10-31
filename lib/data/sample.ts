@@ -464,13 +464,14 @@ export const sampleSource: DataSource = {
       state.waitlist ??= [];
       // Joining twice is fine: keep the first signup (like leads.email in D1), no second welcome email.
       const existing = state.waitlist.find((w) => w.email === address);
-      if (existing) return { ok: true, signup: clone(existing), alreadyJoined: true };
+      // Answered like a first join (N-16): nothing of the stored sign-up, and no second welcome email.
+      if (existing) return { ok: true, signup: { id: existing.id, email: address, zip, category, details: "", placement, createdAt: now() } };
       const signup: WaitlistSignup = { id: uid(), email: address, zip, category, details: "", placement, createdAt: now() };
       state.waitlist.unshift(signup);
       log(state, "joined_waitlist", { email: address });
       queue(state, "welcome", address, { storyboardUrl: absoluteUrl("/storyboard/") });
       save(state);
-      return { ok: true, signup: clone(signup), alreadyJoined: false };
+      return { ok: true, signup: clone(signup) };
     },
     async addDetails(signupId, { category, details }) {
       await latency(200);

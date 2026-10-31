@@ -6,15 +6,19 @@ const h = await harness();
 beforeEach(() => h.reset());
 
 describe("waitlist and invite", () => {
-  it("joining twice keeps one sign-up and says so; step 2's details land on it", async () => {
+  // Decision N-16: a repeat join answers exactly like a first one, so the form never tells anyone who has signed up.
+  it("joining twice keeps one sign-up, answers the repeat like a first join, and step 2's details land on it", async () => {
     const email = freshEmail("waitlist-twice");
     await h.signOut();
     const first = await h.source.funnel.joinWaitlist({ email: email.toUpperCase(), zip: "90026", placement: "hero" });
-    expect(first).toMatchObject({ ok: true, alreadyJoined: false, signup: { email, zip: "90026" } });
+    expect(first).toMatchObject({ ok: true, signup: { email, zip: "90026" } });
     if (!first.ok) return;
     await h.source.funnel.addDetails(first.signup.id, { category: "interiors", details: "Set dressing for homes" });
     const again = await h.source.funnel.joinWaitlist({ email, zip: "90026", placement: "footer" });
-    expect(again).toMatchObject({ ok: true, alreadyJoined: true });
+    expect(again).toMatchObject({ ok: true, signup: { email, zip: "90026" } });
+    expect(Object.keys(again).sort()).toEqual(Object.keys(first).sort());
+    expect(Object.keys(again.ok ? again.signup : {}).sort()).toEqual(Object.keys(first.signup).sort());
+    expect(JSON.stringify(again)).not.toMatch(/already|merged/i);
 
     await h.signInOwner();
     const rows = (await h.source.owners.waitlist({ text: email })).filter((r) => r.signup.email === email);

@@ -432,11 +432,13 @@ export async function joinWaitlist(ctx: Ctx, input: { email: string; zip: string
   const placement = input.placement.trim().slice(0, 60);
   if (outcome === "created" && placement) await ctx.cos.submitForm("call_sheet", { email, placement });
   const signup: WaitlistSignup = { id: signupToken(email, ctx.cos.signingSecret()), email, zip: input.zip, category: category(input.category) ?? "", details: "", placement: input.placement, createdAt: nowIso() };
-  return { ok: true, signup, alreadyJoined: outcome === "merged" };
+  // The outcome stays here (decision N-16): a repeat answers exactly like a first join.
+  return { ok: true, signup };
 }
 
 export async function addDetails(ctx: Ctx, signupId: string, input: { category: string; details: string }): Promise<WaitlistSignup> {
-  // Only the browser that just joined can add to that sign-up: anyone else could otherwise write to any address's.
+  // Step 2 is reachable only after step 1, within the hour. It isn't an ownership check: anyone may join with any
+  // address, and a join merges into an existing sign-up by design (forms 1.0.0), so details can't be kept from a stranger.
   const email = signupEmail(signupId, ctx.cos.signingSecret());
   if (!email || !EMAIL.test(email)) throw new CompanyOsError(422, "invalid_signup");
   await ctx.cos.submitForm("call_sheet", { email, answers: clean({ category: category(input.category), details: input.details.slice(0, 2000) }) });

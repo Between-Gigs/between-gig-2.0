@@ -221,7 +221,8 @@ export interface WaitlistSignup {
 }
 
 export type WaitlistResult =
-  | { ok: true; signup: WaitlistSignup; alreadyJoined: boolean }
+  /** A repeat join answers the same as a first one (decision N-16): nothing says whether the address had signed up. */
+  | { ok: true; signup: WaitlistSignup }
   | { ok: false; error: "email" | "zip" };
 
 export type SketchKind = "talent" | "buyer";
