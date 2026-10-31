@@ -33,7 +33,7 @@ export async function liveHarness(): Promise<Harness> {
   const fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(String(input));
     const headers = new Headers(init?.headers);
-    headers.set("x-forwarded-for", `198.18.${Math.floor(ip / 250) % 250}.${ip++ % 250}`);
+    headers.set("x-real-ip", `198.18.${Math.floor(ip / 250) % 250}.${ip++ % 250}`);
     const req = new Request(url, { ...init, headers });
     if (url.pathname.replace(/\/$/, "") === "/api/profiles/uploadPhoto") return handleUpload(req);
     const [, , group, method] = url.pathname.split("/");

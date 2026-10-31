@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { companyOs } from "./companyos";
 import { media } from "./media";
 import { FUNNEL_LIMIT, ROUTES, handle, handleUpload, resetRateLimit, type RouteName } from "./routes";
@@ -39,7 +39,7 @@ function fake(respond: Responder = () => undefined, { superAdmin = true } = {}) 
 const req = (body: unknown, { token = SESSION as string | null, ip = "203.0.113.7", type = "application/json" } = {}) =>
   new Request("http://localhost:3000/api/x", {
     method: "POST",
-    headers: { "content-type": type, "x-forwarded-for": `10.0.0.1, ${ip}`, ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    headers: { "content-type": type, "x-real-ip": ip, ...(token ? { authorization: `Bearer ${token}` } : {}) },
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
 
@@ -287,17 +287,35 @@ describe("the questionnaire as sent", () => {
 });
 
 describe("review fixes", () => {
-  it("the rate limit keys on the address the proxy set, not one the caller made up", async () => {
+  it("the rate limit keys on X-Real-IP only (Railway's edge sets it); X-Forwarded-For never counts", async () => {
     const { clientIp } = await import("./routes");
     const r = (h: Record<string, string>) => new Request("http://localhost/api/x", { headers: h });
     expect(clientIp(r({ "x-real-ip": "203.0.113.9", "x-forwarded-for": "1.2.3.4" }))).toBe("203.0.113.9");
-    expect(clientIp(r({ "x-forwarded-for": "1.2.3.4, 203.0.113.9" }))).toBe("203.0.113.9");
+    expect(clientIp(r({ "x-forwarded-for": "1.2.3.4, 10.0.0.1" }))).toBeNull();
     const args = [{ email: "a@example.org", zip: "90026", placement: "hero" }];
     const f = fake();
     for (let i = 0; i <= FUNNEL_LIMIT.max; i++) {
-      const res = await handle("funnel.joinWaitlist", new Request("http://localhost/api/x", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": `10.9.${i}.1, 198.51.100.77` }, body: JSON.stringify({ args }) }), { cos: f.cos });
+      // A new X-Forwarded-For every time changes nothing: the same X-Real-IP is the same bucket.
+      const res = await handle("funnel.joinWaitlist", new Request("http://localhost/api/x", { method: "POST", headers: { "content-type": "application/json", "x-real-ip": "198.51.100.77", "x-forwarded-for": `10.9.${i}.1` }, body: JSON.stringify({ args }) }), { cos: f.cos });
       expect(res.status).toBe(i < FUNNEL_LIMIT.max ? 200 : 429);
     }
+  });
+
+  it("without X-Real-IP, every request shares one stricter bucket, with a counted warning that names no address", async () => {
+    const { UNKNOWN_LIMIT } = await import("./routes");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const args = [{ email: "a@example.org", zip: "90026", placement: "hero" }];
+    const f = fake();
+    expect(UNKNOWN_LIMIT.max).toBeLessThan(FUNNEL_LIMIT.max);
+    for (let i = 0; i <= UNKNOWN_LIMIT.max; i++) {
+      const res = await handle("funnel.joinWaitlist", new Request("http://localhost/api/x", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": `192.0.2.${i}` }, body: JSON.stringify({ args }) }), { cos: f.cos });
+      expect(res.status).toBe(i < UNKNOWN_LIMIT.max ? 200 : 429);
+    }
+    const logged = warn.mock.calls.flat().map(String).join(" ");
+    expect(logged).toMatch(/without X-Real-IP/);
+    expect(logged).toMatch(/\b1\b/);
+    expect(logged).not.toMatch(/192\.0\.2\./);
+    warn.mockRestore();
   });
 
   it("a body without a length is still cut off at the limit (no reading hundreds of MB)", async () => {

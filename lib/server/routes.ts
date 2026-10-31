@@ -105,25 +105,39 @@ const DECOY: Partial<Record<RouteName, (args: Args) => unknown>> = {
 export const FUNNEL_LIMIT = { max: 10, windowMs: 60_000 };
 const hits = new Map<string, number[]>();
 
+/** Requests with no X-Real-IP share one bucket, so it is stricter than an address's own. */
+export const UNKNOWN_LIMIT = { max: 5, windowMs: 60_000 };
+let withoutIp = 0;
+
 /**
- * The caller's IP as the proxy saw it: X-Real-IP, which Railway's edge sets, else the last X-Forwarded-For entry (the
- * one the proxy appended). The first entries are whatever the caller sent, so they never count.
+ * The caller's IP: X-Real-IP, which Railway's edge sets, or null. Never X-Forwarded-For: its first entries are
+ * whatever the caller sent, and its last is an internal Railway hop that every caller shares.
  */
-export function clientIp(req: Request) {
-  return req.headers.get("x-real-ip")?.trim() || req.headers.get("x-forwarded-for")?.split(",").pop()?.trim() || "unknown";
+export function clientIp(req: Request): string | null {
+  return req.headers.get("x-real-ip")?.trim() || null;
 }
 
 /** A sliding window per IP for the public forms. In memory: one server instance today (tech debt for more). */
-export function rateLimited(ip: string, now = Date.now(), limit = FUNNEL_LIMIT) {
-  const recent = (hits.get(ip) ?? []).filter((t) => now - t < limit.windowMs);
-  if (recent.length >= limit.max) { hits.set(ip, recent); return true; }
+export function rateLimited(ip: string | null, now = Date.now(), limit = FUNNEL_LIMIT) {
+  if (ip === null) {
+    // A request the edge didn't stamp: counted (no address is logged), and put in the shared "unknown" bucket.
+    withoutIp++;
+    if (withoutIp === 1 || withoutIp % 100 === 0) console.warn(`rate limit: ${withoutIp} public-form request(s) without X-Real-IP, sharing one bucket`);
+    return limitedKey("unknown", now, UNKNOWN_LIMIT);
+  }
+  return limitedKey(`ip:${ip}`, now, limit);
+}
+
+function limitedKey(key: string, now: number, limit: { max: number; windowMs: number }) {
+  const recent = (hits.get(key) ?? []).filter((t) => now - t < limit.windowMs);
+  if (recent.length >= limit.max) { hits.set(key, recent); return true; }
   recent.push(now);
-  hits.delete(ip);
-  hits.set(ip, recent); // most recent last, so the oldest go first when the map is full
+  hits.delete(key);
+  hits.set(key, recent); // most recent last, so the oldest go first when the map is full
   if (hits.size > 10_000) for (const k of [...hits.keys()].slice(0, 1_000)) hits.delete(k);
   return false;
 }
-export const resetRateLimit = () => hits.clear();
+export const resetRateLimit = () => { hits.clear(); withoutIp = 0; };
 
 /* --------------------------------------------------------------- handling --------------------------------------------------------------- */
 
