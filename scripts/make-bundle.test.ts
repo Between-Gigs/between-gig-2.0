@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -22,18 +23,25 @@ function fakeBuild(extra: Record<string, string> = {}) {
 }
 
 describe("makeBundle", () => {
-  it("copies the standalone server, keeping pnpm's relative links, and adds the Dockerfile", async () => {
+  it("copies the standalone server, with node_modules in a tar that keeps pnpm's relative links, and adds the Dockerfile", async () => {
     const root = fakeBuild();
     const out = path.join(temp(), "web");
     await makeBundle({ root, out, env: {} });
     expect(readFileSync(path.join(out, "server.js"), "utf8")).toBe("server");
-    expect(lstatSync(path.join(out, "node_modules/next")).isSymbolicLink()).toBe(true);
-    expect(readlinkSync(path.join(out, "node_modules/next"))).toBe(".pnpm/next@1/node_modules/next");
-    expect(readFileSync(path.join(out, "node_modules/next/index.js"), "utf8")).toBe("next");
+    // `railway up` drops symlinks from what it uploads, and the server then can't find `next` (31 Oct): the upload
+    // holds no link, and node_modules travels as a tar that Docker's ADD unpacks with its links.
+    expect(execFileSync("find", [out, "-type", "l"], { encoding: "utf8" })).toBe("");
+    expect(existsSync(path.join(out, "node_modules"))).toBe(false);
+    const unpacked = temp();
+    execFileSync("tar", ["-xf", path.join(out, "node_modules.tar"), "-C", unpacked]);
+    expect(lstatSync(path.join(unpacked, "node_modules/next")).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(path.join(unpacked, "node_modules/next"))).toBe(".pnpm/next@1/node_modules/next");
+    expect(readFileSync(path.join(unpacked, "node_modules/next/index.js"), "utf8")).toBe("next");
     // The one-time importer runs in this container (the only place that reaches the private API).
     expect(readFileSync(path.join(out, "tools/import-waitlist.mjs"), "utf8")).toContain("runImport");
     const docker = readFileSync(path.join(out, "Dockerfile"), "utf8");
     expect(docker).toMatch(/^FROM node:22\.\d+\.\d+-bookworm-slim@sha256:[0-9a-f]{64}$/m);
+    expect(docker).toMatch(/^ADD --chown=node:node node_modules\.tar \/app\/$/m);
     expect(docker).toMatch(/^USER node$/m);
     expect(docker).toMatch(/^CMD \["node", "server\.js"\]$/m);
   });
