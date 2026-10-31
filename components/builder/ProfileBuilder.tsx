@@ -12,6 +12,7 @@ import { ABOUT_MAX, SECTIONS, STEPS, fieldLabel, pinnedCredits, sectionLabel, va
 import { ChipPicker } from "@/components/profile/ChipPicker";
 import { PhotoPicker } from "@/components/profile/PhotoPicker";
 import { ProfilePreviewCard } from "@/components/profile/ProfilePreviewCard";
+import { useLiveEditWarning } from "@/components/profile/LiveEditWarning";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 
@@ -65,6 +66,7 @@ function Builder({ personId }: { personId: string }) {
   const [step, setStep] = React.useState(0);
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [save, setSave] = React.useState<SaveState>({ status: "idle" });
+  const live = useLiveEditWarning(person?.status);
   const [submitting, setSubmitting] = React.useState(false);
   const [done, setDone] = React.useState<{ outboxId?: string } | null>(null);
   const [preview, setPreview] = React.useState(false);
@@ -112,11 +114,11 @@ function Builder({ personId }: { personId: string }) {
 
   if (!person || !d) return <Page bare><Intro /><BuilderSkeleton /></Page>;
 
-  const set = <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K]) => {
+  const set = <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K]) => live.guard(k, () => {
     dirty.current = true;
     setD((x) => (x ? { ...x, [k]: v } : x));
     setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
-  };
+  });
   const err = (k: keyof ProfileFields) => errors[k];
 
   // Bring the card's top into view instantly (no smooth scroll racing the transition).
@@ -162,6 +164,8 @@ function Builder({ personId }: { personId: string }) {
   const noteFor = (section: ProfileSection) => notes.filter((n) => n.section === section);
   const errorCount = Object.keys(errors).length;
   const resubmitting = person.status === "submitted" || person.status === "approved";
+  // Live, the profile is one record: one that's with the team or live has nothing to send (an edit sends it back itself).
+  const nothingToSend = data.kind === "live" && resubmitting;
 
   return (
     <Page bare>
@@ -176,9 +180,10 @@ function Builder({ personId }: { personId: string }) {
           )}
           {!done && resubmitting && (
             <Banner tone="info" className="mb-4 shadow-md" title={person.status === "approved" ? "Your profile is live" : "Your profile is with our team"}>
-              Changes save here as a draft. {person.status === "approved" ? "Your live profile stays as it is until you submit again and we review the changes." : "Submit again to send the latest version for review."}
+              {person.status === "approved" ? "Changes to your answers take your profile off the site until we review them; availability updates stay live." : "Changes save here as a draft. Submit again to send the latest version for review."}
             </Banner>
           )}
+          {live.dialog}
           <div className="rounded-2xl border border-line bg-surface shadow-lg">
             {!done && (
               <div className="border-b border-line px-5 pt-5 pb-4 sm:px-8">
@@ -217,7 +222,7 @@ function Builder({ personId }: { personId: string }) {
 
                   {step === 0 && (
                     <div className="grid gap-5">
-                      <PhotoPicker id="f-photo" value={d.photo} name={d.name} onChange={set("photo")} error={err("photo")} />
+                      <PhotoPicker id="f-photo" value={d.photo} name={d.name} onChange={set("photo")} error={err("photo")} personId={personId} confirm={(go) => live.guard("photo", go)} />
                       <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
                         <Field label="Full name" error={err("name")}><Input id="f-name" autoComplete="name" value={d.name} onChange={(e) => set("name")(e.target.value)} /></Field>
                         <Field label="Years in the business" error={err("years")}><Input id="f-years" inputMode="numeric" value={d.years} placeholder="e.g. 6" onChange={(e) => set("years")(e.target.value.replace(/\D/g, "").slice(0, 2))} /></Field>
@@ -299,10 +304,10 @@ function Builder({ personId }: { personId: string }) {
 
                   <div className="mt-8 flex items-center justify-between gap-3 border-t border-line pt-5">
                     {step > 0 ? <Button variant="secondary" iconStart={<ArrowLeft />} onClick={(e) => go(step - 1, e.currentTarget)}>Back<span className="max-sm:sr-only">: {STEPS[step - 1]}</span></Button> : <span />}
-                    <Button variant="primary" className="glow-hover" loading={submitting} iconEnd={step === 4 ? <Sparkles /> : <ArrowRight />} onClick={next}>
+                    {!(step === 4 && nothingToSend) && <Button variant="primary" className="glow-hover" loading={submitting} iconEnd={step === 4 ? <Sparkles /> : <ArrowRight />} onClick={next}>
                       {/* Says where it goes next, not just "Continue". */}
                       {step === 4 ? (resubmitting || notes.length ? "Submit again" : "Submit for review") : <>Next<span className="max-sm:sr-only">: {STEPS[step + 1]}</span></>}
-                    </Button>
+                    </Button>}
                   </div>
                 </>
               )}

@@ -5,6 +5,7 @@ import * as React from "react";
 import { AuthContext, type AuthActions } from "@/lib/auth/context";
 import { clerkAppearance, clerkPublishableKey } from "@/lib/auth/clerk";
 import { data } from "@/lib/data";
+import { apiSource } from "@/lib/data/api";
 import { basePath } from "@/lib/site";
 
 /** Clerk (@clerk/react: the Next.js SDK needs a server, this is a static export) around the app, themed with our tokens, plus the bridge from a Clerk user to a Between Gigs session. */
@@ -27,10 +28,15 @@ function Bridge({ children }: { children: React.ReactNode }) {
   const clerk = useClerk();
   const { isLoaded, isSignedIn, user } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress ?? null;
-  const role = user?.publicMetadata?.role === "owner" ? "owner" : "gigster";
+  // Live, Company OS says who is an owner (Super Admins, N-04); the sample trusts Clerk's publicMetadata.role.
+  const live = data.kind === "live";
+  const role = live ? "" : user?.publicMetadata?.role === "owner" ? "owner" : "gigster";
   const identity = !isLoaded ? undefined : isSignedIn && email ? `${user?.id}:${email.toLowerCase()}:${role}` : null;
   const [syncedIdentity, setSyncedIdentity] = React.useState<string | null | undefined>(undefined);
   const [needsConsent, setNeedsConsent] = React.useState<string | null>(null);
+
+  // The live source sends the Clerk session token with each call; 2.0's server passes it on to Company OS.
+  React.useEffect(() => { if (live) apiSource.setTokenProvider(async () => (await clerk.session?.getToken()) ?? null); }, [live, clerk]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -43,7 +49,7 @@ function Bridge({ children }: { children: React.ReactNode }) {
         if (!cancelled) { setNeedsConsent(null); setSyncedIdentity(null); }
         return;
       }
-      if (current?.via === "clerk" && current.email === email.toLowerCase() && current.role === role) {
+      if (current?.via === "clerk" && current.email === email.toLowerCase() && (live || current.role === role)) {
         setNeedsConsent(null);
         setSyncedIdentity(identity);
         return;
@@ -63,7 +69,7 @@ function Bridge({ children }: { children: React.ReactNode }) {
     void sync();
     const unsubscribe = data.auth.onChange(() => { setSyncedIdentity(undefined); void sync(); });
     return () => { cancelled = true; unsubscribe(); };
-  }, [isLoaded, isSignedIn, email, user, clerk, identity, role, pathname, router]);
+  }, [isLoaded, isSignedIn, email, user, clerk, identity, role, live, pathname, router]);
 
   const value = React.useMemo<AuthActions>(() => ({
     provider: "clerk",

@@ -1,12 +1,14 @@
 "use client";
 import { cx } from "@ds/components";
 import Link from "next/link";
-import type { DashboardSummary } from "@/lib/data";
+import { data, type DashboardSummary } from "@/lib/data";
 import { Panel } from "./kit";
 
 interface Stage { label: string; value: number; href: string; now: { label: string; value: number; href: string }[] }
 
 const pct = (n: number, of: number) => (of ? Math.round((n / of) * 100) : 0);
+/** Live has no "opened" stage: Clerk doesn't report an opened invite (Company OS decision N-10). */
+const withOpened = data.kind !== "live";
 
 /**
  * From invite to live: everyone who was invited, and how far they've got. Each stage counts everyone who ever
@@ -16,8 +18,8 @@ const pct = (n: number, of: number) => (of ? Math.round((n / of) * 100) : 0);
 export function Funnel({ d }: { d: DashboardSummary }) {
   const f = d.funnel, w = d.waitlist, c = d.invitedCounts;
   const stages: Stage[] = [
-    { label: "Invited", value: f.invited, href: "/owners/people/", now: [{ label: "haven't opened it", value: w.invited, href: "/owners/waitlist/?status=invited" }] },
-    { label: "Opened the invite", value: f.opened, href: "/owners/waitlist/?status=opened", now: [{ label: "no account yet", value: w.opened, href: "/owners/waitlist/?status=opened" }] },
+    { label: "Invited", value: f.invited, href: "/owners/people/", now: [{ label: withOpened ? "haven't opened it" : "no account yet", value: w.invited, href: "/owners/waitlist/?status=invited" }] },
+    ...(withOpened ? [{ label: "Opened the invite", value: f.opened, href: "/owners/waitlist/?status=opened", now: [{ label: "no account yet", value: w.opened, href: "/owners/waitlist/?status=opened" }] }] : []),
     {
       label: "Created an account", value: f.accounts, href: "/owners/people/?status=draft",
       now: [{ label: "not started", value: c.registered, href: "/owners/people/?status=registered" }, { label: "drafting", value: c.draft, href: "/owners/people/?status=draft" }],
@@ -69,7 +71,7 @@ export function FunnelCompact({ d, onSelect, selected, bare = false }: { d: Dash
   const f = d.funnel;
   const stages: { label: string; value: number; view: FunnelView }[] = [
     { label: "Invited", value: f.invited, view: "invited" },
-    { label: "Opened the invite", value: f.opened, view: "invited" },
+    ...(withOpened ? [{ label: "Opened the invite", value: f.opened, view: "invited" as const }] : []),
     { label: "Created an account", value: f.accounts, view: "building" },
     { label: "Submitted a profile", value: f.submitted, view: "submitted" },
     { label: "Approved", value: f.approved, view: "approved" },

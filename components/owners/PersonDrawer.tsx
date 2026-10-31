@@ -11,6 +11,7 @@ import { ProfilePreviewCard } from "@/components/profile/ProfilePreviewCard";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { shortDate } from "./format";
 import { Meter } from "./kit";
+import { HOLD_MS, holdDecision, type Hold } from "./hold";
 import { missingFields, SuggestEdits } from "./ReviewPanel";
 
 const first = (name: string) => name.split(" ")[0] || name;
@@ -47,18 +48,20 @@ export function PersonDrawer({ rows, index, onIndex, onClose, onChanged }: {
   }, [open, suggest, next, prev, index, onIndex]);
 
   // Decisions take the person out of the list it was opened from; stay on the same slot (the next person).
-  const decided = async (message: string, id: string, name: string) => {
+  // Live, the decision is held until the toast goes (hold.ts): the lists leave the person out meanwhile.
+  const decided = async (message: string, name: string, hold: Hold) => {
     await onChanged();
     toast({
-      message, tone: "success",
-      action: { label: "Undo", onClick: () => void data.owners.undoReview(id).then(onChanged).then(() => toast({ message: `Undone. ${name} is back in the queue.` })) },
+      message, tone: "success", duration: HOLD_MS,
+      action: { label: "Undo", onClick: () => void hold.cancel().then((undone) => undone ? onChanged().then(() => toast({ message: `Undone. ${name} is back in the queue.` })) : toast({ message: "Couldn't undo that. It may have changed already.", tone: "danger" })) },
     });
   };
+  const after = { onSent: () => void onChanged(), onError: () => { void onChanged(); toast({ message: "Couldn't save that decision. Try again.", tone: "danger" }); } };
 
   const approve = async () => {
     if (!row) return;
     setBusy(true);
-    try { await data.owners.approve(row.person.id); await decided(`${row.person.name} approved · now live`, row.person.id, row.person.name); }
+    try { await decided(`${row.person.name} approved · now live`, row.person.name, await holdDecision(row.person.id, () => data.owners.approve(row.person.id), after)); }
     catch { toast({ message: "Couldn't approve. Try again.", tone: "danger" }); }
     finally { setBusy(false); }
   };
@@ -183,7 +186,7 @@ export function PersonDrawer({ rows, index, onIndex, onClose, onChanged }: {
       </Drawer>
       {p && f && reviewing && (
         <SuggestEdits open={suggest} person={p} fields={f} onClose={() => setSuggest(false)}
-          onSent={() => { setSuggest(false); void decided(`Edits sent to ${first(p.name) || "them"}`, p.id, p.name); }} />
+          onSent={(hold) => { setSuggest(false); void decided(`Edits sent to ${first(p.name) || "them"}`, p.name, hold); }} />
       )}
     </>
   );

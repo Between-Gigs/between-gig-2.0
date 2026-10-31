@@ -10,6 +10,7 @@ import { ago } from "./activity";
 import { HeaderSkeleton, Meter, OwnerPage, Panel, Row, RowSkeletons } from "./kit";
 import { OwnerGate } from "./OwnerGate";
 import { OwnerShell } from "./OwnerShell";
+import { isHeld } from "./hold";
 import { reviewHref } from "./ReviewPanel";
 
 const missing = (f: ProfileFields) => Object.values(validateAll(f)).flatMap((e) => Object.keys(e)).map((k) => fieldLabel[k as keyof ProfileFields] ?? k);
@@ -25,7 +26,7 @@ function Queue() {
   const [decided, setDecided] = React.useState<ActivityEvent[]>([]);
   React.useEffect(() => {
     void Promise.all([data.owners.reviewQueue(), data.owners.activity(200)]).then(([q, a]) => {
-      setRows(q);
+      setRows(q.filter((r) => !isHeld(r.person.id)));
       setDecided(a.filter((e) => e.kind === "approved" || e.kind === "changes_requested"));
     });
   }, []);

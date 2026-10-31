@@ -374,6 +374,20 @@ export const sampleSource: DataSource = {
       const draft: ProfileDraft = { personId, fields: clone(fields), step, savedAt: now() };
       state.drafts = [...state.drafts.filter((d) => d.personId !== personId), draft];
       if (person.status === "registered") person.status = "draft";
+      // Editing an approved profile (decision N-09): availability stays live; any other change goes back to review.
+      const published = person.status === "approved" ? state.profiles.find((p) => p.personId === personId) : undefined;
+      if (published) {
+        const { month, monthStatus, dates, ...rest } = fields;
+        const { month: m0, monthStatus: s0, dates: d0, ...before } = published.fields;
+        const text = (o: object) => JSON.stringify(o, Object.keys(o).sort());
+        if (text(rest) !== text(before)) {
+          Object.assign(published, { fields: clone(fields), submittedAt: draft.savedAt });
+          Object.assign(person, { status: "submitted", submittedAt: draft.savedAt, approvedAt: undefined });
+          log(state, "submitted", { personId: person.id, name: person.name, email: person.email });
+        } else if (month !== m0 || monthStatus !== s0 || dates !== d0) {
+          Object.assign(published.fields, { month, monthStatus, dates });
+        }
+      }
       // The profile name follows the questionnaire's "Full name" until it's submitted.
       if (fields.name.trim() && (person.status === "draft")) person.name = fields.name.trim();
       person.updatedAt = draft.savedAt;
@@ -412,6 +426,15 @@ export const sampleSource: DataSource = {
       const p = load().profiles.find((x) => x.personId === personId);
       return p ? clone(p) : null;
     },
+    async uploadPhoto(personId, file) {
+      await latency(120);
+      if (!load().people.some((p) => p.id === personId)) throw new Error("No such person");
+      // The sample keeps the (already cropped and resized) photo as a data URL in the fields.
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      let bin = "";
+      for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      return `data:${file.type || "image/jpeg"};base64,${btoa(bin)}`;
+    },
   },
 
   emails: {
@@ -441,13 +464,14 @@ export const sampleSource: DataSource = {
       state.waitlist ??= [];
       // Joining twice is fine: keep the first signup (like leads.email in D1), no second welcome email.
       const existing = state.waitlist.find((w) => w.email === address);
-      if (existing) return { ok: true, signup: clone(existing), alreadyJoined: true };
+      // Answered like a first join (N-16): nothing of the stored sign-up, and no second welcome email.
+      if (existing) return { ok: true, signup: { id: existing.id, email: address, zip, category, details: "", placement, createdAt: now() } };
       const signup: WaitlistSignup = { id: uid(), email: address, zip, category, details: "", placement, createdAt: now() };
       state.waitlist.unshift(signup);
       log(state, "joined_waitlist", { email: address });
       queue(state, "welcome", address, { storyboardUrl: absoluteUrl("/storyboard/") });
       save(state);
-      return { ok: true, signup: clone(signup), alreadyJoined: false };
+      return { ok: true, signup: clone(signup) };
     },
     async addDetails(signupId, { category, details }) {
       await latency(200);

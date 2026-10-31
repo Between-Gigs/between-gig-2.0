@@ -10,6 +10,7 @@ import { asset } from "@/lib/site";
 import { plans, scenePages, type PlanField } from "@/lib/storyboard";
 import { Page } from "@/components/site/Page";
 import { StoryBook, type StoryBookHandle } from "@/components/storyboard/StoryBook";
+import { Honeypot, trapValue } from "./Honeypot";
 
 type Kind = keyof typeof plans;
 
@@ -142,15 +143,16 @@ export function Planner({ kind, onClose, onBrowse, initial, topic }: { kind: Kin
     return undefined;
   };
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!plan || !kind) return;
+    const website = trapValue(e);
     const next: Record<string, string> = {};
     for (const f of plan.fields) { const m = check(f, values[f.name]); if (m) next[f.name] = m; }
     setErrors(next);
     if (Object.keys(next).length) { document.getElementById(`plan-${Object.keys(next)[0]}`)?.focus(); return; }
     setState("saving");
-    try { await data.funnel.submitSketch(kind, topic ? { ...values, service: topic.title } : values); setState("saved"); }
+    try { await data.funnel.submitSketch(kind, { ...values, ...(topic ? { service: topic.title } : {}), ...(website ? { website } : {}) }); setState("saved"); }
     catch { setState("error"); }
   };
 
@@ -178,6 +180,7 @@ export function Planner({ kind, onClose, onBrowse, initial, topic }: { kind: Kin
         </div>
       ) : plan && (
         <form noValidate onSubmit={submit} aria-busy={state === "saving" || undefined} className="grid gap-4 sm:grid-cols-2">
+          <Honeypot />
           {state === "error" && <Banner tone="danger" className="sm:col-span-2" title="We could not save that yet">Your entries are still here—please try again.</Banner>}
           {topic && (
             <div className="flex items-center gap-4 rounded-xl border border-line bg-surface-sunken p-3 sm:col-span-2">

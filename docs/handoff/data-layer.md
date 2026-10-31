@@ -1,5 +1,10 @@
 # Data layer: from sample to backend
 
+> **Superseded (2026-10-31).** The backend is Company OS, not the Cloudflare Worker this page plans: 2.0's own server
+> routes (`lib/server/*`, `app/api/**`) call it, and the web server has no `CLERK_SECRET_KEY` (Company OS verifies the
+> Clerk session token). What is live: [companyos-local.md](companyos-local.md), [companyos-deploy.md](companyos-deploy.md)
+> and Company OS `docs/customers/between-gigs/gap-analysis.md` §13. Kept as the record of the first plan.
+
 Everything the UI reads or writes goes through one interface, `DataSource` (`lib/data/source.ts`). Today `lib/data/index.ts` exports the localStorage sample (`lib/data/sample.ts`). To go live, write a second implementation that calls the Worker API and export it from `lib/data/index.ts` instead. No component imports the sample directly (the Preview guide and QA use the optional `demo` block, which the live implementation leaves out).
 
 Every method is async and returns plain JSON-able objects, so each maps to one API route. Types live in `lib/data/types.ts`.

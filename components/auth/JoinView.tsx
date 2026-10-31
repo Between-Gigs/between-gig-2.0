@@ -12,10 +12,15 @@ import { clerkEnabled } from "@/lib/auth/clerk";
 import { useSession } from "@/lib/session";
 import { basePath } from "@/lib/site";
 import { AuthShell } from "./AuthShell";
+import { InviteJoin } from "./InviteJoin";
 import { ClerkSlot } from "./ClerkSlot";
 
-/** Open signup, with an optional invite to prefill the email and retain its attribution. */
+/** Open signup, with an optional invite to prefill the email and retain its attribution. Live, invite-only: InviteJoin. */
 export function JoinView() {
+  return data.kind === "live" ? <InviteJoin /> : <SampleJoin />;
+}
+
+function SampleJoin() {
   const token = useSearchParams().get("invite") ?? "";
   const { onboarding } = useAuthActions();
   const [resumeClerk, setResumeClerk] = React.useState(false);

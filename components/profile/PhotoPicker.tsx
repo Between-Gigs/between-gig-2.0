@@ -3,6 +3,8 @@ import { Button, Modal, Slider } from "@ds/components";
 import { Check, Crop as CropIcon, ImagePlus, Trash2 } from "lucide-react";
 import * as React from "react";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
+import { data } from "@/lib/data";
+import { useSession } from "@/lib/session";
 
 const MAX = 800;
 const SOURCE = 1600;
@@ -28,6 +30,13 @@ async function readFile(file: File): Promise<string> {
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+/** The cropped JPEG (a data URL) as the file to upload. */
+function blobOf(dataUrl: string) {
+  const [head, body = ""] = dataUrl.split(",");
+  const bytes = Uint8Array.from(atob(body), (c) => c.charCodeAt(0));
+  return new Blob([bytes], { type: /data:([^;]+)/.exec(head ?? "")?.[1] ?? "image/jpeg" });
 }
 
 type Crop = { z: number; x: number; y: number };
@@ -104,19 +113,37 @@ function PhotoCropper({ src, onCancel, onSave }: { src: string; onCancel: () => 
 }
 
 /**
- * Profile photo: pick, preview, replace or remove. Production uploads the file to storage (see the
- * handoff) and keeps the URL; the sample keeps a small data URL.
+ * Profile photo: pick, preview, replace or remove. The cropped photo goes through profiles.uploadPhoto: live, it is
+ * stored on the profile at once and the field keeps its /media link; the sample keeps a small data URL.
  */
-export function PhotoPicker({ value, name, onChange, error, id }: { value: string; name: string; onChange: (v: string) => void; error?: string; id: string }) {
+export function PhotoPicker({ value, name, onChange, error, id, personId: forPerson, confirm }: {
+  value: string; name: string; onChange: (v: string) => void; error?: string; id: string;
+  /** Whose profile the photo is for (else the signed-in person). */
+  personId?: string;
+  /** Runs `go` once a change is allowed (the live-edit warning on an approved profile), before anything is uploaded. */
+  confirm?: (go: () => void) => void;
+}) {
   const input = React.useRef<HTMLInputElement>(null);
   const [problem, setProblem] = React.useState<string>();
   // The photo being cropped: a new upload, or the current photo to re-crop.
   const [cropping, setCropping] = React.useState<string | null>(null);
+  const { session } = useSession();
+  const use = (photo: string) => {
+    setCropping(null);
+    // The sample keeps the data URL. Live, the photo is uploaded to the person's profile and the field keeps its
+    // /media link; a data URL would never be stored there.
+    if (data.kind !== "live") { onChange(photo); return; }
+    const personId = forPerson ?? session?.personId;
+    if (!personId || !data.profiles.uploadPhoto) { setProblem("We couldn't upload that photo. Try again."); return; }
+    void data.profiles.uploadPhoto(personId, blobOf(photo)).then(onChange, () => setProblem("We couldn't upload that photo. Try again."));
+  };
+
   const pick = async (file?: File) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) { setProblem("Choose an image file: JPG, PNG or HEIC."); return; }
     if (file.size > 15 * 1024 * 1024) { setProblem("That photo is over 15 MB. Choose a smaller one."); return; }
-    try { setProblem(undefined); setCropping(await readFile(file)); } catch { setProblem("We couldn't read that photo. Try another one."); }
+    const start = async () => { try { setProblem(undefined); setCropping(await readFile(file)); } catch { setProblem("We couldn't read that photo. Try another one."); } };
+    if (confirm) confirm(() => void start()); else await start();
   };
   const message = problem ?? error;
   return (
@@ -134,11 +161,11 @@ export function PhotoPicker({ value, name, onChange, error, id }: { value: strin
           <Button size="sm" variant="secondary" iconStart={<ImagePlus />} aria-describedby={message ? `${id}-error` : undefined} onClick={() => input.current?.click()}>
             {value ? "Replace photo" : "Upload a photo"}
           </Button>
-          {value && <Button size="sm" variant="ghost" iconStart={<CropIcon />} onClick={() => setCropping(value)}>Crop</Button>}
+          {value && <Button size="sm" variant="ghost" iconStart={<CropIcon />} onClick={() => (confirm ? confirm(() => setCropping(value)) : setCropping(value))}>Crop</Button>}
           {value && <Button size="sm" variant="ghost" iconStart={<Trash2 />} onClick={() => onChange("")}>Remove</Button>}
         </div>
       </div>
-      {cropping && <PhotoCropper src={cropping} onCancel={() => setCropping(null)} onSave={(url) => { onChange(url); setCropping(null); }} />}
+      {cropping && <PhotoCropper src={cropping} onCancel={() => setCropping(null)} onSave={use} />}
     </div>
   );
 }

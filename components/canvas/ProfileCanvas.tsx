@@ -15,6 +15,7 @@ import { ChipPicker } from "@/components/profile/ChipPicker";
 import { PhotoPicker } from "@/components/profile/PhotoPicker";
 import { ProfilePreviewCard } from "@/components/profile/ProfilePreviewCard";
 import { ProfileView } from "@/components/profile/ProfileView";
+import { useLiveEditWarning } from "@/components/profile/LiveEditWarning";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 
@@ -136,6 +137,7 @@ function Canvas({ personId }: { personId: string }) {
   const [fresh, setFresh] = React.useState<SpotId | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   const [save, setSave] = React.useState<SaveState>({ status: "idle" });
+  const live = useLiveEditWarning(person?.status);
   const [view, setView] = React.useState<"edit" | "client">("edit");
   const [submitting, setSubmitting] = React.useState(false);
   const [sent, setSent] = React.useState(false);
@@ -233,11 +235,11 @@ function Canvas({ personId }: { personId: string }) {
   }, [editing]);
   if (!person || !d) return <Page bare><Band /><CanvasSkeleton /></Page>;
 
-  const set = <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K]) => {
+  const set = <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K]) => live.guard(k, () => {
     dirty.current = true;
     setD((x) => (x ? { ...x, [k]: v } : x));
     setFieldErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
-  };
+  });
 
   // Always the first required part still empty, so nothing earlier gets skipped.
   const nextOf = (from?: SpotId): SpotId | null => firstEmpty(d, from);
@@ -310,11 +312,14 @@ function Canvas({ personId }: { personId: string }) {
   };
 
   const resubmit = person.status === "submitted" || person.status === "approved" || notes.length > 0;
+  // Live, the profile is one record: one that's with the team or live has nothing to send (an edit sends it back itself).
+  const nothingToSend = data.kind === "live" && (person.status === "submitted" || person.status === "approved");
   const first = d.name.split(" ")[0] || "there";
   const ctx: Ctx = { d, editing, next, fresh, errors, noted, open, close, advance, portrait, rise };
 
   return (
     <Page bare>
+      {live.dialog}
       <Band>
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
           <div className="grid gap-1">
@@ -330,7 +335,7 @@ function Canvas({ personId }: { personId: string }) {
         </div>
       </Band>
 
-      <StageBar done={done} total={REQUIRED.length} ready={ready} missing={Object.keys(fieldErrors).length} save={save} view={view} editing={!!editing} sent={sent} submitting={submitting} resubmit={resubmit}
+      <StageBar done={done} total={REQUIRED.length} ready={ready} missing={Object.keys(fieldErrors).length} save={save} view={view} editing={!!editing} sent={sent} submitting={submitting} resubmit={resubmit} canSend={!nothingToSend}
         onRetry={() => { dirty.current = true; void flush(); }} onView={switchView} onNext={() => next && open(next)} onSubmit={submit} />
 
       <div ref={stage} className="vt-page relative mx-auto max-w-7xl px-4 pt-8 pb-32 sm:px-6 sm:pb-24">
@@ -354,7 +359,7 @@ function Canvas({ personId }: { personId: string }) {
                 </ul>
               </Banner>
             )}
-            <EditView d={d} set={set} personId={personId} />
+            <EditView d={d} set={set} personId={personId} confirm={(go) => live.guard("photo", go)} />
           </CanvasCtx.Provider>
         )}
       </div>
@@ -371,15 +376,15 @@ function Canvas({ personId }: { personId: string }) {
         </ol>
       </Modal>
       {!sent && !editing && view === "edit" && (
-        <Dock done={done} total={REQUIRED.length} next={next} ready={ready} resubmit={resubmit} submitting={submitting} onNext={() => next && open(next)} onSubmit={submit} />
+        <Dock done={done} total={REQUIRED.length} next={next} ready={ready} resubmit={resubmit} canSend={!nothingToSend} submitting={submitting} onNext={() => next && open(next)} onSubmit={submit} />
       )}
     </Page>
   );
 }
 
 /** Phones: the progress and the one next step stay in reach at the bottom of the screen. */
-function Dock({ done, total, next, ready, resubmit, submitting, onNext, onSubmit }: {
-  done: number; total: number; next: SpotId | null; ready: boolean; resubmit: boolean; submitting: boolean; onNext: () => void; onSubmit: () => void;
+function Dock({ done, total, next, ready, resubmit, canSend, submitting, onNext, onSubmit }: {
+  done: number; total: number; next: SpotId | null; ready: boolean; resubmit: boolean; canSend: boolean; submitting: boolean; onNext: () => void; onSubmit: () => void;
 }) {
   return (
     <div className="fixed inset-x-0 bottom-0 z-sticky border-t border-line bg-bg/95 px-4 py-3 shadow-lg backdrop-blur-md sm:hidden">
@@ -389,15 +394,15 @@ function Dock({ done, total, next, ready, resubmit, submitting, onNext, onSubmit
           <span className="grid size-8 place-items-center rounded-full bg-bg text-caption text-ink tabular-nums">{done}/{total}</span>
         </span>
         {ready || !next
-          ? <Button variant="primary" fullWidth className="glow-hover" loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}>{resubmit ? "Send again" : "Send for review"}</Button>
+          ? canSend && <Button variant="primary" fullWidth className="glow-hover" loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}>{resubmit ? "Send again" : "Send for review"}</Button>
           : <Button variant="primary" fullWidth iconEnd={<ArrowRight />} onClick={onNext}>Next: {LABEL[next]}</Button>}
       </div>
     </div>
   );
 }
 
-function StageBar({ done, total, ready, missing, save, view, editing, sent, submitting, resubmit, onRetry, onView, onNext, onSubmit }: {
-  done: number; total: number; ready: boolean; missing: number; save: SaveState; view: "edit" | "client"; editing: boolean; sent: boolean; submitting: boolean; resubmit: boolean;
+function StageBar({ done, total, ready, missing, save, view, editing, sent, submitting, resubmit, canSend, onRetry, onView, onNext, onSubmit }: {
+  done: number; total: number; ready: boolean; missing: number; save: SaveState; view: "edit" | "client"; editing: boolean; sent: boolean; submitting: boolean; resubmit: boolean; canSend: boolean;
   onRetry: () => void; onView: (v: string) => void; onNext: () => void; onSubmit: () => void;
 }) {
   const pct = Math.round((done / total) * 100);
@@ -419,7 +424,7 @@ function StageBar({ done, total, ready, missing, save, view, editing, sent, subm
           <SegmentedControl label="View" size="sm" value={view} onChange={onView}
             options={[{ value: "edit", label: "Edit", icon: <PenLine /> }, { value: "client", label: "Client view", icon: <Eye /> }]} />
           {!ready && !sent && <Button size="sm" variant="secondary" iconStart={<Sparkles />} className="max-sm:hidden" onClick={onNext}>Next spot</Button>}
-          {!sent && <Button size="sm" variant={ready && !editing ? "primary" : "secondary"} className={cx("max-sm:hidden", ready && "glow-hover")} loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}>
+          {!sent && canSend && <Button size="sm" variant={ready && !editing ? "primary" : "secondary"} className={cx("max-sm:hidden", ready && "glow-hover")} loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}>
             {resubmit ? "Send again" : "Send for review"}
           </Button>}
         </div>
@@ -429,7 +434,7 @@ function StageBar({ done, total, ready, missing, save, view, editing, sent, subm
 }
 
 /** The profile, laid out like the public page (ProfileView), with every part a spot. */
-function EditView({ d, set, personId }: { d: ProfileFields; set: <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K]) => void; personId: string }) {
+function EditView({ d, set, personId, confirm }: { d: ProfileFields; set: <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K]) => void; personId: string; confirm: (go: () => void) => void }) {
   const { open, next, editing, portrait, rise } = useCanvas();
   const rate = d.rate ? `$${d.rate}/${basisShort[d.basis]}` : null;
   const where = d.market === "la" ? (d.areas.length ? `${d.areas.join(" · ")}, Los Angeles area` : "") : d.otherCity;
@@ -447,7 +452,7 @@ function EditView({ d, set, personId }: { d: ProfileFields; set: <K extends keyo
               <PersonPhoto id={personId} name={d.name} fallback="brand" department={d.position} skills={d.skills} alt="" className="size-full" />
               <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 bg-surface-brand/80 p-3 text-label-md text-ink-on-brand backdrop-blur-sm"><Plus className="size-4" aria-hidden="true" />Add your photo</span>
             </span>}
-            editor={<PhotoEditor d={d} onChange={set("photo")} />}>
+            editor={<PhotoEditor d={d} personId={personId} onChange={set("photo")} confirm={confirm} />}>
             <span className="relative block">
               <PersonPhoto id={personId} name={d.name} src={d.photo} alt="" className="aspect-square w-full rounded-2xl shadow-lg ring-1 ring-line" />
               <Badge tone={d.monthStatus === "available" ? "success" : d.monthStatus === "limited" ? "info" : "neutral"} className="absolute top-3 left-3 shadow-sm">{monthStatusLabel[d.monthStatus]}</Badge>
@@ -695,10 +700,10 @@ function Spot({ id, children, empty, editor, inline = false, className, round = 
 const SAMPLE_PORTRAITS = ["img/people/priya.jpg", "img/people/sam.jpg", "img/people/morgan.jpg"];
 
 /** The photo picker, plus (in the sample only) a few fictional portraits, so a walkthrough isn't stuck without one. */
-function PhotoEditor({ d, onChange }: { d: ProfileFields; onChange: (v: string) => void }) {
+function PhotoEditor({ d, personId, onChange, confirm }: { d: ProfileFields; personId: string; onChange: (v: string) => void; confirm: (go: () => void) => void }) {
   return (
     <div className="grid gap-4">
-      <PhotoPicker id="f-photo" value={d.photo} name={d.name} onChange={onChange} />
+      <PhotoPicker id="f-photo" value={d.photo} name={d.name} onChange={onChange} personId={personId} confirm={confirm} />
       {data.demo && (
         <div className="grid gap-2">
           <p className="text-body-sm text-ink-muted">No photo to hand? Try a sample portrait. They're fictional, for this preview only.</p>

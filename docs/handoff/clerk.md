@@ -9,8 +9,10 @@ Sign-in and joining run on Clerk, themed to Between Gigs. Clerk app: `app_3K6djW
   (`lib/data/sample.ts`), which local QA (`pnpm check`) and the Preview guide use.
 - GitHub Pages builds with the key (`.github/workflows/pages.yml`; a repo variable of the same name overrides it).
   The publishable key is public by design.
-- `CLERK_SECRET_KEY` is **not** used by this app and must never be added to it: it's a static export with no server.
-  It belongs in the Worker API's secrets (`wrangler secret put CLERK_SECRET_KEY`).
+- `CLERK_SECRET_KEY` is not used by 2.0 at all, in either build. 2.0's API routes don't verify Clerk tokens: they pass
+  the browser's Clerk session token on to Company OS, which verifies it with its own key (Company OS
+  `docs/integration-guide.md` §2). So the web server never holds it (least privilege); the deploy doesn't set it, and
+  `scripts/deploy-env.test.ts` keeps it that way. The bundle check still treats the name as a secret.
 - The SDK is `@clerk/react`, not `@clerk/nextjs`: the Next.js SDK needs Server Actions, which a static export
   can't host. Moving to the Worker / a server build later, `@clerk/nextjs` with `clerkMiddleware()` is a drop-in.
 
@@ -36,7 +38,16 @@ Clerk's hosted widget enforces the instance's password policy; the custom detail
 - Paths: `/between-gig-2.0/login/` and `/between-gig-2.0/join/`. Keep allowed-origin protections.
 - Production keys and DNS are a separate rollout. This change only targets this repository's Pages demo.
 
-## Until the Worker API exists
+## The server build (Company OS)
+
+With `NEXT_PUBLIC_DATA_SOURCE=api` the data is Company OS's, behind 2.0's server routes. Sign-up is invite-only
+(decision N-05): `/join` takes Clerk's invitation ticket from the invitation email (`components/auth/InviteJoin.tsx`),
+and a Clerk account nobody invited gets `unknown-email` and is signed out. Owners are Company OS Super Admins
+(`/t/:t/me`), not `publicMetadata.role`. Company OS verifies the Clerk session token on every call, so the role
+switcher and the sample's rules below don't apply there. Terms consent is collected in the UI and Clerk's
+`unsafeMetadata`; Company OS keeps no record of it yet (an open item).
+
+## The sample (Pages): until the Worker API exists
 
 The data is still the browser's sample store. Clerk verifies identity and the bridge maps it by email, creating
 an ordinary Gigster record for a new email. Existing people retain their identity, status, drafts and profiles.

@@ -6,6 +6,7 @@ import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
 import { SECTIONS, fieldLabel, sectionLabel, validateAll } from "@/lib/profile/validate";
 import { typingOrDialog } from "./format";
+import { HOLD_MS, holdDecision, type Hold } from "./hold";
 import { Panel } from "./kit";
 
 const checks = [
@@ -35,7 +36,8 @@ function nextAfter(queue: QueueItem[], id: string) {
 /**
  * Reviewing a submitted profile, one after another. A sticky bar keeps the place in the queue ("2 of 4"),
  * previous and next, Suggest edits and Approve & next in reach while reading the profile below it; J/K, A
- * and E do the same from the keyboard. Each decision moves straight on, with Undo in the toast.
+ * and E do the same from the keyboard. Each decision moves straight on, with Undo in the toast (live, the
+ * decision is held until the toast goes: hold.ts).
  * The checklist sits under the person's header: a guide, not a gate.
  */
 export function ReviewWorkspace({ person, fields, queue, header, children }: {
@@ -57,15 +59,15 @@ export function ReviewWorkspace({ person, fields, queue, header, children }: {
   const go = React.useCallback((q?: QueueItem) => { if (q) router.push(reviewHref(q.id)); }, [router]);
 
   /** Moves on after a decision, and offers Undo, which puts them back in the queue and reopens them. */
-  const decided = React.useCallback((message: string) => {
+  const decided = React.useCallback((message: string, hold: Hold) => {
     toast({
-      message, tone: "success",
+      message, tone: "success", duration: HOLD_MS,
       action: {
         label: "Undo",
         onClick: () => {
-          void data.owners.undoReview(person.id)
-            .then(() => { toast({ message: `Undone. ${person.name} is back in the queue.` }); router.push(reviewHref(person.id)); })
-            .catch(() => toast({ message: "Couldn't undo that. It may have changed already.", tone: "danger" }));
+          void hold.cancel().then((undone) => undone
+            ? (toast({ message: `Undone. ${person.name} is back in the queue.` }), router.push(reviewHref(person.id)))
+            : toast({ message: "Couldn't undo that. It may have changed already.", tone: "danger" }));
         },
       },
     });
@@ -76,8 +78,7 @@ export function ReviewWorkspace({ person, fields, queue, header, children }: {
     if (busy) return;
     setBusy(true);
     try {
-      await data.owners.approve(person.id);
-      decided(`${person.name} approved · now live`);
+      decided(`${person.name} approved · now live`, await holdDecision(person.id, () => data.owners.approve(person.id), { onError: () => toast({ message: `Couldn't approve ${person.name}. Try again.`, tone: "danger" }) }));
     } catch { toast({ message: "Couldn't approve. Try again.", tone: "danger" }); setBusy(false); }
   }, [busy, decided, person.id, person.name, toast]);
 
@@ -156,7 +157,7 @@ export function ReviewWorkspace({ person, fields, queue, header, children }: {
       {children}
 
       <SuggestEdits open={suggest} person={person} fields={fields} onClose={() => setSuggest(false)}
-        onSent={() => { setSuggest(false); decided(`Edits sent to ${first}`); }} />
+        onSent={(hold) => { setSuggest(false); decided(`Edits sent to ${first}`, hold); }} />
     </>
   );
 }
@@ -191,7 +192,7 @@ function prefill(fields: ProfileFields): Record<NoteKey, string> {
   return out;
 }
 
-export function SuggestEdits({ open, person, fields, onClose, onSent }: { open: boolean; person: Person; fields: ProfileFields; onClose: () => void; onSent: (p: Person) => void }) {
+export function SuggestEdits({ open, person, fields, onClose, onSent }: { open: boolean; person: Person; fields: ProfileFields; onClose: () => void; onSent: (hold: Hold) => void }) {
   const toast = useToast();
   const [notes, setNotes] = React.useState<Record<NoteKey, string>>(() => prefill(fields));
   const [error, setError] = React.useState<string>();
@@ -217,8 +218,7 @@ export function SuggestEdits({ open, person, fields, onClose, onSent }: { open: 
     if (!list.length) { setError("Add a note to at least one section."); return; }
     setBusy(true);
     try {
-      const p = await data.owners.requestChanges(person.id, list);
-      onSent(p);
+      onSent(await holdDecision(person.id, () => data.owners.requestChanges(person.id, list), { onError: () => toast({ message: `Couldn't send your notes to ${first}. Try again.`, tone: "danger" }) }));
     } catch { toast({ message: "Couldn't send. Try again.", tone: "danger" }); }
     finally { setBusy(false); }
   };
