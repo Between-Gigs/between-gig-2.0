@@ -32,13 +32,12 @@ async function readFile(file: File): Promise<string> {
   }
 }
 
-/** A photo as a data URL, where there is nobody to upload it for (a preview without a session). */
-const dataUrl = (blob: Blob) => new Promise<string>((resolve, reject) => {
-  const r = new FileReader();
-  r.onload = () => resolve(String(r.result));
-  r.onerror = () => reject(new Error("unreadable"));
-  r.readAsDataURL(blob);
-});
+/** The cropped JPEG (a data URL) as the file to upload. */
+function blobOf(dataUrl: string) {
+  const [head, body = ""] = dataUrl.split(",");
+  const bytes = Uint8Array.from(atob(body), (c) => c.charCodeAt(0));
+  return new Blob([bytes], { type: /data:([^;]+)/.exec(head ?? "")?.[1] ?? "image/jpeg" });
+}
 
 type Crop = { z: number; x: number; y: number };
 
@@ -49,9 +48,8 @@ const size = (i: HTMLImageElement, z: number) => { const a = i.width / i.height;
  * Square crop: drag to move, the slider (or + / −) to zoom, arrow keys to nudge. Positions are in viewport units
  * (the square is 1 × 1), so the maths doesn't depend on its size on screen. Saves an 800px square JPEG.
  */
-function PhotoCropper({ src, onCancel, onSave }: { src: string; onCancel: () => void; onSave: (photo: Blob | string) => Promise<void> }) {
+function PhotoCropper({ src, onCancel, onSave }: { src: string; onCancel: () => void; onSave: (url: string) => void }) {
   const [img, setImg] = React.useState<HTMLImageElement | null>(null);
-  const [saving, setSaving] = React.useState(false);
   const [c, setC] = React.useState<Crop>({ z: 1, x: 0, y: 0 });
   const box = React.useRef<HTMLDivElement>(null);
   const drag = React.useRef<{ px: number; py: number; x: number; y: number } | null>(null);
@@ -80,13 +78,12 @@ function PhotoCropper({ src, onCancel, onSave }: { src: string; onCancel: () => 
     const canvas = document.createElement("canvas");
     canvas.width = MAX; canvas.height = MAX;
     canvas.getContext("2d")?.drawImage(img, (-c.x / w) * img.width, (-c.y / h) * img.height, img.width / w, img.height / h, 0, 0, MAX, MAX);
-    setSaving(true);
-    canvas.toBlob((blob) => void onSave(blob ?? canvas.toDataURL("image/jpeg", 0.86)).finally(() => setSaving(false)), "image/jpeg", 0.86);
+    onSave(canvas.toDataURL("image/jpeg", 0.86));
   };
   const s = img ? size(img, c.z) : { w: 1, h: 1 };
   return (
     <Modal open onClose={onCancel} title="Crop your photo" description="Drag to move it, zoom to frame your face. Clients see the square on your profile; search cards show the dashed band."
-      footer={<><Button variant="ghost" onClick={onCancel}>Cancel</Button><Button variant="primary" iconStart={<Check />} disabled={!img} loading={saving} onClick={save}>Use this photo</Button></>}>
+      footer={<><Button variant="ghost" onClick={onCancel}>Cancel</Button><Button variant="primary" iconStart={<Check />} disabled={!img} onClick={save}>Use this photo</Button></>}>
       <div className="grid gap-4">
         <div ref={box} role="application" tabIndex={0} aria-label="Photo position. Drag, or use the arrow keys to move it."
           className="relative mx-auto aspect-square w-full max-w-80 cursor-grab touch-none overflow-hidden rounded-xl bg-surface-sunken outline-none select-none focus-visible:ring-2 focus-visible:ring-ink-brand active:cursor-grabbing"
@@ -131,15 +128,16 @@ export function PhotoPicker({ value, name, onChange, error, id, personId: forPer
   // The photo being cropped: a new upload, or the current photo to re-crop.
   const [cropping, setCropping] = React.useState<string | null>(null);
   const { session } = useSession();
-  const use = async (photo: Blob | string) => {
-    try {
-      const personId = forPerson ?? session?.personId;
-      // Live, a photo is only kept once uploaded to the person's profile: never fall back to a data URL there.
-      if (typeof photo !== "string" && data.kind === "live" && !personId) throw new Error("no profile to upload to");
-      onChange(typeof photo === "string" ? photo : personId && data.profiles.uploadPhoto ? await data.profiles.uploadPhoto(personId, photo) : await dataUrl(photo));
-      setCropping(null);
-    } catch { setProblem("We couldn't upload that photo. Try again."); setCropping(null); }
+  const use = (photo: string) => {
+    setCropping(null);
+    // The sample keeps the data URL. Live, the photo is uploaded to the person's profile and the field keeps its
+    // /media link; a data URL would never be stored there.
+    if (data.kind !== "live") { onChange(photo); return; }
+    const personId = forPerson ?? session?.personId;
+    if (!personId || !data.profiles.uploadPhoto) { setProblem("We couldn't upload that photo. Try again."); return; }
+    void data.profiles.uploadPhoto(personId, blobOf(photo)).then(onChange, () => setProblem("We couldn't upload that photo. Try again."));
   };
+
   const pick = async (file?: File) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) { setProblem("Choose an image file: JPG, PNG or HEIC."); return; }

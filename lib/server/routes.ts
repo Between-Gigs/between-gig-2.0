@@ -1,5 +1,5 @@
 /*
- * 2.0's server routes, one per DataSource method (app/api/<group>/<method>/route.ts, each one line). This table is
+ * 2.0's server routes, one per DataSource method (app/api/<group>/<method>/route.server.ts, each one line; `*.server.ts` files are in the server build only). This table is
  * where each method gets its credential, in one place to audit:
  * - "optional": the person's session if there is one (who is signed in);
  * - "session": the person's session, or 401;
