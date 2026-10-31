@@ -63,7 +63,8 @@ export function securityHeaders(): Array<{ key: string; value: string }> {
     { key: "X-Frame-Options", value: "DENY" },
     // Two years. No `preload`: that is a separate, hard-to-undo choice for the owner.
     { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
-    { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=(), interest-cohort=()" },
-    { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+    { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()" },
+    // Not plain same-origin: Clerk's popup sign-in (OAuth, later) needs its popup to keep an opener.
+    { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
   ];
 }

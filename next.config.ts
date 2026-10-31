@@ -24,8 +24,8 @@ const config: NextConfig = {
   images: { unoptimized: true },
   reactStrictMode: true,
   ...(server && {
-    // "server.ts" only here, so proxy.server.ts is this build's proxy and the export never sees it.
-    pageExtensions: ["tsx", "ts", "jsx", "js", "server.ts"],
+    // *.server.ts(x) files exist only in this build (proxy.server.ts, F1's route handlers): the export never sees them.
+    pageExtensions: ["tsx", "ts", "jsx", "js", "server.tsx", "server.ts"],
     // The repo itself, not a parent folder with its own lockfile: server.js lands at .next/standalone/server.js.
     outputFileTracingRoot: process.cwd(),
     poweredByHeader: false,

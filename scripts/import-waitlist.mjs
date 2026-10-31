@@ -27,7 +27,18 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** Text the forms module would accept: trimmed, without NUL or other control characters (tab and line breaks stay). */
 const clean = (v) => (v == null ? "" : String(v)).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "").trim();
 const normEmail = (v) => clean(v).toLowerCase();
-const iso = (v) => { const d = new Date(clean(v)); return Number.isNaN(d.getTime()) ? null : d.toISOString(); };
+/**
+ * A timestamp as ISO UTC, the same on any machine: D1/SQLite's zone-less "YYYY-MM-DD HH:MM:SS" is UTC, and a number
+ * is epoch seconds (below 10^12) or milliseconds. Null when unreadable.
+ */
+const iso = (v) => {
+  const t = clean(v);
+  let d;
+  if (/^\d{9,13}$/.test(t)) d = new Date(Number(t) < 1e12 ? Number(t) * 1000 : Number(t));
+  else if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(t)) d = new Date(`${t.replace(" ", "T")}Z`);
+  else d = new Date(t);
+  return t && !Number.isNaN(d.getTime()) ? d.toISOString() : null;
+};
 const nonEmpty = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, clean(v)]).filter(([, v]) => v));
 const blank = () => ({ rows: 0, records: 0, merged: 0, invalid: 0 });
 
@@ -70,8 +81,9 @@ export function readExport(dir) {
     if (fs.existsSync(json) && fs.existsSync(csv)) throw new Error(`import-waitlist: ${t} is given both as .json and .csv; keep one`);
     try {
       tables[t] = fs.existsSync(json) ? parseJson(fs.readFileSync(json, "utf8")) : fs.existsSync(csv) ? parseCsv(fs.readFileSync(csv, "utf8")) : [];
-    } catch (err) {
-      throw new Error(`import-waitlist: ${t} could not be read (${err instanceof Error ? err.message.split("\n")[0].slice(0, 80) : "bad file"})`);
+    } catch {
+      // Never the parser's message: JSON.parse quotes part of the input, which is people's data.
+      throw new Error(`import-waitlist: ${t}.${fs.existsSync(json) ? "json" : "csv"} is not valid ${fs.existsSync(json) ? "JSON" : "CSV"}`);
     }
   }
   if (!TABLES.some((t) => tables[t].length)) throw new Error(`import-waitlist: no rows in ${dir} (expected leads, sketches or privacy_requests as .json or .csv)`);
@@ -140,7 +152,9 @@ export function toSubmissions({ leads = [], sketches = [], privacy_requests = []
     let given;
     try { given = JSON.parse(row.details); } catch { given = null; }
     if (!given || typeof given !== "object" || Array.isArray(given)) given = { details: row.details };
-    const answers = nonEmpty(Object.fromEntries(FORMS[formKey].map((k) => [k, k === "name" ? given.name || row.name : given[k]])));
+    // Text answers only (a number is kept as text); lists or objects are left out rather than flattened.
+    const scalar = (v) => (typeof v === "string" || typeof v === "number" ? v : "");
+    const answers = nonEmpty(Object.fromEntries(FORMS[formKey].map((k) => [k, k === "name" ? scalar(given.name) || row.name : scalar(given[k])])));
     const source = clean(row.source);
     records.push(record(formKey, row, email, answers, source ? { placement: source } : {}));
     counts[formKey].records++;
@@ -173,11 +187,17 @@ async function call(api, route, body) {
   return json;
 }
 
-/** Every form_submission already in the tenant: ids, call-sheet emails and (form, email, submitted_at) keys. */
+/**
+ * Every form_submission already in the tenant: ids, call-sheet emails and (form, email, submitted_at) keys. Paged by
+ * id (a cursor), so submissions arriving meanwhile can't shift the pages.
+ */
 async function existingSubmissions(api) {
   const ids = new Set(), callSheet = new Set(), keys = new Set();
-  for (let offset = 0; ; offset += PAGE) {
-    const { data = [] } = await call(api, "/query", { entity: "form_submission", sort: [{ field: "submitted_at", dir: "asc" }], limit: PAGE, offset });
+  for (let after; ;) {
+    const { data = [] } = await call(api, "/query", {
+      entity: "form_submission", sort: [{ field: "id", dir: "asc" }], limit: PAGE,
+      ...(after === undefined ? {} : { filter: { field: "id", op: "gt", value: after } }),
+    });
     for (const row of data) {
       const d = row.data ?? row;
       const email = normEmail(d.email);
@@ -186,6 +206,7 @@ async function existingSubmissions(api) {
       keys.add(`${d.form_key}\n${email}\n${iso(d.submitted_at)}`);
     }
     if (data.length < PAGE) break;
+    after = String(data[data.length - 1].id);
   }
   return { ids, callSheet, keys };
 }
@@ -216,10 +237,9 @@ export async function runImport({ tables, api, dryRun, log = console.log }) {
       created += ids.length;
       log(`  imported ${created} of ${todo.length}`);
     }
-    if (todo.length) {
-      const { counts: total = {} } = await call(api, "/import/finish", {});
-      log(`  form_submission records in the tenant now: ${Number(total.form_submission) || 0}`);
-    }
+    // Every real run, so a re-run completes an import whose finish failed.
+    const { counts: total = {} } = await call(api, "/import/finish", {});
+    log(`  form_submission records in the tenant now: ${Number(total.form_submission) || 0}`);
   }
   log(dryRun ? `Would import ${todo.length}.` : `Imported ${created}.`);
   return { created, wouldCreate: todo.length, skipped, counts };

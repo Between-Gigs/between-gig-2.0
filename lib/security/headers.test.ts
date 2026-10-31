@@ -82,7 +82,10 @@ describe("securityHeaders", () => {
     expect(h["strict-transport-security"]).toMatch(/^max-age=\d{8,}; includeSubDomains$/);
     expect(h["permissions-policy"]).toContain("camera=()");
     expect(h["permissions-policy"]).toContain("geolocation=()");
-    expect(h["cross-origin-opener-policy"]).toBe("same-origin");
+    // Clerk's popup sign-in (OAuth, later) needs its popup to keep an opener.
+    expect(h["cross-origin-opener-policy"]).toBe("same-origin-allow-popups");
+    // Obsolete features only produce console warnings.
+    expect(h["permissions-policy"]).not.toContain("interest-cohort");
   });
 
   it("does not carry the CSP itself (the proxy sets it per request, with the nonce)", () => {

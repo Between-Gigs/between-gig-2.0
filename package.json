@@ -23,7 +23,7 @@
     "qa:rules": "node scripts/qa/run.mjs rules",
     "thumbs": "node scripts/preview-thumbs.mjs",
     "og": "node scripts/og-images.mjs",
-    "check": "pnpm typecheck && pnpm lint && pnpm lint:values && pnpm test && pnpm build && pnpm qa && pnpm build:server && pnpm check:server",
+    "check": "pnpm typecheck && pnpm lint && pnpm lint:values && pnpm test && pnpm build && node scripts/check-pages.mjs && pnpm qa && pnpm build:server && pnpm check:server",
     "sync:ds": "scripts/sync-design-system.sh",
     "test": "vitest run"
   },

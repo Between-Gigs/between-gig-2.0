@@ -14,27 +14,37 @@ stays as it is: a static export on the sample data, every route.
 | Headers | none (Pages can't set them) | CSP with a per-request nonce, HSTS, nosniff, … |
 | Workflow | `pages.yml` (unchanged) | `deploy-test.yml`, `deploy-prod.yml` |
 
-`scripts/server-build.mjs` moves the internal and waiting folders (`app/workspace`, `app/studio`, `app/preview`,
-`app/emails`, `app/crew-call`, `app/proposals`, `public/artifacts`, `public/studio-source`, `public/thumbs`,
-`public/workspace`) into `.server-build-held/` for the build and puts them back afterwards, so they 404 and are not
-in the output. A route that moves from "Waiting on the client" to "Make live" comes off `INTERNAL` there and onto
-`LIVE_ROUTES`.
+`scripts/server-build.mjs` builds in a temporary copy of the working tree (what `git ls-files` lists, so committed,
+changed and new files but no ignored ones such as `.env*`) without the internal and waiting folders (`INTERNAL`:
+`app/workspace`, `app/studio`, `app/preview`, `app/emails`, `app/crew-call`, `app/proposals`, `public/artifacts`,
+`public/studio-source`, `public/thumbs`, `public/workspace`), so they 404 and are not in the output. The real tree is
+never touched; only `.next` comes back. It fails closed: `pnpm test` fails on a page that is in neither `LIVE_PAGES`
+nor `INTERNAL`, or a `public/` folder in neither `PUBLIC_LIVE` nor `INTERNAL`, and `check-server.mjs` fails on anything
+else in the build output. A route that moves from "Waiting on the client" to "Make live" comes off `INTERNAL` and onto
+`LIVE_PAGES` and `LIVE_ROUTES`.
 
-`pnpm check` runs both builds, then `pnpm check:server`: `scripts/check-bundle.mjs` (no `cos_svc_`, `sk_live`,
+Files named `*.server.ts` / `*.server.tsx` (the proxy, the API and media route handlers) exist only in the server
+build: only it adds those page extensions. `scripts/check-pages.mjs` checks the Pages export has every page and none
+of them.
+
+`pnpm check` runs both builds, `check-pages.mjs` after the export, then `pnpm check:server`: `scripts/check-bundle.mjs` (no `cos_svc_`, `sk_live`,
 `sk_test`, `CLERK_SECRET` or `*.railway.internal` in what browsers download) and `scripts/check-server.mjs` (starts
 the server: live routes 200, internal ones 404, headers and nonces on every page).
 
 ### Security headers
 
-- `proxy.server.ts` (seen only by the server build) sets the Content-Security-Policy per request:
+- `proxy.server.ts` (seen only by the server build) sets the Content-Security-Policy on every request but the build's
+  static files:
   scripts only by nonce with `'strict-dynamic'` (no `'unsafe-inline'`, no `'unsafe-eval'`), Clerk's Frontend API
   (read from the publishable key), Cloudflare's bot check, `img.clerk.com`, `frame-ancestors 'none'`.
   Styles keep `'unsafe-inline'`: Clerk injects its CSS at runtime. Every page renders per request so it can carry
   the nonce (`app/layout.tsx` reads it in the server build only).
 - `next.config.ts` adds to every response: `X-Content-Type-Options: nosniff`, `Referrer-Policy:
   strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, `Strict-Transport-Security: max-age=63072000;
-  includeSubDomains` (no `preload`), `Permissions-Policy`, `Cross-Origin-Opener-Policy: same-origin`.
+  includeSubDomains` (no `preload`), `Permissions-Policy`, `Cross-Origin-Opener-Policy: same-origin-allow-popups`.
 - Clerk's development telemetry (`clerk-telemetry.com`) is blocked on purpose; sign-in doesn't need it.
+- **Owner's decision:** HSTS `includeSubDomains` applies to every `between-gigs.com` subdomain once a browser has
+  seen it. Keep it only if every subdomain serves HTTPS; otherwise drop it in `lib/security/headers.ts`.
 
 ## Environment variables
 
@@ -45,7 +55,7 @@ the server: live routes 200, internal ones 404, headers and nonces on every page
 | `BG_BUILD` | `server` (set by `pnpm build:server`) |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | `pk_test_…` on test, `pk_live_…` on production (from the GitHub variable `CLERK_PUBLISHABLE_KEY`) |
 | `NEXT_PUBLIC_DATA_SOURCE` | `api` (the workflows set it; unset = the sample data) |
-| `NEXT_PUBLIC_SITE_ORIGIN` | production only: `APP_URL` (share images) |
+| `NEXT_PUBLIC_SITE_ORIGIN` | production only: `APP_URL` (share images). Test builds before their address is known, so its share images name the default origin |
 
 **Runtime** (Railway service `web`, `.railway/railway.ts`; server only, never in the browser):
 
@@ -75,8 +85,16 @@ one-time import below.
      `COMPANY_OS_READ_TOKEN`, `COMPANY_OS_SUBMIT_TOKEN`; variables `CLERK_PUBLISHABLE_KEY` (`pk_test_…`),
      `RAILWAY_PROJECT_NAME` (`Between Gigs OS`), `RAILWAY_REGION` (`us-east4-eqdc4a`).
    - `production`: the same names with production values (`sk_live_…`, `pk_live_…`, the production token and
-     identities), plus the variable `APP_URL` (`https://between-gigs.com`). Protection: *Deployment branches and
-     tags* → tag pattern `v*` only.
+     identities), plus the variable `APP_URL` (`https://between-gigs.com`).
+   - **Protection, required** (a run uses the workflow file *from the ref it runs*, so the guard in
+     `deploy-prod.yml` only holds if nobody else can make a `v*` tag):
+     - `production`: *Deployment branches and tags* → tag pattern `v*` only; a required reviewer (you) if the plan
+       offers it.
+     - A **tag ruleset** on `v*` (Settings → Rules → Rulesets → New tag ruleset): restrict creation, update and
+       deletion, with only the repository admins (you) and GitHub Actions (the *Cut release* workflow) allowed to
+       bypass.
+     - `test`: *Deployment branches* → `main` and `companyos` only, so no other branch's workflow file gets the test
+       secrets.
 4. **`company-os.json`:** replace the placeholder with the Company OS release that carries the bg-2 work and delete
    its `todo` line. Cut release and the production deploy refuse the placeholder; test deploys only warn.
 5. **Order** (rule E9): Company OS *Deploy API (test)* → this repo's *Deploy web (test)* → put the printed address
@@ -95,8 +113,9 @@ JSON or CSV per table) into `form_submission` records through `POST /t/:t/import
 - `sketches` → `storyboard_talent` / `storyboard_buyer`, answers from the JSON in `details`.
 - `privacy_requests` → `privacy_request` (`message`).
 
-It skips what is already there (a call-sheet email, or the same form, email and time), so it can run again. It
-prints counts, never values. Run it **inside the `web` service** (the only place that reaches the private API;
+It skips what is already there (a call-sheet email, or the same form, email and time), so it can run again; run it
+before the live forms open, so nothing else writes meanwhile. Times without a zone (SQLite's `datetime()`) are read
+as UTC. It prints counts, never values. Run it **inside the `web` service** (the only place that reaches the private API;
 the bundle carries it as `tools/import-waitlist.mjs`), rehearsing on test first:
 
 ```bash

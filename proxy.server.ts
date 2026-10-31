@@ -25,13 +25,8 @@ export default function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    {
-      // Documents only: not the API routes (JSON), static files or the image optimizer.
-      source: "/((?!api/|_next/static|_next/image|favicon.ico|.*\\.[a-zA-Z0-9]+$).*)",
-      missing: [
-        { type: "header", key: "next-router-prefetch" },
-        { type: "header", key: "purpose", value: "prefetch" },
-      ],
-    },
+    // Every request but the build's static files, prefetches included, so every document gets a policy and the
+    // x-nonce header the layout reads is always this proxy's, never one a client sent.
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };

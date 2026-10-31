@@ -91,6 +91,21 @@ describe("toSubmissions", () => {
     });
   });
 
+  it("reads zone-less SQLite datetimes as UTC and epoch numbers as seconds or milliseconds, the same on any machine", () => {
+    const at = (created_at: string | number) => toSubmissions({ leads: [], sketches: [], privacy_requests: [{ id: "", email: "a@example.test", kind: "privacy-request", message: "m", created_at }] }).records[0]?.data.submitted_at;
+    expect(at("2026-09-01 10:00:00")).toBe("2026-09-01T10:00:00.000Z");
+    expect(at("2026-09-01T10:00:00")).toBe("2026-09-01T10:00:00.000Z");
+    expect(at(1788256800)).toBe("2026-09-01T10:00:00.000Z");
+    expect(at("1788256800000")).toBe("2026-09-01T10:00:00.000Z");
+    expect(at("2026-09-01T12:00:00+02:00")).toBe("2026-09-01T10:00:00.000Z");
+  });
+
+  it("leaves out storyboard answers that aren't text", () => {
+    const row = { id: "", created_at: "2026-09-05T12:00:00.000Z", updated_at: "", kind: "talent", name: "N", email: "n@example.test", source: "",
+      details: JSON.stringify({ role: ["a", "b"], services: { x: 1 }, location: 12, availability: "Weekends" }) };
+    expect(toSubmissions({ leads: [], sketches: [row], privacy_requests: [] }).records[0].data.answers).toEqual({ name: "N", location: "12", availability: "Weekends" });
+  });
+
   it("strips characters Postgres refuses and leaves no empty answers", () => {
     const { records: r } = toSubmissions({ leads: [lead({ email: "z@example.test", zip_code: "9\u000000 1", category: " " })], sketches: [], privacy_requests: [] });
     expect(r[0].data.answers).toEqual({ zip: "900 1" });
@@ -119,6 +134,13 @@ describe("parseCsv / readExport", () => {
     expect(() => readExport(path.join(dir, "empty"))).toThrow(/leads/);
   });
 
+  it("never quotes the file in a read error (JSON.parse messages include part of the input)", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "bg-import-"));
+    dirs.push(dir);
+    writeFileSync(path.join(dir, "leads.json"), '[{"email":"ana@example.test" oops');
+    expect(() => readExport(dir)).toThrow(/^import-waitlist: leads\.json is not valid JSON$/);
+  });
+
   it("refuses a table given twice", () => {
     const dir = mkdtempSync(path.join(tmpdir(), "bg-import-"));
     dirs.push(dir);
@@ -134,7 +156,12 @@ describe("runImport", () => {
     const fetch = async (url: string, init: RequestInit & { headers: Record<string, string> }) => {
       calls.push({ url, init });
       const body = JSON.parse(String(init.body ?? "{}"));
-      if (url.endsWith("/query")) return Response.json({ data: existing.slice(body.offset ?? 0, (body.offset ?? 0) + body.limit) });
+      if (url.endsWith("/query")) {
+        const after = body.filter?.value;
+        const rows = [...existing].sort((a, b) => a.id.localeCompare(b.id)).filter((r) => after === undefined || r.id > after);
+        if (body.offset) throw new Error("offset paging");
+        return Response.json({ data: rows.slice(0, body.limit) });
+      }
       if (url.endsWith("/import/batch")) return Response.json({ ids: body.records.map((_: unknown, i: number) => `id-${i}`) });
       if (url.endsWith("/import/finish")) return Response.json({ counts: { form_submission: 99 } });
       return new Response("not found", { status: 404 });
@@ -185,7 +212,13 @@ describe("runImport", () => {
     expect(summary.created).toBe(0);
   });
 
-  it("pages through existing submissions", async () => {
+  it("finishes the import on every real run, so a re-run after a failed finish completes it", async () => {
+    const { calls, fetch } = api([]);
+    await runImport({ tables: { leads: [], sketches: [], privacy_requests: [] }, api: { ...base, fetch }, dryRun: false, log: () => {} });
+    expect(calls.filter((c) => c.url.endsWith("/import/finish"))).toHaveLength(1);
+  });
+
+  it("pages through existing submissions by id, so rows arriving meanwhile can't shift the pages", async () => {
     const many = Array.from({ length: 1203 }, (_, i) => ({ id: `e${i}`, data: { form_key: "call_sheet", email: `p${i}@example.test`, submitted_at: "2026-01-01T00:00:00.000Z" } }));
     const { calls, fetch } = api(many);
     await runImport({ tables: { leads: [], sketches: [], privacy_requests: [] }, api: { ...base, fetch }, dryRun: true, log: () => {} });
