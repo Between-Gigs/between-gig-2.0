@@ -3,6 +3,8 @@ import { Button, Modal, Slider } from "@ds/components";
 import { Check, Crop as CropIcon, ImagePlus, Trash2 } from "lucide-react";
 import * as React from "react";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
+import { data } from "@/lib/data";
+import { useSession } from "@/lib/session";
 
 const MAX = 800;
 const SOURCE = 1600;
@@ -30,6 +32,14 @@ async function readFile(file: File): Promise<string> {
   }
 }
 
+/** A photo as a data URL, where there is nobody to upload it for (a preview without a session). */
+const dataUrl = (blob: Blob) => new Promise<string>((resolve, reject) => {
+  const r = new FileReader();
+  r.onload = () => resolve(String(r.result));
+  r.onerror = () => reject(new Error("unreadable"));
+  r.readAsDataURL(blob);
+});
+
 type Crop = { z: number; x: number; y: number };
 
 /** The image's size in viewport units at zoom z: it always covers the square. */
@@ -39,8 +49,9 @@ const size = (i: HTMLImageElement, z: number) => { const a = i.width / i.height;
  * Square crop: drag to move, the slider (or + / −) to zoom, arrow keys to nudge. Positions are in viewport units
  * (the square is 1 × 1), so the maths doesn't depend on its size on screen. Saves an 800px square JPEG.
  */
-function PhotoCropper({ src, onCancel, onSave }: { src: string; onCancel: () => void; onSave: (url: string) => void }) {
+function PhotoCropper({ src, onCancel, onSave }: { src: string; onCancel: () => void; onSave: (photo: Blob | string) => Promise<void> }) {
   const [img, setImg] = React.useState<HTMLImageElement | null>(null);
+  const [saving, setSaving] = React.useState(false);
   const [c, setC] = React.useState<Crop>({ z: 1, x: 0, y: 0 });
   const box = React.useRef<HTMLDivElement>(null);
   const drag = React.useRef<{ px: number; py: number; x: number; y: number } | null>(null);
@@ -69,12 +80,13 @@ function PhotoCropper({ src, onCancel, onSave }: { src: string; onCancel: () => 
     const canvas = document.createElement("canvas");
     canvas.width = MAX; canvas.height = MAX;
     canvas.getContext("2d")?.drawImage(img, (-c.x / w) * img.width, (-c.y / h) * img.height, img.width / w, img.height / h, 0, 0, MAX, MAX);
-    onSave(canvas.toDataURL("image/jpeg", 0.86));
+    setSaving(true);
+    canvas.toBlob((blob) => void onSave(blob ?? canvas.toDataURL("image/jpeg", 0.86)).finally(() => setSaving(false)), "image/jpeg", 0.86);
   };
   const s = img ? size(img, c.z) : { w: 1, h: 1 };
   return (
     <Modal open onClose={onCancel} title="Crop your photo" description="Drag to move it, zoom to frame your face. Clients see the square on your profile; search cards show the dashed band."
-      footer={<><Button variant="ghost" onClick={onCancel}>Cancel</Button><Button variant="primary" iconStart={<Check />} disabled={!img} onClick={save}>Use this photo</Button></>}>
+      footer={<><Button variant="ghost" onClick={onCancel}>Cancel</Button><Button variant="primary" iconStart={<Check />} disabled={!img} loading={saving} onClick={save}>Use this photo</Button></>}>
       <div className="grid gap-4">
         <div ref={box} role="application" tabIndex={0} aria-label="Photo position. Drag, or use the arrow keys to move it."
           className="relative mx-auto aspect-square w-full max-w-80 cursor-grab touch-none overflow-hidden rounded-xl bg-surface-sunken outline-none select-none focus-visible:ring-2 focus-visible:ring-ink-brand active:cursor-grabbing"
@@ -104,14 +116,22 @@ function PhotoCropper({ src, onCancel, onSave }: { src: string; onCancel: () => 
 }
 
 /**
- * Profile photo: pick, preview, replace or remove. Production uploads the file to storage (see the
- * handoff) and keeps the URL; the sample keeps a small data URL.
+ * Profile photo: pick, preview, replace or remove. The cropped photo goes through profiles.uploadPhoto: live, it is
+ * stored on the profile at once and the field keeps its /media link; the sample keeps a small data URL.
  */
 export function PhotoPicker({ value, name, onChange, error, id }: { value: string; name: string; onChange: (v: string) => void; error?: string; id: string }) {
   const input = React.useRef<HTMLInputElement>(null);
   const [problem, setProblem] = React.useState<string>();
   // The photo being cropped: a new upload, or the current photo to re-crop.
   const [cropping, setCropping] = React.useState<string | null>(null);
+  const { session } = useSession();
+  const use = async (photo: Blob | string) => {
+    try {
+      const personId = session?.personId;
+      onChange(typeof photo === "string" ? photo : personId && data.profiles.uploadPhoto ? await data.profiles.uploadPhoto(personId, photo) : await dataUrl(photo));
+      setCropping(null);
+    } catch { setProblem("We couldn't upload that photo. Try again."); setCropping(null); }
+  };
   const pick = async (file?: File) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) { setProblem("Choose an image file: JPG, PNG or HEIC."); return; }
@@ -138,7 +158,7 @@ export function PhotoPicker({ value, name, onChange, error, id }: { value: strin
           {value && <Button size="sm" variant="ghost" iconStart={<Trash2 />} onClick={() => onChange("")}>Remove</Button>}
         </div>
       </div>
-      {cropping && <PhotoCropper src={cropping} onCancel={() => setCropping(null)} onSave={(url) => { onChange(url); setCropping(null); }} />}
+      {cropping && <PhotoCropper src={cropping} onCancel={() => setCropping(null)} onSave={use} />}
     </div>
   );
 }

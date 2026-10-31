@@ -9,6 +9,7 @@ import { data, type WaitlistSignup } from "@/lib/data";
 import { waitlistCategories, waitlistCategoryLabel } from "@/lib/data/taxonomy";
 import { asset } from "@/lib/site";
 import { ButtonLink } from "@/components/ui/ButtonLink";
+import { Honeypot, trapValue } from "./Honeypot";
 
 type Step = "signup" | "details" | "done";
 
@@ -43,8 +44,9 @@ export function CallSheetDialog({ open, onClose, category: initialCategory, plac
 
   const go = (next: Step) => startPageTransition(() => setStep(next), { effect: "shift", target: stage.current });
 
-  const join = async (e: React.FormEvent) => {
+  const join = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const website = trapValue(e);
     const next: typeof errors = {};
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) next.email = "Enter your email address, like name@example.com.";
     if (!/^\d{5}$/.test(zip)) next.zip = "Enter a 5-digit ZIP code, like 90026.";
@@ -52,7 +54,7 @@ export function CallSheetDialog({ open, onClose, category: initialCategory, plac
     if (Object.keys(next).length) return;
     setBusy(true);
     try {
-      const r = await data.funnel.joinWaitlist({ email, zip, category, placement });
+      const r = await data.funnel.joinWaitlist({ email, zip, category, placement, ...(website ? { website } : {}) });
       if (!r.ok) { setErrors(r.error === "email" ? { email: "Enter your email address, like name@example.com." } : { zip: "Enter a 5-digit ZIP code, like 90026." }); return; }
       setSignup(r.signup);
       go(r.alreadyJoined ? "done" : "details");
@@ -78,6 +80,7 @@ export function CallSheetDialog({ open, onClose, category: initialCategory, plac
         {errors.form && <Banner tone="danger" className="mb-4" title="We couldn't save that">{errors.form}</Banner>}
         {step === "signup" && (
           <form noValidate onSubmit={join} className="grid gap-4">
+            <Honeypot />
             {category && <p className="rounded-md bg-surface-selected px-3 py-2 text-body-sm text-ink">Interested in offering: <b>{waitlistCategoryLabel(category)}</b></p>}
             <Field label="Email" error={errors.email}>
               <Input type="email" autoComplete="email" maxLength={254} placeholder="you@example.com" value={email} start={<Mail />} autoFocus

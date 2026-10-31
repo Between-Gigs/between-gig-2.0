@@ -15,6 +15,7 @@ import { ChipPicker } from "@/components/profile/ChipPicker";
 import { PhotoPicker } from "@/components/profile/PhotoPicker";
 import { ProfilePreviewCard } from "@/components/profile/ProfilePreviewCard";
 import { ProfileView } from "@/components/profile/ProfileView";
+import { useLiveEditWarning } from "@/components/profile/LiveEditWarning";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 
@@ -136,6 +137,7 @@ function Canvas({ personId }: { personId: string }) {
   const [fresh, setFresh] = React.useState<SpotId | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   const [save, setSave] = React.useState<SaveState>({ status: "idle" });
+  const live = useLiveEditWarning(person?.status);
   const [view, setView] = React.useState<"edit" | "client">("edit");
   const [submitting, setSubmitting] = React.useState(false);
   const [sent, setSent] = React.useState(false);
@@ -233,11 +235,11 @@ function Canvas({ personId }: { personId: string }) {
   }, [editing]);
   if (!person || !d) return <Page bare><Band /><CanvasSkeleton /></Page>;
 
-  const set = <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K]) => {
+  const set = <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K]) => live.guard(k, () => {
     dirty.current = true;
     setD((x) => (x ? { ...x, [k]: v } : x));
     setFieldErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
-  };
+  });
 
   // Always the first required part still empty, so nothing earlier gets skipped.
   const nextOf = (from?: SpotId): SpotId | null => firstEmpty(d, from);
@@ -315,6 +317,7 @@ function Canvas({ personId }: { personId: string }) {
 
   return (
     <Page bare>
+      {live.dialog}
       <Band>
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
           <div className="grid gap-1">

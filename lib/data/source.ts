@@ -69,12 +69,13 @@ export interface DataSource {
   /** The public funnel (Milestone 3). Each call maps to an existing route in the live app; see docs/handoff/milestone-3.md. */
   funnel: {
     /** Step 1 of "Get on the call sheet": email + ZIP (+ category from the card that opened it). Queues the welcome email. */
-    joinWaitlist(input: { email: string; zip: string; category?: string; placement: string }): Promise<WaitlistResult>;
+    /** `website` is the form's honeypot (components/funnel/Honeypot.tsx): only bots fill it, and live drops what they send. */
+    joinWaitlist(input: { email: string; zip: string; category?: string; placement: string; website?: string }): Promise<WaitlistResult>;
     /** Step 2 (optional): service category and "What would you offer?". */
     addDetails(signupId: string, input: { category: string; details: string }): Promise<WaitlistSignup>;
-    /** Storyboard forms. Queues the coming-soon email. */
+    /** Storyboard forms. Queues the coming-soon email. `answers.website` is the honeypot. */
     submitSketch(kind: SketchKind, answers: Record<string, string>): Promise<SketchSubmission>;
-    privacyRequest(email: string, message: string): Promise<PrivacyRequest>;
+    privacyRequest(email: string, message: string, website?: string): Promise<PrivacyRequest>;
   };
 
   /** The owners' tools (Milestone 4). Owner role required on every call. */

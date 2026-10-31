@@ -106,7 +106,7 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
       joinWaitlist: (input) => call("funnel.joinWaitlist", [input]),
       addDetails: (id, input) => call("funnel.addDetails", [id, input]),
       submitSketch: (kind, answers) => call("funnel.submitSketch", [kind, answers]),
-      privacyRequest: (email, message) => call("funnel.privacyRequest", [email, message]),
+      privacyRequest: (email, message, website) => call("funnel.privacyRequest", [email, message, website ?? ""]),
     },
 
     owners: {
