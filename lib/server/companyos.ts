@@ -82,6 +82,8 @@ export function companyOs(cfg: CompanyOsConfig) {
 
   const api = {
     call,
+    /** The secret the call sheet's sign-up tokens are signed from (gigs.signupToken): the submit identity's token. */
+    signingSecret: () => cfg.submitterToken,
     me: (cred: Credential) => call<Me>(cred, "GET", "/me"),
     /** One page of rows. */
     query: async (cred: Credential, spec: QuerySpec) => (await call<{ data: Row[] }>(cred, "POST", "/query", spec)).data,

@@ -188,3 +188,11 @@ rm -rf /tmp/bg-export; unset COMPANY_OS_PLATFORM_KEY
 ```
 
 The export holds real people's data: never commit it, attach it to an issue or keep it after the import.
+
+## Known gaps
+
+- **A photo 404s once the Clerk session cookie has expired.** `/media/<id>` reads the session from Clerk's `__session`
+  cookie (an `<img>` can't send a header). Clerk refreshes that cookie while the page is open, but a tab left long
+  enough can request a private photo (a draft's, or one the owners are reviewing) with an expired one: Company OS
+  refuses the private link, the public one doesn't exist for an unapproved profile, and the image 404s until the page
+  is reloaded. Approved profiles' photos are unaffected (public link). No data is exposed either way.

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { harness, only } from "./harness";
-import { approved, registered, submitted } from "./fixtures";
+import { approved, drafted, registered, submitted, tinyJpeg } from "./fixtures";
 
 const h = await harness();
 beforeEach(() => h.reset());
@@ -60,5 +60,30 @@ describe("what a Gigster, an owner and a visitor see", () => {
     expect(page.profile?.fields.zip).toBe("");
     expect(page.profile?.fields.credits).toEqual(["Night Shift (feature)"]);
     expect(JSON.stringify(page)).not.toContain(who.email);
+  });
+
+  // Another Gigster's data, by id (IDOR): Company OS's row policies hide it, so each answer is "nothing" or a refusal.
+  liveOnly("a Gigster can't read, submit or upload to another Gigster's profile by its id", async () => {
+    const other = await submitted(h, "idor-other");
+    await h.signInOwner();
+    await h.source.owners.requestChanges(other.personId, [{ section: "about", note: "So it can be submitted again." }]);
+    await registered(h, "idor-me");
+    expect(await orNull(h.source.profiles.getDraft(other.personId))).toBeNull();
+    expect(await orNull(h.source.profiles.getProfile(other.personId))).toBeNull();
+    await expect(h.source.profiles.submit(other.personId)).rejects.toThrow();
+    await expect(h.source.profiles.uploadPhoto!(other.personId, tinyJpeg())).rejects.toThrow();
+    await h.signInOwner();
+    expect((await h.source.people.get(other.personId))?.person.status).toBe("changes_requested");
+  });
+
+  liveOnly("a Gigster's unpublished photo is theirs and the owners' only, at its /media link", async () => {
+    const owner = await drafted(h, "idor-photo");
+    expect(await h.media!(owner.fields.photo)).toBe(200);
+    await registered(h, "idor-viewer");
+    expect(await h.media!(owner.fields.photo)).toBe(404);
+    await h.signOut();
+    expect(await h.media!(owner.fields.photo)).toBe(404);
+    await h.signInOwner();
+    expect(await h.media!(owner.fields.photo)).toBe(200);
   });
 });

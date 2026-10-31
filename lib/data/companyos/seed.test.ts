@@ -61,6 +61,22 @@ describe("toCompanyOsSeed", () => {
     }
   });
 
+  it("gives every profile past draft a photo (Company OS's submit and approval need one), reusing the six pictures", () => {
+    const withPhoto = new Set(seed.files.map((f) => f.owner_id));
+    const past = of("profile").filter((p) => p.data.status !== "draft");
+    expect(past.length).toBeGreaterThan(6);
+    for (const p of past) expect(withPhoto.has(p.id!), String(p.data.public_handle)).toBe(true);
+    expect(new Set(seed.files.map((f) => f.path)).size).toBeLessThanOrEqual(6);
+    expect(seed.files.filter((f) => f.owner_id === seed.files[0]!.owner_id)).toHaveLength(1);
+  });
+
+  it("writes call-sheet sign-ups in the importer's shape: unique_key and updated_at", () => {
+    for (const r of of("form_submission")) {
+      expect(r.data.unique_key).toBe(`call_sheet\n${r.data.email}`);
+      expect(r.data.updated_at).toBe(r.data.submitted_at);
+    }
+  });
+
   it("is the same every time (stable ids), so a regenerated seed has a clean diff", () => {
     expect(toCompanyOsSeed(buildSeed(), buildWaitlist(buildSeed().people))).toEqual(seed);
   });

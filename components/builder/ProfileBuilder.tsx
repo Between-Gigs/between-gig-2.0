@@ -164,6 +164,8 @@ function Builder({ personId }: { personId: string }) {
   const noteFor = (section: ProfileSection) => notes.filter((n) => n.section === section);
   const errorCount = Object.keys(errors).length;
   const resubmitting = person.status === "submitted" || person.status === "approved";
+  // Live, the profile is one record: one that's with the team or live has nothing to send (an edit sends it back itself).
+  const nothingToSend = data.kind === "live" && resubmitting;
 
   return (
     <Page bare>
@@ -302,10 +304,10 @@ function Builder({ personId }: { personId: string }) {
 
                   <div className="mt-8 flex items-center justify-between gap-3 border-t border-line pt-5">
                     {step > 0 ? <Button variant="secondary" iconStart={<ArrowLeft />} onClick={(e) => go(step - 1, e.currentTarget)}>Back<span className="max-sm:sr-only">: {STEPS[step - 1]}</span></Button> : <span />}
-                    <Button variant="primary" className="glow-hover" loading={submitting} iconEnd={step === 4 ? <Sparkles /> : <ArrowRight />} onClick={next}>
+                    {!(step === 4 && nothingToSend) && <Button variant="primary" className="glow-hover" loading={submitting} iconEnd={step === 4 ? <Sparkles /> : <ArrowRight />} onClick={next}>
                       {/* Says where it goes next, not just "Continue". */}
                       {step === 4 ? (resubmitting || notes.length ? "Submit again" : "Submit for review") : <>Next<span className="max-sm:sr-only">: {STEPS[step + 1]}</span></>}
-                    </Button>
+                    </Button>}
                   </div>
                 </>
               )}

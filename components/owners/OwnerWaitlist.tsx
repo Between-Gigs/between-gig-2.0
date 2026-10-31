@@ -1,12 +1,13 @@
 "use client";
 import { Badge, Button, Checkbox, Input, Modal, Pager, Select, cx, type BadgeTone, useToast } from "@ds/components";
-import { Eye, Mail, Search, Send, X } from "lucide-react";
+import { Eye, Mail, RotateCw, Search, Send, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { renderEmail } from "@/emails";
 import { data, inviteStatuses, type InviteStatus, type WaitlistQuery, type WaitlistRow } from "@/lib/data";
 import { waitlistCategories, waitlistCategoryLabel } from "@/lib/data/taxonomy";
+import { inChunks } from "@/lib/owners/batch";
 import { OwnerShell } from "./OwnerShell";
 import { OwnerGate } from "./OwnerGate";
 import { shortDate } from "./format";
@@ -42,6 +43,8 @@ function Waitlist() {
   const [confirm, setConfirm] = React.useState(false);
   const [preview, setPreview] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
+  /** Bulk invites go 10 at a time: how many have been sent so far, of how many. */
+  const [progress, setProgress] = React.useState<[number, number] | null>(null);
 
   const refresh = React.useCallback(async (q: WaitlistQuery) => {
     const [r, all] = await Promise.all([data.owners.waitlist(q), data.owners.waitlist()]);
@@ -71,15 +74,28 @@ function Waitlist() {
   const invite = async () => {
     setBusy(true);
     try {
-      const r = await data.owners.invite(selected);
+      const r = await inChunks(selected, (chunk) => data.owners.invite(chunk), (done, of) => setProgress([done, of]));
       toast({ message: `${invites(r.invited)} queued${r.skipped ? ` · ${r.skipped} already invited` : ""}`, tone: "success" });
       if (r.failed) toast({ message: `${invites(r.failed)} couldn't be sent. They're still ready to invite; try again.`, tone: "danger" });
       setSelected([]);
       setConfirm(false);
       await refresh(query);
     } catch { toast({ message: "Couldn't send invites. Try again.", tone: "danger" }); }
-    finally { setBusy(false); }
+    finally { setBusy(false); setProgress(null); }
   };
+
+  /** Live: a new link for someone invited who hasn't signed up; Company OS revokes the older one. */
+  const resend = async (personId: string, address: string) => {
+    try {
+      const r = await data.owners.resendInvite!([personId]);
+      toast(r.invited ? { message: `New invite sent to ${address}`, tone: "success" } : r.failed ? { message: `Couldn't send the invite to ${address}. Try again.`, tone: "danger" } : { message: `${address} has already signed up` });
+      await refresh(query);
+    } catch { toast({ message: `Couldn't send the invite to ${address}. Try again.`, tone: "danger" }); }
+  };
+  const canResend = (r: WaitlistRow) => !!data.owners.resendInvite && r.inviteStatus === "invited" && !!r.personId;
+  const resendButton = (r: WaitlistRow) => canResend(r) && (
+    <Button size="sm" variant="ghost" iconStart={<RotateCw />} aria-label={`Resend invite to ${r.signup.email}`} onClick={() => void resend(r.personId!, r.signup.email)}>Resend</Button>
+  );
 
   const emails = (rows ?? []).filter((r) => selected.includes(r.signup.id)).map((r) => r.signup.email);
   const email = React.useMemo(() => renderEmail("invite", emails[0] ? { email: emails[0] } : {}), [emails[0]]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -143,7 +159,7 @@ function Waitlist() {
                     <td className="px-3 text-ink-muted tabular-nums">{r.signup.zip}</td>
                     <td className="px-3 text-ink-muted">{r.signup.category ? waitlistCategoryLabel(r.signup.category) : "—"}</td>
                     <td className="px-3 whitespace-nowrap text-ink-muted tabular-nums">{shortDate(r.signup.createdAt)}</td>
-                    <td className="px-3">{r.inviteStatus === "not_invited" ? <span className="text-body-sm text-ink-subtle">Not invited</span> : <Badge tone={statusMeta[r.inviteStatus].tone} size="sm">{statusMeta[r.inviteStatus].label}</Badge>}</td>
+                    <td className="px-3">{r.inviteStatus === "not_invited" ? <span className="text-body-sm text-ink-subtle">Not invited</span> : <span className="inline-flex items-center gap-1"><Badge tone={statusMeta[r.inviteStatus].tone} size="sm">{statusMeta[r.inviteStatus].label}</Badge>{resendButton(r)}</span>}</td>
                   </tr>
                 );
               })}
@@ -169,6 +185,7 @@ function Waitlist() {
                   <span className="truncate text-body-sm text-ink-muted tabular-nums">{r.signup.zip} · {shortDate(r.signup.createdAt)}{r.signup.category ? ` · ${waitlistCategoryLabel(r.signup.category)}` : ""}</span>
                 </div>
                 {r.inviteStatus !== "not_invited" && <Badge tone={statusMeta[r.inviteStatus].tone} size="sm" className="shrink-0">{statusMeta[r.inviteStatus].label}</Badge>}
+                {resendButton(r)}
               </li>
             );
           })}
@@ -198,7 +215,7 @@ function Waitlist() {
 
       <Modal open={confirm} onClose={() => setConfirm(false)} size="sm" title={`Invite ${people(n)}?`}
         description={<>We queue {invites(n)}, one to each address, with a personal link that&apos;s valid for 30 days.</>}
-        footer={<><Button variant="ghost" onClick={() => setConfirm(false)}>Cancel</Button><Button variant="primary" loading={busy} iconStart={<Send />} onClick={invite}>Send {invites(n)}</Button></>}>
+        footer={<><Button variant="ghost" onClick={() => setConfirm(false)}>Cancel</Button><Button variant="primary" loading={busy} iconStart={<Send />} onClick={invite}>{progress ? `Sent ${progress[0]} of ${progress[1]}` : `Send ${invites(n)}`}</Button></>}>
         <div className="grid gap-3">
           <div className="grid gap-1 rounded-lg border border-line bg-surface-sunken p-3">
             <p className="text-label-sm text-ink-subtle">Subject</p>

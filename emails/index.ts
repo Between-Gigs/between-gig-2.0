@@ -37,7 +37,7 @@ export const emailTemplates = {
   } satisfies TemplateInfo<SignInCodeProps>,
   "profile-submitted": {
     name: "profile-submitted", label: "Profile submitted", when: "Right after a Gigster submits their profile for review.",
-    render: profileSubmitted, sample: { firstName: "Maya", profileUrl: "https://between-gigs.com/profile", editUrl: "https://between-gigs.com/profile/canvas" },
+    render: profileSubmitted, sample: { firstName: "Maya", profileUrl: "https://between-gigs.com/profile/", editUrl: "https://between-gigs.com/profile/canvas" },
   } satisfies TemplateInfo<ProfileSubmittedProps>,
   welcome: {
     name: "welcome", label: "Welcome", when: "When someone joins the call sheet on /professionals.",

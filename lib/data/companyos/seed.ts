@@ -43,10 +43,17 @@ export function toCompanyOsSeed(state: SeedState, waitlist: WaitlistSignup[]): C
         answers: Object.fromEntries(Object.entries({ zip: w.zip, category: w.category, details: w.details }).filter(([, v]) => v)),
         placement: w.placement,
         submitted_at: w.createdAt,
+        // As Company OS's importer writes it (2.0's scripts/import-waitlist.mjs): later submissions merge by this key.
+        updated_at: w.createdAt,
+        unique_key: `call_sheet\n${w.email}`,
         ...(person ? { person: uuid(`person:${person.id}`) } : {}),
       },
     });
   }
+  // The six pictures: their own people use them, and every other profile past draft borrows one, since Company OS
+  // needs a photo to submit or approve (each profile gets its own file record; the images are shared on disk).
+  const pictures = state.drafts.map((d) => d.fields.photo).filter((src) => src.startsWith("img/people/"));
+  let borrowed = 0;
   for (const draft of state.drafts) {
     const person = state.people.find((p) => p.id === draft.personId)!;
     const profileId = uuid(`profile:${person.id}`);
@@ -83,8 +90,10 @@ export function toCompanyOsSeed(state: SeedState, waitlist: WaitlistSignup[]): C
     if (person.status === "approved") {
       records.push({ entity: "profile_review", data: { profile: profileId, from_status: "submitted", to_status: "approved", note: "Approved", section_notes: {}, created_at: person.approvedAt } });
     }
-    if (fields.photo.startsWith("img/people/")) {
-      files.push({ owner_entity: "profile", owner_id: profileId, kind: "photo", path: `between-gigs/${person.id}.jpg`, mime: "image/jpeg", source: fields.photo });
+    const picture = fields.photo.startsWith("img/people/") ? fields.photo : status !== "draft" ? pictures[borrowed++ % pictures.length] : undefined;
+    if (picture) {
+      const name = picture.replace(/^img\/people\//, "");
+      files.push({ owner_entity: "profile", owner_id: profileId, kind: "photo", path: `between-gigs/${name}`, mime: "image/jpeg", source: picture });
     }
   }
   return {

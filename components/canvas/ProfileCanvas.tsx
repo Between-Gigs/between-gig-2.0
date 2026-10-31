@@ -312,6 +312,8 @@ function Canvas({ personId }: { personId: string }) {
   };
 
   const resubmit = person.status === "submitted" || person.status === "approved" || notes.length > 0;
+  // Live, the profile is one record: one that's with the team or live has nothing to send (an edit sends it back itself).
+  const nothingToSend = data.kind === "live" && (person.status === "submitted" || person.status === "approved");
   const first = d.name.split(" ")[0] || "there";
   const ctx: Ctx = { d, editing, next, fresh, errors, noted, open, close, advance, portrait, rise };
 
@@ -333,7 +335,7 @@ function Canvas({ personId }: { personId: string }) {
         </div>
       </Band>
 
-      <StageBar done={done} total={REQUIRED.length} ready={ready} missing={Object.keys(fieldErrors).length} save={save} view={view} editing={!!editing} sent={sent} submitting={submitting} resubmit={resubmit}
+      <StageBar done={done} total={REQUIRED.length} ready={ready} missing={Object.keys(fieldErrors).length} save={save} view={view} editing={!!editing} sent={sent} submitting={submitting} resubmit={resubmit} canSend={!nothingToSend}
         onRetry={() => { dirty.current = true; void flush(); }} onView={switchView} onNext={() => next && open(next)} onSubmit={submit} />
 
       <div ref={stage} className="vt-page relative mx-auto max-w-7xl px-4 pt-8 pb-32 sm:px-6 sm:pb-24">
@@ -374,15 +376,15 @@ function Canvas({ personId }: { personId: string }) {
         </ol>
       </Modal>
       {!sent && !editing && view === "edit" && (
-        <Dock done={done} total={REQUIRED.length} next={next} ready={ready} resubmit={resubmit} submitting={submitting} onNext={() => next && open(next)} onSubmit={submit} />
+        <Dock done={done} total={REQUIRED.length} next={next} ready={ready} resubmit={resubmit} canSend={!nothingToSend} submitting={submitting} onNext={() => next && open(next)} onSubmit={submit} />
       )}
     </Page>
   );
 }
 
 /** Phones: the progress and the one next step stay in reach at the bottom of the screen. */
-function Dock({ done, total, next, ready, resubmit, submitting, onNext, onSubmit }: {
-  done: number; total: number; next: SpotId | null; ready: boolean; resubmit: boolean; submitting: boolean; onNext: () => void; onSubmit: () => void;
+function Dock({ done, total, next, ready, resubmit, canSend, submitting, onNext, onSubmit }: {
+  done: number; total: number; next: SpotId | null; ready: boolean; resubmit: boolean; canSend: boolean; submitting: boolean; onNext: () => void; onSubmit: () => void;
 }) {
   return (
     <div className="fixed inset-x-0 bottom-0 z-sticky border-t border-line bg-bg/95 px-4 py-3 shadow-lg backdrop-blur-md sm:hidden">
@@ -392,15 +394,15 @@ function Dock({ done, total, next, ready, resubmit, submitting, onNext, onSubmit
           <span className="grid size-8 place-items-center rounded-full bg-bg text-caption text-ink tabular-nums">{done}/{total}</span>
         </span>
         {ready || !next
-          ? <Button variant="primary" fullWidth className="glow-hover" loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}>{resubmit ? "Send again" : "Send for review"}</Button>
+          ? canSend && <Button variant="primary" fullWidth className="glow-hover" loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}>{resubmit ? "Send again" : "Send for review"}</Button>
           : <Button variant="primary" fullWidth iconEnd={<ArrowRight />} onClick={onNext}>Next: {LABEL[next]}</Button>}
       </div>
     </div>
   );
 }
 
-function StageBar({ done, total, ready, missing, save, view, editing, sent, submitting, resubmit, onRetry, onView, onNext, onSubmit }: {
-  done: number; total: number; ready: boolean; missing: number; save: SaveState; view: "edit" | "client"; editing: boolean; sent: boolean; submitting: boolean; resubmit: boolean;
+function StageBar({ done, total, ready, missing, save, view, editing, sent, submitting, resubmit, canSend, onRetry, onView, onNext, onSubmit }: {
+  done: number; total: number; ready: boolean; missing: number; save: SaveState; view: "edit" | "client"; editing: boolean; sent: boolean; submitting: boolean; resubmit: boolean; canSend: boolean;
   onRetry: () => void; onView: (v: string) => void; onNext: () => void; onSubmit: () => void;
 }) {
   const pct = Math.round((done / total) * 100);
@@ -422,7 +424,7 @@ function StageBar({ done, total, ready, missing, save, view, editing, sent, subm
           <SegmentedControl label="View" size="sm" value={view} onChange={onView}
             options={[{ value: "edit", label: "Edit", icon: <PenLine /> }, { value: "client", label: "Client view", icon: <Eye /> }]} />
           {!ready && !sent && <Button size="sm" variant="secondary" iconStart={<Sparkles />} className="max-sm:hidden" onClick={onNext}>Next spot</Button>}
-          {!sent && <Button size="sm" variant={ready && !editing ? "primary" : "secondary"} className={cx("max-sm:hidden", ready && "glow-hover")} loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}>
+          {!sent && canSend && <Button size="sm" variant={ready && !editing ? "primary" : "secondary"} className={cx("max-sm:hidden", ready && "glow-hover")} loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}>
             {resubmit ? "Send again" : "Send for review"}
           </Button>}
         </div>

@@ -72,7 +72,8 @@ export interface DataSource {
     /** `website` is the form's honeypot (components/funnel/Honeypot.tsx): only bots fill it, and live drops what they send. */
     joinWaitlist(input: { email: string; zip: string; category?: string; placement: string; website?: string }): Promise<WaitlistResult>;
     /** Step 2 (optional): service category and "What would you offer?". */
-    addDetails(signupId: string, input: { category: string; details: string }): Promise<WaitlistSignup>;
+    /** `signupId` is the id joinWaitlist returned (live: a short-lived signed token). `website` is the honeypot. */
+    addDetails(signupId: string, input: { category: string; details: string; website?: string }): Promise<WaitlistSignup>;
     /** Storyboard forms. Queues the coming-soon email. `answers.website` is the honeypot. */
     submitSketch(kind: SketchKind, answers: Record<string, string>): Promise<SketchSubmission>;
     privacyRequest(email: string, message: string, website?: string): Promise<PrivacyRequest>;
@@ -96,6 +97,9 @@ export interface DataSource {
     undoReview?(personId: string): Promise<Person>;
     waitlist(query?: WaitlistQuery): Promise<WaitlistRow[]>;
     /** Invites waitlist sign-ups: creates the person and invite, queues the invite email. Skips anyone already invited. */
+    /** Live: invites again people invited but not signed up yet; Company OS revokes their older link. At most 10 a call. */
+    resendInvite?(personIds: string[]): Promise<{ invited: number; skipped: number; failed?: number }>;
+    /** At most 10 sign-ups a call live (the waitlist sends bigger selections in chunks). */
     invite(signupIds: string[]): Promise<{ invited: number; skipped: number; /** Live: invitations that failed (none were sent). */ failed?: number }>;
   };
 

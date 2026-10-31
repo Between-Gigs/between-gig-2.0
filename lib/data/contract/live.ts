@@ -21,6 +21,7 @@ function loadEnv() {
 export async function liveHarness(): Promise<Harness> {
   loadEnv();
   const { handle, handleUpload } = await import("@/lib/server/routes");
+  const { media } = await import("@/lib/server/media");
   const cosUrl = process.env.COMPANY_OS_URL!;
   const tenant = process.env.COMPANY_OS_TENANT || "between-gigs";
   const ownerEmail = process.env.CONTRACT_OWNER_EMAIL || "owner@between-gigs.example";
@@ -32,7 +33,7 @@ export async function liveHarness(): Promise<Harness> {
   const fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(String(input));
     const headers = new Headers(init?.headers);
-    headers.set("x-forwarded-for", `198.18.${Math.floor(ip / 250) % 250}.${ip++ % 250}`);
+    headers.set("x-real-ip", `198.18.${Math.floor(ip / 250) % 250}.${ip++ % 250}`);
     const req = new Request(url, { ...init, headers });
     if (url.pathname.replace(/\/$/, "") === "/api/profiles/uploadPhoto") return handleUpload(req);
     const [, , group, method] = url.pathname.split("/");
@@ -63,5 +64,11 @@ export async function liveHarness(): Promise<Harness> {
       return r.session;
     },
     async signOut() { token = null; await source.auth.signOut(); },
+    async media(url) {
+      const id = url.replace(/^\/media\//, "").replace(/\/$/, "");
+      const res = await media(new Request(`http://localhost:3000/media/${id}/`, { headers: token ? { cookie: `__session=${token}` } : {} }), id);
+      await res.arrayBuffer();
+      return res.status;
+    },
   };
 }

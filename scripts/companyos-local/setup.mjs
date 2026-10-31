@@ -13,7 +13,9 @@ const API = arg("api", "http://localhost:4000");
 const SLUG = "between-gigs";
 const KEY = process.env.PLATFORM_ADMIN_KEY ?? "dev-platform-key";
 const OWNER = "owner@between-gigs.example";
-const APP_URL = "http://localhost:3000";
+// Company OS sends only https links in emails (an http one fails as unsafe_link), so the local app's address for
+// invitations and email links is a made-up https origin; the live run never opens it.
+const APP_URL = arg("app", "https://app.between-gigs.example");
 
 async function call(method, path, body) {
   const res = await fetch(`${API}${path}`, { method, headers: { "x-platform-key": KEY, ...(body ? { "content-type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined });
