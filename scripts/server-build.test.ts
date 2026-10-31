@@ -23,6 +23,8 @@ function fakeRepo() {
   file("app/proposals/home/page.tsx");
   file("public/artifacts/ship-list/index.html");
   file("public/studio-source/manifest.json");
+  file("public/thumbs/home.jpg");
+  file("public/workspace/covers/handoff.jpg");
   file("public/img/logo.svg");
   return root;
 }
@@ -31,7 +33,7 @@ describe("the internal and waiting routes", () => {
   it("are exactly the ship list's internal tools and the pages waiting on the client", () => {
     expect([...INTERNAL].sort()).toEqual([
       "app/crew-call", "app/emails", "app/preview", "app/proposals", "app/studio", "app/workspace",
-      "public/artifacts", "public/studio-source",
+      "public/artifacts", "public/studio-source", "public/thumbs", "public/workspace",
     ]);
   });
 

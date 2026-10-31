@@ -16,7 +16,7 @@ const STANDALONE = path.join(ROOT, ".next/standalone");
 const INTERNAL_URLS = [
   "/workspace/", "/workspace/open/", "/workspace/demo/", "/studio/", "/studio/site/", "/preview/", "/preview/cursors/", "/preview/curtain/",
   "/emails/", "/emails/welcome/", "/crew-call/", "/proposals/home/", "/artifacts/", "/artifacts/ship-list/", "/artifacts/ship-list/index.html",
-  "/studio-source/manifest.json",
+  "/studio-source/manifest.json", "/thumbs/home.jpg", "/workspace/covers/handoff.jpg",
 ];
 
 const failures = [];
@@ -29,10 +29,9 @@ if (!fs.existsSync(path.join(STANDALONE, "server.js"))) {
 
 // Not in the output at all: no compiled page, no copied file.
 for (const dir of INTERNAL) {
-  const name = dir.replace(/^(app|public)\//, "");
-  for (const where of [".next/server/app", ".next/standalone/.next/server/app", ".next/standalone/public"]) {
-    if (fs.existsSync(path.join(ROOT, where, name))) fail(`${dir} is in the build output (${where}/${name})`);
-  }
+  const [kind, name] = [dir.split("/")[0], dir.slice(dir.indexOf("/") + 1)];
+  const outputs = kind === "app" ? [".next/server/app", ".next/standalone/.next/server/app"] : [".next/standalone/public"];
+  for (const where of outputs) if (fs.existsSync(path.join(ROOT, where, name))) fail(`${dir} is in the build output (${where}/${name})`);
 }
 
 const port = await new Promise((resolve) => { const s = net.createServer().listen(0, "127.0.0.1", () => { const p = s.address().port; s.close(() => resolve(p)); }); });
