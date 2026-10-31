@@ -98,7 +98,9 @@ describe("signed in or not", () => {
   });
 
   it("a Gigster on an owner route gets 403 super-admin only, and nothing else is read", async () => {
-    for (const name of ["people.list", "owners.dashboard", "owners.waitlist", "owners.approve", "owners.requestChanges", "owners.invite", "owners.activity", "owners.reviewQueue"] as RouteName[]) {
+    const owner = (Object.keys(ROUTES) as RouteName[]).filter((k) => ROUTES[k].access === "owner");
+    expect(owner).toContain("owners.resendInvite");
+    for (const name of owner) {
       const f = fake(undefined, { superAdmin: false });
       const { res, body, calls } = await call(name, [PERSON, [{ section: "about", note: "x" }]], undefined, f);
       expect(res.status, name).toBe(403);
@@ -134,7 +136,11 @@ describe("public forms: honeypot and rate limit (N-08)", () => {
   it("a filled honeypot gets a plausible success and nothing is sent", async () => {
     const { res, body, calls } = await call("funnel.joinWaitlist", [{ email: "bot@example.org", zip: "90026", placement: "hero", website: "http://spam" }], { token: null });
     expect(res.status).toBe(200);
-    expect(body.result).toMatchObject({ ok: true, alreadyJoined: false });
+    expect(body.result).toMatchObject({ ok: true, signup: { email: "bot@example.org" } });
+    // Shaped like a real answer: the id looks like a signed sign-up token, not the address.
+    const decoyId = (body.result as { signup: { id: string } }).signup.id;
+    expect(decoyId).toMatch(/^[A-Za-z0-9_-]+\.[0-9]+\.[A-Za-z0-9_-]+$/);
+    expect(decoyId).not.toContain("bot@example.org");
     expect(calls).toEqual([]);
     expect((await call("funnel.submitSketch", ["talent", { email: "bot@example.org", website: "x" }], { token: null })).calls).toEqual([]);
     expect((await call("funnel.privacyRequest", ["bot@example.org", "hi", "x"], { token: null })).calls).toEqual([]);
@@ -471,5 +477,43 @@ describe("round 1: call-sheet details need the sign-up's token", () => {
   it("a filled honeypot on the details step sends nothing", async () => {
     const { calls } = await call("funnel.addDetails", ["x.1.y", { category: "interiors", details: "x", website: "spam" }], { token: null });
     expect(calls).toEqual([]);
+  });
+});
+
+describe("round 2: nothing about stored data reaches a visitor", () => {
+  it("a repeat call-sheet join answers exactly like a first one: \"merged\" never appears", async () => {
+    const created = await call("funnel.joinWaitlist", [{ email: "maya@example.org", zip: "90026", placement: "hero" }], { token: null }, fake());
+    const merged = fake((c) => (c.path.startsWith("/forms/") ? { body: { outcome: "merged" } } : undefined));
+    const again = await call("funnel.joinWaitlist", [{ email: "maya@example.org", zip: "90026", placement: "hero" }], { token: null }, merged);
+    const shape = (b: Record<string, unknown>) => JSON.stringify(b, (k, v) => (k === "id" || k === "createdAt" ? "_" : v));
+    expect(shape(again.body)).toBe(shape(created.body));
+    expect(JSON.stringify(again.body)).not.toMatch(/merged|already/i);
+    const details = await call("funnel.addDetails", [(again.body.result as { signup: { id: string } }).signup.id, { category: "interiors", details: "x" }], { token: null }, merged);
+    expect(JSON.stringify(details.body)).not.toMatch(/merged|already/i);
+  });
+
+  it("on public routes, Company OS refusing the service identity (401/403) is 503 unavailable, with no message", async () => {
+    for (const status of [401, 403]) {
+      const f = fake(() => ({ status, body: { error: status === 401 ? "unauthorized" : "forbidden", message: "service identity revoked at 2026-10-31 by ops" } }));
+      for (const [name, args] of [
+        ["funnel.joinWaitlist", [{ email: "a@example.org", zip: "90026", placement: "hero" }]],
+        ["funnel.submitSketch", ["talent", { email: "a@example.org" }]],
+        ["funnel.privacyRequest", ["a@example.org", "hi"]],
+        ["people.getPublic", ["maya"]],
+        ["people.similar", ["x"]],
+      ] as [RouteName, unknown[]][]) {
+        const { res, body } = await call(name, args, { token: null }, f);
+        expect(res.status, `${name} ${status}`).toBe(503);
+        expect(body).toEqual({ error: "unavailable" });
+      }
+    }
+  });
+
+  it("a signed-in person still gets Company OS's own 403 and message on their routes", async () => {
+    const f = fake((c) => (c.path === "/batch" ? { status: 403, body: { error: "forbidden", message: "not your profile" } } : undefined), { superAdmin: false });
+    f.cos.query = async () => [{ id: "p1", data: { person: PERSON }, createdAt: "", updatedAt: "" }];
+    const { res, body } = await call("profiles.saveDraft", [PERSON, {}], undefined, f);
+    expect(res.status).toBe(403);
+    expect(body).toEqual({ error: "forbidden", message: "not your profile" });
   });
 });

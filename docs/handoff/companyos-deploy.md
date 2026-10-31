@@ -75,7 +75,9 @@ one-time import below.
 
 1. **Railway:** nothing to create by hand. `web` is created by the first deploy in the project's existing `test` and
    `production` environments (Company OS runbook `customer-environments.md` §1). Production: after its first deploy,
-   add the custom domain `between-gigs.com` to `web` (and the DNS records Railway shows).
+   add the custom domain `between-gigs.com` to `web` (and the DNS records Railway shows). **`www.between-gigs.com`
+   must 301 to `https://between-gigs.com`** (at the DNS provider or a redirect service), never be served by `web`:
+   Company OS accepts Clerk sessions only from `APP_URL`'s origin, so a Gigster on `www` would look signed out.
 2. **Service identities**, per environment, on the tenant (shown once; straight into the GitHub secret):
    `POST /platform/tenants/<tenant>/service-identities` with `{ "name": "2.0 public reads", "roleKey": "public_reader" }`
    and `{ "name": "2.0 public forms", "roleKey": "form_submitter", "mode": "submit" }`.
@@ -196,3 +198,14 @@ The export holds real people's data: never commit it, attach it to an issue or k
   enough can request a private photo (a draft's, or one the owners are reviewing) with an expired one: Company OS
   refuses the private link, the public one doesn't exist for an unapproved profile, and the image 404s until the page
   is reloaded. Approved profiles' photos are unaffected (public link). No data is exposed either way.
+- **The test deploy runs whichever branch's workflow it is started from.** `deploy-test.yml` can be dispatched from
+  any branch, and a run uses that branch's workflow file with the `test` environment's secrets in scope. The guard is
+  GitHub's, not the workflow's: the owner must restrict the `test` environment's *Deployment branches* to `main` and
+  `companyos` (step 3 of the setup above). Until then, anyone who can push a branch can read the test secrets.
+- **IPv6 callers each get their own rate-limit bucket.** The public-form limit keys on the full `X-Real-IP`, and one
+  IPv6 client controls a whole /64, so it can rotate addresses and never hit the limit. To do: key IPv6 by its /64, add
+  a global ceiling for the form routes, and evict past 10,000 keys (the map's current cap). Company OS's submit
+  identity limit (20 a second) still bounds the total.
+- **`checks.yml` uses action tags, not commit SHAs.** A moved tag would run different code in CI. Pinning every
+  `uses:` to a SHA (and a test in `workflows.test.ts` that refuses a tag) is a follow-up for the workflows' owner.
+

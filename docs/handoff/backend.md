@@ -1,5 +1,10 @@
 # Backend handoff (for Anu)
 
+> **Superseded (2026-10-31).** The backend is Company OS, not the Cloudflare Worker this page plans: 2.0's own server
+> routes (`lib/server/*`, `app/api/**`) call it, and the web server has no `CLERK_SECRET_KEY` (Company OS verifies the
+> Clerk session token). What is live: [companyos-local.md](companyos-local.md), [companyos-deploy.md](companyos-deploy.md)
+> and Company OS `docs/customers/between-gigs/gap-analysis.md` §13. Kept as the record of the first plan.
+
 The front end is built and runs as a static site on sample data. Every read and write goes through one interface,
 `DataSource` ([`lib/data/source.ts`](../../lib/data/source.ts)), so the backend work is a Worker API plus one
 replacement implementation: write `lib/data/api.ts` with `fetch` calls and export it from `lib/data/index.ts`

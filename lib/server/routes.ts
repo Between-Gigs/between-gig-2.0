@@ -10,6 +10,7 @@
  * another site can't make these calls on someone's behalf. Responses carry results and Company OS's refusal codes only.
  */
 import type { PeopleQuery, ProfileFields, ReviewNoteInput, SketchKind, WaitlistQuery } from "@/lib/data/types";
+import { randomBytes } from "node:crypto";
 import { blankFields } from "@/lib/data/seed";
 import { CompanyOsError, companyOs, configFromEnv, type CompanyOs, type Credential } from "./companyos";
 import * as gigs from "./gigs";
@@ -96,7 +97,9 @@ export type RouteName = keyof typeof ROUTES;
 const DECOY: Partial<Record<RouteName, (args: Args) => unknown>> = {
   "funnel.joinWaitlist": ([input]) => {
     const i = o<Record<string, unknown>>(input);
-    return { ok: true, alreadyJoined: false, signup: { id: s(i.email).toLowerCase(), email: s(i.email).toLowerCase(), zip: s(i.zip), category: s(i.category), details: "", placement: s(i.placement), createdAt: new Date().toISOString() } };
+    const email = s(i.email).trim().toLowerCase();
+    // Shaped exactly like a real answer, its id a token like a real one (signed with a throwaway key: it opens nothing).
+    return { ok: true, signup: { id: gigs.signupToken(email, randomBytes(32).toString("hex")), email, zip: s(i.zip), category: s(i.category), details: "", placement: s(i.placement), createdAt: new Date().toISOString() } };
   },
 };
 
@@ -184,10 +187,16 @@ function fromEnv() {
 }
 
 /** Turns an error into the browser's answer: Company OS's status and code as they came, anything else a bare 500. */
-export function failure(e: unknown) {
+export function failure(e: unknown, access?: Access) {
   if (e instanceof CompanyOsError) {
     // A missing service identity or an unreachable Company OS is ours to fix, not the visitor's: no detail.
     if (e.status >= 500) return json(e.status === 503 ? 503 : 502, { error: "unavailable" });
+    if (access === "public" || access === "funnel") {
+      // Anonymous visitors: Company OS refusing our service identity (revoked, rotated) is ours to fix too, and its
+      // English message is never theirs to read. A refusal of what they sent keeps only its code.
+      if (e.status === 401 || e.status === 403) return json(503, { error: "unavailable" });
+      return json(e.status, { error: e.code });
+    }
     return json(e.status, { error: e.code, ...(e.detail ? { message: e.detail } : {}) });
   }
   console.error("route failed", e instanceof Error ? e.name : typeof e);
@@ -229,7 +238,7 @@ export async function handle(name: RouteName, req: Request, deps: Deps = {}): Pr
     const result = await route.run({ cos, cred, appUrl }, args, req);
     return json(200, { result: result ?? null });
   } catch (e) {
-    return failure(e);
+    return failure(e, route.access);
   }
 }
 

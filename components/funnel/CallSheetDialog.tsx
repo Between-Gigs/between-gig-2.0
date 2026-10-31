@@ -15,8 +15,10 @@ type Step = "signup" | "details" | "done";
 
 const copy: Record<Step, { title: string; description: string }> = {
   signup: { title: "Get on the call sheet", description: "Get updates and an invitation when professional onboarding opens." },
-  details: { title: "You're on the list.", description: "You're on the call sheet. Check your email for a welcome from Between Gigs—and a little story about what comes next. Add optional details below, or you're all set." },
-  done: { title: "Thank you for joining!", description: "Check your email for your Between Gigs welcome and a little story about what comes next. If it hasn't arrived in a few minutes, check your spam folder." },
+  // The same words for a first sign-up and a repeat (decision N-16: the form never says who has signed up before).
+  // A repeat gets no second welcome email, so neither step promises one.
+  details: { title: "You're on the list.", description: "You're on the call sheet. Add optional details below, or you're all set." },
+  done: { title: "Thank you for joining!", description: "You're on the call sheet. We'll email you about what comes next; if nothing arrives, check your spam folder." },
 };
 
 /**
@@ -57,7 +59,7 @@ export function CallSheetDialog({ open, onClose, category: initialCategory, plac
       const r = await data.funnel.joinWaitlist({ email, zip, category, placement, ...(website ? { website } : {}) });
       if (!r.ok) { setErrors(r.error === "email" ? { email: "Enter your email address, like name@example.com." } : { zip: "Enter a 5-digit ZIP code, like 90026." }); return; }
       setSignup(r.signup);
-      go(r.alreadyJoined ? "done" : "details");
+      go("details");
     } catch {
       setErrors({ form: "Please try again." });
     } finally {
@@ -124,7 +126,7 @@ export function CallSheetDialog({ open, onClose, category: initialCategory, plac
               <span className="text-label-sm text-ink-brand">While you wait</span>
               <span className="text-body-sm text-ink">Flip through the Storyboard to see the kinds of work clients could bring to you.</span>
             </div>
-            {data.kind === "sample" && <p className="text-body-sm text-ink-subtle">Sample mode: the welcome email is in the <Link href="/emails/" className="inline-flex items-center gap-1 text-link underline underline-offset-2"><Inbox className="size-3.5" aria-hidden="true" />sample outbox</Link>.</p>}
+            {data.kind === "sample" && <p className="text-body-sm text-ink-subtle">Sample mode: emails are in the <Link href="/emails/" className="inline-flex items-center gap-1 text-link underline underline-offset-2"><Inbox className="size-3.5" aria-hidden="true" />sample outbox</Link>.</p>}
             <div className="flex flex-wrap justify-center gap-3">
               <ButtonLink href="/storyboard/" variant="primary" iconEnd={<ArrowRight />}>Open the Storyboard</ButtonLink>
               <Button onClick={onClose}>Done</Button>

@@ -6,6 +6,7 @@ import Link from "next/link";
 import * as React from "react";
 import { data, type Person, type Profile, type ProfileFields } from "@/lib/data";
 import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/data/taxonomy";
+import { locationLabel } from "@/lib/profile/location";
 import { asset } from "@/lib/site";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { pinnedCredits } from "@/lib/profile/validate";
@@ -48,7 +49,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
   // The owner view already has the person's name as its page title.
   const Name = mode === "owner" ? "h2" : "h1";
   const rate = f.rate ? `$${f.rate}/${basisShort[f.basis]}` : null;
-  const where = f.market === "la" ? `${f.areas.join(" · ") || "Los Angeles"}, Los Angeles area` : f.otherCity;
+  const where = locationLabel(f);
   const sections = [["overview", "Overview"], ["services", "Services"], ...(portfolio.length ? [["portfolio", "Portfolio"]] : []), ["experience", "Experience"], ["faqs", "FAQs"]] as [string, string][];
 
   // Scrollspy: the tab for the section in view lights up.
@@ -64,10 +65,10 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
   const jump = (id: string) => root.current?.querySelector(`[data-section="${id}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   // Live, the public page reads only what Company OS's public_reader may see: no ZIP, home city or insurance answer.
-  // Those rows are left out rather than shown empty or as the questionnaire's default.
+  // The insurance row is left out rather than shown as the questionnaire's default; the city falls back in locationLabel.
   const unseen = mode === "public" && data.kind === "live";
   const glance: [string, React.ReactNode, string?][] = [
-    ...(where || !unseen ? [["Location", where, f.zip ? `Based near ${f.zip}` : undefined] as [string, React.ReactNode, string?]] : []),
+    ["Location", where, f.zip ? `Based near ${f.zip}` : undefined],
     ["Rate", rate ? <>From <b className="text-ink">{rate}</b></> : "Discussed per project", "Project scope agreed together"],
     ["Availability", monthStatusLabel[f.monthStatus], [f.month, f.dates].filter(Boolean).join(" · ")],
     ["Travel & work mode", modeLabel[f.mode], f.travel || undefined],
