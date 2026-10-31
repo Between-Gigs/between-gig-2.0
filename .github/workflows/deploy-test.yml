@@ -1,0 +1,159 @@
+# Deploy the Between Gigs 2.0 server to the `test` environment of Railway project "Between Gigs OS": the `web`
+# service, next to Company OS's `api` (decision N-03; Company OS runbook customer-environments.md §6b, §8 step 3).
+#
+#   "Run workflow" button (any branch) ─► checks ─► build with test's settings + bundle ─► infra + settings + deploy
+#
+# By hand only: GitHub -> Actions -> "Deploy web (test)" -> Run workflow -> pick the branch.
+# Company OS must have deployed its `api` to Between Gigs' test environment first: this service's variables
+# reference it.
+#
+# Needs a GitHub Environment named `test` with (docs/handoff/companyos-deploy.md):
+#   secrets    RAILWAY_TOKEN            project token of "Between Gigs OS", environment `test`
+#              CLERK_SECRET_KEY         the Clerk development instance's secret key (sk_test_…), the same instance
+#                                       Between Gigs' test `api` verifies
+#              COMPANY_OS_READ_TOKEN    the test tenant's read service identity (cos_svc_…, role public_reader)
+#              COMPANY_OS_SUBMIT_TOKEN  the test tenant's submit identity (cos_svc_…, role form_submitter, mode submit)
+#   variables  CLERK_PUBLISHABLE_KEY    its publishable key (pk_test_…), built into the pages
+#              RAILWAY_PROJECT_NAME     "Between Gigs OS" (a label; the token picks the project)
+#              RAILWAY_REGION           optional: the api's region, us-east4-eqdc4a
+# Any branch may be deployed. To narrow who can, set "Deployment branches" on the `test` environment.
+name: Deploy web (test)
+run-name: Deploy web (test) ${{ github.ref_name }}
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web-test
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  RAILWAY_CLI_VERSION: 5.62.1
+  RAILWAY_SDK_VERSION: 3.11.0
+  RAILWAY_ENV: test
+  SERVICE: web
+
+jobs:
+  # The gate, with no environment and no secret: typecheck, lint, unit tests, the server build, its smoke check
+  # (live routes 200, internal ones 404, headers) and the client bundle scan.
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Company OS requirement (a placeholder only warns on test)
+        run: node scripts/check-company-os.mjs --allow-todo
+      - run: pnpm typecheck && pnpm lint && pnpm lint:values && pnpm test
+      - name: Server build (no internal routes) and its checks
+        run: pnpm build:server && pnpm check:server
+
+  deploy:
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Check the configuration BEFORE any build, infra, variable or service mutation.
+      - name: Require test configuration
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
+          COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
+          COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
+          BG_RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT_NAME }}
+        run: |
+          case "$CLERK_SECRET_KEY" in sk_test_?*) ;; *) echo "::error::test requires a Clerk TEST secret key (sk_test_…) in the test environment's secrets"; exit 1 ;; esac
+          case "$CLERK_PUBLISHABLE_KEY" in pk_test_?*) ;; *) echo "::error::test requires a Clerk TEST publishable key (pk_test_…) in the test environment's variables"; exit 1 ;; esac
+          case "$COMPANY_OS_READ_TOKEN" in cos_svc_?*) ;; *) echo "::error::Set the test environment's secret COMPANY_OS_READ_TOKEN (a cos_svc_… read identity)"; exit 1 ;; esac
+          case "$COMPANY_OS_SUBMIT_TOKEN" in cos_svc_?*) ;; *) echo "::error::Set the test environment's secret COMPANY_OS_SUBMIT_TOKEN (a cos_svc_… submit identity)"; exit 1 ;; esac
+          if [ "$COMPANY_OS_READ_TOKEN" = "$COMPANY_OS_SUBMIT_TOKEN" ]; then echo "::error::COMPANY_OS_READ_TOKEN and COMPANY_OS_SUBMIT_TOKEN must be two different identities"; exit 1; fi
+          if [ -z "$BG_RAILWAY_PROJECT" ]; then echo "::error::Set the test environment's variable RAILWAY_PROJECT_NAME"; exit 1; fi
+
+      # The deployed build: this environment's public settings are built into the pages. No secret in this step.
+      - name: Server build with test's settings
+        env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_DATA_SOURCE: api
+        run: pnpm build:server && node scripts/check-server.mjs
+
+      # The bundle that is uploaded, scanned with this environment's real secret values set: it must contain none.
+      - name: Bundle (no secret of this environment in it)
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
+          COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: node scripts/make-bundle.mjs "$RUNNER_TEMP/web"
+
+      # The IaC file imports the `railway` SDK: installed next to it (pinned here, not in package.json).
+      - run: npm install --no-save --prefix .railway "railway@${RAILWAY_SDK_VERSION}"
+      - name: Install the Railway CLI
+        run: npm install -g "@railway/cli@${RAILWAY_CLI_VERSION}"
+
+      - name: Infra plan
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          BG_RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT_NAME }}
+          BG_RAILWAY_REGION: ${{ vars.RAILWAY_REGION }}
+        run: |
+          {
+            echo "### Railway infra plan (${RAILWAY_ENV})"
+            echo '```'
+            railway config plan
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Apply infra
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          BG_RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT_NAME }}
+          BG_RAILWAY_REGION: ${{ vars.RAILWAY_REGION }}
+        run: railway config apply --yes
+
+      # The IaC declares these as preserve(); the values go in over stdin, without a redeploy.
+      # APP_URL is this service's own Railway-generated domain (created here if it has none yet).
+      - name: Sync secrets and settings
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
+          COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
+        run: |
+          set_var() { printf '%s' "$2" | railway variable set "$1" --stdin --service "$SERVICE" --environment "$RAILWAY_ENV" --skip-deploys; }
+          out=$(railway domain --service "$SERVICE" --environment "$RAILWAY_ENV" 2>&1) || true
+          url=$(printf '%s' "$out" | grep -oE 'https://[a-zA-Z0-9.-]+\.up\.railway\.app' | head -1)
+          if [ -z "$url" ]; then echo "::error::Could not determine the test web service's public URL"; exit 1; fi
+          set_var APP_URL "$url"
+          for name in CLERK_SECRET_KEY COMPANY_OS_READ_TOKEN COMPANY_OS_SUBMIT_TOKEN; do set_var "$name" "${!name}"; done
+          echo "APP_URL=$url" >> "$GITHUB_ENV"
+
+      # Uploads the checked bundle only (not the checkout).
+      - name: Deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up "$RUNNER_TEMP/web" --path-as-root --no-gitignore --ci --service "$SERVICE" --environment "$RAILWAY_ENV" --message "test ${GITHUB_SHA::12}"
+
+      - name: Summary
+        run: |
+          {
+            echo "### Site: ${APP_URL} (branch ${GITHUB_REF_NAME}, ${GITHUB_SHA::12})"
+            echo ""
+            echo "First deploy: put this address in Company OS's \`test-between-gigs\` APP_URL and run its Deploy API (test) again, so the API accepts this origin."
+          } >> "$GITHUB_STEP_SUMMARY"
