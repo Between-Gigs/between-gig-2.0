@@ -53,6 +53,11 @@ export interface DataSource {
     /** Freezes the draft as the profile, sets status submitted, queues the confirmation email. */
     submit(personId: string): Promise<{ person: Person; profile: Profile }>;
     getProfile(personId: string): Promise<Profile | null>;
+    /**
+     * The builder's photo step: stores the image and returns what goes in `fields.photo` (a data URL in the sample;
+     * live, the photo is uploaded to the person's profile at once and this is its /media link).
+     */
+    uploadPhoto?(personId: string, file: Blob): Promise<string>;
   };
 
   emails: {
@@ -83,10 +88,11 @@ export interface DataSource {
     /** submitted → changes_requested, with one short note per section. Queues the "changes-requested" email. */
     requestChanges(personId: string, notes: ReviewNoteInput[]): Promise<Person>;
     /**
-     * Undoes the last approve or request-changes on this person, right after it (the Undo toast): back to
-     * submitted, notes cleared, the decision's activity line and its still-queued email withdrawn.
+     * Sample only. Undoes the last approve or request-changes on this person, right after it: back to submitted,
+     * notes cleared, the decision's activity line and its still-queued email withdrawn. Live, the review toast holds
+     * the decision for a few seconds instead, and Undo cancels it before anything is sent (decision N-10).
      */
-    undoReview(personId: string): Promise<Person>;
+    undoReview?(personId: string): Promise<Person>;
     waitlist(query?: WaitlistQuery): Promise<WaitlistRow[]>;
     /** Invites waitlist sign-ups: creates the person and invite, queues the invite email. Skips anyone already invited. */
     invite(signupIds: string[]): Promise<{ invited: number; skipped: number }>;

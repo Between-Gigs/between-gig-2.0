@@ -13,6 +13,7 @@ import { FunnelCompact } from "./Funnel";
 import { Meter, OwnerPage, Panel, PanelLink, Row, RowSkeletons, StatTab, useFitList } from "./kit";
 import { OwnerGate } from "./OwnerGate";
 import { OwnerShell } from "./OwnerShell";
+import { isHeld } from "./hold";
 import { PersonDrawer } from "./PersonDrawer";
 
 const greeting = () => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
@@ -36,7 +37,7 @@ const PHONE_ROWS = 5;
 /** A funnel selection narrows the same current-status list to its invited cohort. */
 function rowsFor(view: View, summary: DashboardSummary, all: PersonSummary[], invitedOnly = false) {
   const statuses = views[view].statuses;
-  const rows = view === "submitted" ? summary.reviewQueue : statuses ? all.filter((r) => statuses.includes(r.person.status)) : [];
+  const rows = view === "submitted" ? summary.reviewQueue.filter((r) => !isHeld(r.person.id)) : statuses ? all.filter((r) => statuses.includes(r.person.status)) : [];
   const invited = new Set(summary.invitedPersonIds);
   return invitedOnly ? rows.filter((r) => invited.has(r.person.id)) : rows;
 }
