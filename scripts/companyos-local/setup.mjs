@@ -58,7 +58,7 @@ const reader = await identity("public_reader");
 const submitter = await identity("form_submitter", "submit");
 writeFileSync(".env.companyos.local", [
   "# Written by scripts/companyos-local/setup.mjs for a LOCAL Company OS with a made-up tenant. Never commit.",
-  `COMPANY_OS_URL=${API}`, `COMPANY_OS_TENANT=${SLUG}`, `COMPANY_OS_READER_TOKEN=${reader}`, `COMPANY_OS_SUBMITTER_TOKEN=${submitter}`,
-  `APP_URL=${APP_URL}`, "NEXT_PUBLIC_DATA_SOURCE=companyos", `CONTRACT_OWNER_EMAIL=${OWNER}`, "",
+  `COMPANY_OS_URL=${API}`, `COMPANY_OS_TENANT=${SLUG}`, `COMPANY_OS_READ_TOKEN=${reader}`, `COMPANY_OS_SUBMIT_TOKEN=${submitter}`,
+  `APP_URL=${APP_URL}`, "NEXT_PUBLIC_DATA_SOURCE=api", `CONTRACT_OWNER_EMAIL=${OWNER}`, "",
 ].join("\n"));
 console.log("wrote .env.companyos.local (service identity tokens; git-ignored)");

@@ -10,15 +10,16 @@ and in the server build (Railway).
 
 | File | What it does |
 | --- | --- |
-| `lib/data/api.ts` | The live DataSource: a POST per method to 2.0's own `/api/<group>/<method>`, with the Clerk session token. Picked by `NEXT_PUBLIC_DATA_SOURCE=companyos` (`lib/data/index.ts`). |
+| `lib/data/api.ts` | The live DataSource: a POST per method to 2.0's own `/api/<group>/<method>`, with the Clerk session token. Picked by `NEXT_PUBLIC_DATA_SOURCE=api` (`lib/data/index.ts`). |
 | `lib/server/routes.ts` | The routes' table: each method's credential (session, owner, public reader, submit-only), the honeypot and per-IP limit on public forms, refusals passed through. `app/api/**/route.server.ts` are one line each. |
 | `lib/server/gigs.ts` | Each method in Company OS calls, and Company OS records as 2.0's types. |
 | `lib/server/companyos.ts` | The Company OS client. Server only. |
 | `lib/server/media.ts`, `app/media/[id]/route.server.ts` | Photos, streamed from Company OS's short-lived links. |
 | `lib/data/contract/*` | The DataSource contract suite: `pnpm test` (sample), `pnpm test:live` (local Company OS). |
 
-Server environment (never `NEXT_PUBLIC_`): `COMPANY_OS_URL`, `COMPANY_OS_TENANT` (`between-gigs`),
-`COMPANY_OS_READER_TOKEN` (public_reader), `COMPANY_OS_SUBMITTER_TOKEN` (form_submitter, submit mode), `APP_URL`.
+Server environment (never `NEXT_PUBLIC_`; the deploy sets them, docs/handoff/companyos-deploy.md): `COMPANY_OS_URL`,
+`COMPANY_OS_TENANT` (`between-gigs-dev` on test, `between-gigs` in production), `COMPANY_OS_READ_TOKEN` (public_reader),
+`COMPANY_OS_SUBMIT_TOKEN` (form_submitter, submit mode), `APP_URL`, `CLERK_SECRET_KEY` (see clerk.md).
 
 ## Running it against a local Company OS
 

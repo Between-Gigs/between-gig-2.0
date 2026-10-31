@@ -22,8 +22,8 @@ export function configFromEnv(env: Record<string, string | undefined> = process.
   return {
     url: url.replace(/\/+$/, ""),
     tenant: env.COMPANY_OS_TENANT || "between-gigs",
-    readerToken: env.COMPANY_OS_READER_TOKEN ?? "",
-    submitterToken: env.COMPANY_OS_SUBMITTER_TOKEN ?? "",
+    readerToken: env.COMPANY_OS_READ_TOKEN ?? "",
+    submitterToken: env.COMPANY_OS_SUBMIT_TOKEN ?? "",
   };
 }
 
