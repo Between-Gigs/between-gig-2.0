@@ -96,7 +96,7 @@ export interface DataSource {
     undoReview?(personId: string): Promise<Person>;
     waitlist(query?: WaitlistQuery): Promise<WaitlistRow[]>;
     /** Invites waitlist sign-ups: creates the person and invite, queues the invite email. Skips anyone already invited. */
-    invite(signupIds: string[]): Promise<{ invited: number; skipped: number }>;
+    invite(signupIds: string[]): Promise<{ invited: number; skipped: number; /** Live: invitations that failed (none were sent). */ failed?: number }>;
   };
 
   /** Sample-only controls for the Preview guide and QA. The live implementation omits them. */

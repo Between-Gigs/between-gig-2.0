@@ -38,9 +38,19 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
   const listeners = new Set<() => void>();
   const changed = () => { sessionCache = null; for (const l of listeners) l(); };
   let sessionCache: { at: number; value: ReturnType<DataSource["auth"]["session"]> } | null = null;
+  // The last token, for a call that must leave at once (a held decision sent as the page closes).
+  let lastToken: string | null = null;
+  // Autosaves and uploads for one person go one after another, so two can't both create the profile.
+  const queues = new Map<string, Promise<unknown>>();
+  const inOrder = <T,>(personId: string, run: () => Promise<T>): Promise<T> => {
+    const next = (queues.get(personId) ?? Promise.resolve()).catch(() => undefined).then(run);
+    queues.set(personId, next);
+    return next;
+  };
 
   async function send(path: string, init: RequestInit): Promise<unknown> {
-    const token = await getToken().catch(() => null);
+    const token = init.keepalive && lastToken ? lastToken : await getToken().catch(() => null);
+    lastToken = token;
     const res = await doFetch(`${base}/api/${path}`, { ...init, headers: { ...(init.headers as Record<string, string>), ...(token ? { authorization: `Bearer ${token}` } : {}) } });
     const body = (await res.json().catch(() => ({}))) as { result?: unknown; error?: string; message?: string };
     if (!res.ok) throw new DataError(res.status, body.error ?? "error", body.message);
@@ -54,7 +64,7 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
 
   return {
     kind: "live",
-    setTokenProvider(get) { getToken = get; changed(); },
+    setTokenProvider(get) { getToken = get; lastToken = null; changed(); },
 
     people: {
       list: (query) => call("people.list", [query ?? {}]),
@@ -80,7 +90,7 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
         sessionCache = { at: Date.now(), value: Promise.resolve(r.ok ? r.session : null) };
         return r;
       },
-      async signOut() { changed(); },
+      async signOut() { lastToken = null; changed(); },
       onChange(listener) { listeners.add(listener); return () => void listeners.delete(listener); },
     },
 
@@ -88,12 +98,12 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
       getDraft: async (personId) => withStep(await call<ProfileDraft | null>("profiles.getDraft", [personId])),
       async saveDraft(personId, fields: ProfileFields, step) {
         try { storage.setItem(stepKey(personId), String(step)); } catch { /* storage blocked: the builder starts at step 1 */ }
-        return (await withStep(await call<ProfileDraft>("profiles.saveDraft", [personId, fields])))!;
+        return withStep(await inOrder(personId, () => call<ProfileDraft>("profiles.saveDraft", [personId, fields])))!;
       },
       submit: (personId) => call("profiles.submit", [personId]),
       getProfile: (personId) => call("profiles.getProfile", [personId]),
-      uploadPhoto: (personId, file) =>
-        send(`profiles/uploadPhoto?personId=${encodeURIComponent(personId)}`, { method: "POST", headers: { "content-type": file.type || "image/jpeg" }, body: file }) as Promise<string>,
+      uploadPhoto: (personId, file) => inOrder(personId, () =>
+        send(`profiles/uploadPhoto?personId=${encodeURIComponent(personId)}`, { method: "POST", headers: { "content-type": file.type || "image/jpeg" }, body: file }) as Promise<string>),
     },
 
     emails: {

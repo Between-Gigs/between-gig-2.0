@@ -39,7 +39,7 @@ function fake(respond: Responder = () => undefined, { superAdmin = true } = {}) 
 const req = (body: unknown, { token = SESSION as string | null, ip = "203.0.113.7", type = "application/json" } = {}) =>
   new Request("http://localhost:3000/api/x", {
     method: "POST",
-    headers: { "content-type": type, "x-forwarded-for": `${ip}, 10.0.0.1`, ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    headers: { "content-type": type, "x-forwarded-for": `10.0.0.1, ${ip}`, ...(token ? { authorization: `Bearer ${token}` } : {}) },
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
 
@@ -283,5 +283,60 @@ describe("the questionnaire as sent", () => {
     expect(f).toMatchObject({ name: "Ana", years: "", skills: ["Props"], creditPins: [false, true], market: "la" });
     expect(f.about).toHaveLength(4000);
     expect(f).not.toHaveProperty("extra");
+  });
+});
+
+describe("review fixes", () => {
+  it("the rate limit keys on the address the proxy set, not one the caller made up", async () => {
+    const { clientIp } = await import("./routes");
+    const r = (h: Record<string, string>) => new Request("http://localhost/api/x", { headers: h });
+    expect(clientIp(r({ "x-real-ip": "203.0.113.9", "x-forwarded-for": "1.2.3.4" }))).toBe("203.0.113.9");
+    expect(clientIp(r({ "x-forwarded-for": "1.2.3.4, 203.0.113.9" }))).toBe("203.0.113.9");
+    const args = [{ email: "a@example.org", zip: "90026", placement: "hero" }];
+    const f = fake();
+    for (let i = 0; i <= FUNNEL_LIMIT.max; i++) {
+      const res = await handle("funnel.joinWaitlist", new Request("http://localhost/api/x", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": `10.9.${i}.1, 198.51.100.77` }, body: JSON.stringify({ args }) }), { cos: f.cos });
+      expect(res.status).toBe(i < FUNNEL_LIMIT.max ? 200 : 429);
+    }
+  });
+
+  it("a body without a length is still cut off at the limit (no reading hundreds of MB)", async () => {
+    const big = new ReadableStream({ start(c) { for (let i = 0; i < 40; i++) c.enqueue(new Uint8Array(512 * 1024)); c.close(); } });
+    const f = fake();
+    const res = await handleUpload(new Request(`http://localhost/api/profiles/uploadPhoto?personId=${PERSON}`, { method: "POST", headers: { "content-type": "image/jpeg", authorization: `Bearer ${SESSION}` }, body: big, duplex: "half" } as RequestInit), { cos: f.cos });
+    expect(res.status).toBe(413);
+    expect(f.calls).toEqual([]);
+    const json = new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode(`{"args":["${"x".repeat(300_000)}"]}`)); c.close(); } });
+    expect((await handle("funnel.joinWaitlist", new Request("http://localhost/api/x", { method: "POST", headers: { "content-type": "application/json" }, body: json, duplex: "half" } as RequestInit), { cos: f.cos })).status).toBe(413);
+  });
+
+  it("invites carry on item by item: a failed invitation is counted, its sign-up isn't marked as invited, the rest go out", async () => {
+    const subs = ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"];
+    const f = fake((c) => {
+      const body = c.body as { entity?: string; filter?: { and?: { value: string }[]; value?: string } } | undefined;
+      if (c.path === "/query" && body?.entity === "form_submission") {
+        const id = body.filter?.and?.[0]?.value;
+        return { body: { data: [{ id, data: { email: id === subs[0] ? "fail@example.org" : "ok@example.org", form_key: "call_sheet" }, createdAt: "", updatedAt: "" }] } };
+      }
+      if (c.path === "/api/person") return { status: 201, body: { data: { id: (c.body as { email: string }).email === "fail@example.org" ? "p-fail" : "p-ok", data: {}, createdAt: "", updatedAt: "" } } };
+      if (c.path === "/invitations") return (c.body as { email: string }).email === "fail@example.org" ? { status: 502, body: { error: "invitation_failed" } } : { status: 201, body: { url: "http://localhost:3000/join/?__clerk_ticket=t" } };
+      return undefined;
+    });
+    const { body, calls } = await call("owners.invite", [subs], undefined, f);
+    expect(body.result).toEqual({ invited: 1, skipped: 0, failed: 1 });
+    const linked = calls.filter((c) => c.method === "PATCH").map((c) => c.path);
+    expect(linked).toEqual([`/api/form_submission/${subs[1]}`]);
+    expect(calls.filter((c) => c.path === "/api/comms_log")).toHaveLength(1);
+  });
+
+  it("no invites without the site's address to send people back to", async () => {
+    const f = fake();
+    const res = await handle("owners.invite", req({ args: [["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]] }), { cos: f.cos, appUrl: "" });
+    expect(res.status).toBe(503);
+  });
+
+  it("a waitlist category outside the list isn't stored", async () => {
+    const { calls } = await call("funnel.joinWaitlist", [{ email: "c@example.org", zip: "90026", category: "<b>junk</b>", placement: "hero" }], { token: null });
+    expect(calls[0]!.body).toEqual({ email: "c@example.org", answers: { zip: "90026" } });
   });
 });

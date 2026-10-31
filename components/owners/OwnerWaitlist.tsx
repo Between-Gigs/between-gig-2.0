@@ -73,6 +73,7 @@ function Waitlist() {
     try {
       const r = await data.owners.invite(selected);
       toast({ message: `${invites(r.invited)} queued${r.skipped ? ` · ${r.skipped} already invited` : ""}`, tone: "success" });
+      if (r.failed) toast({ message: `${invites(r.failed)} couldn't be sent. They're still ready to invite; try again.`, tone: "danger" });
       setSelected([]);
       setConfirm(false);
       await refresh(query);

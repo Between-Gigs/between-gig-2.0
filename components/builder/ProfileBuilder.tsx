@@ -220,7 +220,7 @@ function Builder({ personId }: { personId: string }) {
 
                   {step === 0 && (
                     <div className="grid gap-5">
-                      <PhotoPicker id="f-photo" value={d.photo} name={d.name} onChange={set("photo")} error={err("photo")} />
+                      <PhotoPicker id="f-photo" value={d.photo} name={d.name} onChange={set("photo")} error={err("photo")} personId={personId} confirm={(go) => live.guard("photo", go)} />
                       <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
                         <Field label="Full name" error={err("name")}><Input id="f-name" autoComplete="name" value={d.name} onChange={(e) => set("name")(e.target.value)} /></Field>
                         <Field label="Years in the business" error={err("years")}><Input id="f-years" inputMode="numeric" value={d.years} placeholder="e.g. 6" onChange={(e) => set("years")(e.target.value.replace(/\D/g, "").slice(0, 2))} /></Field>

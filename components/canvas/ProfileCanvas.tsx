@@ -357,7 +357,7 @@ function Canvas({ personId }: { personId: string }) {
                 </ul>
               </Banner>
             )}
-            <EditView d={d} set={set} personId={personId} />
+            <EditView d={d} set={set} personId={personId} confirm={(go) => live.guard("photo", go)} />
           </CanvasCtx.Provider>
         )}
       </div>
@@ -432,7 +432,7 @@ function StageBar({ done, total, ready, missing, save, view, editing, sent, subm
 }
 
 /** The profile, laid out like the public page (ProfileView), with every part a spot. */
-function EditView({ d, set, personId }: { d: ProfileFields; set: <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K]) => void; personId: string }) {
+function EditView({ d, set, personId, confirm }: { d: ProfileFields; set: <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K]) => void; personId: string; confirm: (go: () => void) => void }) {
   const { open, next, editing, portrait, rise } = useCanvas();
   const rate = d.rate ? `$${d.rate}/${basisShort[d.basis]}` : null;
   const where = d.market === "la" ? (d.areas.length ? `${d.areas.join(" · ")}, Los Angeles area` : "") : d.otherCity;
@@ -450,7 +450,7 @@ function EditView({ d, set, personId }: { d: ProfileFields; set: <K extends keyo
               <PersonPhoto id={personId} name={d.name} fallback="brand" department={d.position} skills={d.skills} alt="" className="size-full" />
               <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 bg-surface-brand/80 p-3 text-label-md text-ink-on-brand backdrop-blur-sm"><Plus className="size-4" aria-hidden="true" />Add your photo</span>
             </span>}
-            editor={<PhotoEditor d={d} onChange={set("photo")} />}>
+            editor={<PhotoEditor d={d} personId={personId} onChange={set("photo")} confirm={confirm} />}>
             <span className="relative block">
               <PersonPhoto id={personId} name={d.name} src={d.photo} alt="" className="aspect-square w-full rounded-2xl shadow-lg ring-1 ring-line" />
               <Badge tone={d.monthStatus === "available" ? "success" : d.monthStatus === "limited" ? "info" : "neutral"} className="absolute top-3 left-3 shadow-sm">{monthStatusLabel[d.monthStatus]}</Badge>
@@ -698,10 +698,10 @@ function Spot({ id, children, empty, editor, inline = false, className, round = 
 const SAMPLE_PORTRAITS = ["img/people/priya.jpg", "img/people/sam.jpg", "img/people/morgan.jpg"];
 
 /** The photo picker, plus (in the sample only) a few fictional portraits, so a walkthrough isn't stuck without one. */
-function PhotoEditor({ d, onChange }: { d: ProfileFields; onChange: (v: string) => void }) {
+function PhotoEditor({ d, personId, onChange, confirm }: { d: ProfileFields; personId: string; onChange: (v: string) => void; confirm: (go: () => void) => void }) {
   return (
     <div className="grid gap-4">
-      <PhotoPicker id="f-photo" value={d.photo} name={d.name} onChange={onChange} />
+      <PhotoPicker id="f-photo" value={d.photo} name={d.name} onChange={onChange} personId={personId} confirm={confirm} />
       {data.demo && (
         <div className="grid gap-2">
           <p className="text-body-sm text-ink-muted">No photo to hand? Try a sample portrait. They're fictional, for this preview only.</p>

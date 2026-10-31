@@ -24,8 +24,10 @@ export async function holdDecision(personId: string, send: () => Promise<unknown
     await send();
     return { cancel: () => undo(personId).then(() => true, () => false) };
   }
+  // One decision per person at a time: a second one while the first is held is refused, as a sent one would be.
+  if (pending.has(personId)) throw new Error("a decision on this person is already waiting");
   const fire = () => {
-    pending.delete(personId);
+    if (pending.get(personId)?.fire === fire) pending.delete(personId);
     send().then(() => onSent?.(), onError);
   };
   pending.set(personId, { timer: setTimeout(fire, HOLD_MS), fire });

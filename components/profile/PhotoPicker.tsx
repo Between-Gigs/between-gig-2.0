@@ -119,7 +119,13 @@ function PhotoCropper({ src, onCancel, onSave }: { src: string; onCancel: () => 
  * Profile photo: pick, preview, replace or remove. The cropped photo goes through profiles.uploadPhoto: live, it is
  * stored on the profile at once and the field keeps its /media link; the sample keeps a small data URL.
  */
-export function PhotoPicker({ value, name, onChange, error, id }: { value: string; name: string; onChange: (v: string) => void; error?: string; id: string }) {
+export function PhotoPicker({ value, name, onChange, error, id, personId: forPerson, confirm }: {
+  value: string; name: string; onChange: (v: string) => void; error?: string; id: string;
+  /** Whose profile the photo is for (else the signed-in person). */
+  personId?: string;
+  /** Runs `go` once a change is allowed (the live-edit warning on an approved profile), before anything is uploaded. */
+  confirm?: (go: () => void) => void;
+}) {
   const input = React.useRef<HTMLInputElement>(null);
   const [problem, setProblem] = React.useState<string>();
   // The photo being cropped: a new upload, or the current photo to re-crop.
@@ -127,7 +133,9 @@ export function PhotoPicker({ value, name, onChange, error, id }: { value: strin
   const { session } = useSession();
   const use = async (photo: Blob | string) => {
     try {
-      const personId = session?.personId;
+      const personId = forPerson ?? session?.personId;
+      // Live, a photo is only kept once uploaded to the person's profile: never fall back to a data URL there.
+      if (typeof photo !== "string" && data.kind === "live" && !personId) throw new Error("no profile to upload to");
       onChange(typeof photo === "string" ? photo : personId && data.profiles.uploadPhoto ? await data.profiles.uploadPhoto(personId, photo) : await dataUrl(photo));
       setCropping(null);
     } catch { setProblem("We couldn't upload that photo. Try again."); setCropping(null); }
@@ -136,7 +144,8 @@ export function PhotoPicker({ value, name, onChange, error, id }: { value: strin
     if (!file) return;
     if (!file.type.startsWith("image/")) { setProblem("Choose an image file: JPG, PNG or HEIC."); return; }
     if (file.size > 15 * 1024 * 1024) { setProblem("That photo is over 15 MB. Choose a smaller one."); return; }
-    try { setProblem(undefined); setCropping(await readFile(file)); } catch { setProblem("We couldn't read that photo. Try another one."); }
+    const start = async () => { try { setProblem(undefined); setCropping(await readFile(file)); } catch { setProblem("We couldn't read that photo. Try another one."); } };
+    if (confirm) confirm(() => void start()); else await start();
   };
   const message = problem ?? error;
   return (
@@ -154,7 +163,7 @@ export function PhotoPicker({ value, name, onChange, error, id }: { value: strin
           <Button size="sm" variant="secondary" iconStart={<ImagePlus />} aria-describedby={message ? `${id}-error` : undefined} onClick={() => input.current?.click()}>
             {value ? "Replace photo" : "Upload a photo"}
           </Button>
-          {value && <Button size="sm" variant="ghost" iconStart={<CropIcon />} onClick={() => setCropping(value)}>Crop</Button>}
+          {value && <Button size="sm" variant="ghost" iconStart={<CropIcon />} onClick={() => (confirm ? confirm(() => setCropping(value)) : setCropping(value))}>Crop</Button>}
           {value && <Button size="sm" variant="ghost" iconStart={<Trash2 />} onClick={() => onChange("")}>Remove</Button>}
         </div>
       </div>

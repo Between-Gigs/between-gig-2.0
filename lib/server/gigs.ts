@@ -14,6 +14,7 @@ import type {
   WaitlistResult, WaitlistRow, WaitlistSignup,
 } from "@/lib/data/types";
 import { blankFields } from "@/lib/data/seed";
+import { waitlistCategories } from "@/lib/data/taxonomy";
 import { CompanyOsError, and, eq, type AdminUser, type BatchOp, type CompanyOs, type Credential, type Row } from "./companyos";
 
 export interface Ctx {
@@ -296,8 +297,14 @@ export function draftOps(personId: string, fields: ProfileFields, existing: { pr
   }
   const id = existing.profile.id;
   const old = existing.profile.data;
+  // Compared with the stored profile as 2.0 reads it: a value 2.0 shows as its nearest (work mode "remote" as on site)
+  // goes back only if the person changed that answer, so no stored value is lost and no edit is made by accident.
+  const shown = toProfile(fromProfile(old, itemsOf(existing.items), fields.photo)).data;
   const changed: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(data)) if (JSON.stringify(old[k] ?? "") !== JSON.stringify(v)) changed[k] = v;
+  for (const [k, v] of Object.entries(data)) {
+    const unset = old[k] == null || old[k] === "";
+    if (JSON.stringify(old[k] ?? "") !== JSON.stringify(v) && (unset || JSON.stringify(shown[k] ?? "") !== JSON.stringify(v))) changed[k] = v;
+  }
   // A cleared number or month isn't in toProfile's output: clear it.
   for (const k of ["years_experience", "availability_month"]) if (!(k in data) && old[k] != null && old[k] !== "") changed[k] = null;
   const ops: BatchOp[] = Object.keys(changed).length ? [{ op: "update", entity: "profile", id, data: changed }] : [];
@@ -328,8 +335,8 @@ export async function saveDraft(ctx: Ctx, personId: string, fields: ProfileField
     // The first batch creates the profile when there is none; later chunks only touch items (rare: over 200 changes).
     await ctx.cos.batch(ctx.cred, ops.slice(i, i + 200));
   }
-  // Removing the photo deletes it (Company OS refuses if that would leave a submitted profile without one).
-  if (!fields.photo && own.photo) await ctx.cos.remove(ctx.cred, "file", own.photo.id);
+  // Removing the photo deletes it, on a draft only: a submitted or live profile needs one, so it's replaced by uploading.
+  if (!fields.photo && own.photo && own.profile?.data.status === "draft") await ctx.cos.remove(ctx.cred, "file", own.photo.id);
   const after = await ownProfile(ctx, personId);
   return { personId, fields: after.profile ? fieldsFrom(after) : fields, step: 0, savedAt: after.profile ? iso(after.profile.updatedAt) : nowIso() };
 }
@@ -372,6 +379,8 @@ export async function uploadPhoto(ctx: Ctx, personId: string, bytes: Uint8Array,
 /* ----------------------------------------------------------------- funnel ----------------------------------------------------------------- */
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** A call-sheet category from the list (lib/data/taxonomy.ts), else nothing. */
+const category = (v: string | undefined) => (waitlistCategories.some(([id]) => id === v) ? v : undefined);
 const clean = (o: Record<string, string | undefined>) => Object.fromEntries(Object.entries(o).filter(([, v]) => v && v.trim()).map(([k, v]) => [k, v!.trim()]));
 
 /** "Get on the call sheet". One per email (ADR 0042): a repeat merges and says "already joined". The signup's id is its email. */
@@ -381,7 +390,7 @@ export async function joinWaitlist(ctx: Ctx, input: { email: string; zip: string
   if (!/^\d{5}$/.test(input.zip)) return { ok: false, error: "zip" };
   let outcome: "created" | "merged";
   try {
-    ({ outcome } = await ctx.cos.submitForm("call_sheet", { email, answers: clean({ zip: input.zip, category: input.category }) }));
+    ({ outcome } = await ctx.cos.submitForm("call_sheet", { email, answers: clean({ zip: input.zip, category: category(input.category) }) }));
   } catch (e) {
     if (e instanceof CompanyOsError && e.code === "invalid_email") return { ok: false, error: "email" };
     throw e;
@@ -389,15 +398,15 @@ export async function joinWaitlist(ctx: Ctx, input: { email: string; zip: string
   // Where the first sign-up came from stays (a merge would overwrite it): the placement goes only with a new sign-up.
   const placement = input.placement.trim().slice(0, 60);
   if (outcome === "created" && placement) await ctx.cos.submitForm("call_sheet", { email, placement });
-  const signup: WaitlistSignup = { id: email, email, zip: input.zip, category: input.category ?? "", details: "", placement: input.placement, createdAt: nowIso() };
+  const signup: WaitlistSignup = { id: email, email, zip: input.zip, category: category(input.category) ?? "", details: "", placement: input.placement, createdAt: nowIso() };
   return { ok: true, signup, alreadyJoined: outcome === "merged" };
 }
 
 export async function addDetails(ctx: Ctx, signupId: string, input: { category: string; details: string }): Promise<WaitlistSignup> {
   const email = signupId.trim().toLowerCase();
   if (!EMAIL.test(email)) throw new CompanyOsError(422, "invalid_email");
-  await ctx.cos.submitForm("call_sheet", { email, answers: clean({ category: input.category, details: input.details.slice(0, 2000) }) });
-  return { id: email, email, zip: "", category: input.category, details: input.details.trim(), placement: "", createdAt: nowIso() };
+  await ctx.cos.submitForm("call_sheet", { email, answers: clean({ category: category(input.category), details: input.details.slice(0, 2000) }) });
+  return { id: email, email, zip: "", category: category(input.category) ?? "", details: input.details.trim(), placement: "", createdAt: nowIso() };
 }
 
 const SKETCH_ANSWERS: Record<SketchKind, string[]> = {
@@ -465,26 +474,36 @@ export async function waitlist(ctx: Ctx, query: WaitlistQuery = {}) {
 /** Each sign-up in turn (R-14): a person from the submission, the link, the invitation, the invite email sent by hand. */
 export async function invite(ctx: Ctx, signupIds: string[]) {
   await requireOwner(ctx);
-  let invited = 0, skipped = 0;
+  if (!/^https?:\/\//.test(ctx.appUrl)) throw new CompanyOsError(503, "app_url_not_configured");
+  let invited = 0, skipped = 0, failed = 0;
   for (const id of [...new Set(signupIds)].slice(0, 200)) {
     const [sub] = /^[0-9a-f-]{36}$/i.test(id) ? await ctx.cos.query(ctx.cred, { entity: "form_submission", filter: and(eq("id", id), eq("form_key", "call_sheet")), limit: 1 }) : [];
     if (!sub || sub.data.person) { skipped++; continue; }
-    const email = str(sub.data.email);
-    // An address with a person already (another sign-up, an earlier import) reuses it.
-    const [existing] = await ctx.cos.query(ctx.cred, { entity: "person", filter: eq("email", email), limit: 1 });
-    const personId = existing?.id ?? (await ctx.cos.create(ctx.cred, "person", { name: email, email })).id;
-    await ctx.cos.patch(ctx.cred, "form_submission", sub.id, { person: personId });
-    let url: string;
+    // Item by item (R-14): one that fails is counted and the rest go on. The sign-up is linked to its person last, once
+    // the invitation and its email are out, so a failed one stays "not invited" and can be invited again.
     try {
-      ({ url } = await ctx.cos.invite(ctx.cred, { email, roleKey: "provider", personId, redirectUrl: `${ctx.appUrl}/join/` }));
+      const email = str(sub.data.email);
+      // An address with a person already (another sign-up, an earlier attempt) reuses it.
+      const [existing] = await ctx.cos.query(ctx.cred, { entity: "person", filter: eq("email", email), limit: 1 });
+      const personId = existing?.id ?? (await ctx.cos.create(ctx.cred, "person", { name: email, email })).id;
+      let url: string;
+      try {
+        ({ url } = await ctx.cos.invite(ctx.cred, { email, roleKey: "provider", personId, redirectUrl: `${ctx.appUrl}/join/` }));
+      } catch (e) {
+        if (!(e instanceof CompanyOsError && e.code === "already_signed_up")) throw e;
+        await ctx.cos.patch(ctx.cred, "form_submission", sub.id, { person: personId });
+        skipped++;
+        continue;
+      }
+      await ctx.cos.create(ctx.cred, "comms_log", { deliver: true, channel: "email", recipient: personId, message_key: "invite", vars: { invite_url: url } });
+      await ctx.cos.patch(ctx.cred, "form_submission", sub.id, { person: personId });
+      invited++;
     } catch (e) {
-      if (e instanceof CompanyOsError && e.code === "already_signed_up") { skipped++; continue; }
-      throw e;
+      if (!(e instanceof CompanyOsError)) throw e;
+      failed++;
     }
-    await ctx.cos.create(ctx.cred, "comms_log", { deliver: true, channel: "email", recipient: personId, message_key: "invite", vars: { invite_url: url } });
-    invited++;
   }
-  return { invited, skipped };
+  return { invited, skipped, ...(failed ? { failed } : {}) };
 }
 
 async function profileOf(ctx: Ctx, personId: string) {

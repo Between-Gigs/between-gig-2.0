@@ -104,9 +104,12 @@ const DECOY: Partial<Record<RouteName, (args: Args) => unknown>> = {
 export const FUNNEL_LIMIT = { max: 10, windowMs: 60_000 };
 const hits = new Map<string, number[]>();
 
-/** The caller's IP: the first X-Forwarded-For entry (Railway's proxy sets it), else X-Real-IP. */
+/**
+ * The caller's IP as the proxy saw it: X-Real-IP, which Railway's edge sets, else the last X-Forwarded-For entry (the
+ * one the proxy appended). The first entries are whatever the caller sent, so they never count.
+ */
 export function clientIp(req: Request) {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip")?.trim() || "unknown";
+  return req.headers.get("x-real-ip")?.trim() || req.headers.get("x-forwarded-for")?.split(",").pop()?.trim() || "unknown";
 }
 
 /** A sliding window per IP for the public forms. In memory: one server instance today (tech debt for more). */
@@ -114,8 +117,9 @@ export function rateLimited(ip: string, now = Date.now(), limit = FUNNEL_LIMIT) 
   const recent = (hits.get(ip) ?? []).filter((t) => now - t < limit.windowMs);
   if (recent.length >= limit.max) { hits.set(ip, recent); return true; }
   recent.push(now);
-  hits.set(ip, recent);
-  if (hits.size > 10_000) for (const [k, v] of hits) if (!v.some((t) => now - t < limit.windowMs)) hits.delete(k);
+  hits.delete(ip);
+  hits.set(ip, recent); // most recent last, so the oldest go first when the map is full
+  if (hits.size > 10_000) for (const k of [...hits.keys()].slice(0, 1_000)) hits.delete(k);
   return false;
 }
 export const resetRateLimit = () => hits.clear();
@@ -131,6 +135,26 @@ const MAX_BODY = 256 * 1024;
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store", "x-content-type-options": "nosniff" } });
+
+/** The body, read no further than `max` bytes; null when it's longer (whatever Content-Length says, or without one). */
+export async function readCapped(req: Request, max: number): Promise<Uint8Array | null> {
+  if (Number(req.headers.get("content-length") ?? 0) > max) return null;
+  if (!req.body) return new Uint8Array();
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) { await reader.cancel().catch(() => undefined); return null; }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(size);
+  let at = 0;
+  for (const c of chunks) { out.set(c, at); at += c.byteLength; }
+  return out;
+}
 
 /** The Clerk session token the browser sent, if any. */
 export function bearer(req: Request) {
@@ -161,9 +185,11 @@ export async function handle(name: RouteName, req: Request, deps: Deps = {}): Pr
   if (req.method !== "POST") return json(405, { error: "method not allowed" });
   // JSON only: a plain cross-site form can't send it without the browser asking first (CORS).
   if (!(req.headers.get("content-type") ?? "").toLowerCase().startsWith("application/json")) return json(415, { error: "unsupported media type" });
-  if (Number(req.headers.get("content-length") ?? 0) > MAX_BODY) return json(413, { error: "too large" });
-  const text = await req.text();
-  if (text.length > MAX_BODY) return json(413, { error: "too large" });
+  // The public forms' limit comes before anything is read.
+  if (route.access === "funnel" && rateLimited(clientIp(req))) return json(429, { error: "rate_limited" });
+  const raw = await readCapped(req, MAX_BODY);
+  if (!raw) return json(413, { error: "too large" });
+  const text = new TextDecoder().decode(raw);
   let args: Args;
   try {
     const body = JSON.parse(text || "{}") as { args?: unknown };
@@ -176,7 +202,6 @@ export async function handle(name: RouteName, req: Request, deps: Deps = {}): Pr
   let cred: Credential;
   if (route.access === "public") cred = { kind: "reader" };
   else if (route.access === "funnel") {
-    if (rateLimited(clientIp(req))) return json(429, { error: "rate_limited" });
     const trap = route.honeypot?.(args);
     if (typeof trap === "string" && trap.trim()) return json(200, { result: DECOY[name]?.(args) ?? null });
     cred = { kind: "submitter" };
@@ -203,10 +228,9 @@ export async function handleUpload(req: Request, deps: Deps = {}): Promise<Respo
   if (!token) return json(401, { error: "unauthorized" });
   const mime = (req.headers.get("content-type") ?? "").split(";")[0]!.trim().toLowerCase();
   if (!mime.startsWith("image/")) return json(415, { error: "unsupported media type" });
-  if (Number(req.headers.get("content-length") ?? 0) > gigs.PHOTO_MAX_BYTES) return json(413, { error: "file_too_large" });
   const personId = new URL(req.url).searchParams.get("personId") ?? "";
-  const bytes = new Uint8Array(await req.arrayBuffer());
-  if (bytes.byteLength > gigs.PHOTO_MAX_BYTES) return json(413, { error: "file_too_large" });
+  const bytes = await readCapped(req, gigs.PHOTO_MAX_BYTES);
+  if (!bytes) return json(413, { error: "file_too_large" });
   try {
     const { cos, appUrl } = deps.cos ? { cos: deps.cos, appUrl: deps.appUrl ?? "" } : fromEnv();
     return json(200, { result: await gigs.uploadPhoto({ cos, cred: { kind: "session", token }, appUrl }, personId, bytes, mime) });

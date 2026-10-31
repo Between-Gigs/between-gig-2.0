@@ -55,3 +55,21 @@ describe("draftOps", () => {
     expect(ops).toEqual([{ op: "update", entity: "profile", id: "prof", data: { availability_status: "limited", availability_notes: "Mornings" } }]);
   });
 });
+
+describe("draftOps keeps what 2.0 can't show", () => {
+  it("a stored value 2.0 reads as its nearest (work mode remote) isn't overwritten by an availability edit", async () => {
+    const { fromProfile } = await import("@/lib/data/companyos/fields");
+    const s = stored();
+    s.profile.data.work_mode = "remote";
+    const shown = fromProfile(s.profile.data, s.items.map((r) => ({ kind: r.data.kind as "credit", value: String(r.data.value), position: Number(r.data.position), ...(r.data.visible === false ? { visible: false } : {}) })), "/media/f");
+    expect(draftOps(PERSON, { ...shown, monthStatus: "limited" }, s)).toEqual([{ op: "update", entity: "profile", id: "prof", data: { availability_status: "limited" } }]);
+  });
+});
+
+describe("draftOps writes what isn't stored yet", () => {
+  it("a profile created by the photo upload (name only) gets every answer on the next save, defaults included", () => {
+    const s = { profile: { id: "prof", data: { person: PERSON, display_name: "Maya Ríos", status: "draft" }, createdAt: "", updatedAt: "" }, items: [] };
+    const [update] = draftOps(PERSON, fields, s);
+    expect(update!.data).toMatchObject({ home_market: "la", work_mode: "at_provider", insurance_disclosure: "discuss_privately", rate_basis: "hourly", position: "Set decoration" });
+  });
+});
