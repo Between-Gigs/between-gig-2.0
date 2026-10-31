@@ -206,6 +206,7 @@ The export holds real people's data: never commit it, attach it to an issue or k
   IPv6 client controls a whole /64, so it can rotate addresses and never hit the limit. To do: key IPv6 by its /64, add
   a global ceiling for the form routes, and evict past 10,000 keys (the map's current cap). Company OS's submit
   identity limit (20 a second) still bounds the total.
-- **`checks.yml` uses action tags, not commit SHAs.** A moved tag would run different code in CI. Pinning every
-  `uses:` to a SHA (and a test in `workflows.test.ts` that refuses a tag) is a follow-up for the workflows' owner.
+- **`pages.yml` (the authors' GitHub Pages deploy) uses action tags, not commit SHAs.** A moved tag would run
+  different code with the Pages deploy token. Every other workflow is pinned to SHAs, and `workflows.test.ts` refuses a
+  tag in them; pinning `pages.yml` too is the authors' call (then drop its exception in that test).
 

@@ -35,6 +35,15 @@ describe("the workflows", () => {
     }
   });
 
+  it("every action is pinned to a full commit SHA, never a movable tag (pages.yml is the authors' Pages deploy: Known gaps)", () => {
+    for (const name of workflows.filter((n) => n !== "pages.yml")) {
+      for (const line of read(name).split("\n")) {
+        const m = /^\s*-?\s*uses:\s*(\S+)/.exec(line);
+        if (m && !m[1].startsWith("./")) expect(m[1], `${name}: ${m[1]}`).toMatch(/@[0-9a-f]{40}$/);
+      }
+    }
+  });
+
   it("PR checks also run the unit tests, the Pages route check and the server build with its checks", () => {
     const yml = read("checks.yml");
     expect(yml).toMatch(/pnpm test\b/);
