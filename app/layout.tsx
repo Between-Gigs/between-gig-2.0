@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Providers } from "@/components/site/Providers";
 import { share, siteOrigin } from "@/lib/og";
 import "./globals.css";
@@ -25,11 +26,13 @@ export const viewport: Viewport = {
  */
 const themeScript = `(function(){try{var d=document.documentElement,t=localStorage.getItem("bg-theme");if(t==="light"||t==="dark")d.setAttribute("data-theme",t);if(localStorage.getItem("bg2-owner-nav-collapsed")==="1")d.setAttribute("data-owner-nav","collapsed");if(location.pathname.indexOf("/workspace/")>-1)d.setAttribute("data-workspace","")}catch(e){}try{if(window.top!==window&&window.top.document.documentElement.hasAttribute("data-workspace"))d.setAttribute("data-embedded","")}catch(e){}})()`;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Server build only: render per request with the CSP nonce from proxy.server.ts (the Pages export stays static).
+  const nonce = process.env.BG_BUILD === "server" ? (await headers()).get("x-nonce") ?? undefined : undefined;
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="bg-bg text-ink">
         <Providers>{children}</Providers>

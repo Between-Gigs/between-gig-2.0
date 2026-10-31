@@ -1,0 +1,9 @@
+{
+  "name": "between-gigs-2-railway",
+  "private": true,
+  "description": "The Railway IaC SDK and CLI for the deploy workflows, locked (npm ci --ignore-scripts in .railway/). Not part of the app.",
+  "devDependencies": {
+    "@railway/cli": "5.62.1",
+    "railway": "3.11.0"
+  }
+}
