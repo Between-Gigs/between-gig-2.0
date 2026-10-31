@@ -16,7 +16,6 @@
 # The GitHub Environment `production` must hold the following (docs/handoff/companyos-deploy.md). Its protection
 # rule (Deployment branches and tags: tag pattern `v*` only) is a GitHub setting: Settings -> Environments.
 #   secrets    RAILWAY_TOKEN            project token of "Between Gigs OS", environment `production`
-#              CLERK_SECRET_KEY         sk_live_… (the Clerk production instance the production `api` verifies)
 #              COMPANY_OS_READ_TOKEN    the between-gigs tenant's read service identity (cos_svc_…)
 #              COMPANY_OS_SUBMIT_TOKEN  the between-gigs tenant's submit identity (cos_svc_…, mode submit)
 #   variables  CLERK_PUBLISHABLE_KEY    pk_live_…, built into the pages
@@ -163,14 +162,12 @@ jobs:
       # Check every setting BEFORE any build, infra, variable or service mutation.
       - name: Require production configuration
         env:
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
           COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
           APP_URL: ${{ vars.APP_URL }}
           BG_RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT_NAME }}
         run: |
-          case "$CLERK_SECRET_KEY" in sk_live_?*) ;; *) echo "::error::production requires a Clerk LIVE secret key (sk_live_…) in the production environment's secrets"; exit 1 ;; esac
           case "$CLERK_PUBLISHABLE_KEY" in pk_live_?*) ;; *) echo "::error::production requires a Clerk LIVE publishable key (pk_live_…) in the production environment's variables"; exit 1 ;; esac
           case "$COMPANY_OS_READ_TOKEN" in cos_svc_?*) ;; *) echo "::error::Set the production secret COMPANY_OS_READ_TOKEN (a cos_svc_… read identity)"; exit 1 ;; esac
           case "$COMPANY_OS_SUBMIT_TOKEN" in cos_svc_?*) ;; *) echo "::error::Set the production secret COMPANY_OS_SUBMIT_TOKEN (a cos_svc_… submit identity)"; exit 1 ;; esac
@@ -188,7 +185,6 @@ jobs:
 
       - name: Bundle (no secret of this environment in it)
         env:
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
@@ -221,12 +217,11 @@ jobs:
       - name: Sync secrets and settings
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
           APP_URL: ${{ vars.APP_URL }}
         run: |
-          for name in CLERK_SECRET_KEY COMPANY_OS_READ_TOKEN COMPANY_OS_SUBMIT_TOKEN APP_URL; do
+          for name in COMPANY_OS_READ_TOKEN COMPANY_OS_SUBMIT_TOKEN APP_URL; do
             printf '%s' "${!name}" | railway variable set "$name" --stdin \
               --service "$SERVICE" --environment "$RAILWAY_ENV" --skip-deploys
           done

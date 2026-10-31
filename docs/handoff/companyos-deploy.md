@@ -65,7 +65,6 @@ the server: live routes 200, internal ones 404, headers and nonces on every page
 | `COMPANY_OS_TENANT` | `between-gigs-dev` on test, `between-gigs` on production (N-13) | the IaC |
 | `COMPANY_OS_READ_TOKEN` | `cos_svc_…`, a read identity (role `public_reader`): public pages | workflow, from the GitHub secret |
 | `COMPANY_OS_SUBMIT_TOKEN` | `cos_svc_…`, a submit identity (role `form_submitter`, mode `submit`): public forms | workflow, from the GitHub secret |
-| `CLERK_SECRET_KEY` | `sk_test_…` / `sk_live_…`, the same Clerk instance as that environment's `api` | workflow, from the GitHub secret |
 | `APP_URL` | the site's origin, `https://…`, no trailing slash (test: the Railway domain) | workflow |
 | `NODE_ENV`, `PORT`, `HOSTNAME` | `production`, `3000`, `0.0.0.0` | the IaC |
 
@@ -81,10 +80,9 @@ one-time import below.
    `POST /platform/tenants/<tenant>/service-identities` with `{ "name": "2.0 public reads", "roleKey": "public_reader" }`
    and `{ "name": "2.0 public forms", "roleKey": "form_submitter", "mode": "submit" }`.
 3. **GitHub environments** in this repo (Settings → Environments), created before the first run:
-   - `test`: secrets `RAILWAY_TOKEN` (the test project token), `CLERK_SECRET_KEY` (`sk_test_…`),
-     `COMPANY_OS_READ_TOKEN`, `COMPANY_OS_SUBMIT_TOKEN`; variables `CLERK_PUBLISHABLE_KEY` (`pk_test_…`),
+   - `test`: secrets `RAILWAY_TOKEN` (the test project token), `COMPANY_OS_READ_TOKEN`, `COMPANY_OS_SUBMIT_TOKEN`; variables `CLERK_PUBLISHABLE_KEY` (`pk_test_…`),
      `RAILWAY_PROJECT_NAME` (`Between Gigs OS`), `RAILWAY_REGION` (`us-east4-eqdc4a`).
-   - `production`: the same names with production values (`sk_live_…`, `pk_live_…`, the production token and
+   - `production`: the same names with production values (`pk_live_…`, the production token and
      identities), plus the variable `APP_URL` (`https://between-gigs.com`).
    - **Protection, required** (a run uses the workflow file *from the ref it runs*, so the guard in
      `deploy-prod.yml` only holds if nobody else can make a `v*` tag):

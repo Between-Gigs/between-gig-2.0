@@ -9,10 +9,10 @@ Sign-in and joining run on Clerk, themed to Between Gigs. Clerk app: `app_3K6djW
   (`lib/data/sample.ts`), which local QA (`pnpm check`) and the Preview guide use.
 - GitHub Pages builds with the key (`.github/workflows/pages.yml`; a repo variable of the same name overrides it).
   The publishable key is public by design.
-- `CLERK_SECRET_KEY` is server-only. The GitHub Pages export (no server) never has it. The server build (Railway,
-  decision N-03) gets it in the server's environment from the deploy, never as a `NEXT_PUBLIC_` variable and never in
-  the browser bundle. 2.0's API routes don't verify Clerk tokens themselves: they pass the browser's Clerk session
-  token on to Company OS, which verifies it (Company OS `docs/integration-guide.md` §2). See companyos-local.md.
+- `CLERK_SECRET_KEY` is not used by 2.0 at all, in either build. 2.0's API routes don't verify Clerk tokens: they pass
+  the browser's Clerk session token on to Company OS, which verifies it with its own key (Company OS
+  `docs/integration-guide.md` §2). So the web server never holds it (least privilege); the deploy doesn't set it, and
+  `scripts/deploy-env.test.ts` keeps it that way. The bundle check still treats the name as a secret.
 - The SDK is `@clerk/react`, not `@clerk/nextjs`: the Next.js SDK needs Server Actions, which a static export
   can't host. Moving to the Worker / a server build later, `@clerk/nextjs` with `clerkMiddleware()` is a drop-in.
 

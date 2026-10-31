@@ -9,8 +9,6 @@
 #
 # Needs a GitHub Environment named `test` with (docs/handoff/companyos-deploy.md):
 #   secrets    RAILWAY_TOKEN            project token of "Between Gigs OS", environment `test`
-#              CLERK_SECRET_KEY         the Clerk development instance's secret key (sk_test_…), the same instance
-#                                       Between Gigs' test `api` verifies
 #              COMPANY_OS_READ_TOKEN    the test tenant's read service identity (cos_svc_…, role public_reader)
 #              COMPANY_OS_SUBMIT_TOKEN  the test tenant's submit identity (cos_svc_…, role form_submitter, mode submit)
 #   variables  CLERK_PUBLISHABLE_KEY    its publishable key (pk_test_…), built into the pages
@@ -71,13 +69,11 @@ jobs:
       # Check the configuration BEFORE any build, infra, variable or service mutation.
       - name: Require test configuration
         env:
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
           COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
           BG_RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT_NAME }}
         run: |
-          case "$CLERK_SECRET_KEY" in sk_test_?*) ;; *) echo "::error::test requires a Clerk TEST secret key (sk_test_…) in the test environment's secrets"; exit 1 ;; esac
           case "$CLERK_PUBLISHABLE_KEY" in pk_test_?*) ;; *) echo "::error::test requires a Clerk TEST publishable key (pk_test_…) in the test environment's variables"; exit 1 ;; esac
           case "$COMPANY_OS_READ_TOKEN" in cos_svc_?*) ;; *) echo "::error::Set the test environment's secret COMPANY_OS_READ_TOKEN (a cos_svc_… read identity)"; exit 1 ;; esac
           case "$COMPANY_OS_SUBMIT_TOKEN" in cos_svc_?*) ;; *) echo "::error::Set the test environment's secret COMPANY_OS_SUBMIT_TOKEN (a cos_svc_… submit identity)"; exit 1 ;; esac
@@ -94,7 +90,6 @@ jobs:
       # The bundle that is uploaded, scanned with this environment's real secret values set: it must contain none.
       - name: Bundle (no secret of this environment in it)
         env:
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
@@ -129,7 +124,6 @@ jobs:
       - name: Sync secrets and settings
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
         run: |
@@ -138,7 +132,7 @@ jobs:
           url=$(printf '%s' "$out" | grep -oE 'https://[a-zA-Z0-9.-]+\.up\.railway\.app' | head -1)
           if [ -z "$url" ]; then echo "::error::Could not determine the test web service's public URL"; exit 1; fi
           set_var APP_URL "$url"
-          for name in CLERK_SECRET_KEY COMPANY_OS_READ_TOKEN COMPANY_OS_SUBMIT_TOKEN; do set_var "$name" "${!name}"; done
+          for name in COMPANY_OS_READ_TOKEN COMPANY_OS_SUBMIT_TOKEN; do set_var "$name" "${!name}"; done
           echo "APP_URL=$url" >> "$GITHUB_ENV"
 
       # Uploads the checked bundle only (not the checkout).

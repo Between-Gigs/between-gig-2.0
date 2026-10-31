@@ -19,7 +19,7 @@ and in the server build (Railway).
 
 Server environment (never `NEXT_PUBLIC_`; the deploy sets them, docs/handoff/companyos-deploy.md): `COMPANY_OS_URL`,
 `COMPANY_OS_TENANT` (`between-gigs-dev` on test, `between-gigs` in production), `COMPANY_OS_READ_TOKEN` (public_reader),
-`COMPANY_OS_SUBMIT_TOKEN` (form_submitter, submit mode), `APP_URL`, `CLERK_SECRET_KEY` (see clerk.md).
+`COMPANY_OS_SUBMIT_TOKEN` (form_submitter, submit mode), `APP_URL`. No Clerk secret: Company OS verifies the session token (clerk.md).
 
 ## Running it against a local Company OS
 

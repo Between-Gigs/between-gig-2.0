@@ -41,8 +41,6 @@ export default defineRailway((ctx) => {
       // Read: public reads (the public profile pages). Submit: the public forms only.
       COMPANY_OS_READ_TOKEN: preserve(),
       COMPANY_OS_SUBMIT_TOKEN: preserve(),
-      // The SAME Clerk instance as this environment's api (test: development; production: production).
-      CLERK_SECRET_KEY: preserve(),
       // This service's public origin: Clerk session tokens must have been issued to it (`azp`).
       APP_URL: preserve(),
     },
