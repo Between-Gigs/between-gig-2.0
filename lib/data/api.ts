@@ -51,7 +51,9 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
   async function send(path: string, init: RequestInit): Promise<unknown> {
     const token = init.keepalive && lastToken ? lastToken : await getToken().catch(() => null);
     lastToken = token;
-    const res = await doFetch(`${base}/api/${path}`, { ...init, headers: { ...(init.headers as Record<string, string>), ...(token ? { authorization: `Bearer ${token}` } : {}) } });
+    // The site's URLs end in a slash (next.config trailingSlash): ask for that one, not a redirect to it.
+    const [route, query] = path.split("?");
+    const res = await doFetch(`${base}/api/${route}/${query ? `?${query}` : ""}`, { ...init, headers: { ...(init.headers as Record<string, string>), ...(token ? { authorization: `Bearer ${token}` } : {}) } });
     const body = (await res.json().catch(() => ({}))) as { result?: unknown; error?: string; message?: string };
     if (!res.ok) throw new DataError(res.status, body.error ?? "error", body.message);
     return body.result;

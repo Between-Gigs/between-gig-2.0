@@ -34,7 +34,7 @@ export async function liveHarness(): Promise<Harness> {
     const headers = new Headers(init?.headers);
     headers.set("x-forwarded-for", `198.18.${Math.floor(ip / 250) % 250}.${ip++ % 250}`);
     const req = new Request(url, { ...init, headers });
-    if (url.pathname === "/api/profiles/uploadPhoto") return handleUpload(req);
+    if (url.pathname.replace(/\/$/, "") === "/api/profiles/uploadPhoto") return handleUpload(req);
     const [, , group, method] = url.pathname.split("/");
     return handle(`${group}.${method}` as Parameters<typeof handle>[0], req);
   }) as typeof globalThis.fetch;
