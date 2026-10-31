@@ -7,9 +7,9 @@ import ogPages from "@/lib/og-pages.json";
 /*
  * Static export: seed slugs are prerendered. A slug created later (someone who registers in the demo)
  * has no file, so GitHub Pages serves 404.html, and app/not-found.tsx renders this same view from the
- * URL. Production (a Worker) can render any slug directly.
+ * URL. The server build renders any handle on request: dynamicParams is left at its default (true), which
+ * the export can't use and treats as false.
  */
-export const dynamicParams = false;
 export const generateStaticParams = () => seedPeople.map((p) => ({ slug: p.id }));
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;

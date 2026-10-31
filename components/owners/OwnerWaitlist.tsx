@@ -14,6 +14,9 @@ import { OwnerPage, Panel, RowSkeletons } from "./kit";
 
 const PAGE = 25;
 /** Where each sign-up is with their invite now. "Account created" matches the dashboard funnel's wording. */
+/** Live has no "opened" stage: Clerk doesn't report an opened invite (Company OS decision N-10). */
+const statuses = data.kind === "live" ? inviteStatuses.filter((s) => s !== "opened") : inviteStatuses;
+
 const statusMeta: Record<InviteStatus, { label: string; tone: BadgeTone }> = {
   not_invited: { label: "Not invited", tone: "neutral" },
   invited: { label: "Invite sent", tone: "info" },
@@ -29,7 +32,7 @@ export function OwnerWaitlist() {
 function Waitlist() {
   const params = useSearchParams();
   const toast = useToast();
-  const initialStatus = (inviteStatuses as string[]).includes(params.get("status") ?? "") ? (params.get("status") as InviteStatus) : "all";
+  const initialStatus = (statuses as string[]).includes(params.get("status") ?? "") ? (params.get("status") as InviteStatus) : "all";
   const [query, setQuery] = React.useState<Required<WaitlistQuery>>({ text: "", inviteStatus: initialStatus, category: "all", sort: "joined-new" });
   const [text, setText] = React.useState("");
   const [rows, setRows] = React.useState<WaitlistRow[] | null>(null);
@@ -43,7 +46,7 @@ function Waitlist() {
   const refresh = React.useCallback(async (q: WaitlistQuery) => {
     const [r, all] = await Promise.all([data.owners.waitlist(q), data.owners.waitlist()]);
     setRows(r);
-    setCounts(Object.fromEntries(inviteStatuses.map((s) => [s, all.filter((x) => x.inviteStatus === s).length])) as Record<InviteStatus, number>);
+    setCounts(Object.fromEntries(statuses.map((s) => [s, all.filter((x) => x.inviteStatus === s).length])) as Record<InviteStatus, number>);
   }, []);
   React.useEffect(() => { void refresh(query); }, [query, refresh]); // eslint-disable-line react-hooks/set-state-in-effect
   React.useEffect(() => {
@@ -70,6 +73,7 @@ function Waitlist() {
     try {
       const r = await data.owners.invite(selected);
       toast({ message: `${invites(r.invited)} queued${r.skipped ? ` · ${r.skipped} already invited` : ""}`, tone: "success" });
+      if (r.failed) toast({ message: `${invites(r.failed)} couldn't be sent. They're still ready to invite; try again.`, tone: "danger" });
       setSelected([]);
       setConfirm(false);
       await refresh(query);
@@ -97,7 +101,7 @@ function Waitlist() {
       <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-0 flex-1 basis-60"><Input type="search" aria-label="Search the waitlist" placeholder="Email or ZIP" value={text} onChange={(e) => setText(e.target.value)} start={<Search />} /></div>
         <Select aria-label="Invite status" value={query.inviteStatus} onValueChange={set("inviteStatus")} className="w-full sm:w-56"
-          options={[{ value: "all", label: `Everyone${counts ? ` · ${total}` : ""}` }, ...inviteStatuses.map((st) => ({ value: st, label: `${statusMeta[st].label}${counts ? ` · ${counts[st]}` : ""}` }))]} />
+          options={[{ value: "all", label: `Everyone${counts ? ` · ${total}` : ""}` }, ...statuses.map((st) => ({ value: st, label: `${statusMeta[st].label}${counts ? ` · ${counts[st]}` : ""}` }))]} />
         <div className="flex w-full gap-2 sm:w-auto [&>*]:flex-1 sm:[&>*]:w-44 sm:[&>*]:flex-none">{selects}</div>
       </div>
 

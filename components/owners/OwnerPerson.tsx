@@ -16,6 +16,7 @@ import { OwnerGate } from "./OwnerGate";
 import { HeaderSkeleton, Panel, useScrolledPast } from "./kit";
 import { ReviewWorkspace, type QueueItem } from "./ReviewPanel";
 import { shortDate } from "./format";
+import { isHeld } from "./hold";
 
 /** /owners/people/[id]: one person as the owners see them: where they are, what they've filled in, their profile. */
 export function OwnerPerson({ id }: { id: string }) {
@@ -34,7 +35,7 @@ function Person({ id }: { id: string }) {
     void Promise.all([data.people.get(id), data.profiles.getProfile(id), data.owners.reviewQueue()]).then(([summary, p, q]) => {
       setS(summary);
       setProfile(p);
-      setQueue(q.map((r) => ({ id: r.person.id, name: r.person.name })));
+      setQueue(q.filter((r) => !isHeld(r.person.id)).map((r) => ({ id: r.person.id, name: r.person.name })));
     });
   }, [id]);
   useSettleWhen(s !== undefined);

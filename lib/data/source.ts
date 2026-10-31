@@ -53,6 +53,11 @@ export interface DataSource {
     /** Freezes the draft as the profile, sets status submitted, queues the confirmation email. */
     submit(personId: string): Promise<{ person: Person; profile: Profile }>;
     getProfile(personId: string): Promise<Profile | null>;
+    /**
+     * The builder's photo step: stores the image and returns what goes in `fields.photo` (a data URL in the sample;
+     * live, the photo is uploaded to the person's profile at once and this is its /media link).
+     */
+    uploadPhoto?(personId: string, file: Blob): Promise<string>;
   };
 
   emails: {
@@ -64,12 +69,13 @@ export interface DataSource {
   /** The public funnel (Milestone 3). Each call maps to an existing route in the live app; see docs/handoff/milestone-3.md. */
   funnel: {
     /** Step 1 of "Get on the call sheet": email + ZIP (+ category from the card that opened it). Queues the welcome email. */
-    joinWaitlist(input: { email: string; zip: string; category?: string; placement: string }): Promise<WaitlistResult>;
+    /** `website` is the form's honeypot (components/funnel/Honeypot.tsx): only bots fill it, and live drops what they send. */
+    joinWaitlist(input: { email: string; zip: string; category?: string; placement: string; website?: string }): Promise<WaitlistResult>;
     /** Step 2 (optional): service category and "What would you offer?". */
     addDetails(signupId: string, input: { category: string; details: string }): Promise<WaitlistSignup>;
-    /** Storyboard forms. Queues the coming-soon email. */
+    /** Storyboard forms. Queues the coming-soon email. `answers.website` is the honeypot. */
     submitSketch(kind: SketchKind, answers: Record<string, string>): Promise<SketchSubmission>;
-    privacyRequest(email: string, message: string): Promise<PrivacyRequest>;
+    privacyRequest(email: string, message: string, website?: string): Promise<PrivacyRequest>;
   };
 
   /** The owners' tools (Milestone 4). Owner role required on every call. */
@@ -83,13 +89,14 @@ export interface DataSource {
     /** submitted → changes_requested, with one short note per section. Queues the "changes-requested" email. */
     requestChanges(personId: string, notes: ReviewNoteInput[]): Promise<Person>;
     /**
-     * Undoes the last approve or request-changes on this person, right after it (the Undo toast): back to
-     * submitted, notes cleared, the decision's activity line and its still-queued email withdrawn.
+     * Sample only. Undoes the last approve or request-changes on this person, right after it: back to submitted,
+     * notes cleared, the decision's activity line and its still-queued email withdrawn. Live, the review toast holds
+     * the decision for a few seconds instead, and Undo cancels it before anything is sent (decision N-10).
      */
-    undoReview(personId: string): Promise<Person>;
+    undoReview?(personId: string): Promise<Person>;
     waitlist(query?: WaitlistQuery): Promise<WaitlistRow[]>;
     /** Invites waitlist sign-ups: creates the person and invite, queues the invite email. Skips anyone already invited. */
-    invite(signupIds: string[]): Promise<{ invited: number; skipped: number }>;
+    invite(signupIds: string[]): Promise<{ invited: number; skipped: number; /** Live: invitations that failed (none were sent). */ failed?: number }>;
   };
 
   /** Sample-only controls for the Preview guide and QA. The live implementation omits them. */
