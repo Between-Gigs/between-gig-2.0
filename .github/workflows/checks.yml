@@ -13,15 +13,18 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck && pnpm lint && pnpm lint:values
+      - run: pnpm typecheck && pnpm lint && pnpm lint:values && pnpm test
       - run: node scripts/qa/auth-data.mjs
       - run: pnpm build
+      - run: node scripts/check-pages.mjs
       - name: Use the runner's installed Chrome for browser checks
         run: |
           bg_chrome_path=$(command -v google-chrome)
@@ -44,3 +47,5 @@ jobs:
       - name: Verify signup callbacks, returning login and roles (isolated mock SDK)
         run: |
           node scripts/qa/clerk-contract.mjs
+      - name: Server build (no internal routes) and its checks
+        run: pnpm build:server && pnpm check:server

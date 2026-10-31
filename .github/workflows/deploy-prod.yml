@@ -64,16 +64,21 @@ jobs:
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: The tag exists, is annotated and is on main
         id: tag
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          if ! git fetch --quiet --force origin "refs/tags/$TAG:refs/tags/$TAG"; then
+          # The checkout keeps no token (persist-credentials: false): these fetches get it as a header.
+          auth="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)"
+          if ! git -c "http.extraheader=$auth" fetch --quiet --force origin "refs/tags/$TAG:refs/tags/$TAG"; then
             echo "::error::Tag $TAG does not exist on GitHub. Create it with the 'Cut release' workflow."
             exit 1
           fi
-          git fetch --quiet --no-tags origin "+refs/heads/main:refs/remotes/origin/main"
+          git -c "http.extraheader=$auth" fetch --quiet --no-tags origin "+refs/heads/main:refs/remotes/origin/main"
           kind="$(git cat-file -t "refs/tags/$TAG")"
           if [ "$kind" != "tag" ]; then
             echo "::error::Tag $TAG is a lightweight tag (it points straight at a $kind). Release tags are annotated: create them with the 'Cut release' workflow."
@@ -118,6 +123,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           ref: ${{ needs.guard.outputs.sha }}
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -139,6 +145,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           ref: ${{ github.ref }}
 
       # The tag must still be the commit the guard checked (a tag can be moved).

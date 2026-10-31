@@ -55,7 +55,7 @@ the server: live routes 200, internal ones 404, headers and nonces on every page
 | `BG_BUILD` | `server` (set by `pnpm build:server`) |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | `pk_test_…` on test, `pk_live_…` on production (from the GitHub variable `CLERK_PUBLISHABLE_KEY`) |
 | `NEXT_PUBLIC_DATA_SOURCE` | `api` (the workflows set it; unset = the sample data) |
-| `NEXT_PUBLIC_SITE_ORIGIN` | production only: `APP_URL` (share images). Test builds before their address is known, so its share images name the default origin |
+| `NEXT_PUBLIC_SITE_ORIGIN` | the site's origin, for share images and canonical links: production `APP_URL`; test the service's Railway address, which the workflow finds (or creates) before it builds |
 
 **Runtime** (Railway service `web`, `.railway/railway.ts`; server only, never in the browser):
 
@@ -99,6 +99,63 @@ one-time import below.
    in Company OS `test-between-gigs`'s `APP_URL` and deploy the API (test) again → test the flows →
    Company OS *Deploy API (prod)* → *Cut release* here (bump `package.json`'s version first) → *Deploy web (prod)*
    from that tag. Rollback: deploy the previous tag.
+
+   On test, Company OS's `APP_URL` starts as the placeholder `https://placeholder.invalid` (its runbook
+   `customer-environments.md` §8 step 3). Until the API is deployed the second time with the real address, every
+   email it sends (invitations, form notifications) links to `placeholder.invalid`, and it refuses invitation
+   redirects to this site. Send no test email before that second deploy; one sent earlier has a dead link and
+   must be sent again.
+6. **The first Super Admins** (owner's decision), at go-live, once production's `api` has `APP_URL` set to the
+   real domain: the operator invites **Peter, Patti and the owner** as Super Admins, one call each, and hands each
+   person **their own link privately** (a direct message to them, never a shared channel or email thread: the link
+   signs them in). Rehearse it on test first with the tenant `between-gigs-dev` and the test address.
+
+   The call is `POST /t/<tenant>/invitations` with the platform key, body
+   `{ "email": "<their address>", "roleKey": "super_admin", "redirectUrl": "<APP_URL>/join/" }`. Run it inside the
+   `web` service like the import (the only place that reaches the private API), typing the key and the address so
+   neither lands in the shell history:
+
+   ```bash
+   railway ssh --service web --environment production   # --environment test for the rehearsal
+   ```
+
+   ```bash
+   read -rs COMPANY_OS_PLATFORM_KEY && export COMPANY_OS_PLATFORM_KEY
+   read -r INVITE_EMAIL && export INVITE_EMAIL
+   node --input-type=module -e 'const r = await fetch(`${process.env.COMPANY_OS_URL}/t/${process.env.COMPANY_OS_TENANT}/invitations`, { method: "POST", headers: { "content-type": "application/json", "x-platform-key": process.env.COMPANY_OS_PLATFORM_KEY }, body: JSON.stringify({ email: process.env.INVITE_EMAIL, roleKey: "super_admin", redirectUrl: `${process.env.APP_URL}/join/` }) }); console.log(r.status, await r.text())'
+   unset COMPANY_OS_PLATFORM_KEY INVITE_EMAIL
+   ```
+
+   - `201` with `url`: that is the person's link. It is shown only this once (Company OS never stores or logs it);
+     copy it straight into the private message. Running the call again sends a new link and revokes the old one.
+   - `409 already_signed_up`: they have signed in before and already have access.
+   - `422 redirect_not_allowed`: the API's `APP_URL` is not this site's address yet (see step 5).
+   - `409 role_mismatch`: that login already has another role in this tenant; change it in Company OS first.
+
+## Client IP behind Railway's edge (the per-IP rate limit)
+
+The public forms' rate limit counts requests per client IP, read from `X-Real-IP` (`lib/server/routes.ts`). That
+is only safe if Railway's edge **sets or overwrites** `X-Real-IP` on every request, so a caller can't send their own
+and get a fresh allowance each time.
+
+What Railway says (checked 2026-10-31):
+
+- The docs ([Specs and limits](https://docs.railway.com/networking/public-networking/specs-and-limits), request
+  headers) list `X-Real-IP` "for identifying client's remote IP", but don't say whether a value the client sends
+  is replaced.
+- Staff and moderator answers on Railway's Help Station say the edge writes `X-Real-IP` itself, so it can't be
+  spoofed ([2026-09-22](https://station.railway.com/questions/verification-of-x-real-ip-header-handlin-e7ec8863)),
+  and one user's measurement agrees: a spoofed `X-Real-IP` and `X-Forwarded-For` didn't reach the app
+  ([2026-09-08](https://station.railway.com/questions/does-the-edge-strip-client-x-forwarded-f-613e5cb6)). The same
+  thread reports a staff-acknowledged bug: on traffic routed through Railway's CDN, `X-Real-IP` carries the CDN
+  node's address, not the client's. Railway publishes no formal guarantee.
+- Requests over the private network (`*.railway.internal`) skip the edge, so any service in the project could
+  send any `X-Real-IP`. Nothing but the public edge should call `web`.
+
+So: **likely, not guaranteed.** On the first test deploy, check it: send the forms' endpoint more requests than
+the limit allows, each with a different made-up `X-Real-IP` (e.g. `203.0.113.x`), and confirm the limit still
+answers `429`. Repeat after any change to Railway's CDN settings for the service. If it fails, the limit has to
+key on something the client can't set; tell lane F1, which owns the rate limit.
 
 ## The one-time waitlist import (at the DNS switch)
 
