@@ -15,6 +15,7 @@ import type {
 } from "@/lib/data/types";
 import { blankFields } from "@/lib/data/seed";
 import { waitlistCategories } from "@/lib/data/taxonomy";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { CompanyOsError, and, eq, type AdminUser, type BatchOp, type CompanyOs, type Credential, type Row } from "./companyos";
 
 export interface Ctx {
@@ -33,7 +34,11 @@ export const PHOTO_MAX_BYTES = 10 * 1024 * 1024;
 
 const str = (v: unknown) => (typeof v === "string" ? v : "");
 const nowIso = () => new Date().toISOString();
-const iso = (v: unknown) => (typeof v === "string" ? new Date(v).toISOString() : v instanceof Date ? v.toISOString() : "");
+/** A stored time as ISO text; "" for none or one that doesn't parse (never a thrown RangeError). */
+const iso = (v: unknown) => {
+  const d = typeof v === "string" && v ? new Date(v) : v instanceof Date ? v : null;
+  return d && !Number.isNaN(d.getTime()) ? d.toISOString() : "";
+};
 export const mediaUrl = (fileId: string) => `/media/${fileId}`;
 const groupBy = <T,>(rows: T[], key: (r: T) => string) => {
   const m = new Map<string, T[]>();
@@ -344,7 +349,8 @@ export async function saveDraft(ctx: Ctx, personId: string, fields: ProfileField
 export async function submit(ctx: Ctx, personId: string) {
   const own = await ownProfile(ctx, personId);
   if (!own.profile) throw new CompanyOsError(422, "profile_incomplete", "nothing to submit");
-  await ctx.cos.patch(ctx.cred, "profile", own.profile.id, { status: "submitted" });
+  // Already with the team or live: nothing to send (an edit to a live profile has already sent it back, N-09).
+  if (own.profile.data.status !== "submitted" && own.profile.data.status !== "approved") await ctx.cos.patch(ctx.cred, "profile", own.profile.id, { status: "submitted" });
   const summary = await getPerson(ctx, personId);
   const profile = await getProfile(ctx, personId);
   if (!summary || !profile) throw new CompanyOsError(404, "not found");
@@ -383,7 +389,34 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const category = (v: string | undefined) => (waitlistCategories.some(([id]) => id === v) ? v : undefined);
 const clean = (o: Record<string, string | undefined>) => Object.fromEntries(Object.entries(o).filter(([, v]) => v && v.trim()).map(([k, v]) => [k, v!.trim()]));
 
-/** "Get on the call sheet". One per email (ADR 0042): a repeat merges and says "already joined". The signup's id is its email. */
+/** How long step 2 (addDetails) may follow step 1. */
+const SIGNUP_TTL_MS = 60 * 60_000;
+const b64 = (s: string | Buffer) => Buffer.from(s).toString("base64url");
+const signupMac = (secret: string, payload: string) => {
+  // A key of its own, derived from the submit identity's token, so no other secret is needed and the token itself isn't reused.
+  const key = createHmac("sha256", secret).update("between-gigs:call-sheet-details").digest();
+  return createHmac("sha256", key).update(payload).digest("base64url");
+};
+
+/** The sign-up's id as the browser holds it: the email and the time, signed. Only step 2 of the same sign-up can use it. */
+export function signupToken(email: string, secret: string, now = Date.now()) {
+  const payload = `${b64(email)}.${now}`;
+  return `${payload}.${signupMac(secret, payload)}`;
+}
+
+/** The email a valid, recent sign-up token was made for, or null. */
+export function signupEmail(token: string, secret: string, now = Date.now()): string | null {
+  const [mail, at, mac] = token.split(".");
+  if (!mail || !at || !mac || !secret || !/^[0-9]{1,15}$/.test(at)) return null;
+  const want = Buffer.from(signupMac(secret, `${mail}.${at}`));
+  const got = Buffer.from(mac);
+  if (want.length !== got.length || !timingSafeEqual(want, got)) return null;
+  const age = now - Number(at);
+  if (age < 0 || age > SIGNUP_TTL_MS) return null;
+  return Buffer.from(mail, "base64url").toString("utf8");
+}
+
+/** "Get on the call sheet". One per email (ADR 0042): a repeat merges and says "already joined". The signup's id is a signed token (signupToken). */
 export async function joinWaitlist(ctx: Ctx, input: { email: string; zip: string; category?: string; placement: string }): Promise<WaitlistResult> {
   const email = input.email.trim().toLowerCase();
   if (!EMAIL.test(email) || email.length > 254) return { ok: false, error: "email" };
@@ -398,15 +431,16 @@ export async function joinWaitlist(ctx: Ctx, input: { email: string; zip: string
   // Where the first sign-up came from stays (a merge would overwrite it): the placement goes only with a new sign-up.
   const placement = input.placement.trim().slice(0, 60);
   if (outcome === "created" && placement) await ctx.cos.submitForm("call_sheet", { email, placement });
-  const signup: WaitlistSignup = { id: email, email, zip: input.zip, category: category(input.category) ?? "", details: "", placement: input.placement, createdAt: nowIso() };
+  const signup: WaitlistSignup = { id: signupToken(email, ctx.cos.signingSecret()), email, zip: input.zip, category: category(input.category) ?? "", details: "", placement: input.placement, createdAt: nowIso() };
   return { ok: true, signup, alreadyJoined: outcome === "merged" };
 }
 
 export async function addDetails(ctx: Ctx, signupId: string, input: { category: string; details: string }): Promise<WaitlistSignup> {
-  const email = signupId.trim().toLowerCase();
-  if (!EMAIL.test(email)) throw new CompanyOsError(422, "invalid_email");
+  // Only the browser that just joined can add to that sign-up: anyone else could otherwise write to any address's.
+  const email = signupEmail(signupId, ctx.cos.signingSecret());
+  if (!email || !EMAIL.test(email)) throw new CompanyOsError(422, "invalid_signup");
   await ctx.cos.submitForm("call_sheet", { email, answers: clean({ category: category(input.category), details: input.details.slice(0, 2000) }) });
-  return { id: email, email, zip: "", category: category(input.category) ?? "", details: input.details.trim(), placement: "", createdAt: nowIso() };
+  return { id: signupId, email, zip: "", category: category(input.category) ?? "", details: input.details.trim(), placement: "", createdAt: nowIso() };
 }
 
 const SKETCH_ANSWERS: Record<SketchKind, string[]> = {
@@ -471,33 +505,71 @@ export async function waitlist(ctx: Ctx, query: WaitlistQuery = {}) {
     : b.signup.createdAt.localeCompare(a.signup.createdAt));
 }
 
-/** Each sign-up in turn (R-14): a person from the submission, the link, the invitation, the invite email sent by hand. */
+/** At most this many sign-ups a request; the owners' screen sends bigger selections in chunks, with progress. */
+export const INVITE_CHUNK = 10;
+
+/**
+ * The invitation (Company OS creates or re-creates it, revoking an older link) and its email, sent by hand with the
+ * link. An email Company OS couldn't send is a failure: the person would never get the link.
+ */
+async function sendInvite(ctx: Ctx, personId: string, email: string): Promise<"invited" | "signed_up"> {
+  let url: string;
+  try {
+    ({ url } = await ctx.cos.invite(ctx.cred, { email, roleKey: "provider", personId, redirectUrl: `${ctx.appUrl}/join/` }));
+  } catch (e) {
+    if (e instanceof CompanyOsError && e.code === "already_signed_up") return "signed_up";
+    throw e;
+  }
+  const log = await ctx.cos.create(ctx.cred, "comms_log", { deliver: true, channel: "email", recipient: personId, message_key: "invite", vars: { invite_url: url } });
+  if (log?.data?.status === "failed") throw new CompanyOsError(502, "invite_email_failed");
+  return "invited";
+}
+
+function checkBatch(ctx: Ctx, ids: string[]) {
+  if (!/^https?:\/\//.test(ctx.appUrl)) throw new CompanyOsError(503, "app_url_not_configured");
+  if (ids.length > INVITE_CHUNK) throw new CompanyOsError(422, "too_many", `at most ${INVITE_CHUNK} a request`);
+}
+
+/** Each sign-up in turn (R-14): a person from the submission, the invitation, the invite email, then the link. */
 export async function invite(ctx: Ctx, signupIds: string[]) {
   await requireOwner(ctx);
-  if (!/^https?:\/\//.test(ctx.appUrl)) throw new CompanyOsError(503, "app_url_not_configured");
+  const ids = [...new Set(signupIds)];
+  checkBatch(ctx, ids);
   let invited = 0, skipped = 0, failed = 0;
-  for (const id of [...new Set(signupIds)].slice(0, 200)) {
-    const [sub] = /^[0-9a-f-]{36}$/i.test(id) ? await ctx.cos.query(ctx.cred, { entity: "form_submission", filter: and(eq("id", id), eq("form_key", "call_sheet")), limit: 1 }) : [];
-    if (!sub || sub.data.person) { skipped++; continue; }
-    // Item by item (R-14): one that fails is counted and the rest go on. The sign-up is linked to its person last, once
-    // the invitation and its email are out, so a failed one stays "not invited" and can be invited again.
+  for (const id of ids) {
+    // Item by item: one that fails (its lookup included) is counted and the rest go on. The sign-up is linked to its
+    // person last, once the invitation and its email are out, so a failed one stays "not invited" and can be invited again.
     try {
+      const [sub] = /^[0-9a-f-]{36}$/i.test(id) ? await ctx.cos.query(ctx.cred, { entity: "form_submission", filter: and(eq("id", id), eq("form_key", "call_sheet")), limit: 1 }) : [];
+      if (!sub || sub.data.person) { skipped++; continue; }
       const email = str(sub.data.email);
       // An address with a person already (another sign-up, an earlier attempt) reuses it.
       const [existing] = await ctx.cos.query(ctx.cred, { entity: "person", filter: eq("email", email), limit: 1 });
       const personId = existing?.id ?? (await ctx.cos.create(ctx.cred, "person", { name: email, email })).id;
-      let url: string;
-      try {
-        ({ url } = await ctx.cos.invite(ctx.cred, { email, roleKey: "provider", personId, redirectUrl: `${ctx.appUrl}/join/` }));
-      } catch (e) {
-        if (!(e instanceof CompanyOsError && e.code === "already_signed_up")) throw e;
-        await ctx.cos.patch(ctx.cred, "form_submission", sub.id, { person: personId });
-        skipped++;
-        continue;
-      }
-      await ctx.cos.create(ctx.cred, "comms_log", { deliver: true, channel: "email", recipient: personId, message_key: "invite", vars: { invite_url: url } });
+      const outcome = await sendInvite(ctx, personId, email);
       await ctx.cos.patch(ctx.cred, "form_submission", sub.id, { person: personId });
-      invited++;
+      if (outcome === "invited") invited++; else skipped++;
+    } catch (e) {
+      if (!(e instanceof CompanyOsError)) throw e;
+      failed++;
+    }
+  }
+  return { invited, skipped, ...(failed ? { failed } : {}) };
+}
+
+/** Invites again people already invited who haven't signed up: a new link, the older one revoked by Company OS. */
+export async function resendInvite(ctx: Ctx, personIds: string[]) {
+  await requireOwner(ctx);
+  const ids = [...new Set(personIds)];
+  checkBatch(ctx, ids);
+  const persons = ids.length ? await ctx.cos.byIds(ctx.cred, "person", "id", ids) : [];
+  const users = new Map((await ctx.cos.adminUsers(ctx.cred)).map((u) => [u.userId, u]));
+  let invited = 0, skipped = 0, failed = 0;
+  for (const id of ids) {
+    const person = persons.find((p) => p.id === id);
+    if (!person || users.get(str(person.data.user))?.signedUp) { skipped++; continue; }
+    try {
+      if ((await sendInvite(ctx, person.id, str(person.data.email))) === "invited") invited++; else skipped++;
     } catch (e) {
       if (!(e instanceof CompanyOsError)) throw e;
       failed++;

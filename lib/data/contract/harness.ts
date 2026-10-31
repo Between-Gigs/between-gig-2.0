@@ -21,6 +21,8 @@ export interface Harness {
   /** One of the owners signs in. */
   signInOwner(): Promise<Session>;
   signOut(): Promise<void>;
+  /** Live only: the status of a photo's /media link, fetched as whoever is signed in (with their session cookie). */
+  media?(url: string): Promise<number>;
 }
 
 export async function harness(): Promise<Harness> {

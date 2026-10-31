@@ -65,11 +65,12 @@ export function CallSheetDialog({ open, onClose, category: initialCategory, plac
     }
   };
 
-  const saveDetails = async (e: React.FormEvent) => {
+  const saveDetails = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const website = trapValue(e);
     if (!signup || (!category && !details.trim())) { go("done"); return; }
     setBusy(true);
-    try { await data.funnel.addDetails(signup.id, { category, details }); go("done"); }
+    try { await data.funnel.addDetails(signup.id, { category, details, ...(website ? { website } : {}) }); go("done"); }
     catch { setErrors({ form: "Please try again." }); }
     finally { setBusy(false); }
   };
@@ -99,6 +100,7 @@ export function CallSheetDialog({ open, onClose, category: initialCategory, plac
         )}
         {step === "details" && (
           <form noValidate onSubmit={saveDetails} className="grid gap-4">
+            <Honeypot />
             <Field label="Service category" optional>
               <Select placeholder="Choose a service" value={category || undefined} onValueChange={setCategory}
                 options={waitlistCategories.filter(([value]) => value !== "styling").map(([value, label]) => ({ value, label }))} />

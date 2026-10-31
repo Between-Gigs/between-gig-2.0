@@ -4,6 +4,7 @@
  * Gigster. The sample can reverse a decision (owners.undoReview), so there it is sent at once, as before.
  */
 import { data } from "@/lib/data";
+import { sendNow } from "@/lib/data/api";
 
 export const HOLD_MS = 8000;
 
@@ -48,6 +49,7 @@ export const isHeld = (personId: string) => pending.has(personId);
 // Leaving or closing the page sends what's waiting rather than dropping it.
 if (typeof window !== "undefined") {
   window.addEventListener("pagehide", () => {
-    for (const p of [...pending.values()]) { clearTimeout(p.timer); p.fire(); }
+    // keepalive and the last token: the page is going, so there's no time to fetch a fresh one (the timer path does).
+    for (const p of [...pending.values()]) { clearTimeout(p.timer); sendNow(p.fire); }
   });
 }

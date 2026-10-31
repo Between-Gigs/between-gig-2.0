@@ -21,6 +21,7 @@ function loadEnv() {
 export async function liveHarness(): Promise<Harness> {
   loadEnv();
   const { handle, handleUpload } = await import("@/lib/server/routes");
+  const { media } = await import("@/lib/server/media");
   const cosUrl = process.env.COMPANY_OS_URL!;
   const tenant = process.env.COMPANY_OS_TENANT || "between-gigs";
   const ownerEmail = process.env.CONTRACT_OWNER_EMAIL || "owner@between-gigs.example";
@@ -63,5 +64,11 @@ export async function liveHarness(): Promise<Harness> {
       return r.session;
     },
     async signOut() { token = null; await source.auth.signOut(); },
+    async media(url) {
+      const id = url.replace(/^\/media\//, "").replace(/\/$/, "");
+      const res = await media(new Request(`http://localhost:3000/media/${id}/`, { headers: token ? { cookie: `__session=${token}` } : {} }), id);
+      await res.arrayBuffer();
+      return res.status;
+    },
   };
 }

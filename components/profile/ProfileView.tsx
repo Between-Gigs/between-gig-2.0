@@ -4,7 +4,7 @@ import { Reveal } from "@ds/motion";
 import { ArrowRight, ArrowUpRight, Calendar, Check, ChevronLeft, ChevronRight, MapPin, MessageSquare, Star, Wallet } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
-import type { Person, Profile, ProfileFields } from "@/lib/data";
+import { data, type Person, type Profile, type ProfileFields } from "@/lib/data";
 import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/data/taxonomy";
 import { asset } from "@/lib/site";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
@@ -63,14 +63,17 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
   }, [person.id]);
   const jump = (id: string) => root.current?.querySelector(`[data-section="${id}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
+  // Live, the public page reads only what Company OS's public_reader may see: no ZIP, home city or insurance answer.
+  // Those rows are left out rather than shown empty or as the questionnaire's default.
+  const unseen = mode === "public" && data.kind === "live";
   const glance: [string, React.ReactNode, string?][] = [
-    ["Location", where, f.zip ? `Based near ${f.zip}` : undefined],
+    ...(where || !unseen ? [["Location", where, f.zip ? `Based near ${f.zip}` : undefined] as [string, React.ReactNode, string?]] : []),
     ["Rate", rate ? <>From <b className="text-ink">{rate}</b></> : "Discussed per project", "Project scope agreed together"],
     ["Availability", monthStatusLabel[f.monthStatus], [f.month, f.dates].filter(Boolean).join(" · ")],
     ["Travel & work mode", modeLabel[f.mode], f.travel || undefined],
     ...(f.tools ? [["Tools & equipment", f.tools] as [string, string]] : []),
     ...(f.languages ? [["Languages", f.languages] as [string, string]] : []),
-    ["Insurance", `${insuranceLabel[f.insurance]} · Not verified`],
+    ...(unseen ? [] : [["Insurance", `${insuranceLabel[f.insurance]} · Not verified`] as [string, string]]),
   ];
 
   return (

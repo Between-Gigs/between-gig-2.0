@@ -49,7 +49,8 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
   };
 
   async function send(path: string, init: RequestInit): Promise<unknown> {
-    const token = init.keepalive && lastToken ? lastToken : await getToken().catch(() => null);
+    // Normally a fresh token for every call. Only a call made while the page closes (sendNow) can't wait for one.
+    const token = urgent && lastToken ? lastToken : await getToken().catch(() => null);
     lastToken = token;
     // The site's URLs end in a slash (next.config trailingSlash): ask for that one, not a redirect to it.
     const [route, query] = path.split("?");
@@ -58,8 +59,8 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
     if (!res.ok) throw new DataError(res.status, body.error ?? "error", body.message);
     return body.result;
   }
-  const call = <T,>(name: string, args: unknown[] = [], keepalive = false) =>
-    send(name.replace(".", "/"), { method: "POST", keepalive, headers: { "content-type": "application/json" }, body: JSON.stringify({ args }) }) as Promise<T>;
+  const call = <T,>(name: string, args: unknown[] = []) =>
+    send(name.replace(".", "/"), { method: "POST", keepalive: urgent, headers: { "content-type": "application/json" }, body: JSON.stringify({ args }) }) as Promise<T>;
 
   const stepKey = (personId: string) => `bg2-builder-step:${personId}`;
   const withStep = (d: ProfileDraft | null) => (d ? { ...d, step: Number(storage.getItem(stepKey(d.personId)) ?? 0) || 0 } : d);
@@ -125,13 +126,24 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
       dashboard: () => call("owners.dashboard"),
       activity: (limit) => call("owners.activity", [limit ?? 50]),
       reviewQueue: () => call("owners.reviewQueue"),
-      // keepalive: a held decision sent as the page closes still arrives (components/owners/hold.ts).
-      approve: (id) => call("owners.approve", [id], true),
-      requestChanges: (id, notes) => call("owners.requestChanges", [id, notes], true),
+      approve: (id) => call("owners.approve", [id]),
+      requestChanges: (id, notes) => call("owners.requestChanges", [id, notes]),
       waitlist: (query) => call("owners.waitlist", [query ?? {}]),
       invite: (ids) => call("owners.invite", [ids]),
+      resendInvite: (personIds) => call("owners.resendInvite", [personIds]),
     },
   };
+}
+
+let urgent = false;
+
+/**
+ * Runs `start` as the page closes (components/owners/hold.ts on pagehide): the calls it makes go out at once, with
+ * `keepalive` and the last token, since there is no time to fetch a fresh one. `start` must make them synchronously.
+ */
+export function sendNow(start: () => void) {
+  urgent = true;
+  try { start(); } finally { urgent = false; }
 }
 
 /** The browser's live source. ClerkLayer gives it the session token (setTokenProvider). */

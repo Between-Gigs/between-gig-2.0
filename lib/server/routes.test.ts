@@ -78,7 +78,7 @@ describe("credentials", () => {
   it("every route is in the table with an access rule", () => {
     expect(Object.keys(ROUTES).sort()).toEqual([
       "auth.session", "auth.syncExternal", "funnel.addDetails", "funnel.joinWaitlist", "funnel.privacyRequest", "funnel.submitSketch",
-      "owners.activity", "owners.approve", "owners.dashboard", "owners.invite", "owners.requestChanges", "owners.reviewQueue", "owners.waitlist",
+      "owners.activity", "owners.approve", "owners.dashboard", "owners.invite", "owners.requestChanges", "owners.resendInvite", "owners.reviewQueue", "owners.waitlist",
       "people.get", "people.getPublic", "people.list", "people.similar", "profiles.getDraft", "profiles.getProfile", "profiles.saveDraft", "profiles.submit",
     ]);
     const access = Object.fromEntries(Object.entries(ROUTES).map(([k, v]) => [k, v.access]));
@@ -338,5 +338,120 @@ describe("review fixes", () => {
   it("a waitlist category outside the list isn't stored", async () => {
     const { calls } = await call("funnel.joinWaitlist", [{ email: "c@example.org", zip: "90026", category: "<b>junk</b>", placement: "hero" }], { token: null });
     expect(calls[0]!.body).toEqual({ email: "c@example.org", answers: { zip: "90026" } });
+  });
+});
+
+describe("round 1: invites", () => {
+  const SUB = (n: number) => `${String(n).padStart(8, "0")}-aaaa-4aaa-8aaa-aaaaaaaaaaaa`;
+  const subRow = (id: string, email: string, person?: string) => ({ id, data: { email, form_key: "call_sheet", ...(person ? { person } : {}) }, createdAt: "", updatedAt: "" });
+  const invites = (opts: { failQuery?: string; commsStatus?: (email: string) => string } = {}) => fake((c) => {
+    const body = c.body as { entity?: string; filter?: { and?: { value: string }[]; value?: string } } | undefined;
+    if (c.path === "/query" && body?.entity === "form_submission") {
+      const id = body.filter?.and?.[0]?.value ?? "";
+      if (id === opts.failQuery) return { status: 500, body: { error: "internal error" } };
+      return { body: { data: [subRow(id, `${id.slice(0, 8)}@example.org`)] } };
+    }
+    if (c.path === "/api/person") return { status: 201, body: { data: { id: `p-${(c.body as { email: string }).email}`, data: {}, createdAt: "", updatedAt: "" } } };
+    if (c.path === "/invitations") return { status: 201, body: { url: "http://localhost:3000/join/?__clerk_ticket=t" } };
+    if (c.path === "/api/comms_log") return { status: 201, body: { data: { id: "log", data: { status: opts.commsStatus?.(String((c.body as { recipient: string }).recipient)) ?? "queued" }, createdAt: "", updatedAt: "" } } };
+    return undefined;
+  });
+
+  it("at most 10 sign-ups a request (the UI sends chunks of 10)", async () => {
+    const { res, body } = await call("owners.invite", [Array.from({ length: 11 }, (_, i) => SUB(i))], undefined, invites());
+    expect(res.status).toBe(422);
+    expect(body).toEqual({ error: "too_many", message: "at most 10 a request" });
+  });
+
+  it("a sign-up whose lookup fails is counted failed, and the rest go on", async () => {
+    const { body } = await call("owners.invite", [[SUB(1), SUB(2)]], undefined, invites({ failQuery: SUB(1) }));
+    expect(body.result).toEqual({ invited: 1, skipped: 0, failed: 1 });
+  });
+
+  it("an invite email Company OS couldn't send counts as failed, and the sign-up stays not invited", async () => {
+    const f = invites({ commsStatus: (recipient) => (recipient.includes("00000001") ? "failed" : "queued") });
+    const { body, calls } = await call("owners.invite", [[SUB(1), SUB(2)]], undefined, f);
+    expect(body.result).toEqual({ invited: 1, skipped: 0, failed: 1 });
+    expect(calls.filter((c) => c.method === "PATCH").map((c) => c.path)).toEqual([`/api/form_submission/${SUB(2)}`]);
+  });
+
+  it("resending re-invites a linked person who hasn't signed up (Company OS revokes the older link) and emails the new one", async () => {
+    const f = fake((c) => {
+      const body = c.body as { entity?: string } | undefined;
+      if (c.path === "/query" && body?.entity === "person") return { body: { data: [{ id: PERSON, data: { email: "maya@example.org", user: "u-maya" }, createdAt: "", updatedAt: "" }] } };
+      if (c.path === "/admin/users") return { body: { users: [{ userId: "u-maya", email: "maya@example.org", signedUp: false }] } };
+      if (c.path === "/invitations") return { status: 201, body: { url: "http://localhost:3000/join/?__clerk_ticket=new" } };
+      if (c.path === "/api/comms_log") return { status: 201, body: { data: { id: "log", data: { status: "queued" }, createdAt: "", updatedAt: "" } } };
+      return undefined;
+    });
+    const { body, calls } = await call("owners.resendInvite", [[PERSON]], undefined, f);
+    expect(body.result).toEqual({ invited: 1, skipped: 0 });
+    expect(calls.find((c) => c.path === "/invitations")?.body).toMatchObject({ email: "maya@example.org", roleKey: "provider", personId: PERSON });
+    expect(calls.find((c) => c.path === "/api/comms_log")?.body).toMatchObject({ recipient: PERSON, message_key: "invite", vars: { invite_url: "http://localhost:3000/join/?__clerk_ticket=new" } });
+  });
+
+  it("resending skips someone who has already signed up", async () => {
+    const f = fake((c) => {
+      const body = c.body as { entity?: string } | undefined;
+      if (c.path === "/query" && body?.entity === "person") return { body: { data: [{ id: PERSON, data: { email: "maya@example.org", user: "u-maya" }, createdAt: "", updatedAt: "" }] } };
+      if (c.path === "/admin/users") return { body: { users: [{ userId: "u-maya", email: "maya@example.org", signedUp: true }] } };
+      return undefined;
+    });
+    const { body, calls } = await call("owners.resendInvite", [[PERSON]], undefined, f);
+    expect(body.result).toEqual({ invited: 0, skipped: 1 });
+    expect(calls.some((c) => c.path === "/invitations")).toBe(false);
+  });
+});
+
+describe("round 1: submit", () => {
+  const withStatus = (status: string) => fake((c) => {
+    const body = c.body as { entity?: string } | undefined;
+    if (c.path === "/query" && body?.entity === "profile") return { body: { data: [{ id: "prof", data: { person: PERSON, status, submitted_at: "2026-10-30T10:00:00.000Z", display_name: "Maya" }, createdAt: "", updatedAt: "" }] } };
+    if (c.path === "/query" && body?.entity === "person") return { body: { data: [{ id: PERSON, data: { email: "maya@example.org", name: "Maya" }, createdAt: "", updatedAt: "" }] } };
+    return undefined;
+  }, { superAdmin: false });
+
+  for (const status of ["submitted", "approved"]) {
+    it(`submitting a profile that is already ${status} sends nothing and answers it as it is`, async () => {
+      const f = withStatus(status);
+      const { res, body, calls } = await call("profiles.submit", [PERSON], undefined, f);
+      expect(res.status).toBe(200);
+      expect(calls.some((c) => c.method === "PATCH")).toBe(false);
+      expect((body.result as { person: { status: string } }).person.status).toBe(status);
+    });
+  }
+});
+
+describe("round 1: call-sheet details need the sign-up's token", () => {
+  it("joining returns a signed token as the sign-up id; details with it merge, without it or tampered are refused", async () => {
+    const f = fake();
+    const join = await call("funnel.joinWaitlist", [{ email: "Maya@Example.org", zip: "90026", placement: "hero" }], { token: null }, f);
+    const id = (join.body.result as { signup: { id: string } }).signup.id;
+    expect(id).not.toContain("maya@example.org");
+    expect(id).toMatch(/^[A-Za-z0-9_-]+\.[0-9]+\.[A-Za-z0-9_-]+$/);
+
+    const ok = await call("funnel.addDetails", [id, { category: "interiors", details: "Homes" }], { token: null }, f);
+    expect(ok.res.status).toBe(200);
+    expect(f.calls.at(-1)).toMatchObject({ path: "/forms/call_sheet/submissions", body: { email: "maya@example.org", answers: { category: "interiors", details: "Homes" } } });
+
+    const before = f.calls.length;
+    for (const bad of ["maya@example.org", `${id.split(".")[0]}.${id.split(".")[1]}.AAAA`, `${Buffer.from("eve@example.org").toString("base64url")}.${id.split(".")[1]}.${id.split(".")[2]}`]) {
+      const r = await call("funnel.addDetails", [bad, { category: "interiors", details: "x" }], { token: null }, f);
+      expect(r.res.status, bad).toBe(422);
+      expect(r.body).toEqual({ error: "invalid_signup" });
+    }
+    expect(f.calls.length).toBe(before);
+  });
+
+  it("an old token is refused", async () => {
+    const { signupToken } = await import("./gigs");
+    const old = signupToken("maya@example.org", SUBMITTER, Date.now() - 2 * 60 * 60_000);
+    const r = await call("funnel.addDetails", [old, { category: "interiors", details: "x" }], { token: null });
+    expect(r.body).toEqual({ error: "invalid_signup" });
+  });
+
+  it("a filled honeypot on the details step sends nothing", async () => {
+    const { calls } = await call("funnel.addDetails", ["x.1.y", { category: "interiors", details: "x", website: "spam" }], { token: null });
+    expect(calls).toEqual([]);
   });
 });

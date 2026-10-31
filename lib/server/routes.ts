@@ -87,6 +87,7 @@ export const ROUTES = {
   "owners.requestChanges": { access: "owner", run: (ctx, [id, notes]) => gigs.requestChanges(ctx, s(id), (Array.isArray(notes) ? notes : []) as ReviewNoteInput[]) },
   "owners.waitlist": { access: "owner", run: (ctx, [q]) => gigs.waitlist(ctx, o<WaitlistQuery>(q)) },
   "owners.invite": { access: "owner", run: (ctx, [list]) => gigs.invite(ctx, ids(list)) },
+  "owners.resendInvite": { access: "owner", run: (ctx, [list]) => gigs.resendInvite(ctx, ids(list)) },
 } satisfies Record<string, RouteDef>;
 
 export type RouteName = keyof typeof ROUTES;

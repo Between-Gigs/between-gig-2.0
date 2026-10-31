@@ -26,7 +26,7 @@ Server environment (never `NEXT_PUBLIC_`; the deploy sets them, docs/handoff/com
 1. In Company OS: a database of your own (`create database configurator_f1`, then `DATABASE_URL=… pnpm db:migrate`).
 2. Here: `node scripts/companyos-local/fake-storage.mjs` (port 4100). Company OS's file routes need storage, and a
    photo is required to submit.
-3. Company OS's API with `AUTH_PROVIDER=dev`, `CLERK_AUTHORIZED_PARTIES=http://localhost:3000`,
+3. Company OS's API with `AUTH_PROVIDER=dev`, `CLERK_AUTHORIZED_PARTIES=https://app.between-gigs.example` (setup.mjs's made-up https app address: Company OS emails only https links),
    `SUPABASE_URL=http://localhost:4100`, `SUPABASE_SERVICE_ROLE_KEY=fake-local`, `STORAGE_BUCKET_PRIVATE=private`,
    `STORAGE_BUCKET_PUBLISHED=published`, `MESSAGING_EMAIL_PROVIDER=fake`, `MESSAGING_EMAIL_ALLOWED_DOMAINS=between-gigs.example`.
 4. `node scripts/companyos-local/setup.mjs`: the made-up tenant, the recipe, the test seed with its photos, the two

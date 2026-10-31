@@ -3,6 +3,10 @@ import { button, defaultContext, h2, hero, layout, link, p, section, signature, 
 
 export interface ProfileSubmittedProps {
   firstName: string;
+  /**
+   * The Gigster's own profile page, {links}/profile/ (signed in): a submitted profile isn't public yet, so never
+   * /p/<handle>. Company OS's copy of this template (its recipe) uses the same link.
+   */
   profileUrl: string;
   editUrl: string;
 }
