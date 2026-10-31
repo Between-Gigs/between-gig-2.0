@@ -23,7 +23,8 @@
     "og": "node scripts/og-images.mjs",
     "check": "pnpm typecheck && pnpm lint && pnpm lint:values && pnpm test && pnpm build && pnpm qa",
     "sync:ds": "scripts/sync-design-system.sh",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:live": "CONTRACT_TARGET=live vitest run lib/data/contract --no-file-parallelism --testTimeout 60000"
   },
   "dependencies": {
     "@clerk/react": "6.18.0",

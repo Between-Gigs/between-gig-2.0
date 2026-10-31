@@ -60,7 +60,11 @@ describe("credentials", () => {
   it("public forms post with the submit-only identity", async () => {
     const { res, calls } = await call("funnel.joinWaitlist", [{ email: "Maya@Example.org", zip: "90026", placement: "hero" }], { token: null });
     expect(res.status).toBe(200);
-    expect(calls).toEqual([{ method: "POST", path: "/forms/call_sheet/submissions", auth: `Bearer ${SUBMITTER}`, body: { email: "maya@example.org", answers: { zip: "90026" }, placement: "hero" } }]);
+    // The placement follows only a new sign-up, so a repeat (a merge) keeps where the first one came from.
+    expect(calls).toEqual([
+      { method: "POST", path: "/forms/call_sheet/submissions", auth: `Bearer ${SUBMITTER}`, body: { email: "maya@example.org", answers: { zip: "90026" } } },
+      { method: "POST", path: "/forms/call_sheet/submissions", auth: `Bearer ${SUBMITTER}`, body: { email: "maya@example.org", placement: "hero" } },
+    ]);
   });
 
   it("everything else runs as the signed-in person, with the token the browser sent", async () => {

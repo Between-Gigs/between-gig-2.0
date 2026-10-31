@@ -381,11 +381,14 @@ export async function joinWaitlist(ctx: Ctx, input: { email: string; zip: string
   if (!/^\d{5}$/.test(input.zip)) return { ok: false, error: "zip" };
   let outcome: "created" | "merged";
   try {
-    ({ outcome } = await ctx.cos.submitForm("call_sheet", { email, answers: clean({ zip: input.zip, category: input.category }), placement: input.placement.slice(0, 60) }));
+    ({ outcome } = await ctx.cos.submitForm("call_sheet", { email, answers: clean({ zip: input.zip, category: input.category }) }));
   } catch (e) {
     if (e instanceof CompanyOsError && e.code === "invalid_email") return { ok: false, error: "email" };
     throw e;
   }
+  // Where the first sign-up came from stays (a merge would overwrite it): the placement goes only with a new sign-up.
+  const placement = input.placement.trim().slice(0, 60);
+  if (outcome === "created" && placement) await ctx.cos.submitForm("call_sheet", { email, placement });
   const signup: WaitlistSignup = { id: email, email, zip: input.zip, category: input.category ?? "", details: "", placement: input.placement, createdAt: nowIso() };
   return { ok: true, signup, alreadyJoined: outcome === "merged" };
 }
@@ -494,6 +497,8 @@ async function profileOf(ctx: Ctx, personId: string) {
 async function decide(ctx: Ctx, personId: string, status: "approved" | "changes_requested", notes: ReviewNoteInput[]) {
   await requireOwner(ctx);
   const profile = await profileOf(ctx, personId);
+  // Only a submitted profile is decided on. Company OS would take a review of an approved profile as a note.
+  if (profile.data.status !== "submitted") throw new CompanyOsError(422, "invalid_status_transition", "only a submitted profile can be reviewed");
   const sections = Object.fromEntries(notes.map((n) => [n.section, n.note]));
   const label: Record<ProfileSection, string> = { about: "About you", skills: "Skills & services", where: "Where & when", story: "Your story" };
   const note = notes.length ? notes.map((n) => `${label[n.section]}: ${n.note}`).join("\n") : "Approved";
