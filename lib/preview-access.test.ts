@@ -15,6 +15,10 @@ describe("requestPreview", () => {
     expect(await requestPreview(async () => "tok_0123456789", fetcher(204, calls))).toBe("granted");
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe("/api/preview/grant/");
+    // Under a base path (the Pages build's), the same path below it, as lib/data/api.ts does.
+    const based: Call[] = [];
+    await requestPreview(async () => "tok_0123456789", fetcher(204, based), "/between-gig-2.0");
+    expect(based[0]!.url).toBe("/between-gig-2.0/api/preview/grant/");
     expect(calls[0]!.init.method).toBe("POST");
     expect(calls[0]!.init.headers).toEqual({ "content-type": "application/json", authorization: "Bearer tok_0123456789" });
   });
@@ -26,7 +30,8 @@ describe("requestPreview", () => {
   });
 
   it.each([
-    [401, "signed-out"],
+    // A token was sent and still refused: signing in again wouldn't help, so not "signed-out" (a manual loop).
+    [401, "unavailable"],
     [404, "refused"],
     [503, "unavailable"],
     [500, "unavailable"],
