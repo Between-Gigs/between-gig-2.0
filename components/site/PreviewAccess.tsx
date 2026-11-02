@@ -39,7 +39,8 @@ export function PreviewAccess() {
       else setState(result);
     });
     return () => { cancelled = true; };
-  }, [session, loading]);
+    // Signed in or not, not the session object: a refresh makes a new one, and each would send another grant.
+  }, [!!session, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (data.kind === "sample") {
     return (

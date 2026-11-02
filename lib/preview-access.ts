@@ -25,11 +25,10 @@ export async function requestPreview(
       credentials: "same-origin",
     });
     if (res.status === 204) return "granted";
-    if (res.status === 404) return "refused";
-    // A token went with the request, so a 401 means Company OS refused it: signing in again wouldn't help. The status
-    // (never the token) goes to the console, so a tester can tell this apart from a Company OS outage.
+    // The status (never the token) goes to the console, so a tester can tell the cases apart: 404 is Company OS saying
+    // this person isn't a super admin; 401 is the token refused (signing in again wouldn't help); 5xx is an outage.
     console.warn(`preview access: the grant answered ${res.status}`);
-    return "unavailable";
+    return res.status === 404 ? "refused" : "unavailable";
   } catch {
     return "unavailable";
   }
