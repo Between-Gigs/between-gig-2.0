@@ -25,7 +25,9 @@ afterAll(() => rmSync(top, { recursive: true, force: true }));
 
 const cookie = (exp = NOW + HOUR, secret = SECRET, user = "u1") => `${PREVIEW_COOKIE}=${previewCookieValue(secret, user, exp)}`;
 const get = (p: string, c?: string, method = "GET") => new Request(`https://web.example${p}`, { method, headers: c ? { cookie: c } : {} });
-const serve = (p: string, c: string | undefined = cookie(), secret: string | undefined = SECRET) => servePreview(get(p, c), { root: ROOT, secret, now: NOW });
+// null, not undefined, for "none": a default parameter would replace undefined.
+const serve = (p: string, c: string | null = cookie(), secret: string | null = SECRET) =>
+  servePreview(get(p, c ?? undefined), { root: ROOT, secret: secret ?? undefined, now: NOW });
 
 describe("serving the export", () => {
   it("sends /preview/ to the guide", async () => {
@@ -91,7 +93,7 @@ describe("serving the export", () => {
 
 describe("access", () => {
   it.each([
-    ["no cookie", undefined],
+    ["no cookie", null],
     ["expired", cookie(NOW - 1)],
     ["another secret", cookie(NOW + HOUR, "q".repeat(64))],
     ["tampered", cookie().replace(/=(\d+)\./, (_, d) => `=${Number(d) + 1}.`)],
@@ -104,7 +106,7 @@ describe("access", () => {
   });
 
   it("without the signing secret, fails closed with 503", async () => {
-    expect((await serve("/preview/preview/", cookie(), undefined)).status).toBe(503);
+    expect((await serve("/preview/preview/", cookie(), null)).status).toBe(503);
   });
 });
 

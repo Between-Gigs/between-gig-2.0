@@ -72,7 +72,8 @@ export async function makeBundle({ root, out, env = process.env }) {
     fs.writeFileSync(path.join(outAbs, "Dockerfile"), DOCKERFILE);
     fs.writeFileSync(path.join(outAbs, ".dockerignore"), "Dockerfile\n.dockerignore\n");
     fs.writeFileSync(path.join(outAbs, MARKER), "Built by scripts/make-bundle.mjs; safe to replace.\n");
-    const found = await findSecrets([path.join(outAbs, ".next/static"), path.join(outAbs, "public")], env);
+    const browserDirs = [".next/static", "public", "preview-site"].map((d) => path.join(outAbs, d)).filter((d) => fs.existsSync(d));
+    const found = await findSecrets(browserDirs, env);
     if (found.length) throw new Error(`make-bundle: secrets in the browser files:\n  - ${found.join("\n  - ")}`);
   } catch (err) {
     fs.rmSync(outAbs, { recursive: true, force: true });
