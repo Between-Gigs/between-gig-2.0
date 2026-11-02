@@ -3,6 +3,8 @@ import { EmptyState } from "@ds/components";
 import { Compass, LockKeyhole, Telescope } from "lucide-react";
 import * as React from "react";
 import { data } from "@/lib/data";
+import { apiSource } from "@/lib/data/api";
+import { requestPreview } from "@/lib/preview-access";
 import { useSession } from "@/lib/session";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { Page } from "./Page";
@@ -30,14 +32,12 @@ export function PreviewAccess() {
     if (!session) { setState("signed-out"); return; } // eslint-disable-line react-hooks/set-state-in-effect
     const target = previewTarget(new URLSearchParams(window.location.search).get("next"));
     let cancelled = false;
-    // Clerk keeps its __session cookie fresh while this page is open; the server reads it (lib/server/preview.ts).
-    void fetch("/api/preview/grant/", { method: "POST", headers: { "content-type": "application/json" }, body: "{}", credentials: "same-origin" })
-      .then((res) => {
-        if (cancelled) return;
-        if (res.status === 204) window.location.assign(target);
-        else setState(res.status === 401 ? "signed-out" : res.status === 404 ? "refused" : "unavailable");
-      })
-      .catch(() => { if (!cancelled) setState("unavailable"); });
+    // The session token goes in the request, as on every other API call (lib/preview-access.ts).
+    void requestPreview(() => apiSource.token()).then((result) => {
+      if (cancelled) return;
+      if (result === "granted") window.location.assign(target);
+      else setState(result);
+    });
     return () => { cancelled = true; };
   }, [session, loading]);
 

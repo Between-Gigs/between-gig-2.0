@@ -30,7 +30,7 @@ const memoryStorage = (): Pick<Storage, "getItem" | "setItem"> => {
   return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => void m.set(k, v) };
 };
 
-export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenProvider(get: () => Promise<string | null>): void } {
+export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenProvider(get: () => Promise<string | null>): void; token(): Promise<string | null> } {
   const base = opts.baseUrl ?? basePath;
   const doFetch = opts.fetch ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
   let getToken = opts.getToken ?? (async () => null);
@@ -68,6 +68,8 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
   return {
     kind: "live",
     setTokenProvider(get) { getToken = get; lastToken = null; changed(); },
+    /** The current session token, for a call that isn't a DataSource method (/preview-access/). */
+    token: () => getToken(),
 
     people: {
       list: (query) => call("people.list", [query ?? {}]),
