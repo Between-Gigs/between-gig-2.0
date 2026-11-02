@@ -30,10 +30,21 @@ const serve = (p: string, c: string | null = cookie(), secret: string | null = S
   servePreview(get(p, c ?? undefined), { root: ROOT, secret: secret ?? undefined, now: NOW });
 
 describe("serving the export", () => {
-  it("sends /preview/ to the guide", async () => {
+  it("serves the sample site's home at /preview/ (its logo links there); /preview gets its slash", async () => {
     const res = await serve("/preview/");
-    expect(res.status).toBe(308);
-    expect(res.headers.get("location")).toBe("/preview/preview/");
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("<html>sample home</html>");
+    expect((await serve("/preview")).headers.get("location")).toBe("/preview/");
+  });
+
+  it("without a cookie, the bare /preview/ opens the guide after the door", async () => {
+    expect((await serve("/preview/", null)).headers.get("location")).toBe("/preview-access/?next=%2Fpreview%2Fpreview%2F");
+  });
+
+  it("lets the email previews load the emails' Google fonts", async () => {
+    const csp = (await serve("/preview/preview/")).headers.get("content-security-policy")!;
+    expect(csp).toContain("style-src 'self' 'unsafe-inline' https://fonts.googleapis.com");
+    expect(csp).toContain("font-src 'self' data: https://fonts.gstatic.com");
   });
 
   it("serves a page's index.html with the preview's own headers", async () => {

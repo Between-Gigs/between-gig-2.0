@@ -139,7 +139,7 @@ try {
   if (door.status !== 302 || door.headers.get("location") !== "/preview-access/?next=%2Fpreview%2Femails%2F") fail(`/preview/emails/ without a cookie answered ${door.status} ${door.headers.get("location")}`);
   for (const url of ["/preview/preview/", "/preview/preview/cursors/", "/preview/emails/", "/preview/studio/", "/preview/thumbs/home.jpg", "/preview/"]) {
     const res = await fetch(base + url, { redirect: "manual", headers: { cookie: previewCookie() } });
-    const want = url === "/preview/" ? 308 : 200;
+    const want = 200;
     if (res.status !== want) { fail(`${url} with a preview cookie answered ${res.status}, expected ${want}`); continue; }
     if (want === 200) {
       if (!/frame-ancestors 'self'/.test(res.headers.get("content-security-policy") ?? "")) fail(`${url}: not the preview's CSP`);

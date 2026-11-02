@@ -34,7 +34,7 @@ const sections: { title: string; items: Item[] }[] = [
     ],
   },
   { title: "Messages", items: [{ href: live ? "/preview/emails/" : "/emails/", label: "Emails", icon: <Mail />, page: live }] },
-  { title: "Build", items: [{ href: "/preview/", label: "Preview", icon: <Telescope />, hint: "the site on sample data", page: live }] },
+  { title: "Build", items: [{ href: live ? "/preview/preview/" : "/preview/", label: "Preview", icon: <Telescope />, hint: "the site on sample data", page: live }] },
 ];
 
 function countsFrom(d: DashboardSummary): Record<CountKey, number> {

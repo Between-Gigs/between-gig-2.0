@@ -7,9 +7,9 @@ import { useSession } from "@/lib/session";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { Page } from "./Page";
 
-/** Where the preview should open: a path under /preview/ only. */
+/** Where the preview should open: a path under /preview/ only, else the guide. */
 export function previewTarget(raw: string | null): string {
-  if (!raw || !raw.startsWith("/preview/") || raw.includes("//") || raw.includes("\\") || /[\u0000-\u001f]/.test(raw)) return "/preview/";
+  if (!raw || !raw.startsWith("/preview/") || raw.includes("//") || raw.includes("\\") || /[\u0000-\u001f]/.test(raw)) return "/preview/preview/";
   return raw;
 }
 

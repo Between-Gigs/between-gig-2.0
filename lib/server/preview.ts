@@ -36,8 +36,9 @@ const plain = (status: number, body = "") => new Response(body || null, { status
 
 /** The export's own pages: Next's inline bootstrap scripts (no nonce in a static export) and its own frames. */
 export const PREVIEW_CSP = [
-  "default-src 'self'", "script-src 'self' 'unsafe-inline'", "style-src 'self' 'unsafe-inline'", "img-src 'self' data: blob:",
-  "font-src 'self' data:", "connect-src 'self'", "frame-src 'self'", "worker-src 'self' blob:", "object-src 'none'",
+  // Google Fonts: the email gallery's previews load the emails' own web fonts.
+  "default-src 'self'", "script-src 'self' 'unsafe-inline'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", "img-src 'self' data: blob:",
+  "font-src 'self' data: https://fonts.gstatic.com", "connect-src 'self'", "frame-src 'self'", "worker-src 'self' blob:", "object-src 'none'",
   "base-uri 'self'", "form-action 'self'", "frame-ancestors 'self'",
 ].join("; ");
 
@@ -102,10 +103,11 @@ export async function servePreview(req: Request, deps: { root?: string; secret?:
   if (url.pathname !== "/preview" && !url.pathname.startsWith("/preview/")) return plain(404, "Not found");
   if (!secret) return plain(503, "The preview is not configured.");
   if (!validCookie(req, secret, now)) {
-    const next = url.pathname.startsWith("/preview/") ? url.pathname : "/preview/";
+    const next = url.pathname === "/preview" || url.pathname === "/preview/" ? "/preview/preview/" : url.pathname;
     return new Response(null, { status: 302, headers: { ...NO_STORE, location: `/preview-access/?next=${encodeURIComponent(next)}` } });
   }
-  if (url.pathname === "/preview" || url.pathname === "/preview/") return new Response(null, { status: 308, headers: { ...NO_STORE, location: "/preview/preview/" } });
+  // /preview/ is the sample site's home page (its logo links there); the guide is /preview/preview/.
+  if (url.pathname === "/preview") return new Response(null, { status: 308, headers: { ...NO_STORE, location: "/preview/" } });
 
   const full = resolveInside(root, url.pathname);
   const file = full ? await fileOf(full) : null;
