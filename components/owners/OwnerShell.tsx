@@ -1,6 +1,6 @@
 "use client";
 import { Avatar, Count, Drawer, IconButton, Input, cx } from "@ds/components";
-import { ClipboardCheck, LayoutDashboard, ListPlus, LogOut, Mail, PanelLeftClose, PanelLeftOpen, Search, Telescope, Users } from "lucide-react";
+import { ClipboardCheck, LayoutDashboard, ListPlus, LogOut, Mail, PanelLeftClose, PanelLeftOpen, Search, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
@@ -8,19 +8,15 @@ import { data, type DashboardSummary } from "@/lib/data";
 import { useAuthActions } from "@/lib/auth/context";
 import { useSession } from "@/lib/session";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 /** The collapsed rail is remembered here; app/layout.tsx restores it onto <html data-owner-nav> before first paint. */
 export const COLLAPSED_KEY = "bg2-owner-nav-collapsed";
 
 type CountKey = "review" | "people" | "waitlist";
-/** `page`: a plain link, for a page outside this app (the preview is the sample export, served as files). */
-interface Item { href: string; label: string; icon: React.ReactNode; exact?: boolean; count?: CountKey; hint?: string; page?: boolean }
-
-/**
- * On a live site the email gallery and the preview guide are in the preview (/preview/, super admins only: the sample
- * export, lib/server/preview.ts); in the sample build they are this app's own pages.
- */
-const live = data.kind === "live";
+interface Item { href: string; label: string; icon: React.ReactNode; exact?: boolean; count?: CountKey; hint?: string }
 
 /** The owners' sections, grouped by the job: see the day, look after Gigsters, talk to people. */
 const sections: { title: string; items: Item[] }[] = [
@@ -33,8 +29,7 @@ const sections: { title: string; items: Item[] }[] = [
       { href: "/owners/waitlist/", label: "Waitlist", icon: <ListPlus />, count: "waitlist", hint: "not invited yet" },
     ],
   },
-  { title: "Messages", items: [{ href: live ? "/preview/emails/" : "/emails/", label: "Emails", icon: <Mail />, page: live }] },
-  { title: "Build", items: [{ href: live ? "/preview/preview/" : "/preview/", label: "Preview", icon: <Telescope />, hint: "the site on sample data", page: live }] },
+  { title: "Messages", items: [{ href: "/emails/", label: "Emails", icon: <Mail /> }] },
 ];
 
 function countsFrom(d: DashboardSummary): Record<CountKey, number> {
@@ -224,9 +219,8 @@ function NavLink({ item: i, count, active, attention, onNavigate, rail }: {
   item: Item; count?: number; active: boolean; attention: boolean; onNavigate?: () => void; rail: (cls: string) => string;
 }) {
   const name = count !== undefined && i.hint ? `${i.label}, ${count} ${i.hint}` : i.label;
-  const Anchor = i.page ? "a" : Link;
   return (
-    <Anchor href={i.href} onClick={onNavigate} aria-current={active ? "page" : undefined} aria-label={name} title={name}
+    <Link href={i.href} onClick={onNavigate} aria-current={active ? "page" : undefined} aria-label={name} title={name}
       className={cx(
         "group flex min-h-11 items-center gap-3 rounded-md px-3 py-1.5 text-label-md transition-colors duration-fast [&_svg]:size-5 [&_svg]:shrink-0",
         rail("nav-collapsed:size-10 nav-collapsed:min-h-10 nav-collapsed:justify-center nav-collapsed:p-0"),
@@ -246,6 +240,6 @@ function NavLink({ item: i, count, active, attention, onNavigate, rail }: {
           {count !== undefined && <Count value={count} max={999} tone={attention ? "accent" : "quiet"} />}
         </span>
       )}
-    </Anchor>
+    </Link>
   );
 }

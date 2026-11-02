@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { data, type RequestCodeResult, type SignInResult } from "@/lib/data";
-import { SAMPLE_OWNER } from "@/lib/data/seed";
+import { SAMPLE_OWNER } from "@/lib/data/fields";
 import { clerkEnabled } from "@/lib/auth/clerk";
 import { useAuthActions } from "@/lib/auth/context";
 import { useSession } from "@/lib/session";

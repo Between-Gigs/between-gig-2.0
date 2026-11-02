@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { GATE_COOKIE, gateCookieValue, resetGateLimits, safeNext, testGate, type GateEnv } from "./test-gate";
+import { GATE_COOKIE, gateCookieValue, gateEnv, resetGateLimits, safeNext, testGate, type GateEnv } from "./test-gate";
 
 // The test environment's passphrase gate (playbook rule D5): on only when TEST_GATE_PASSPHRASE is set.
 const ENV: GateEnv = { passphrase: "correct horse battery", secret: "s".repeat(64) };
@@ -19,6 +19,11 @@ const cookieFor = async (env: GateEnv, exp: number) => `${GATE_COOKIE}=${await g
 beforeEach(() => resetGateLimits());
 
 describe("off", () => {
+  it("never on production, even if the variable got there (a forked environment, a hand-set value)", () => {
+    expect(gateEnv({ TEST_GATE_PASSPHRASE: "p", COOKIE_SIGNING_SECRET: "s", RAILWAY_ENVIRONMENT_NAME: "production" } as unknown as NodeJS.ProcessEnv).passphrase).toBeUndefined();
+    expect(gateEnv({ TEST_GATE_PASSPHRASE: "p", COOKIE_SIGNING_SECRET: "s", RAILWAY_ENVIRONMENT_NAME: "test" } as unknown as NodeJS.ProcessEnv).passphrase).toBe("p");
+  });
+
   it("lets everything through when no passphrase is set", async () => {
     expect(await testGate(req("/"), {}, NOW)).toBeNull();
     expect(await testGate(req("/api/funnel/joinWaitlist/", { method: "POST" }), { secret: ENV.secret }, NOW)).toBeNull();
@@ -70,8 +75,12 @@ describe("the passphrase form", () => {
     expect(res.status).toBe(303);
     // Absolute (Next's proxy refuses a relative Location), on the site's own origin.
     expect(res.headers.get("location")).toBe("https://web-test.example/join/?invite=abc");
-    const viaAppUrl = (await testGate(post({ passphrase: ENV.passphrase!, next: "/p/x/" }, "198.51.100.1"), { ...ENV, origin: "https://site.example" }, NOW))!;
-    expect(viaAppUrl.headers.get("location")).toBe("https://site.example/p/x/");
+    // On the host that served the form: APP_URL's origin (its https) when that's the host, else the request's own.
+    const hosted = req("/test-gate/", { method: "POST", ip: "198.51.100.1", headers: { "content-type": "application/x-www-form-urlencoded", host: "web-test.example" }, body: new URLSearchParams({ passphrase: ENV.passphrase!, next: "/p/x/" }).toString() });
+    const viaAppUrl = (await testGate(hosted, { ...ENV, origin: "https://web-test.example" }, NOW))!;
+    expect(viaAppUrl.headers.get("location")).toBe("https://web-test.example/p/x/");
+    const elsewhere = (await testGate(post({ passphrase: ENV.passphrase!, next: "/p/x/" }, "198.51.100.2"), { ...ENV, origin: "https://other.example" }, NOW))!;
+    expect(elsewhere.headers.get("location")).toBe("https://web-test.example/p/x/");
     const cookie = res.headers.get("set-cookie")!;
     expect(cookie).toMatch(new RegExp(`^${GATE_COOKIE}=`));
     for (const flag of ["HttpOnly", "Secure", "SameSite=Lax", "Path=/", `Max-Age=${30 * 86_400}`]) expect(cookie).toContain(flag);
@@ -126,6 +135,7 @@ describe("cookies that don't count", () => {
     ["expired", () => cookieFor(ENV, NOW - 1)],
     ["signed under an old passphrase", () => cookieFor({ ...ENV, passphrase: "old passphrase" }, NOW + DAY)],
     ["signed with another secret", () => cookieFor({ ...ENV, secret: "t".repeat(64) }, NOW + DAY)],
+    ["signed for another site", () => cookieFor({ ...ENV, origin: "https://elsewhere.example" }, NOW + DAY)],
     ["tampered expiry", async () => (await cookieFor(ENV, NOW + DAY)).replace(/=(\d+)\./, (_, d) => `=${Number(d) + 1}.`)],
     ["garbage", async () => `${GATE_COOKIE}=not-a-cookie`],
   ])("%s → the gate", async (_, make) => {

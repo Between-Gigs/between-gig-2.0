@@ -13,7 +13,7 @@ import type {
   ProfileDraft, ProfileFields, ProfileSection, ReviewNote, ReviewNoteInput, Session, SketchKind, SyncExternalResult, WaitlistQuery,
   WaitlistResult, WaitlistRow, WaitlistSignup,
 } from "@/lib/data/types";
-import { blankFields } from "@/lib/data/seed";
+import { blankFields } from "@/lib/data/fields";
 import { waitlistCategories } from "@/lib/data/taxonomy";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { CompanyOsError, and, eq, type AdminUser, type BatchOp, type CompanyOs, type Credential, type Row } from "./companyos";

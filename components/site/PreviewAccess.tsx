@@ -26,8 +26,8 @@ export function PreviewAccess() {
 
   React.useEffect(() => {
     if (data.kind !== "live" || loading) return;
+    // Signed in: the server decides (Company OS super admin), not this page's idea of the role.
     if (!session) { setState("signed-out"); return; } // eslint-disable-line react-hooks/set-state-in-effect
-    if (session.role !== "owner") { setState("refused"); return; }
     const target = previewTarget(new URLSearchParams(window.location.search).get("next"));
     let cancelled = false;
     // Clerk keeps its __session cookie fresh while this page is open; the server reads it (lib/server/preview.ts).

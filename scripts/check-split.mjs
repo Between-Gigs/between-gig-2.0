@@ -25,6 +25,10 @@ export const DASHBOARD_MODULES = [
 ];
 /** The sample store's localStorage key, in lib/data/sample.ts only. */
 export const SAMPLE_MARKER = "bg2-sample-v2";
+/** The made-up people's IMDb link, in lib/data/seed.ts only. */
+export const SEED_MARKER = "nm0000000";
+/** What every dashboard file puts in its chunk (lib/split-area.ts). Unlike the manifest, it shows however the code got in. */
+export const DASHBOARD_MARKER = "bg-split:dashboard";
 
 /**
  * Problems, one line each. pages: [{ route, modules: project-relative client module paths, chunks: [{ name, text }] }].
@@ -37,9 +41,11 @@ export function splitProblems(pages, { live, expect = [] }) {
     if (!known.has(p.route)) { problems.push(`${p.route} is neither a site nor a dashboard route (scripts/check-split.mjs)`); continue; }
     if (SITE_ROUTES.includes(p.route)) {
       for (const mod of p.modules) if (DASHBOARD_MODULES.some((re) => re.test(mod))) problems.push(`${p.route} loads dashboard code: ${mod}`);
+      const dash = p.chunks.find((c) => c.text.includes(DASHBOARD_MARKER));
+      if (dash) problems.push(`${p.route} ships dashboard code (${dash.name})`);
     }
     if (live) {
-      const leaked = p.chunks.find((c) => c.text.includes(SAMPLE_MARKER));
+      const leaked = p.chunks.find((c) => c.text.includes(SAMPLE_MARKER) || c.text.includes(SEED_MARKER));
       if (leaked) problems.push(`${p.route} ships the sample data (${leaked.name})`);
     }
   }

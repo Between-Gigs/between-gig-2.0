@@ -6,7 +6,7 @@
  * /preview-access/ checks the signed-in person with Company OS (POST /api/preview/grant/), which sets a signed 12-hour
  * cookie scoped to /preview. Without COOKIE_SIGNING_SECRET both answer 503.
  */
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { CompanyOsError, companyOs, configFromEnv, type CompanyOs } from "./companyos";
@@ -14,13 +14,16 @@ import { sessionToken } from "./media";
 
 export const PREVIEW_COOKIE = "bg_preview";
 export const PREVIEW_ROOT = "preview-site";
-const MAX_AGE_S = 12 * 3600;
+// One hour: it doesn't follow sign-out, and /preview-access/ renews it without a click while the person is signed in.
+const MAX_AGE_S = 3600;
 
-const sign = (secret: string, userId: string, exp: number) => createHmac("sha256", secret).update(`preview|${userId}|${exp}`).digest("hex");
+// Bound to the site (APP_URL), so a cookie minted on test never opens production's preview, even with one secret.
+const sign = (secret: string, userId: string, exp: number, site = process.env.APP_URL ?? "") =>
+  createHmac("sha256", secret).update(`preview|${site}|${userId}|${exp}`).digest("hex");
 
 /** The cookie's value: expiry (ms), the super admin's user id (base64url) and the signature. */
-export const previewCookieValue = (secret: string, userId: string, exp: number) =>
-  `${exp}.${Buffer.from(userId, "utf8").toString("base64url")}.${sign(secret, userId, exp)}`;
+export const previewCookieValue = (secret: string, userId: string, exp: number, site?: string) =>
+  `${exp}.${Buffer.from(userId, "utf8").toString("base64url")}.${sign(secret, userId, exp, site)}`;
 
 function validCookie(req: Request, secret: string, now: number) {
   const m = new RegExp(`(?:^|;\\s*)${PREVIEW_COOKIE}=(\\d{1,15})\\.([A-Za-z0-9_-]{1,200})\\.([0-9a-f]{64})(?:;|$)`).exec(req.headers.get("cookie") ?? "");
@@ -34,13 +37,28 @@ function validCookie(req: Request, secret: string, now: number) {
 const NO_STORE = { "cache-control": "no-store" };
 const plain = (status: number, body = "") => new Response(body || null, { status, headers: { ...NO_STORE, "content-type": "text/plain; charset=utf-8", "x-content-type-options": "nosniff" } });
 
-/** The export's own pages: Next's inline bootstrap scripts (no nonce in a static export) and its own frames. */
-export const PREVIEW_CSP = [
-  // Google Fonts: the email gallery's previews load the emails' own web fonts.
-  "default-src 'self'", "script-src 'self' 'unsafe-inline'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", "img-src 'self' data: blob:",
-  "font-src 'self' data: https://fonts.gstatic.com", "connect-src 'self'", "frame-src 'self'", "worker-src 'self' blob:", "object-src 'none'",
-  "base-uri 'self'", "form-action 'self'", "frame-ancestors 'self'",
-].join("; ");
+/**
+ * The export's policy. A static export has no nonce, so each page may run exactly its own inline scripts, by hash
+ * (never 'unsafe-inline': the preview shares the live site's origin and its signed-in session). It frames its own
+ * pages, and the email gallery's previews load the emails' Google fonts.
+ */
+export function previewCsp(scriptHashes: string[] = []) {
+  return [
+    "default-src 'self'", ["script-src 'self'", ...scriptHashes].join(" "), "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "img-src 'self' data: blob:", "font-src 'self' data: https://fonts.gstatic.com", "connect-src 'self'", "frame-src 'self'",
+    "worker-src 'self' blob:", "object-src 'none'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'self'",
+  ].join("; ");
+}
+
+/** The hashes of a page's inline scripts (those without src), as CSP sources. */
+export function inlineScriptHashes(html: string): string[] {
+  const out: string[] = [];
+  for (const m of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
+    if (/\bsrc\s*=/i.test(m[1]!) || m[2] === "") continue;
+    out.push(`'sha256-${createHash("sha256").update(m[2]!, "utf8").digest("base64")}'`);
+  }
+  return out;
+}
 
 const TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8",
@@ -51,7 +69,7 @@ const TYPES: Record<string, string> = {
 };
 
 /** The file a /preview/… path names inside root, or null when it would leave it or isn't a plain path. */
-function resolveInside(root: string, rawPath: string): string | null {
+export function resolveInside(root: string, rawPath: string): string | null {
   if (!rawPath.startsWith("/preview/")) return null;
   const rest = rawPath.slice("/preview/".length);
   // Encoded separators and NUL never mean anything in a URL the export makes.
@@ -69,24 +87,33 @@ function resolveInside(root: string, rawPath: string): string | null {
   return rel.startsWith("..") || path.isAbsolute(rel) ? null : full;
 }
 
-async function fileOf(full: string): Promise<string | null> {
+/** The file to send (a directory's index.html), only if its real path, links followed, is still inside root. */
+async function fileOf(root: string, full: string): Promise<string | null> {
+  const realRoot = await fs.realpath(root).catch(() => null);
+  const inside = async (p: string) => {
+    const real = await fs.realpath(p).catch(() => null);
+    if (!real || !realRoot) return false;
+    const rel = path.relative(realRoot, real);
+    return !rel.startsWith("..") && !path.isAbsolute(rel);
+  };
   const stat = await fs.stat(full).catch(() => null);
-  if (stat?.isFile()) return full;
+  if (stat?.isFile()) return (await inside(full)) ? full : null;
   if (stat?.isDirectory()) {
     const index = path.join(full, "index.html");
-    if ((await fs.stat(index).catch(() => null))?.isFile()) return index;
+    if ((await fs.stat(index).catch(() => null))?.isFile() && (await inside(index))) return index;
   }
   return null;
 }
 
-function fileHeaders(file: string, root: string) {
+// Every answer is private: a shared cache must never hand a gated file to someone without the cookie.
+function fileHeaders(file: string, root: string, body: Uint8Array) {
   const ext = path.extname(file).toLowerCase();
   const rel = path.relative(root, file).split(path.sep).join("/");
-  const cache = ext === ".html" ? "no-store" : rel.startsWith("_next/static/") ? "public, max-age=31536000, immutable" : "private, max-age=3600";
+  const cache = ext === ".html" ? "no-store" : rel.startsWith("_next/static/") ? "private, max-age=31536000, immutable" : "private, max-age=3600";
   return {
     "content-type": TYPES[ext] ?? "application/octet-stream",
     "cache-control": cache,
-    "content-security-policy": PREVIEW_CSP,
+    "content-security-policy": previewCsp(ext === ".html" ? inlineScriptHashes(Buffer.from(body).toString("utf8")) : []),
     "x-frame-options": "SAMEORIGIN",
     "x-robots-tag": "noindex, nofollow",
     "x-content-type-options": "nosniff",
@@ -110,15 +137,15 @@ export async function servePreview(req: Request, deps: { root?: string; secret?:
   if (url.pathname === "/preview") return new Response(null, { status: 308, headers: { ...NO_STORE, location: "/preview/" } });
 
   const full = resolveInside(root, url.pathname);
-  const file = full ? await fileOf(full) : null;
+  const file = full ? await fileOf(root, full) : null;
   if (!file) {
     const notFound = await fs.readFile(path.join(root, "404.html")).catch(() => null);
-    return notFound
-      ? new Response(req.method === "HEAD" ? null : new Uint8Array(notFound), { status: 404, headers: fileHeaders(path.join(root, "404.html"), root) })
-      : plain(404, "Not found");
+    if (!notFound) return plain(404, "Not found");
+    const bytes = new Uint8Array(notFound);
+    return new Response(req.method === "HEAD" ? null : bytes, { status: 404, headers: fileHeaders(path.join(root, "404.html"), root, bytes) });
   }
-  const body = req.method === "HEAD" ? null : new Uint8Array(await fs.readFile(file));
-  return new Response(body, { status: 200, headers: fileHeaders(file, root) });
+  const bytes = new Uint8Array(await fs.readFile(file));
+  return new Response(req.method === "HEAD" ? null : bytes, { status: 200, headers: fileHeaders(file, root, bytes) });
 }
 
 let cachedCos: Pick<CompanyOs, "me"> | null = null;

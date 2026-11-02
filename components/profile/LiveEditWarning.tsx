@@ -2,6 +2,9 @@
 import { ConfirmDialog } from "@ds/components";
 import * as React from "react";
 import type { PersonStatus, ProfileFields } from "@/lib/data";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 /** Availability is the one thing a live profile can change without going back to review (Company OS decision N-09). */
 const LIVE_FIELDS: (keyof ProfileFields)[] = ["month", "monthStatus", "dates"];

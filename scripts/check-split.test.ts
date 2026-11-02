@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DASHBOARD_ROUTES, SAMPLE_MARKER, SITE_ROUTES, splitProblems } from "./check-split.mjs";
+import { DASHBOARD_MARKER, DASHBOARD_ROUTES, SAMPLE_MARKER, SEED_MARKER, SITE_ROUTES, splitProblems } from "./check-split.mjs";
 
 // Code splitting (owner, 2026-11-02): the public site loads no dashboard code, and a live (api) build ships no sample data.
 type Page = { route: string; modules: string[]; chunks: { name: string; text: string }[] };
@@ -38,6 +38,24 @@ describe("splitProblems", () => {
     const pages = clean();
     pages[2]!.chunks.push({ name: "/_next/static/chunks/sample.js", text: `x="${SAMPLE_MARKER}"` });
     expect(splitProblems(pages, { live: true })).toEqual(["/owners ships the sample data (/_next/static/chunks/sample.js)"]);
+  });
+
+  it("fails when a site route's chunks carry dashboard code, even through an import the manifest doesn't list", () => {
+    const pages = clean();
+    pages[1]!.chunks.push({ name: "/_next/static/chunks/shared.js", text: `markArea("${DASHBOARD_MARKER}")` });
+    expect(splitProblems(pages, { live: true })).toEqual(["/p/[slug] ships dashboard code (/_next/static/chunks/shared.js)"]);
+  });
+
+  it("the dashboards may carry their own marker", () => {
+    const pages = clean();
+    pages[2]!.chunks.push({ name: "o.js", text: DASHBOARD_MARKER });
+    expect(splitProblems(pages, { live: true })).toEqual([]);
+  });
+
+  it("fails when a live build ships the made-up seed people (not only the sample store)", () => {
+    const pages = clean();
+    pages[0]!.chunks.push({ name: "/_next/static/chunks/seed.js", text: `imdb:"https://www.imdb.com/name/${SEED_MARKER}/"` });
+    expect(splitProblems(pages, { live: true })).toEqual(["/ ships the sample data (/_next/static/chunks/seed.js)"]);
   });
 
   it("allows the sample data in a sample build", () => {

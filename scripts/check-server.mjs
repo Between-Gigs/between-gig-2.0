@@ -64,7 +64,8 @@ const PASSPHRASE = "check server passphrase";
 async function start(extra) {
   const port = await new Promise((resolve) => { const s = net.createServer().listen(0, "127.0.0.1", () => { const p = s.address().port; s.close(() => resolve(p)); }); });
   const env = { ...process.env, PORT: String(port), HOSTNAME: "127.0.0.1", NODE_ENV: "production", ...extra };
-  for (const name of ["TEST_GATE_PASSPHRASE", "COOKIE_SIGNING_SECRET"]) if (!(name in extra)) delete env[name];
+  // APP_URL too: both cookies are bound to it, and the deploy workflows have it set by this step.
+  for (const name of ["TEST_GATE_PASSPHRASE", "COOKIE_SIGNING_SECRET", "APP_URL"]) if (!(name in extra)) delete env[name];
   const server = spawn(process.execPath, ["server.js"], { cwd: STANDALONE, env, stdio: ["ignore", "pipe", "pipe"] });
   let log = "";
   server.stdout.on("data", (b) => { log += b; });
@@ -81,7 +82,7 @@ async function start(extra) {
 
 /** A preview cookie as lib/server/preview.ts signs it. */
 const previewCookie = (exp = Date.now() + 3_600_000, user = "check-server") =>
-  `bg_preview=${exp}.${Buffer.from(user).toString("base64url")}.${createHmac("sha256", SECRET).update(`preview|${user}|${exp}`).digest("hex")}`;
+  `bg_preview=${exp}.${Buffer.from(user).toString("base64url")}.${createHmac("sha256", SECRET).update(`preview||${user}|${exp}`).digest("hex")}`;
 
 let server = { stop() {} };
 try {
@@ -161,8 +162,9 @@ try {
     const res = await fetch(g + url);
     if (res.status !== 200) fail(`gate: exempt ${url} answered ${res.status}`);
   }
+  // Reaches its handler, which refuses a request without Resend's signature headers with 400.
   const hook = await fetch(`${g}/webhooks/resend/`, { method: "POST", body: "{}" });
-  if (hook.status === 401 && (hook.headers.get("content-type") ?? "").includes("text/html")) fail("gate: the Resend webhook got the passphrase page");
+  if (hook.status !== 400) fail(`gate: the Resend webhook answered ${hook.status}, expected its own 400`);
   const wrong = await fetch(`${g}/test-gate/`, { method: "POST", redirect: "manual", headers: { "content-type": "application/x-www-form-urlencoded", "x-real-ip": "192.0.2.1" }, body: "passphrase=nope&next=%2F" });
   if (wrong.status !== 401) fail(`gate: a wrong passphrase answered ${wrong.status}`);
   const right = await fetch(`${g}/test-gate/`, { method: "POST", redirect: "manual", headers: { "content-type": "application/x-www-form-urlencoded", "x-real-ip": "192.0.2.2" }, body: `passphrase=${encodeURIComponent(PASSPHRASE)}&next=%2Fjoin%2F%3Finvite%3Dx` });

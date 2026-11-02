@@ -10,7 +10,7 @@
  * - 5 wrong tries in 15 minutes from one address, then 429 (in memory: one server instance on test).
  * - Exempt: Resend's signed webhook, the email images (mail clients fetch them without a cookie) and the healthcheck.
  */
-// Web Crypto, not node:crypto: the proxy may run in the Edge runtime.
+// Web Crypto: runs the same in any runtime Next gives the proxy.
 
 export interface GateEnv {
   passphrase?: string;
@@ -27,7 +27,8 @@ const LIMIT = { max: 5, windowMs: 15 * 60_000 };
 const EXEMPT = [/^\/webhooks\/resend\/?$/, /^\/email\/[^/]+$/, /^\/healthz\/?$/];
 
 export const gateEnv = (env: NodeJS.ProcessEnv = process.env): GateEnv => ({
-  passphrase: env.TEST_GATE_PASSPHRASE || undefined,
+  // Never on production, whatever reached its variables (the deploy refuses the secret too).
+  passphrase: env.RAILWAY_ENVIRONMENT_NAME === "production" ? undefined : env.TEST_GATE_PASSPHRASE || undefined,
   secret: env.COOKIE_SIGNING_SECRET || undefined,
   origin: env.APP_URL || undefined,
 });
@@ -37,7 +38,8 @@ const hex = (b: ArrayBuffer) => [...new Uint8Array(b)].map((x) => x.toString(16)
 const sha256 = async (s: string) => hex(await crypto.subtle.digest("SHA-256", utf8.encode(s)));
 async function sign(env: GateEnv, exp: number) {
   const key = await crypto.subtle.importKey("raw", utf8.encode(env.secret!), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  return hex(await crypto.subtle.sign("HMAC", key, utf8.encode(`gate|${await sha256(env.passphrase!)}|${exp}`)));
+  // Bound to the passphrase (a new one signs everyone out) and to the site (APP_URL).
+  return hex(await crypto.subtle.sign("HMAC", key, utf8.encode(`gate|${env.origin ?? ""}|${await sha256(env.passphrase!)}|${exp}`)));
 }
 /** Same length strings compared without stopping at the first difference. */
 function equal(a: string, b: string) {
@@ -97,6 +99,12 @@ async function readForm(req: Request): Promise<URLSearchParams | null> {
   return new URLSearchParams(body);
 }
 
+/** APP_URL's origin when it is the host the request came to (the request's own URL may say http behind the edge). */
+function sameHost(origin: string | undefined, req: Request) {
+  if (!origin) return undefined;
+  try { return new URL(origin).host === req.headers.get("host") ? new URL(origin).origin : undefined; } catch { return undefined; }
+}
+
 /** null to let the request through, or the gate's own answer. */
 export async function testGate(req: Request, env: GateEnv = gateEnv(), now = Date.now()): Promise<Response | null> {
   if (!env.passphrase) return null;
@@ -120,7 +128,7 @@ export async function testGate(req: Request, env: GateEnv = gateEnv(), now = Dat
     const exp = now + MAX_AGE_S * 1000;
     return new Response(null, {
       status: 303,
-      headers: { ...BASE_HEADERS, location: new URL(next, env.origin ?? url.origin).toString(), "set-cookie": `${GATE_COOKIE}=${await gateCookieValue(env, exp)}; Max-Age=${MAX_AGE_S}; Path=/; HttpOnly; Secure; SameSite=Lax` },
+      headers: { ...BASE_HEADERS, location: new URL(next, sameHost(env.origin, req) ?? url.origin).toString(), "set-cookie": `${GATE_COOKIE}=${await gateCookieValue(env, exp)}; Max-Age=${MAX_AGE_S}; Path=/; HttpOnly; Secure; SameSite=Lax` },
     });
   }
 

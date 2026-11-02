@@ -109,7 +109,7 @@ function EmailThumb({ html }: { html?: string }) {
   return (
     <div ref={box} aria-hidden="true" className="relative overflow-hidden border-b border-line bg-surface-embed" style={{ height: `${Math.ceil(height * scale)}px` }}>
       {doc && (
-        <iframe title="" tabIndex={-1} srcDoc={doc} scrolling="no" onLoad={measure}
+        <iframe title="" tabIndex={-1} sandbox="allow-same-origin" srcDoc={doc} scrolling="no" onLoad={measure}
           className="pointer-events-none absolute top-0 left-0 w-150 origin-top-left"
           style={{ transform: `scale(${scale})`, height: `${height}px` }} />
       )}

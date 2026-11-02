@@ -20,9 +20,10 @@ stays as it is: a static export on the sample data, every route.
 The server serves the sample export at `/preview/` (`lib/server/preview.ts`, `app/(served)/preview/[[...path]]/route.server.ts`),
 so test and production each preview exactly the frontend they run, without touching real data. Without a preview
 cookie, `/preview/…` redirects to `/preview-access/`. That page signs the visitor in if needed, and a super admin
-(Company OS `me().isSuperAdmin`, checked by `POST /api/preview/grant/`) gets a signed, 12-hour `bg_preview` cookie
-scoped to `/preview` and goes on to the page they asked for. Anyone else sees "not found". The owner sidebar's
-**Preview** and **Emails** links open it. The footer's "Preview build…" note shows only on the sample data.
+(Company OS `me().isSuperAdmin`, checked by `POST /api/preview/grant/`) gets a signed, 1-hour `bg_preview` cookie (bound to the site, so test's never opens production's; renewed without a click while signed in)
+scoped to `/preview` and goes on to the page they asked for. Anyone else sees "not found". Nothing in the live app
+links to it (owner's decision, 2026-11-02): it is opened only by its address, `/preview/`. The footer's "Preview
+build…" note shows only on the sample data.
 
 ### Code splitting
 
@@ -45,7 +46,12 @@ The test site is on the public internet, so `proxy.server.ts` puts a passphrase 
   `/healthz/` (Railway's healthcheck).
 - Everything behind it is `noindex`. Without `COOKIE_SIGNING_SECRET` it answers 503 (fail closed).
 
-`deploy-test.yml` refuses to run without both secrets; `deploy-prod.yml` refuses a `TEST_GATE_PASSPHRASE`.
+`deploy-test.yml` refuses to run without both secrets; `deploy-prod.yml` refuses a `TEST_GATE_PASSPHRASE`, and the
+gate ignores one on Railway's `production` environment anyway.
+
+What it does not cover, on purpose: the build's own files (`/_next/static`, the favicon) load without the cookie, as
+the pages need them. They hold no secret and, with the sample swapped out, no sample data. The attempt limit counts
+per `X-Real-IP` (Railway's edge sets it, see below); without one, every caller shares a single bucket.
 Testers need the passphrase before an email link opens for them.
 
 `scripts/server-build.mjs` builds in a temporary copy of the working tree (what `git ls-files` lists, so committed,

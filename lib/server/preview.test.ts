@@ -1,9 +1,9 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { CompanyOsError, type Me } from "./companyos";
-import { PREVIEW_COOKIE, grantPreview, previewCookieValue, servePreview } from "./preview";
+import { PREVIEW_COOKIE, grantPreview, previewCookieValue, resolveInside, servePreview } from "./preview";
 
 // /preview/ on the server builds (owner, 2026-11-02): the sample-data export of the whole site, for super admins only.
 const SECRET = "p".repeat(64);
@@ -15,12 +15,15 @@ const ROOT = path.join(top, "preview-site");
 const file = (rel: string, text: string) => { mkdirSync(path.dirname(path.join(ROOT, rel)), { recursive: true }); writeFileSync(path.join(ROOT, rel), text); };
 file("index.html", "<html>sample home</html>");
 file("preview/index.html", "<html>preview guide</html>");
+file("scripted/index.html", '<html><script>self.__next_f.push([1])</script><script src="/preview/_next/static/chunks/app.js"></script><script id="t">document.documentElement.dataset.theme="dark"</script></html>');
 file("emails/invite/index.html", "<html>invite email</html>");
 file("_next/static/chunks/app.js", "console.log(1)");
 file("thumbs/home.jpg", "jpg");
 file("index.txt", "rsc");
 file("404.html", "<html>sample not found</html>");
 writeFileSync(path.join(top, "outside.txt"), "must never be served");
+symlinkSync(path.join(top, "outside.txt"), path.join(ROOT, "linked.txt"));
+symlinkSync(top, path.join(ROOT, "linked-dir"));
 afterAll(() => rmSync(top, { recursive: true, force: true }));
 
 const cookie = (exp = NOW + HOUR, secret = SECRET, user = "u1") => `${PREVIEW_COOKIE}=${previewCookieValue(secret, user, exp)}`;
@@ -56,16 +59,26 @@ describe("serving the export", () => {
     expect(res.headers.get("x-robots-tag")).toBe("noindex, nofollow");
     expect(res.headers.get("x-frame-options")).toBe("SAMEORIGIN");
     const csp = res.headers.get("content-security-policy")!;
-    expect(csp).toContain("script-src 'self' 'unsafe-inline'");
+    expect(csp).toMatch(/script-src 'self'(;|$| )/);
+    expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
     expect(csp).toContain("frame-ancestors 'self'");
     expect(csp).toContain("connect-src 'self'");
+  });
+
+  it("allows exactly the page's own inline scripts, by hash (the export has no nonce)", async () => {
+    const { createHash } = await import("node:crypto");
+    const h = (t: string) => `'sha256-${createHash("sha256").update(t).digest("base64")}'`;
+    const csp = (await serve("/preview/scripted/")).headers.get("content-security-policy")!;
+    const scriptSrc = csp.split("; ").find((d) => d.startsWith("script-src "))!;
+    expect(scriptSrc).toBe(`script-src 'self' ${h("self.__next_f.push([1])")} ${h('document.documentElement.dataset.theme="dark"')}`);
   });
 
   it("serves nested pages, static chunks (long cache) and files with their types", async () => {
     expect(await (await serve("/preview/emails/invite/")).text()).toBe("<html>invite email</html>");
     const js = await serve("/preview/_next/static/chunks/app.js");
     expect(js.headers.get("content-type")).toBe("text/javascript; charset=utf-8");
-    expect(js.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
+    // private: a shared cache must never hand a gated file to someone without the cookie.
+    expect(js.headers.get("cache-control")).toBe("private, max-age=31536000, immutable");
     expect((await serve("/preview/thumbs/home.jpg")).headers.get("content-type")).toBe("image/jpeg");
     expect((await serve("/preview/index.txt")).headers.get("content-type")).toBe("text/plain; charset=utf-8");
   });
@@ -84,6 +97,24 @@ describe("serving the export", () => {
     const res = await serve("/preview/nope/");
     expect(res.status).toBe(404);
     expect(await res.text()).toBe("<html>sample not found</html>");
+  });
+
+  // A URL already normalises "..", so these reach resolveInside as written only when called directly.
+  it.each([
+    "/preview/../outside.txt", "/preview/%2e%2e/outside.txt", "/preview/emails/%2F..%2F..%2Foutside.txt", "/preview/..%5Coutside.txt",
+    "/preview/a%00b", "/preview/%zz", "/previewx/", "/preview/a\\..\\b",
+  ])("resolveInside refuses %s", (p) => {
+    expect(resolveInside(ROOT, p)).toBeNull();
+  });
+
+  it("resolveInside keeps plain paths inside the export", () => {
+    expect(resolveInside(ROOT, "/preview/emails/invite/")).toBe(path.join(ROOT, "emails/invite"));
+  });
+
+  it.each(["/preview/linked.txt", "/preview/linked-dir/outside.txt"])("never follows a link out of the export: %s → 404", async (p) => {
+    const res = await serve(p);
+    expect(res.status).toBe(404);
+    expect(await res.text()).not.toContain("must never be served");
   });
 
   it.each([
@@ -127,14 +158,19 @@ describe("granting access", () => {
   const post = (headers: Record<string, string> = { authorization: "Bearer tok_0123456789", "content-type": "application/json" }, method = "POST") =>
     new Request("https://web.example/api/preview/grant/", { method, headers, body: method === "POST" ? "{}" : undefined });
 
-  it("a super admin gets a 12-hour cookie scoped to /preview", async () => {
+  it("a super admin gets a 1-hour cookie scoped to /preview", async () => {
     const res = await grantPreview(post(), { secret: SECRET, cos: cos(me(true)), now: NOW });
     expect(res.status).toBe(204);
     const set = res.headers.get("set-cookie")!;
-    for (const flag of ["HttpOnly", "Secure", "SameSite=Lax", "Path=/preview", "Max-Age=43200"]) expect(set).toContain(flag);
+    for (const flag of ["HttpOnly", "Secure", "SameSite=Lax", "Path=/preview", "Max-Age=3600"]) expect(set).toContain(flag);
     const value = set.split(";")[0]!;
     expect((await serve("/preview/preview/", value)).status).toBe(200);
-    expect((await servePreview(get("/preview/preview/", value), { root: ROOT, secret: SECRET, now: NOW + 12 * HOUR + 1 })).status).toBe(302);
+    expect((await servePreview(get("/preview/preview/", value), { root: ROOT, secret: SECRET, now: NOW + HOUR + 1 })).status).toBe(302);
+  });
+
+  it("a cookie signed for another site (test's, on production) doesn't open the preview", async () => {
+    const other = `${PREVIEW_COOKIE}=${previewCookieValue(SECRET, "u1", NOW + HOUR, "https://web-test.example")}`;
+    expect((await serve("/preview/preview/", other)).status).toBe(302);
   });
 
   it("reads Clerk's __session cookie when there is no header", async () => {

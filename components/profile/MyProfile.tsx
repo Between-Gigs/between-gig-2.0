@@ -3,7 +3,7 @@ import { Banner, Button, Skeleton, Switch, useToast } from "@ds/components";
 import { ArrowRight, Copy, Eye, ListChecks, PartyPopper, PencilLine, Share2 } from "lucide-react";
 import * as React from "react";
 import { data, type Person, type PersonSummary, type Profile, type ProfileFields } from "@/lib/data";
-import { blankFields } from "@/lib/data/seed";
+import { blankFields } from "@/lib/data/fields";
 import { useRequireRole } from "@/lib/guard";
 import { absoluteUrl } from "@/lib/site";
 import { STEPS, sectionLabel } from "@/lib/profile/validate";
@@ -12,6 +12,9 @@ import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { ProfilePreviewCard } from "./ProfilePreviewCard";
 import { ProfileView } from "./ProfileView";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric" }) : "");
 

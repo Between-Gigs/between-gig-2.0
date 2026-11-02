@@ -44,6 +44,11 @@ describe("findSecrets", () => {
     expect(found).toEqual([`${path.join(dir, "studio-source/lib/a.ts.txt")}: the value of COOKIE_SIGNING_SECRET`]);
   });
 
+  it("judges those folders inside the scanned one only, never by where the checkout lives", async () => {
+    const dir = bundle({ "artifacts/build/chunks/x.js": 'x="cos_svc_0000_fictional"' });
+    expect(await findSecrets([path.join(dir, "artifacts/build")])).toHaveLength(1);
+  });
+
   it("finds this environment's real values when they are set, and never prints them", async () => {
     const env = { COMPANY_OS_URL: "http://fictional-api.example.test:4000", COMPANY_OS_SUBMIT_TOKEN: "fictional-submit-secret-123" };
     const dir = bundle({ "a.js": "fictional-submit-secret-123", "b.js": "see http://fictional-api.example.test:4000/x", "c.js": "fine" });

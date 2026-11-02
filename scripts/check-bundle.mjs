@@ -41,7 +41,8 @@ export async function findSecrets(dirs, env = {}) {
       const text = fs.readFileSync(file).toString("latin1");
       // In the preview export, Studio's copy of the app's source and the handoff documents are text about the code:
       // they name these patterns on purpose. Only real values count there.
-      const source = file.split(path.sep).some((part) => DOC_DIRS.has(part));
+      // Judged inside the scanned folder only, so where the checkout lives never matters.
+      const source = DOC_DIRS.has(path.relative(dir, file).split(path.sep)[0]);
       if (!source) for (const [what, re] of PATTERNS) if (re.test(text)) found.push(`${file}: ${what}`);
       for (const [name, value] of values) if (text.includes(value)) found.push(`${file}: the value of ${name}`);
     }

@@ -1,5 +1,8 @@
 import { cx } from "@ds/components";
 import { Check, Plus } from "lucide-react";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 /** Multi-select as a cloud of toggle chips: every option visible, one tap to pick or drop. From the GigsterOnboarding template. */
 export function ChipPicker({ id, options, value, onChange, label, invalid, describedBy }: {

@@ -5,6 +5,9 @@ import * as React from "react";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { data } from "@/lib/data";
 import { useSession } from "@/lib/session";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 const MAX = 800;
 const SOURCE = 1600;
