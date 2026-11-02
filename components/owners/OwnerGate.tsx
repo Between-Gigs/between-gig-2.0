@@ -8,6 +8,9 @@ import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { HeaderSkeleton } from "./kit";
 import { OwnerShell } from "./OwnerShell";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 /**
  * Owner pages render only for an owner session. In the sample, a visitor can switch to the sample owner

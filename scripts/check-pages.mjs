@@ -29,6 +29,8 @@ for (const r of pages) {
 const serverOnly = appRoutes(ROOT, { server: true }).filter((r) => r.serverOnly);
 for (const r of serverOnly) {
   const p = r.dynamic ? staticPart(r.path) : r.path;
+  // /preview/: the server serves this export's own preview pages there (lib/server/preview.ts), so they are expected.
+  if (p === "/preview") continue;
   if (p && fs.existsSync(path.join(OUT, p))) failures.push(`${r.path} exists only in the server build, but out${p} is there`);
 }
 

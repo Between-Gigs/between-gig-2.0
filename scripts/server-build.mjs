@@ -18,10 +18,13 @@ export const INTERNAL = [
   "public/artifacts", "public/studio-source", "public/thumbs", "public/workspace",
 ];
 
-/** The 18 "Make live" pages, as app routes. A page in neither this list nor INTERNAL fails `pnpm test`. */
+/**
+ * The 18 "Make live" pages and the preview's door (/preview-access: the panel itself is the sample export at /preview/,
+ * scripts/preview-build.mjs), as app routes. A page in neither this list nor INTERNAL fails `pnpm test`.
+ */
 export const LIVE_PAGES = [
   "/", "/join", "/licensing-insurance", "/login", "/owners", "/owners/people", "/owners/people/[id]", "/owners/review",
-  "/owners/waitlist", "/p/[slug]", "/privacy", "/professionals", "/profile", "/profile/canvas", "/profile/edit",
+  "/owners/waitlist", "/p/[slug]", "/preview-access", "/privacy", "/professionals", "/profile", "/profile/canvas", "/profile/edit",
   "/provider-standards", "/storyboard", "/terms",
 ];
 
@@ -29,13 +32,12 @@ export const LIVE_PAGES = [
 export const LIVE_ROUTES = [
   "/", "/professionals/", "/storyboard/", "/privacy/", "/terms/", "/licensing-insurance/", "/provider-standards/",
   "/join/", "/login/", "/profile/canvas/", "/profile/edit/", "/profile/", "/p/maya/",
-  "/owners/", "/owners/review/", "/owners/people/", "/owners/people/maya/", "/owners/waitlist/",
+  "/owners/", "/owners/review/", "/owners/people/", "/owners/people/maya/", "/owners/waitlist/", "/preview-access/",
 ];
 
 /** Top-level public/ folders the live pages and the emails use. Any other must be in INTERNAL. */
 export const PUBLIC_LIVE = ["art", "cursors", "email", "img", "og"];
 
-const isInternal = (rel) => INTERNAL.some((dir) => rel === dir || rel.startsWith(`${dir}/`));
 
 /** node_modules into the copy: a copy-on-write clone (macOS) or hard links (Linux), else a plain copy. */
 function cloneNodeModules(from, to) {
@@ -44,13 +46,13 @@ function cloneNodeModules(from, to) {
   throw new Error("server-build: could not copy node_modules");
 }
 
-/** Copies the working tree as git sees it (committed, changed and new files; not ignored ones) minus INTERNAL. */
-export function stageCopy(root, dest) {
+/** Copies the working tree as git sees it (committed, changed and new files; not ignored ones) minus `exclude`. */
+export function stageCopy(root, dest, exclude = INTERNAL) {
   const listed = execFileSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], { cwd: root, encoding: "utf8" });
   const files = [...new Set(listed.split("\0").filter(Boolean))];
   fs.mkdirSync(dest, { recursive: true });
   for (const rel of files) {
-    if (isInternal(rel)) continue;
+    if (exclude.some((dir) => rel === dir || rel.startsWith(`${dir}/`))) continue;
     const from = path.join(root, rel);
     const st = fs.lstatSync(from, { throwIfNoEntry: false });
     if (!st) continue; // deleted in the working tree

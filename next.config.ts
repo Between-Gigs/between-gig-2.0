@@ -11,6 +11,8 @@ import { securityHeaders } from "./lib/security/headers";
  *   proxy.server.ts sets the per-request CSP. See docs/handoff/companyos-deploy.md.
  */
 const server = process.env.BG_BUILD === "server";
+/** A live build (test, production): the sample DataSource is swapped out at build time (lib/data/selected.ts). */
+const live = process.env.NEXT_PUBLIC_DATA_SOURCE === "api";
 const basePath = server ? "" : process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 /** The build's commit and time, for the workspace status bar. */
@@ -23,6 +25,7 @@ const config: NextConfig = {
   trailingSlash: true,
   images: { unoptimized: true },
   reactStrictMode: true,
+  ...(live && { turbopack: { resolveAlias: { "@/lib/data/selected": "./lib/data/selected.live.ts" } } }),
   ...(server && {
     // *.server.ts(x) files exist only in this build (proxy.server.ts, F1's route handlers): the export never sees them.
     pageExtensions: ["tsx", "ts", "jsx", "js", "server.tsx", "server.ts"],
@@ -30,7 +33,11 @@ const config: NextConfig = {
     outputFileTracingRoot: process.cwd(),
     poweredByHeader: false,
     productionBrowserSourceMaps: false,
-    headers: async () => [{ source: "/:path*", headers: securityHeaders() }],
+    // /preview/ is the sample export and sets its own framing (SAMEORIGIN: its workspace frames its own pages).
+    headers: async () => [
+      { source: "/:path((?!preview(?:/|$)).*)", headers: securityHeaders() },
+      { source: "/preview/:path*", headers: securityHeaders().filter((h) => h.key !== "X-Frame-Options") },
+    ],
   }),
 };
 

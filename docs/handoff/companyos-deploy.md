@@ -4,15 +4,55 @@
 calls the API server-side over Railway's private network (Company OS decision log N-03). The GitHub Pages preview
 stays as it is: a static export on the sample data, every route.
 
-## Two builds
+## Three builds
 
-| | GitHub Pages preview | Server (test and production) |
-| --- | --- | --- |
-| Command | `pnpm build` | `pnpm build:server` (sets `BG_BUILD=server`) |
-| Output | `out/` (static export, base path `/between-gig-2.0`) | `.next/standalone/` (Next server) |
-| Routes | every route | the ship list's 18 "Make live" routes |
-| Headers | none (Pages can't set them) | CSP with a per-request nonce, HSTS, nosniff, … |
-| Workflow | `pages.yml` (unchanged) | `deploy-test.yml`, `deploy-prod.yml` |
+| | GitHub Pages preview | Server (test and production) | The server's /preview/ |
+| --- | --- | --- | --- |
+| Command | `pnpm build` | `pnpm build:server` (sets `BG_BUILD=server`) | `pnpm build:preview`, after the server build |
+| Output | `out/` (static export, base path `/between-gig-2.0`) | `.next/standalone/` (Next server) | `.next/standalone/preview-site/` (static export, base path `/preview`) |
+| Routes | every route | the ship list's 18 "Make live" routes, plus `/preview-access/` | every route, on the sample data |
+| Data | sample | `NEXT_PUBLIC_DATA_SOURCE=api` on test and production: the sample is not in the bundle (`lib/data/selected.ts`) | sample only: no Clerk key, no data source, never calls Company OS |
+| Headers | none (Pages can't set them) | CSP with a per-request nonce, HSTS, nosniff, … | its own CSP (inline scripts, `frame-ancestors 'self'`), `X-Frame-Options: SAMEORIGIN`, noindex |
+| Workflow | `pages.yml` (unchanged) | `deploy-test.yml`, `deploy-prod.yml` | the same, in the same step |
+
+### /preview/ on test and production (super admins only)
+
+The server serves the sample export at `/preview/` (`lib/server/preview.ts`, `app/(served)/preview/[[...path]]/route.server.ts`),
+so test and production each preview exactly the frontend they run, without touching real data. Without a preview
+cookie, `/preview/…` redirects to `/preview-access/`. That page signs the visitor in if needed, and a super admin
+(Company OS `me().isSuperAdmin`, checked by `POST /api/preview/grant/`) gets a signed, 1-hour `bg_preview` cookie (bound to the site, so test's never opens production's; renewed without a click while signed in)
+scoped to `/preview` and goes on to the page they asked for. Anyone else sees "not found". Nothing in the live app
+links to it (owner's decision, 2026-11-02): it is opened only by its address, `/preview/`. The footer's "Preview
+build…" note shows only on the sample data.
+
+### Code splitting
+
+`scripts/check-split.mjs` (in `pnpm check:server`) fails the build if a public site page (`/`, `/professionals`,
+`/storyboard`, the legal pages, `/p/[slug]`, `/join`, `/login`, `/preview-access`) loads dashboard code
+(`components/owners`, `builder`, `canvas`, the profile editor's parts), or, on a live build, if any page ships the
+sample data. A live build swaps `@/lib/data/selected` for `selected.live.ts` (`next.config.ts`), so the sample store
+is never bundled.
+
+### The test gate (test only)
+
+The test site is on the public internet, so `proxy.server.ts` puts a passphrase in front of it
+(`lib/security/test-gate.ts`, Company OS playbook rule D5). It is on when `TEST_GATE_PASSPHRASE` is set:
+
+- Without its cookie, a page answers 401 with the passphrase form, and `/api/*` answers 401 JSON.
+- The right passphrase sets a signed 30-day `bg_test_gate` cookie and returns to the page asked for, query included.
+  A new passphrase signs everyone out.
+- 5 wrong tries in 15 minutes from one address get 429.
+- Exempt: `/webhooks/resend/` (signed by Resend), `/email/*` (mail clients fetch the images without a cookie), and
+  `/healthz/` (Railway's healthcheck).
+- Everything behind it is `noindex`. Without `COOKIE_SIGNING_SECRET` it answers 503 (fail closed).
+
+`deploy-test.yml` refuses to run without both secrets; `deploy-prod.yml` refuses a `TEST_GATE_PASSPHRASE`, and the
+gate ignores one on Railway's `production` environment anyway.
+
+What it does not cover, on purpose: the build's own files (`/_next/static`, the favicon) load without the cookie, as
+the pages need them. They hold no secret and, with the sample swapped out, no sample data. The attempt limit counts
+per `X-Real-IP` (Railway's edge sets it, see below); without one, every caller shares a single bucket.
+Testers need the passphrase before an email link opens for them.
 
 `scripts/server-build.mjs` builds in a temporary copy of the working tree (what `git ls-files` lists, so committed,
 changed and new files but no ignored ones such as `.env*`) without the internal and waiting folders (`INTERNAL`:
@@ -27,9 +67,12 @@ Files named `*.server.ts` / `*.server.tsx` (the proxy, the API and media route h
 build: only it adds those page extensions. `scripts/check-pages.mjs` checks the Pages export has every page and none
 of them.
 
-`pnpm check` runs both builds, `check-pages.mjs` after the export, then `pnpm check:server`: `scripts/check-bundle.mjs` (no `cos_svc_`, `sk_live`,
-`sk_test`, `CLERK_SECRET` or `*.railway.internal` in what browsers download) and `scripts/check-server.mjs` (starts
-the server: live routes 200, internal ones 404, headers and nonces on every page).
+`pnpm check` runs all three builds, `check-pages.mjs` after the export, then `pnpm check:server`:
+- `scripts/check-bundle.mjs`: no `cos_svc_`, `sk_live`, `sk_test`, `CLERK_SECRET` or `*.railway.internal` in what
+  browsers download, the preview export included. In its Studio source copy, only real secret values count.
+- `scripts/check-server.mjs`: starts the server. Live routes 200, internal ones 404, headers and nonces on every page,
+  `/healthz/` 200, `/preview/` behind its cookie. A second start with a passphrase checks the test gate.
+- `scripts/check-split.mjs`: the code-splitting rules above.
 
 ### Security headers
 
@@ -66,6 +109,8 @@ the server: live routes 200, internal ones 404, headers and nonces on every page
 | `COMPANY_OS_READ_TOKEN` | `cos_svc_…`, a read identity (role `public_reader`): public pages | workflow, from the GitHub secret |
 | `COMPANY_OS_SUBMIT_TOKEN` | `cos_svc_…`, a submit identity (role `form_submitter`, mode `submit`): public forms | workflow, from the GitHub secret |
 | `APP_URL` | the site's origin, `https://…`, no trailing slash (test: the Railway domain) | workflow |
+| `COOKIE_SIGNING_SECRET` | random, different per environment: signs the preview's and the gate's cookies | workflow, from the GitHub secret |
+| `TEST_GATE_PASSPHRASE` | test only: the passphrase in front of the test site | workflow, from the GitHub secret |
 | `NODE_ENV`, `PORT`, `HOSTNAME` | `production`, `3000`, `0.0.0.0` | the IaC |
 
 The platform key (`COMPANY_OS_PLATFORM_KEY`) is **not** on this service. It is only typed into a shell for the
@@ -82,10 +127,13 @@ one-time import below.
    `POST /platform/tenants/<tenant>/service-identities` with `{ "name": "2.0 public reads", "roleKey": "public_reader" }`
    and `{ "name": "2.0 public forms", "roleKey": "form_submitter", "mode": "submit" }`.
 3. **GitHub environments** in this repo (Settings → Environments), created before the first run:
-   - `test`: secrets `RAILWAY_TOKEN` (the test project token), `COMPANY_OS_READ_TOKEN`, `COMPANY_OS_SUBMIT_TOKEN`; variables `CLERK_PUBLISHABLE_KEY` (`pk_test_…`),
+   - `test`: secrets `RAILWAY_TOKEN` (the test project token), `COMPANY_OS_READ_TOKEN`, `COMPANY_OS_SUBMIT_TOKEN`,
+     `TEST_GATE_PASSPHRASE` (your choice, at least 12 characters) and `COOKIE_SIGNING_SECRET` (`openssl rand -hex 32`);
+     variables `CLERK_PUBLISHABLE_KEY` (`pk_test_…`),
      `RAILWAY_PROJECT_NAME` (`Between Gigs OS`), `RAILWAY_REGION` (`us-east4-eqdc4a`).
    - `production`: the same names with production values (`pk_live_…`, the production token and
-     identities), plus the variable `APP_URL` (`https://between-gigs.com`).
+     identities, its own `COOKIE_SIGNING_SECRET`), plus the variable `APP_URL` (`https://between-gigs.com`), and
+     **no** `TEST_GATE_PASSPHRASE` (the deploy refuses one).
    - **Protection, required** (a run uses the workflow file *from the ref it runs*, so the guard in
      `deploy-prod.yml` only holds if nobody else can make a `v*` tag):
      - `production`: *Deployment branches and tags* → tag pattern `v*` only; a required reviewer (you) if the plan

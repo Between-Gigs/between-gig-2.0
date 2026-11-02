@@ -37,6 +37,18 @@ describe("findSecrets", () => {
     expect(found[0]).toContain(path.join("chunks", "x.js"));
   });
 
+  it("in the preview's Studio source copy and handoff documents (text about the code), only real values count, not the patterns they name", async () => {
+    const dir = bundle({ "studio-source/lib/server/routes.test.ts.txt": 'expect(x).not.toContain("cos_svc_")', "artifacts/backend-handoff/index.html": "never give it CLERK_SECRET_KEY", "studio-source/lib/a.ts.txt": "k=REAL-SECRET-VALUE-123" });
+    expect(await findSecrets([dir])).toEqual([]);
+    const found = await findSecrets([dir], { COOKIE_SIGNING_SECRET: "REAL-SECRET-VALUE-123" });
+    expect(found).toEqual([`${path.join(dir, "studio-source/lib/a.ts.txt")}: the value of COOKIE_SIGNING_SECRET`]);
+  });
+
+  it("judges those folders inside the scanned one only, never by where the checkout lives", async () => {
+    const dir = bundle({ "artifacts/build/chunks/x.js": 'x="cos_svc_0000_fictional"' });
+    expect(await findSecrets([path.join(dir, "artifacts/build")])).toHaveLength(1);
+  });
+
   it("finds this environment's real values when they are set, and never prints them", async () => {
     const env = { COMPANY_OS_URL: "http://fictional-api.example.test:4000", COMPANY_OS_SUBMIT_TOKEN: "fictional-submit-secret-123" };
     const dir = bundle({ "a.js": "fictional-submit-secret-123", "b.js": "see http://fictional-api.example.test:4000/x", "c.js": "fine" });

@@ -2,6 +2,11 @@
  * Email templates as pure functions: props in, { subject, preheader, html, text } out. No React, no
  * DOM, so they run unchanged in the Worker that sends through Resend.
  * Previews: /emails and /emails/[name].
+ *
+ * Company OS sends the live emails from copies of these in its repo (deploy/recipes/between-gigs/emails/*.html|txt),
+ * rendered with assetBase = siteUrl = "{{links.base}}" and the props as {{…}} placeholders, so each environment's
+ * emails load images from and link to its own site. After a change here, re-render those copies; Company OS's
+ * email-templates test refuses hard-coded hosts and links without their trailing slash.
  */
 import { invite, type InviteProps } from "./invite";
 import { profileSubmitted, type ProfileSubmittedProps } from "./profile-submitted";
@@ -29,7 +34,7 @@ interface TemplateInfo<P> {
 export const emailTemplates = {
   invite: {
     name: "invite", label: "Invite", when: "To each waitlist sign-up when professional onboarding opens.",
-    render: invite, sample: { inviteUrl: "https://between-gigs.com/join?invite=sample-token", email: "riley.park@example.com" },
+    render: invite, sample: { inviteUrl: "https://between-gigs.com/join/?invite=sample-token", email: "riley.park@example.com" },
   } satisfies TemplateInfo<InviteProps>,
   "sign-in-code": {
     name: "sign-in-code", label: "Sign-in code", when: "When someone asks to sign in with their email.",
@@ -37,11 +42,11 @@ export const emailTemplates = {
   } satisfies TemplateInfo<SignInCodeProps>,
   "profile-submitted": {
     name: "profile-submitted", label: "Profile submitted", when: "Right after a Gigster submits their profile for review.",
-    render: profileSubmitted, sample: { firstName: "Maya", profileUrl: "https://between-gigs.com/profile/", editUrl: "https://between-gigs.com/profile/canvas" },
+    render: profileSubmitted, sample: { firstName: "Maya", profileUrl: "https://between-gigs.com/profile/", editUrl: "https://between-gigs.com/profile/canvas/" },
   } satisfies TemplateInfo<ProfileSubmittedProps>,
   welcome: {
     name: "welcome", label: "Welcome", when: "When someone joins the call sheet on /professionals.",
-    render: welcome, sample: { storyboardUrl: "https://between-gigs.com/storyboard" },
+    render: welcome, sample: { storyboardUrl: "https://between-gigs.com/storyboard/" },
   } satisfies TemplateInfo<WelcomeProps>,
   "coming-soon": {
     name: "coming-soon", label: "Coming soon", when: "After either Storyboard form: offering skills or describing a project.",
@@ -49,11 +54,11 @@ export const emailTemplates = {
   } satisfies TemplateInfo<ComingSoonProps>,
   approved: {
     name: "approved", label: "Profile approved", when: "When an owner approves a submitted profile.",
-    render: approved, sample: { firstName: "Imani", profileUrl: "https://between-gigs.com/p/imani-carter", editUrl: "https://between-gigs.com/profile/canvas" },
+    render: approved, sample: { firstName: "Imani", profileUrl: "https://between-gigs.com/p/imani-carter/", editUrl: "https://between-gigs.com/profile/canvas/" },
   } satisfies TemplateInfo<ApprovedProps>,
   "changes-requested": {
     name: "changes-requested", label: "Changes requested", when: "When an owner suggests edits, one note per section.",
-    render: changesRequested, sample: { firstName: "Hana", notes: "about|Please add a profile photo that shows your face clearly.\nstory|Tell clients a little more about what a session with you looks like.", editUrl: "https://between-gigs.com/profile/canvas" },
+    render: changesRequested, sample: { firstName: "Hana", notes: "about|Please add a profile photo that shows your face clearly.\nstory|Tell clients a little more about what a session with you looks like.", editUrl: "https://between-gigs.com/profile/canvas/" },
   } satisfies TemplateInfo<ChangesRequestedProps>,
 } as const;
 

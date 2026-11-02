@@ -26,7 +26,8 @@ export default defineRailway((ctx) => {
   const web = service("web", {
     source: empty(),
     build: { builder: "DOCKERFILE", dockerfilePath: "Dockerfile" },
-    healthcheck: "/",
+    // Not "/": on test the passphrase gate answers every page with 401; /healthz/ is exempt (lib/security/test-gate.ts).
+    healthcheck: "/healthz/",
     healthcheckTimeout: 60,
     ...(region ? { regions: { [region]: 1 } } : {}),
     env: {
@@ -43,6 +44,10 @@ export default defineRailway((ctx) => {
       COMPANY_OS_SUBMIT_TOKEN: preserve(),
       // This service's public origin: Clerk session tokens must have been issued to it (`azp`).
       APP_URL: preserve(),
+      // Signs the preview's cookie, and on test the gate's (lib/server/preview.ts, lib/security/test-gate.ts).
+      COOKIE_SIGNING_SECRET: preserve(),
+      // The test site's passphrase gate (Company OS playbook rule D5); production never has one.
+      ...(prod ? {} : { TEST_GATE_PASSPHRASE: preserve() }),
     },
   });
 

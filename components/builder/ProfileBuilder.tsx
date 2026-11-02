@@ -15,6 +15,9 @@ import { ProfilePreviewCard } from "@/components/profile/ProfilePreviewCard";
 import { useLiveEditWarning } from "@/components/profile/LiveEditWarning";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 const HEADS: [string, string][] = [
   ["Meet your Gigster", "Start with the experience that makes you, you."],

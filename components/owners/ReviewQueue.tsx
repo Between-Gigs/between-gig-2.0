@@ -12,6 +12,9 @@ import { OwnerGate } from "./OwnerGate";
 import { OwnerShell } from "./OwnerShell";
 import { isHeld } from "./hold";
 import { reviewHref } from "./ReviewPanel";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 const missing = (f: ProfileFields) => Object.values(validateAll(f)).flatMap((e) => Object.keys(e)).map((k) => fieldLabel[k as keyof ProfileFields] ?? k);
 const isToday = (iso: string) => new Date(iso).toDateString() === new Date().toDateString();

@@ -1,7 +1,7 @@
 import { renderEmail, type EmailContext } from "@/emails";
 import type { EmailTemplate } from "@/lib/data";
 import { basePath } from "@/lib/site";
-import { DEMO_TOKENS } from "@/lib/data/seed";
+import { DEMO_TOKENS } from "@/lib/data/fields";
 
 export type PreviewScheme = "light" | "dark";
 

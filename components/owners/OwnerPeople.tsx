@@ -12,6 +12,9 @@ import { PersonStatusBadge, personStatusMeta } from "@/components/people/PersonS
 import { Meter, OwnerPage, Panel, Row, RowSkeletons } from "./kit";
 import { OwnerShell } from "./OwnerShell";
 import { OwnerGate } from "./OwnerGate";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 const VIEW_KEY = "bg2-people-view";
 const blank: Required<PeopleQuery> = { text: "", status: "all", service: "all", area: "all", availability: "all", craft: "all", profile: "all", sort: "updated" };

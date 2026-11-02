@@ -11,6 +11,8 @@
 #   secrets    RAILWAY_TOKEN            project token of "Between Gigs OS", environment `test`
 #              COMPANY_OS_READ_TOKEN    the test tenant's read service identity (cos_svc_…, role public_reader)
 #              COMPANY_OS_SUBMIT_TOKEN  the test tenant's submit identity (cos_svc_…, role form_submitter, mode submit)
+#              TEST_GATE_PASSPHRASE     the passphrase in front of the whole test site (playbook rule D5)
+#              COOKIE_SIGNING_SECRET    random (openssl rand -hex 32): signs the gate's and the preview's cookies
 #   variables  CLERK_PUBLISHABLE_KEY    its publishable key (pk_test_…), built into the pages
 #              RAILWAY_PROJECT_NAME     "Between Gigs OS" (a label; the token picks the project)
 #              RAILWAY_REGION           optional: the api's region, us-east4-eqdc4a
@@ -52,7 +54,7 @@ jobs:
         run: node scripts/check-company-os.mjs --allow-todo
       - run: pnpm typecheck && pnpm lint && pnpm lint:values && pnpm test
       - name: Server build (no internal routes) and its checks
-        run: pnpm build:server && pnpm check:server
+        run: pnpm build:server && pnpm build:preview && pnpm check:server
 
   deploy:
     needs: checks
@@ -76,9 +78,14 @@ jobs:
           CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
           COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
+          TEST_GATE_PASSPHRASE: ${{ secrets.TEST_GATE_PASSPHRASE }}
+          COOKIE_SIGNING_SECRET: ${{ secrets.COOKIE_SIGNING_SECRET }}
           BG_RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT_NAME }}
         run: |
           case "$CLERK_PUBLISHABLE_KEY" in pk_test_?*) ;; *) echo "::error::test requires a Clerk TEST publishable key (pk_test_…) in the test environment's variables"; exit 1 ;; esac
+          # The test site is public: it never runs without its passphrase gate (playbook rule D5).
+          if [ ${#TEST_GATE_PASSPHRASE} -lt 12 ]; then echo "::error::Set the test environment's secret TEST_GATE_PASSPHRASE (at least 12 characters)"; exit 1; fi
+          if [ ${#COOKIE_SIGNING_SECRET} -lt 32 ]; then echo "::error::Set the test environment's secret COOKIE_SIGNING_SECRET (openssl rand -hex 32)"; exit 1; fi
           case "$COMPANY_OS_READ_TOKEN" in cos_svc_?*) ;; *) echo "::error::Set the test environment's secret COMPANY_OS_READ_TOKEN (a cos_svc_… read identity)"; exit 1 ;; esac
           case "$COMPANY_OS_SUBMIT_TOKEN" in cos_svc_?*) ;; *) echo "::error::Set the test environment's secret COMPANY_OS_SUBMIT_TOKEN (a cos_svc_… submit identity)"; exit 1 ;; esac
           if [ "$COMPANY_OS_READ_TOKEN" = "$COMPANY_OS_SUBMIT_TOKEN" ]; then echo "::error::COMPANY_OS_READ_TOKEN and COMPANY_OS_SUBMIT_TOKEN must be two different identities"; exit 1; fi
@@ -126,7 +133,7 @@ jobs:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_DATA_SOURCE: api
           NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.site.outputs.url }}
-        run: pnpm build:server && node scripts/check-server.mjs
+        run: pnpm build:server && pnpm build:preview && pnpm check:server
 
       # The bundle that is uploaded, scanned with this environment's real secret values set: it must contain none.
       - name: Bundle (no secret of this environment in it)
@@ -134,6 +141,8 @@ jobs:
           COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          TEST_GATE_PASSPHRASE: ${{ secrets.TEST_GATE_PASSPHRASE }}
+          COOKIE_SIGNING_SECRET: ${{ secrets.COOKIE_SIGNING_SECRET }}
         run: node scripts/make-bundle.mjs "$RUNNER_TEMP/web"
 
       # The IaC declares these as preserve(); the values go in over stdin, without a redeploy.
@@ -142,8 +151,10 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
+          TEST_GATE_PASSPHRASE: ${{ secrets.TEST_GATE_PASSPHRASE }}
+          COOKIE_SIGNING_SECRET: ${{ secrets.COOKIE_SIGNING_SECRET }}
         run: |
-          for name in APP_URL COMPANY_OS_READ_TOKEN COMPANY_OS_SUBMIT_TOKEN; do
+          for name in APP_URL COMPANY_OS_READ_TOKEN COMPANY_OS_SUBMIT_TOKEN TEST_GATE_PASSPHRASE COOKIE_SIGNING_SECRET; do
             printf '%s' "${!name}" | railway variable set "$name" --stdin --service "$SERVICE" --environment "$RAILWAY_ENV" --skip-deploys
           done
 

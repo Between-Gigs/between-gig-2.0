@@ -15,6 +15,9 @@ import { OwnerGate } from "./OwnerGate";
 import { OwnerShell } from "./OwnerShell";
 import { isHeld } from "./hold";
 import { PersonDrawer } from "./PersonDrawer";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 const greeting = () => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
 const today = () => new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });

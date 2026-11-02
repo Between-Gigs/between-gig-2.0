@@ -1,8 +1,10 @@
-// Checks the server build (`pnpm build:server`) by starting it: the 18 "Make live" routes answer 200, the internal and
-// waiting ones 404 and are not in the build output, and every page carries the security headers with a fresh CSP
-// nonce that each of its scripts uses. Run after the build; exits 1 on any failure.
+// Checks the server build (`pnpm build:server`, then `pnpm build:preview`) by starting it: the live routes answer 200,
+// the internal and waiting ones 404 and are not in the build output, and every page carries the security headers with
+// a fresh CSP nonce that each of its scripts uses. /preview/ is the sample export, for a preview cookie only; /healthz/
+// answers 200. A second start with TEST_GATE_PASSPHRASE checks the test gate. Exits 1 on any failure.
 //   node scripts/check-server.mjs
 import { spawn } from "node:child_process";
+import { createHmac } from "node:crypto";
 import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
@@ -15,7 +17,7 @@ const STANDALONE = path.join(ROOT, ".next/standalone");
 
 // One URL per internal page or file, so a route that slipped back in shows up by name.
 const INTERNAL_URLS = [
-  "/workspace/", "/workspace/open/", "/workspace/demo/", "/studio/", "/studio/site/", "/preview/", "/preview/cursors/", "/preview/curtain/",
+  "/workspace/", "/workspace/open/", "/workspace/demo/", "/studio/", "/studio/site/",
   "/emails/", "/emails/welcome/", "/crew-call/", "/proposals/home/", "/artifacts/", "/artifacts/ship-list/", "/artifacts/ship-list/index.html",
   "/studio-source/manifest.json", "/thumbs/home.jpg", "/workspace/covers/handoff.jpg",
 ];
@@ -28,41 +30,64 @@ if (!fs.existsSync(path.join(STANDALONE, "server.js"))) {
   process.exit(1);
 }
 
-// Not in the output at all: no compiled page, no copied file.
+// Not in the output at all: no compiled page, no copied file. (Under app/preview only the server-only handler that
+// serves the sample export may be compiled, app/(served)/preview: no page.)
+const pagesUnder = (dir) => fs.existsSync(dir) ? fs.readdirSync(dir, { recursive: true }).filter((f) => /(^|\/)page\.js$/.test(String(f))) : [];
 for (const dir of INTERNAL) {
   const [kind, name] = [dir.split("/")[0], dir.slice(dir.indexOf("/") + 1)];
   const outputs = kind === "app" ? [".next/server/app", ".next/standalone/.next/server/app"] : [".next/standalone/public"];
-  for (const where of outputs) if (fs.existsSync(path.join(ROOT, where, name))) fail(`${dir} is in the build output (${where}/${name})`);
+  for (const where of outputs) {
+    const at = path.join(ROOT, where, name);
+    if (kind === "app" ? pagesUnder(at).length : fs.existsSync(at)) fail(`${dir} is in the build output (${where}/${name})`);
+  }
 }
+const PREVIEW_SITE = path.join(STANDALONE, "preview-site");
+if (!fs.existsSync(path.join(PREVIEW_SITE, "preview/index.html"))) fail("no .next/standalone/preview-site/preview/index.html: run pnpm build:preview after the server build");
 
 // The server-only files (*.server.ts(x): F1's /api/* and /media/[id] handlers) are compiled into this build.
 const SERVER_ONLY = appRoutes(ROOT, { server: true }).filter((r) => r.serverOnly);
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, ".next/server/app-paths-manifest.json"), "utf8"));
-for (const r of SERVER_ONLY) if (!manifest[`${r.path}/${r.kind}`]) fail(`${r.path} (${r.kind}.server.*) is not in the server build`);
+// Next keeps route groups, "(served)", in its keys; the URL (and appRoutes) doesn't have them.
+const routeKeys = new Set(Object.keys(manifest).map((k) => k.replace(/\/\([^)/]+\)/g, "")));
+for (const r of SERVER_ONLY) if (!routeKeys.has(`${r.path}/${r.kind}`)) fail(`${r.path} (${r.kind}.server.*) is not in the server build`);
 
 // Fail closed: nothing in the output that isn't a live page, Next's own error pages or a server-only handler.
 const allowed = new Set([...LIVE_PAGES.map((p) => `${p === "/" ? "" : p}/page`), "/_not-found/page", "/_global-error/page", ...SERVER_ONLY.map((r) => `${r.path}/${r.kind}`)]);
-for (const key of Object.keys(manifest)) if (!allowed.has(key)) fail(`${key} is in the server build but is neither live nor server-only`);
+for (const key of routeKeys) if (!allowed.has(key)) fail(`${key} is in the server build but is neither live nor server-only`);
 for (const name of fs.readdirSync(path.join(STANDALONE, "public"))) if (!PUBLIC_LIVE.includes(name)) fail(`public/${name} is in the server build but not in PUBLIC_LIVE`);
 
-const port = await new Promise((resolve) => { const s = net.createServer().listen(0, "127.0.0.1", () => { const p = s.address().port; s.close(() => resolve(p)); }); });
-const server = spawn(process.execPath, ["server.js"], {
-  cwd: STANDALONE,
-  env: { ...process.env, PORT: String(port), HOSTNAME: "127.0.0.1", NODE_ENV: "production" },
-  stdio: ["ignore", "pipe", "pipe"],
-});
-let log = "";
-server.stdout.on("data", (b) => { log += b; });
-server.stderr.on("data", (b) => { log += b; });
-const base = `http://127.0.0.1:${port}`;
+// Made-up values for these checks only.
+const SECRET = "check-server-signing-secret-0123456789abcdef";
+const PASSPHRASE = "check server passphrase";
 
-try {
+/** Starts the standalone server with extra environment; resolves once it answers. */
+async function start(extra) {
+  const port = await new Promise((resolve) => { const s = net.createServer().listen(0, "127.0.0.1", () => { const p = s.address().port; s.close(() => resolve(p)); }); });
+  const env = { ...process.env, PORT: String(port), HOSTNAME: "127.0.0.1", NODE_ENV: "production", ...extra };
+  // APP_URL too: both cookies are bound to it, and the deploy workflows have it set by this step.
+  for (const name of ["TEST_GATE_PASSPHRASE", "COOKIE_SIGNING_SECRET", "APP_URL"]) if (!(name in extra)) delete env[name];
+  const server = spawn(process.execPath, ["server.js"], { cwd: STANDALONE, env, stdio: ["ignore", "pipe", "pipe"] });
+  let log = "";
+  server.stdout.on("data", (b) => { log += b; });
+  server.stderr.on("data", (b) => { log += b; });
+  const base = `http://127.0.0.1:${port}`;
   const started = Date.now();
   for (;;) {
-    try { await fetch(`${base}/`, { redirect: "manual" }); break; } catch { /* not up yet */ }
-    if (Date.now() - started > 30_000) throw new Error(`the server did not start:\n${log}`);
+    try { await fetch(`${base}/healthz/`, { redirect: "manual" }); break; } catch { /* not up yet */ }
+    if (Date.now() - started > 30_000) { server.kill(); throw new Error(`the server did not start:\n${log}`); }
     await new Promise((r) => setTimeout(r, 250));
   }
+  return { base, stop: () => server.kill() };
+}
+
+/** A preview cookie as lib/server/preview.ts signs it. */
+const previewCookie = (exp = Date.now() + 3_600_000, user = "check-server") =>
+  `bg_preview=${exp}.${Buffer.from(user).toString("base64url")}.${createHmac("sha256", SECRET).update(`preview||${user}|${exp}`).digest("hex")}`;
+
+let server = { stop() {} };
+try {
+  server = await start({ COOKIE_SIGNING_SECRET: SECRET });
+  const { base } = server;
 
   const nonces = new Set();
   for (const route of LIVE_ROUTES) {
@@ -106,10 +131,54 @@ try {
     if (res.status !== 200) fail(`${asset} answered ${res.status}`);
     else checkHeaders(asset, res.headers, { csp: false });
   }
+  // The healthcheck: up, no data.
+  const health = await fetch(`${base}/healthz/`);
+  if (health.status !== 200 || (await health.text()) !== "ok") fail("/healthz/ did not answer 200 ok");
+
+  // /preview/: without the cookie, the door; with it, the sample export with its own headers.
+  const door = await fetch(`${base}/preview/emails/`, { redirect: "manual" });
+  if (door.status !== 302 || door.headers.get("location") !== "/preview-access/?next=%2Fpreview%2Femails%2F") fail(`/preview/emails/ without a cookie answered ${door.status} ${door.headers.get("location")}`);
+  for (const url of ["/preview/preview/", "/preview/preview/cursors/", "/preview/emails/", "/preview/studio/", "/preview/thumbs/home.jpg", "/preview/"]) {
+    const res = await fetch(base + url, { redirect: "manual", headers: { cookie: previewCookie() } });
+    const want = 200;
+    if (res.status !== want) { fail(`${url} with a preview cookie answered ${res.status}, expected ${want}`); continue; }
+    if (want === 200) {
+      if (!/frame-ancestors 'self'/.test(res.headers.get("content-security-policy") ?? "")) fail(`${url}: not the preview's CSP`);
+      if (res.headers.get("x-frame-options") !== "SAMEORIGIN") fail(`${url}: x-frame-options is ${res.headers.get("x-frame-options")}`);
+    }
+  }
+  const expired = await fetch(`${base}/preview/preview/`, { redirect: "manual", headers: { cookie: previewCookie(Date.now() - 1) } });
+  if (expired.status !== 302) fail(`an expired preview cookie answered ${expired.status}`);
+  server.stop();
+
+  // The test gate: everything but the exempt paths asks for the passphrase.
+  server = await start({ COOKIE_SIGNING_SECRET: SECRET, TEST_GATE_PASSPHRASE: PASSPHRASE });
+  const g = server.base;
+  const home = await fetch(`${g}/`, { redirect: "manual" });
+  if (home.status !== 401 || !(await home.text()).includes('action="/test-gate/"')) fail(`gate: / answered ${home.status} without the passphrase page`);
+  const api = await fetch(`${g}/api/auth/session/`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+  if (api.status !== 401) fail(`gate: the API answered ${api.status}`);
+  for (const url of ["/healthz/", "/email/between-gigs-wide-on-light.png"]) {
+    const res = await fetch(g + url);
+    if (res.status !== 200) fail(`gate: exempt ${url} answered ${res.status}`);
+  }
+  // Reaches its handler, which refuses a request without Resend's signature headers with 400.
+  const hook = await fetch(`${g}/webhooks/resend/`, { method: "POST", body: "{}" });
+  if (hook.status !== 400) fail(`gate: the Resend webhook answered ${hook.status}, expected its own 400`);
+  const wrong = await fetch(`${g}/test-gate/`, { method: "POST", redirect: "manual", headers: { "content-type": "application/x-www-form-urlencoded", "x-real-ip": "192.0.2.1" }, body: "passphrase=nope&next=%2F" });
+  if (wrong.status !== 401) fail(`gate: a wrong passphrase answered ${wrong.status}`);
+  const right = await fetch(`${g}/test-gate/`, { method: "POST", redirect: "manual", headers: { "content-type": "application/x-www-form-urlencoded", "x-real-ip": "192.0.2.2" }, body: `passphrase=${encodeURIComponent(PASSPHRASE)}&next=%2Fjoin%2F%3Finvite%3Dx` });
+  const cookie = (right.headers.get("set-cookie") ?? "").split(";")[0];
+  if (right.status !== 303 || !(right.headers.get("location") ?? "").endsWith("/join/?invite=x") || !cookie.startsWith("bg_test_gate=")) fail(`gate: the right passphrase answered ${right.status} ${right.headers.get("location")}`);
+  else {
+    const inside = await fetch(`${g}/professionals/`, { headers: { cookie } });
+    if (inside.status !== 200) fail(`gate: with the cookie /professionals/ answered ${inside.status}`);
+    if (inside.headers.get("x-robots-tag") !== "noindex, nofollow") fail("gate: a page behind the gate is indexable");
+  }
 } catch (err) {
   fail(String(err instanceof Error ? err.message : err));
 } finally {
-  server.kill();
+  server.stop();
 }
 
 function checkHeaders(where, h, { csp = true } = {}) {
@@ -131,4 +200,4 @@ if (failures.length) {
   console.error(`❌ check-server: ${failures.length} problem(s):\n  - ${failures.join("\n  - ")}`);
   process.exit(1);
 }
-console.log(`✅ check-server: ${LIVE_ROUTES.length} live routes 200 with headers and per-request nonces; ${INTERNAL_URLS.length} internal URLs 404 and absent from the build; ${SERVER_ONLY.length} server-only routes served`);
+console.log(`✅ check-server: ${LIVE_ROUTES.length} live routes 200 with headers and per-request nonces; ${INTERNAL_URLS.length} internal URLs 404 and absent from the build; ${SERVER_ONLY.length} server-only routes served; /preview/ behind its cookie; the test gate`);

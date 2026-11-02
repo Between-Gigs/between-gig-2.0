@@ -8,14 +8,9 @@ import type { Invite, Person, PersonStatus, Profile, ProfileDraft, ProfileFields
 const at = (d: string) => `2026-${d}:00.000Z`;
 const IMDB_SAMPLE = "https://www.imdb.com/name/nm0000000/";
 
-export const SAMPLE_OWNER = { email: "owners@between-gigs.example", name: "Owner (sample)" } as const;
-
-export const blankFields = (name = ""): ProfileFields => ({
-  photo: "", name, years: "", position: "", imdb: "", credits: [""],
-  skills: [], services: [], other: "",
-  market: "la", otherCity: "", zip: "", areas: [], travel: "", month: "November 2026", monthStatus: "available", dates: "", rate: "", basis: "hourly",
-  about: "", languages: "", insurance: "private", tools: "", transport: "", mode: "on-site",
-});
+// Small helpers live code also uses (fields.ts): kept out of this file, so importing them never bundles the seed.
+export { blankFields, DEMO_TOKENS, SAMPLE_OWNER } from "./fields";
+import { blankFields, DEMO_TOKENS, SAMPLE_OWNER } from "./fields";
 
 interface SeedPerson {
   id: string;
@@ -175,7 +170,6 @@ const emailFor = (name: string) => `${name.toLowerCase().replace(/[^a-z]+/g, "."
 const dayIso = (daysAgo: number, hour = 15) => at(`10-${String(21 - daysAgo).padStart(2, "0")}T${String(hour).padStart(2, "0")}:00`);
 
 /** The demo invite tokens, so the switcher and QA can open each invite state. */
-export const DEMO_TOKENS = { valid: "riley-7q2m", used: "grace-3k8d", expired: "sky-9x4p", unknown: "not-a-real-invite" } as const;
 
 export interface SeedState {
   people: Person[];

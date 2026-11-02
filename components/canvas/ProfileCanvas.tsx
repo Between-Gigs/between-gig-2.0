@@ -18,6 +18,9 @@ import { ProfileView } from "@/components/profile/ProfileView";
 import { useLiveEditWarning } from "@/components/profile/LiveEditWarning";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 /*
  * /profile/canvas/: onboarding as editing. The Gigster lands on their own profile, blank, in the layout clients will

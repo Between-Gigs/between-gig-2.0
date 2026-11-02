@@ -11,7 +11,7 @@
  */
 import type { PeopleQuery, ProfileFields, ReviewNoteInput, SketchKind, WaitlistQuery } from "@/lib/data/types";
 import { randomBytes } from "node:crypto";
-import { blankFields } from "@/lib/data/seed";
+import { blankFields } from "@/lib/data/fields";
 import { CompanyOsError, companyOs, configFromEnv, type CompanyOs, type Credential } from "./companyos";
 import * as gigs from "./gigs";
 

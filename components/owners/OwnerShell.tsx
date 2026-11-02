@@ -8,6 +8,9 @@ import { data, type DashboardSummary } from "@/lib/data";
 import { useAuthActions } from "@/lib/auth/context";
 import { useSession } from "@/lib/session";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 /** The collapsed rail is remembered here; app/layout.tsx restores it onto <html data-owner-nav> before first paint. */
 export const COLLAPSED_KEY = "bg2-owner-nav-collapsed";

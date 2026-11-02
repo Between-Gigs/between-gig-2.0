@@ -1,12 +1,16 @@
 "use client";
 import { EmptyState } from "@ds/components";
 import { ArrowLeft, Compass } from "lucide-react";
+import dynamic from "next/dynamic";
 import * as React from "react";
 import { basePath } from "@/lib/site";
-import { OwnerPerson } from "@/components/owners/OwnerPerson";
 import { PublicProfile } from "@/components/profile/PublicProfile";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { Page } from "./Page";
+
+// Loaded only when a Pages visitor opens an owner's person page this export didn't prerender: every page loads this
+// not-found boundary, and owner code has no place in a public page's download (scripts/check-split.mjs).
+const OwnerPerson = dynamic(() => import("@/components/owners/OwnerPerson").then((m) => m.OwnerPerson));
 
 type Resolved = { kind: "profile"; slug: string } | { kind: "owner-person"; id: string } | { kind: "missing" } | null;
 

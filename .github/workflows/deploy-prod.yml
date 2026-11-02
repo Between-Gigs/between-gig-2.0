@@ -18,6 +18,8 @@
 #   secrets    RAILWAY_TOKEN            project token of "Between Gigs OS", environment `production`
 #              COMPANY_OS_READ_TOKEN    the between-gigs tenant's read service identity (cos_svc_…)
 #              COMPANY_OS_SUBMIT_TOKEN  the between-gigs tenant's submit identity (cos_svc_…, mode submit)
+#              COOKIE_SIGNING_SECRET    random (openssl rand -hex 32), not test's: signs the preview's cookie
+#              (never TEST_GATE_PASSPHRASE: production has no passphrase gate, and the deploy refuses one)
 #   variables  CLERK_PUBLISHABLE_KEY    pk_live_…, built into the pages
 #              APP_URL                  https://between-gigs.com (the custom domain on the web service, no path)
 #              RAILWAY_PROJECT_NAME     "Between Gigs OS" (a label; the token picks the project)
@@ -133,7 +135,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck && pnpm lint && pnpm lint:values && pnpm test
       - name: Server build (no internal routes) and its checks
-        run: pnpm build:server && pnpm check:server
+        run: pnpm build:server && pnpm build:preview && pnpm check:server
 
   deploy:
     needs: [guard, checks]
@@ -174,8 +176,12 @@ jobs:
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
           APP_URL: ${{ vars.APP_URL }}
           BG_RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT_NAME }}
+          COOKIE_SIGNING_SECRET: ${{ secrets.COOKIE_SIGNING_SECRET }}
+          TEST_GATE_PASSPHRASE: ${{ secrets.TEST_GATE_PASSPHRASE }}
         run: |
           case "$CLERK_PUBLISHABLE_KEY" in pk_live_?*) ;; *) echo "::error::production requires a Clerk LIVE publishable key (pk_live_…) in the production environment's variables"; exit 1 ;; esac
+          if [ ${#COOKIE_SIGNING_SECRET} -lt 32 ]; then echo "::error::Set the production secret COOKIE_SIGNING_SECRET (openssl rand -hex 32; not test's)"; exit 1; fi
+          if [ -n "$TEST_GATE_PASSPHRASE" ]; then echo "::error::The production environment has a TEST_GATE_PASSPHRASE secret: production never runs the test gate. Delete it."; exit 1; fi
           case "$COMPANY_OS_READ_TOKEN" in cos_svc_?*) ;; *) echo "::error::Set the production secret COMPANY_OS_READ_TOKEN (a cos_svc_… read identity)"; exit 1 ;; esac
           case "$COMPANY_OS_SUBMIT_TOKEN" in cos_svc_?*) ;; *) echo "::error::Set the production secret COMPANY_OS_SUBMIT_TOKEN (a cos_svc_… submit identity)"; exit 1 ;; esac
           if [ "$COMPANY_OS_READ_TOKEN" = "$COMPANY_OS_SUBMIT_TOKEN" ]; then echo "::error::COMPANY_OS_READ_TOKEN and COMPANY_OS_SUBMIT_TOKEN must be two different identities"; exit 1; fi
@@ -188,13 +194,14 @@ jobs:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_DATA_SOURCE: api
           NEXT_PUBLIC_SITE_ORIGIN: ${{ vars.APP_URL }}
-        run: pnpm build:server && node scripts/check-server.mjs
+        run: pnpm build:server && pnpm build:preview && pnpm check:server
 
       - name: Bundle (no secret of this environment in it)
         env:
           COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          COOKIE_SIGNING_SECRET: ${{ secrets.COOKIE_SIGNING_SECRET }}
         run: node scripts/make-bundle.mjs "$RUNNER_TEMP/web"
 
       # The Railway SDK (imported by .railway/railway.ts) and CLI, from .railway/package-lock.json with no install
@@ -227,8 +234,9 @@ jobs:
           COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
           APP_URL: ${{ vars.APP_URL }}
+          COOKIE_SIGNING_SECRET: ${{ secrets.COOKIE_SIGNING_SECRET }}
         run: |
-          for name in COMPANY_OS_READ_TOKEN COMPANY_OS_SUBMIT_TOKEN APP_URL; do
+          for name in COMPANY_OS_READ_TOKEN COMPANY_OS_SUBMIT_TOKEN APP_URL COOKIE_SIGNING_SECRET; do
             printf '%s' "${!name}" | railway variable set "$name" --stdin \
               --service "$SERVICE" --environment "$RAILWAY_ENV" --skip-deploys
           done
