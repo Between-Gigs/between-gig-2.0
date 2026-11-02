@@ -14,6 +14,13 @@ function source() {
 }
 
 describe("lib/data/api.ts", () => {
+  it("token(): the current session token from the provider, for calls outside the DataSource (the preview's door)", async () => {
+    const api = createApiSource({ getToken: async () => "tok_abc" });
+    expect(await api.token()).toBe("tok_abc");
+    api.setTokenProvider(async () => null);
+    expect(await api.token()).toBeNull();
+  });
+
   it("asks for a fresh token on every call, held decisions included, without keepalive", async () => {
     const { api, seen } = source();
     await api.owners.approve("a");
