@@ -60,4 +60,45 @@ describe("the workflows", () => {
     expect(build).toBeGreaterThan(domain);
     expect(s[build]).toMatch(/NEXT_PUBLIC_SITE_ORIGIN: \$\{\{ steps\.\w+\.outputs\.url \}\}/);
   });
+
+  it("every server build also builds the preview export before its checks (preview, split)", () => {
+    for (const name of ["checks.yml", "deploy-test.yml", "deploy-prod.yml", "release.yml"]) {
+      for (const step of steps(read(name)).filter((x) => x.includes("pnpm build:server"))) {
+        expect(step, `${name}: ${step.split("\n")[0].trim()}`).toMatch(/pnpm build:server && pnpm build:preview && pnpm check:server/);
+      }
+    }
+  });
+
+  it("the deployed builds are checked as live builds (no sample data shipped)", () => {
+    for (const name of ["deploy-test.yml", "deploy-prod.yml"]) {
+      const build = steps(read(name)).find((x) => x.includes("pnpm build:server") && x.includes("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"));
+      expect(build, name).toBeDefined();
+      expect(build!, name).toMatch(/NEXT_PUBLIC_DATA_SOURCE: api/);
+      expect(build!, name).toMatch(/pnpm check:server/);
+    }
+  });
+
+  it("test requires the gate's passphrase and the signing secret before any change, and sends both to Railway", () => {
+    const s = steps(read("deploy-test.yml"));
+    const require = s.find((x) => x.includes("Require test configuration"))!;
+    for (const name of ["TEST_GATE_PASSPHRASE", "COOKIE_SIGNING_SECRET"]) {
+      expect(require).toContain(`${name}: \${{ secrets.${name} }}`);
+      expect(require).toMatch(new RegExp(`\\$${name}`));
+    }
+    const sync = s.find((x) => x.includes("railway variable set"))!;
+    expect(sync).toMatch(/for name in [^;]*TEST_GATE_PASSPHRASE/);
+    expect(sync).toMatch(/for name in [^;]*COOKIE_SIGNING_SECRET/);
+  });
+
+  it("production requires the signing secret, refuses a test gate passphrase, and never sends one", () => {
+    const yml = read("deploy-prod.yml");
+    const s = steps(yml);
+    const require = s.find((x) => x.includes("Require production configuration"))!;
+    expect(require).toContain("COOKIE_SIGNING_SECRET: ${{ secrets.COOKIE_SIGNING_SECRET }}");
+    expect(require).toContain("TEST_GATE_PASSPHRASE: ${{ secrets.TEST_GATE_PASSPHRASE }}");
+    expect(require).toMatch(/if \[ -n "\$TEST_GATE_PASSPHRASE" \]/);
+    const sync = s.find((x) => x.includes("railway variable set"))!;
+    expect(sync).toMatch(/for name in [^;]*COOKIE_SIGNING_SECRET/);
+    expect(sync).not.toContain("TEST_GATE_PASSPHRASE");
+  });
 });

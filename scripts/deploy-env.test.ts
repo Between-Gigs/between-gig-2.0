@@ -17,4 +17,11 @@ describe("the web server's environment", () => {
     const railway = read(".railway/railway.ts");
     for (const name of ["COMPANY_OS_READ_TOKEN", "COMPANY_OS_SUBMIT_TOKEN", "APP_URL"]) expect(railway).toMatch(new RegExp(`${name}\\s*:`));
   });
+
+  it("gets the cookie signing secret everywhere, the test gate's passphrase on test only, and a healthcheck the gate lets through", () => {
+    const railway = read(".railway/railway.ts");
+    expect(railway).toMatch(/COOKIE_SIGNING_SECRET:\s*preserve\(\)/);
+    expect(railway).toMatch(/\.\.\.\(prod \? \{\} : \{ TEST_GATE_PASSPHRASE: preserve\(\) \}\)/);
+    expect(railway).toMatch(/healthcheck: "\/healthz\/"/);
+  });
 });
