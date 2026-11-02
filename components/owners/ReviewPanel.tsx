@@ -8,6 +8,9 @@ import { SECTIONS, fieldLabel, sectionLabel, validateAll } from "@/lib/profile/v
 import { typingOrDialog } from "./format";
 import { HOLD_MS, holdDecision, type Hold } from "./hold";
 import { Panel } from "./kit";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 const checks = [
   { id: "photo", label: "The photo shows their face clearly", hint: "Friendly, well lit, no group shots." },

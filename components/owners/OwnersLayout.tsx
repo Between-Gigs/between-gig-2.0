@@ -1,6 +1,9 @@
 "use client";
 import { useSession } from "@/lib/session";
 import { OwnerFrame } from "./OwnerShell";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 /**
  * Keeps the owner frame (header and sidebar) mounted while moving between owner pages, so only the page

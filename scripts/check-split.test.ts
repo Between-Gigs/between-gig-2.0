@@ -1,5 +1,7 @@
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { DASHBOARD_MARKER, DASHBOARD_ROUTES, SAMPLE_MARKER, SEED_MARKER, SITE_ROUTES, splitProblems } from "./check-split.mjs";
+import { DASHBOARD_MARKER, DASHBOARD_MODULES, DASHBOARD_ROUTES, SAMPLE_MARKER, SEED_MARKER, SITE_ROUTES, splitProblems } from "./check-split.mjs";
 
 // Code splitting (owner, 2026-11-02): the public site loads no dashboard code, and a live (api) build ships no sample data.
 type Page = { route: string; modules: string[]; chunks: { name: string; text: string }[] };
@@ -7,8 +9,8 @@ const page = (route: string, modules: string[] = [], text = "clean"): Page => ({
 const clean = (): Page[] => [
   page("/", ["components/home/CallSheetHome.tsx"]),
   page("/p/[slug]", ["components/profile/PublicProfile.tsx", "components/profile/ProfileView.tsx"]),
-  page("/owners", ["components/owners/OwnerShell.tsx"]),
-  page("/profile/canvas", ["components/canvas/ProfileCanvas.tsx", "components/profile/PhotoPicker.tsx"]),
+  page("/owners", ["components/owners/OwnerShell.tsx"], DASHBOARD_MARKER),
+  page("/profile/canvas", ["components/canvas/ProfileCanvas.tsx", "components/profile/PhotoPicker.tsx"], DASHBOARD_MARKER),
 ];
 
 describe("splitProblems", () => {
@@ -67,6 +69,22 @@ describe("splitProblems", () => {
   it("fails closed on a route it doesn't know, and on a known route missing from the build", () => {
     expect(splitProblems([...clean(), page("/new-thing")], { live: true })).toContain("/new-thing is neither a site nor a dashboard route (scripts/check-split.mjs)");
     expect(splitProblems(clean(), { live: true, expect: ["/login"] })).toContain("/login is not in the build");
+  });
+
+  it("fails when a dashboard page's chunks lack the marker (the marker stopped reaching the bundle, so the site check would be blind)", () => {
+    const pages = clean();
+    pages[2]!.chunks = [{ name: "o.js", text: "clean" }];
+    expect(splitProblems(pages, { live: true })).toEqual(["/owners has no dashboard marker in its chunks (lib/split-area.ts)"]);
+  });
+
+  it("every dashboard file calls markArea, so no dashboard code can reach a public page unseen", () => {
+    const root = path.resolve(import.meta.dirname, "..");
+    const files = ["components/owners", "components/builder", "components/canvas", "components/profile"]
+      .flatMap((dir) => readdirSync(path.join(root, dir)).map((f) => `${dir}/${f}`))
+      .filter((f) => /\.tsx?$/.test(f) && !f.endsWith(".test.ts") && DASHBOARD_MODULES.some((re: RegExp) => re.test(f)));
+    expect(files.length).toBeGreaterThan(10);
+    const unmarked = files.filter((f) => !readFileSync(path.join(root, f), "utf8").includes(`markArea("${DASHBOARD_MARKER}")`));
+    expect(unmarked).toEqual([]);
   });
 
   it("classifies every live page exactly once", () => {

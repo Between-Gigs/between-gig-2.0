@@ -2,6 +2,9 @@ import { cx } from "@ds/components";
 import { CircleCheck, Mail, MailOpen, MessageSquareWarning, Send, UserCheck, UserPlus } from "lucide-react";
 import Link from "next/link";
 import type { ActivityEvent, ActivityKind } from "@/lib/data";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 /** Each kind of event has its own icon and soft tone, so a glance tells them apart. Never colour alone: the verb says it. */
 const meta: Record<ActivityKind, { verb: string; Icon: typeof Mail; tone: string }> = {

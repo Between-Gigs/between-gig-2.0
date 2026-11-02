@@ -1,3 +1,7 @@
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
+
 /** "Oct 20" (adds the year only when it isn't this year). For tables and timelines: short, never wraps. */
 export const shortDate = (iso?: string) => {
   if (!iso) return null;

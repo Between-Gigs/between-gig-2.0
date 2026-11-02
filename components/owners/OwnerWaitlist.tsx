@@ -12,6 +12,9 @@ import { OwnerShell } from "./OwnerShell";
 import { OwnerGate } from "./OwnerGate";
 import { shortDate } from "./format";
 import { OwnerPage, Panel, RowSkeletons } from "./kit";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 const PAGE = 25;
 /** Where each sign-up is with their invite now. "Account created" matches the dashboard funnel's wording. */

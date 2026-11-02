@@ -44,6 +44,10 @@ export function splitProblems(pages, { live, expect = [] }) {
       const dash = p.chunks.find((c) => c.text.includes(DASHBOARD_MARKER));
       if (dash) problems.push(`${p.route} ships dashboard code (${dash.name})`);
     }
+    // The marker has to reach the dashboards' own chunks, or the site check above would pass blind.
+    if (DASHBOARD_ROUTES.includes(p.route) && !p.chunks.some((c) => c.text.includes(DASHBOARD_MARKER))) {
+      problems.push(`${p.route} has no dashboard marker in its chunks (lib/split-area.ts)`);
+    }
     if (live) {
       const leaked = p.chunks.find((c) => c.text.includes(SAMPLE_MARKER) || c.text.includes(SEED_MARKER));
       if (leaked) problems.push(`${p.route} ships the sample data (${leaked.name})`);

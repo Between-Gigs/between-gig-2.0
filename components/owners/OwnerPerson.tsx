@@ -17,6 +17,9 @@ import { HeaderSkeleton, Panel, useScrolledPast } from "./kit";
 import { ReviewWorkspace, type QueueItem } from "./ReviewPanel";
 import { shortDate } from "./format";
 import { isHeld } from "./hold";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 /** /owners/people/[id]: one person as the owners see them: where they are, what they've filled in, their profile. */
 export function OwnerPerson({ id }: { id: string }) {

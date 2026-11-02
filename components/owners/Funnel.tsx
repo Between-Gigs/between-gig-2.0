@@ -3,6 +3,9 @@ import { cx } from "@ds/components";
 import Link from "next/link";
 import { data, type DashboardSummary } from "@/lib/data";
 import { Panel } from "./kit";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 interface Stage { label: string; value: number; href: string; now: { label: string; value: number; href: string }[] }
 

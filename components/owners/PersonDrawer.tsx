@@ -13,6 +13,9 @@ import { shortDate } from "./format";
 import { Meter } from "./kit";
 import { HOLD_MS, holdDecision, type Hold } from "./hold";
 import { missingFields, SuggestEdits } from "./ReviewPanel";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 const first = (name: string) => name.split(" ")[0] || name;
 

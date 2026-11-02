@@ -3,7 +3,7 @@
  * built with base path /preview (scripts/preview-build.mjs) into preview-site/ next to server.js, and served from
  * there by app/(served)/preview/[[...path]]/route.server.ts. It never calls Company OS, so it shows what this
  * environment's frontend looks like without touching real data. Super admins only:
- * /preview-access/ checks the signed-in person with Company OS (POST /api/preview/grant/), which sets a signed 12-hour
+ * /preview-access/ checks the signed-in person with Company OS (POST /api/preview/grant/), which sets a signed 1-hour
  * cookie scoped to /preview. Without COOKIE_SIGNING_SECRET both answer 503.
  */
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";

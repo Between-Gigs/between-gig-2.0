@@ -5,6 +5,9 @@
  */
 import { data } from "@/lib/data";
 import { sendNow } from "@/lib/data/api";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 export const HOLD_MS = 8000;
 

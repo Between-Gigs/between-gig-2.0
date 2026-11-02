@@ -4,6 +4,9 @@ import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { useInOwnerFrame } from "./OwnerShell";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
 
 /*
  * The owner pages' kit. Every owner page is built from these few pieces so they all look and behave the same:
