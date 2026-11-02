@@ -63,7 +63,8 @@ describe("the workflows", () => {
 
   it("every server build also builds the preview export before its checks (preview, split)", () => {
     for (const name of ["checks.yml", "deploy-test.yml", "deploy-prod.yml", "release.yml"]) {
-      for (const step of steps(read(name)).filter((x) => x.includes("pnpm build:server"))) {
+      // A live build run only for the split check (checks.yml) needs no preview.
+      for (const step of steps(read(name)).filter((x) => x.includes("pnpm build:server") && !x.includes("node scripts/check-split.mjs"))) {
         expect(step, `${name}: ${step.split("\n")[0].trim()}`).toMatch(/pnpm build:server && pnpm build:preview && pnpm check:server/);
       }
     }
@@ -100,5 +101,12 @@ describe("the workflows", () => {
     const sync = s.find((x) => x.includes("railway variable set"))!;
     expect(sync).toMatch(/for name in [^;]*COOKIE_SIGNING_SECRET/);
     expect(sync).not.toContain("TEST_GATE_PASSPHRASE");
+  });
+
+  it("PR checks also check a live (api) build's code splitting, so a sample-data leak fails the PR", () => {
+    const live = steps(read("checks.yml")).find((x) => x.includes("check-split.mjs"));
+    expect(live).toBeDefined();
+    expect(live!).toMatch(/NEXT_PUBLIC_DATA_SOURCE: api/);
+    expect(live!).toMatch(/pnpm build:server && node scripts\/check-split\.mjs/);
   });
 });

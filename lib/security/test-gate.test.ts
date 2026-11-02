@@ -62,11 +62,18 @@ describe("exempt paths (providers and mail clients have no cookie)", () => {
       expect(await testGate(req(path, { method: path.startsWith("/webhooks") ? "POST" : "GET" }), ENV, NOW)).toBeNull();
     });
   }
-  for (const path of ["/webhooks/other/", "/webhooks/resend/x/", "/emails/", "/email", "/healthz/x/", "/api/healthz/"]) {
+  for (const path of ["/webhooks/other/", "/webhooks/resend/x/", "/emails/", "/email", "/healthz/x/", "/api/healthz/", "/email/x", "/email/notes.html", "/email/x%2F..%2Fapi%2Fx.png"]) {
     it(`still gates ${path}`, async () => {
       expect((await testGate(req(path), ENV, NOW))?.status).toBe(401);
     });
   }
+});
+
+describe("the email images' exemption is narrow", () => {
+  it("covers reading an image only, never another method", async () => {
+    expect((await testGate(req("/email/a.png", { method: "POST" }), ENV, NOW))?.status).toBe(401);
+    expect(await testGate(req("/email/a.jpg", { method: "HEAD" }), ENV, NOW)).toBeNull();
+  });
 });
 
 describe("the passphrase form", () => {
@@ -148,10 +155,11 @@ describe("cookies that don't count", () => {
 });
 
 describe("half configured", () => {
-  it("a passphrase without the signing secret fails closed with 503 (exempt paths still pass)", async () => {
+  it("a passphrase without the signing secret fails closed with 503, and the healthcheck says so too", async () => {
     const env = { passphrase: ENV.passphrase };
     expect((await testGate(req("/"), env, NOW))!.status).toBe(503);
     expect((await testGate(post({ passphrase: ENV.passphrase! }), env, NOW))!.status).toBe(503);
-    expect(await testGate(req("/healthz/"), env, NOW)).toBeNull();
+    expect((await testGate(req("/healthz/"), env, NOW))!.status).toBe(503);
+    expect(await testGate(req("/webhooks/resend/", { method: "POST" }), env, NOW)).toBeNull();
   });
 });

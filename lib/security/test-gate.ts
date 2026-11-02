@@ -24,7 +24,10 @@ export const GATE_PATH = "/test-gate/";
 const MAX_AGE_S = 30 * 86_400;
 const MAX_BODY = 4096;
 const LIMIT = { max: 5, windowMs: 15 * 60_000 };
-const EXEMPT = [/^\/webhooks\/resend\/?$/, /^\/email\/[^/]+$/, /^\/healthz\/?$/];
+const WEBHOOK = /^\/webhooks\/resend\/?$/;
+// Reading an email image only: a plain file name with an image extension, nothing encoded.
+const EMAIL_IMAGE = /^\/email\/[A-Za-z0-9._-]+\.(?:png|jpe?g|gif|webp)$/;
+const HEALTH = /^\/healthz\/?$/;
 
 export const gateEnv = (env: NodeJS.ProcessEnv = process.env): GateEnv => ({
   // Never on production, whatever reached its variables (the deploy refuses the secret too).
@@ -110,8 +113,11 @@ function sameHost(origin: string | undefined, req: Request) {
 export async function testGate(req: Request, env: GateEnv = gateEnv(), now = Date.now()): Promise<Response | null> {
   if (!env.passphrase) return null;
   const url = new URL(req.url);
-  if (EXEMPT.some((re) => re.test(url.pathname))) return null;
+  const read = req.method === "GET" || req.method === "HEAD";
+  if (WEBHOOK.test(url.pathname) || (read && EMAIL_IMAGE.test(url.pathname))) return null;
+  // Half configured: everything answers 503, the healthcheck included, so Railway doesn't call a closed site healthy.
   if (!env.secret) return text(503, "This test site is not configured yet.");
+  if (HEALTH.test(url.pathname)) return null;
 
   const atGate = url.pathname === GATE_PATH || url.pathname === GATE_PATH.slice(0, -1);
   if (atGate && req.method === "POST") {
