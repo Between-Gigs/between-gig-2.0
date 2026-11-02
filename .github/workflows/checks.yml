@@ -48,4 +48,4 @@ jobs:
         run: |
           node scripts/qa/clerk-contract.mjs
       - name: Server build (no internal routes) and its checks
-        run: pnpm build:server && pnpm check:server
+        run: pnpm build:server && pnpm build:preview && pnpm check:server

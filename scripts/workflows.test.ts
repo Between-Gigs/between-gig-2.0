@@ -49,7 +49,7 @@ describe("the workflows", () => {
     expect(yml).toMatch(/pnpm test\b/);
     // Right after the plain export (the later one with a base path overwrites out/).
     expect(yml).toMatch(/- run: pnpm build\n\s+- run: node scripts\/check-pages\.mjs/);
-    expect(yml).toContain("pnpm build:server && pnpm check:server");
+    expect(yml).toContain("pnpm build:server && pnpm build:preview && pnpm check:server");
   });
 
   it("the test deploy builds with its own address as the site origin, found before the build", () => {
@@ -83,7 +83,7 @@ describe("the workflows", () => {
     const require = s.find((x) => x.includes("Require test configuration"))!;
     for (const name of ["TEST_GATE_PASSPHRASE", "COOKIE_SIGNING_SECRET"]) {
       expect(require).toContain(`${name}: \${{ secrets.${name} }}`);
-      expect(require).toMatch(new RegExp(`\\$${name}`));
+      expect(require).toMatch(new RegExp(`\\$\\{#${name}\\} -lt \\d+`));
     }
     const sync = s.find((x) => x.includes("railway variable set"))!;
     expect(sync).toMatch(/for name in [^;]*TEST_GATE_PASSPHRASE/);
