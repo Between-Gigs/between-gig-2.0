@@ -14,7 +14,7 @@ const req = (path: string, init: RequestInit & { ip?: string; cookie?: string } 
 };
 const post = (body: Record<string, string>, ip = "203.0.113.7") =>
   req("/test-gate/", { method: "POST", ip, headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(body).toString() });
-const cookieFor = (env: GateEnv, exp: number) => `${GATE_COOKIE}=${gateCookieValue(env, exp)}`;
+const cookieFor = async (env: GateEnv, exp: number) => `${GATE_COOKIE}=${await gateCookieValue(env, exp)}`;
 
 beforeEach(() => resetGateLimits());
 
@@ -68,7 +68,10 @@ describe("the passphrase form", () => {
   it("with the right passphrase: 303 to next and a 30-day signed cookie", async () => {
     const res = (await testGate(post({ passphrase: ENV.passphrase!, next: "/join/?invite=abc" }), ENV, NOW))!;
     expect(res.status).toBe(303);
-    expect(res.headers.get("location")).toBe("/join/?invite=abc");
+    // Absolute (Next's proxy refuses a relative Location), on the site's own origin.
+    expect(res.headers.get("location")).toBe("https://web-test.example/join/?invite=abc");
+    const viaAppUrl = (await testGate(post({ passphrase: ENV.passphrase!, next: "/p/x/" }, "198.51.100.1"), { ...ENV, origin: "https://site.example" }, NOW))!;
+    expect(viaAppUrl.headers.get("location")).toBe("https://site.example/p/x/");
     const cookie = res.headers.get("set-cookie")!;
     expect(cookie).toMatch(new RegExp(`^${GATE_COOKIE}=`));
     for (const flag of ["HttpOnly", "Secure", "SameSite=Lax", "Path=/", `Max-Age=${30 * 86_400}`]) expect(cookie).toContain(flag);
@@ -119,18 +122,18 @@ describe("next", () => {
 
 describe("cookies that don't count", () => {
   it.each([
-    ["no cookie", ""],
-    ["expired", cookieFor(ENV, NOW - 1)],
-    ["signed under an old passphrase", cookieFor({ ...ENV, passphrase: "old passphrase" }, NOW + DAY)],
-    ["signed with another secret", cookieFor({ ...ENV, secret: "t".repeat(64) }, NOW + DAY)],
-    ["tampered expiry", cookieFor(ENV, NOW + DAY).replace(/=(\d+)\./, (_, d) => `=${Number(d) + 1}.`)],
-    ["garbage", `${GATE_COOKIE}=not-a-cookie`],
-  ])("%s → the gate", async (_, cookie) => {
-    expect((await testGate(req("/", { cookie }), ENV, NOW))?.status).toBe(401);
+    ["no cookie", async () => ""],
+    ["expired", () => cookieFor(ENV, NOW - 1)],
+    ["signed under an old passphrase", () => cookieFor({ ...ENV, passphrase: "old passphrase" }, NOW + DAY)],
+    ["signed with another secret", () => cookieFor({ ...ENV, secret: "t".repeat(64) }, NOW + DAY)],
+    ["tampered expiry", async () => (await cookieFor(ENV, NOW + DAY)).replace(/=(\d+)\./, (_, d) => `=${Number(d) + 1}.`)],
+    ["garbage", async () => `${GATE_COOKIE}=not-a-cookie`],
+  ])("%s → the gate", async (_, make) => {
+    expect((await testGate(req("/", { cookie: await make() }), ENV, NOW))?.status).toBe(401);
   });
 
   it("a valid one among other cookies passes", async () => {
-    expect(await testGate(req("/", { cookie: `a=1; ${cookieFor(ENV, NOW + DAY)}; b=2` }), ENV, NOW)).toBeNull();
+    expect(await testGate(req("/", { cookie: `a=1; ${await cookieFor(ENV, NOW + DAY)}; b=2` }), ENV, NOW)).toBeNull();
   });
 });
 
