@@ -78,6 +78,7 @@ function fail(ip: string, now: number) {
   if (failures.size > 10_000) for (const k of [...failures.keys()].slice(0, 1_000)) failures.delete(k);
 }
 
+// System colours only: this page loads nothing (no tokens, no stylesheet) and follows the visitor's light or dark mode.
 const BASE_HEADERS = { "cache-control": "no-store", "x-robots-tag": "noindex, nofollow", "x-content-type-options": "nosniff" };
 const PAGE_CSP = "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
 // Attributes here are double-quoted, so these four are enough.
@@ -85,7 +86,7 @@ const escape = (s: string) => s.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};
 
 function page(status: number, next: string, message = "") {
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow"><title>Between Gigs · test</title>
-<style>body{font:16px/1.5 system-ui,sans-serif;margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f6f2;color:#0e1a13}main{width:min(22rem,calc(100% - 2rem))}h1{font-size:1.25rem;margin:0 0 .25rem}p{margin:0 0 1rem;color:#3b4a3e}label{display:block;font-weight:600;margin-bottom:.25rem}input{width:100%;box-sizing:border-box;font:inherit;padding:.6rem .75rem;border:1px solid #9aa79c;border-radius:.5rem}button{margin-top:.75rem;width:100%;font:inherit;font-weight:600;padding:.6rem;border:0;border-radius:.5rem;background:#086c42;color:#fff;cursor:pointer}.e{color:#a3261b}</style></head>
+<style>:root{color-scheme:light dark}body{font:16px/1.5 system-ui,sans-serif;margin:0;min-height:100vh;display:grid;place-items:center;background:Canvas;color:CanvasText}main{width:min(22rem,calc(100% - 2rem))}h1{font-size:1.25rem;margin:0 0 .25rem}p{margin:0 0 1rem}label{display:block;font-weight:600;margin-bottom:.25rem}input{width:100%;box-sizing:border-box;font:inherit;padding:.6rem .75rem;border:1px solid GrayText;border-radius:.5rem}button{margin-top:.75rem;width:100%;font:inherit;font-weight:600;padding:.6rem;border:0;border-radius:.5rem;background:AccentColor;color:AccentColorText;cursor:pointer}.e{font-weight:600}</style></head>
 <body><main><h1>Between Gigs test site</h1><p>This is the team's test environment. Enter the passphrase to continue.</p>${message ? `<p class="e" role="alert">${escape(message)}</p>` : ""}
 <form method="post" action="${GATE_PATH}"><input type="hidden" name="next" value="${escape(next)}"><label for="p">Passphrase</label><input id="p" name="passphrase" type="password" autocomplete="current-password" required autofocus><button type="submit">Continue</button></form></main></body></html>`;
   return new Response(html, { status, headers: { ...BASE_HEADERS, "content-type": "text/html; charset=utf-8", "content-security-policy": PAGE_CSP } });
