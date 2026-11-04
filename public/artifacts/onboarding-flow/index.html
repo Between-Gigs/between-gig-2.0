@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Gigster onboarding flow</title><meta name="robots" content="noindex"><meta name="viewport" content="width=1920">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f8f4;--card:#fff;--ink:#0e1a13;--muted:#3b4a3e;--subtle:#5f6f62;--line:#dae3d8;--brand:#0f3d29;--mint:#1fdc8c;--mintsoft:#e2f5ea;--warn:#f6e7c1;--warnink:#6b4b00}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:Figtree,system-ui,sans-serif;color:var(--ink);width:1920px}
+.wrap{padding:56px 64px 64px}
+h1{font-family:Sora,sans-serif;font-size:40px;line-height:46px;margin:0;letter-spacing:-.02em}
+.sub{margin:10px 0 0;font-size:18px;color:var(--muted)}
+.phases{display:grid;grid-template-columns:repeat(6,1fr);gap:24px;margin-top:40px}
+.phase{grid-column:span var(--s);display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--subtle)}
+.phase:after{content:"";flex:1;height:1px;background:var(--line)}
+.row{display:grid;grid-template-columns:repeat(6,1fr);gap:24px;margin-top:14px;position:relative}
+.step{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative;box-shadow:0 6px 16px rgba(15,61,41,.06)}
+.step img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;object-position:top;border-bottom:1px solid var(--line)}
+.body{padding:16px 18px 18px}
+.num{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:999px;background:var(--brand);color:#fff;font:700 14px Figtree;margin-right:8px}
+.t{display:flex;align-items:center;font:700 18px/24px Sora,sans-serif}
+.d{margin:8px 0 0;font-size:14.5px;line-height:21px;color:var(--muted)}
+.who{position:absolute;top:10px;left:10px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 8px;border-radius:999px;background:#fff;border:1px solid var(--line);color:var(--subtle)}
+.mail{margin-top:12px;display:flex;gap:8px;align-items:flex-start;background:var(--mintsoft);border-radius:8px;padding:9px 10px;font-size:13px;line-height:18px;color:var(--brand)}
+.mail b{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#17633f}
+.arrow{position:absolute;top:50%;width:24px;height:2px;background:var(--brand)}
+.arrow:after{content:"";position:absolute;right:-1px;top:-4px;border-left:8px solid var(--brand);border-top:5px solid transparent;border-bottom:5px solid transparent}
+.branches{display:grid;grid-template-columns:repeat(6,1fr);gap:24px;margin-top:28px;align-items:start}
+.br{background:#fff;border:1px dashed #9fb3a3;border-radius:12px;padding:14px;display:grid;gap:12px}
+.br img{width:100%;aspect-ratio:16/7;object-fit:cover;object-position:top;border-radius:8px;border:1px solid var(--line)}
+.br .t{font-size:15px;line-height:20px}
+.br .d{font-size:13.5px;line-height:19px;margin-top:4px}
+.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--warnink);background:var(--warn);border-radius:999px;padding:3px 8px;margin-bottom:6px}
+.tag.g{color:#17633f;background:var(--mintsoft)}
+.up{font-size:13px;color:var(--subtle);margin-top:6px}
+.legend{margin-top:36px;display:flex;gap:28px;font-size:14px;color:var(--muted);align-items:center;flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.sw{width:18px;height:12px;border-radius:3px;display:inline-block}
+.foot{margin-top:18px;font-size:13px;color:var(--subtle)}
+</style></head>
+<body><div class="wrap">
+<h1>Gigster onboarding: from invite to live profile</h1>
+<p class="sub">Four things for the Gigster to do: open the invite, create the account, fill in the page, send it. Everything else is ours.</p>
+
+<div class="phases"><div class="phase" style="--s:4">The Gigster · about 10 minutes</div><div class="phase" style="--s:1">Between Gigs team</div><div class="phase" style="--s:1">Live</div></div>
+<div class="row">
+  <div class="step"><img src="invite.jpg" alt=""><div class="body"><div class="t"><span class="num">1</span>Open the invite</div><p class="d">“Your craft. More possibilities.” One button: Create your profile. The link is personal and lasts 30 days.</p><div class="mail"><span>✉</span><span><b>Email</b>You're invited to Between Gigs</span></div></div></div>
+  <div class="step"><img src="join.jpg" alt=""><div class="body"><div class="t"><span class="num">2</span>Create the account</div><p class="d">Email already filled in from the invite. Add your name, agree to the terms, set a password (or verify with a code).</p><p class="up">One card, the same as Log in.</p></div></div>
+  <div class="step"><img src="edit.jpg" alt=""><div class="body"><div class="t"><span class="num">3</span>Fill in your page</div><p class="d">The page clients will see, blank. Tap any part to fill it in where it sits, or press Next to be walked through. Saves as you go.</p><p class="up">10 parts · no form wizard</p></div></div>
+  <div class="step"><img src="preview.jpg" alt=""><div class="body"><div class="t"><span class="num">4</span>Preview and send</div><p class="d">Preview shows exactly what clients will see. Send for review checks everything at once and opens anything missing.</p><div class="mail"><span>✉</span><span><b>Email</b>We've got your profile, Riley</span></div></div></div>
+  <div class="step"><span class="who">Team</span><img src="review.jpg" alt=""><div class="body"><div class="t"><span class="num">5</span>Team review</div><p class="d">Owners see who's waiting, oldest first. A short checklist, then Approve, or Suggest edits pinned to the parts that need them.</p></div></div>
+  <div class="step"><img src="live.jpg" alt=""><div class="body"><div class="t"><span class="num">6</span>Live</div><p class="d">The public profile clients find. My profile shows the link to share and the card in search.</p><div class="mail"><span>✉</span><span><b>Email</b>You're on the call sheet, Riley. Your profile is live.</span></div></div></div>
+</div>
+
+<div class="branches">
+  <div class="br"><img src="login.jpg" alt=""><div><span class="tag g">Coming back</span><div class="t">Log in</div><p class="d">Email code or password, then straight back to the page where they left off.</p></div></div>
+  <div class="br"><img src="used.jpg" alt=""><div><span class="tag">Invite problem</span><div class="t">Used, expired or unknown link</div><p class="d">Says what happened and gives one next step: Log in, or create an account.</p></div></div>
+  <div class="br" style="grid-column:4"><img src="submitted.jpg" alt=""><div><span class="tag g">While waiting</span><div class="t">My profile: Submitted</div><p class="d">“Our team is reviewing your profile.” Nothing to do; Edit is still there.</p></div></div>
+  <div class="br" style="grid-column:5"><img src="changes.jpg" alt=""><div><span class="tag">If changes are needed</span><div class="t">Changes requested → back to step 3</div><p class="d">Email plus notes pinned to each part on the page. Fix them, send again.</p><div class="mail" style="margin-top:8px"><span>✉</span><span><b>Email</b>A few small changes to your profile</span></div></div></div>
+  <div class="br" style="grid-column:6"><img src="mylive.jpg" alt=""><div><span class="tag g">After launch</span><div class="t">My profile: You're live</div><p class="d">Public link, copy and share, Edit profile to keep availability current.</p></div></div>
+</div>
+
+<div class="legend"><span><i class="sw" style="background:var(--brand)"></i>Main path</span><span><i class="sw" style="border:1px dashed #9fb3a3;background:#fff"></i>Branches</span><span><i class="sw" style="background:var(--mintsoft)"></i>Email sent at this step</span></div>
+<p class="foot">Direction B · Warm &amp; friendly · screens from the preview build with fictional sample people · 4 November 2026</p>
+</div></body></html>
