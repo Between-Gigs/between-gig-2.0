@@ -23,12 +23,12 @@ export function PersonPhoto({ id, name, src, className, morph = false, alt, text
   }
   const a11y = alt === "" ? { "aria-hidden": true as const } : { role: "img", "aria-label": alt ?? `${name || "Gigster"} (no photo yet)` };
   if (fallback === "brand") {
-    // A placeholder portrait: a head-and-shoulders silhouette lit from above on a soft light surface, with the
+    // A placeholder portrait: a head-and-shoulders silhouette lit from above on the forest surface, with the
     // person's department as a small badge, so a missing photo still reads as "a person goes here".
     return (
-      <span {...a11y} style={style}
-        className={cx("@container relative isolate block overflow-hidden bg-surface-sunken select-none", className)}>
-        <svg aria-hidden="true" viewBox="0 0 200 200" preserveAspectRatio="xMidYMax meet" className="absolute inset-x-0 bottom-0 mx-auto h-5/6 max-h-full w-auto text-ink-subtle">
+      <span {...a11y} data-theme="dark" style={style}
+        className={cx("@container relative isolate block overflow-hidden bg-surface-brand phosphor-dots select-none", className)}>
+        <svg aria-hidden="true" viewBox="0 0 200 200" preserveAspectRatio="xMidYMax meet" className="absolute inset-x-0 bottom-0 mx-auto h-5/6 max-h-full w-auto text-ink-brand">
           <defs>
             <linearGradient id={`pp-${id}`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0" stopColor="currentColor" stopOpacity=".42" />
@@ -38,7 +38,7 @@ export function PersonPhoto({ id, name, src, className, morph = false, alt, text
           <circle cx="100" cy="74" r="38" fill={`url(#pp-${id})`} />
           <path d="M22 200c4-46 38-74 78-74s74 28 78 74z" fill={`url(#pp-${id})`} />
         </svg>
-        <span aria-hidden="true" className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-surface p-1.5 text-label-sm text-ink shadow-xs @3xs:px-2 @3xs:py-1">
+        <span aria-hidden="true" className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-surface/80 p-1.5 text-label-sm text-ink backdrop-blur-sm @3xs:px-2 @3xs:py-1">
           {createElement(departmentIcon(department, skills), { className: "size-3.5 text-ink-brand", strokeWidth: 1.75 })}
           <span className="hidden @3xs:inline">No photo yet</span>
         </span>

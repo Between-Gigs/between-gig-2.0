@@ -115,15 +115,15 @@ export function ProfileCanvas() {
   return session?.personId ? <Canvas personId={session.personId} /> : <Page bare><Band /><CanvasSkeleton /></Page>;
 }
 
-/** Loading: the editor bar and the page's two columns, in the same light frame the editor opens in. */
-function Band() {
+/** Loading: the forest band with the dotted phosphor texture, the brand's signature, while the page loads. */
+function Band({ children }: { children?: React.ReactNode }) {
   return (
-    <div className="border-b border-line bg-bg">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-3 sm:px-6">
-        <div className="grid w-full max-w-80 gap-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-1.5" /></div>
-        <Skeleton className="h-9 w-40" />
+    <section data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
+      <span aria-hidden="true" className="glow-horizon opacity-40" />
+      <div className="relative z-raised mx-auto max-w-7xl px-4 py-5 sm:px-6">
+        {children ?? <h1 className="font-display text-heading-lg text-ink">Your profile</h1>}
       </div>
-    </div>
+    </section>
   );
 }
 

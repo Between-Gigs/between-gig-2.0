@@ -121,16 +121,17 @@ function Live({ person }: { person: Person }) {
   };
 
   return (
-    <section aria-labelledby="live-h" className="grid gap-6 rounded-2xl bg-tint-mint p-6 text-tint-ink sm:p-8">
+    <section aria-labelledby="live-h" data-theme="dark" className="relative isolate grid gap-6 overflow-hidden rounded-2xl bg-surface-brand phosphor-dots p-6 text-ink sm:p-8">
+      <span aria-hidden="true" className="glow-horizon -z-10 opacity-50" />
       <div className="flex flex-col items-start gap-5 sm:flex-row">
         <span aria-hidden="true" className="grid size-20 shrink-0 place-items-center rounded-full bg-surface shadow-sm"><Icon3D name="party_popper" className="size-12" /></span>
         <div className="grid gap-1.5">
-          <h2 id="live-h" className="font-display text-heading-lg text-tint-ink">You&apos;re live, {first}</h2>
-          <p className="max-w-prose text-body-md text-tint-ink">The Between Gigs team approved your profile{person.approvedAt && ` on ${when(person.approvedAt)}`}, and clients can find it now. Keep this month's availability current from Edit profile.</p>
+          <h2 id="live-h" className="font-display text-heading-lg text-ink">You&apos;re live, {first}</h2>
+          <p className="max-w-prose text-body-md text-ink">The Between Gigs team approved your profile{person.approvedAt && ` on ${when(person.approvedAt)}`}, and clients can find it now. Keep this month's availability current from Edit profile.</p>
         </div>
       </div>
       <div className="grid gap-2">
-        <label htmlFor="live-url" className="text-label-md text-tint-ink">Your public link</label>
+        <label htmlFor="live-url" className="text-label-md text-ink">Your public link</label>
         <div className="flex flex-wrap gap-2">
           <input id="live-url" readOnly value={url} onFocus={(e) => e.currentTarget.select()}
             className="h-12 min-w-0 flex-1 basis-56 rounded-full border border-line-strong bg-surface px-5 text-body-md text-ink outline-none focus-visible:ring-2 focus-visible:ring-focus" />

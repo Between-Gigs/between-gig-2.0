@@ -42,8 +42,8 @@ export function ProfileBuilder() {
 /** A slim band above the builder. The big welcome headline lives on My profile, where they start. */
 function Intro() {
   return (
-    <section className="border-b border-line bg-bg">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-4 py-5 sm:px-6">
+    <section data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
+      <div className="relative z-raised mx-auto flex max-w-7xl flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-4 py-5 sm:px-6">
         <h1 className="font-display text-heading-lg text-ink">Build your profile</h1>
         <p className="text-body-sm text-ink-muted">It saves as you go. Come back any time. <Link href="/profile/canvas/" className="ml-1 inline-flex min-h-11 items-center underline underline-offset-2 hover:text-ink sm:min-h-6">Try editing right on your profile</Link></p>
       </div>
@@ -54,7 +54,7 @@ function Intro() {
 function BuilderSkeleton() {
   return (
     <div className="relative z-raised mx-auto mt-6 grid max-w-7xl gap-8 px-4 pb-20 sm:px-6 lg:grid-cols-12">
-      <div aria-busy="true" aria-label="Loading your profile" className="grid gap-4 rounded-lg border border-line bg-surface p-8 shadow-lg lg:col-span-7">
+      <div aria-busy="true" aria-label="Loading your profile" className="grid gap-4 rounded-2xl border border-line bg-surface p-8 shadow-lg lg:col-span-7">
         <Skeleton className="h-8 w-1/2" /><Skeleton /><Skeleton shape="block" className="h-24" /><Skeleton shape="block" className="h-40" />
       </div>
     </div>
@@ -187,7 +187,7 @@ function Builder({ personId }: { personId: string }) {
             </Banner>
           )}
           {live.dialog}
-          <div className="rounded-lg border border-line bg-surface shadow-lg">
+          <div className="rounded-2xl border border-line bg-surface shadow-lg">
             {!done && (
               <div className="border-b border-line px-5 pt-5 pb-4 sm:px-8">
                 <Stepper steps={[...STEPS]} current={step} onStepClick={(i) => i !== step && go(i)} />
@@ -230,7 +230,7 @@ function Builder({ personId }: { personId: string }) {
                         <Field label="Full name" error={err("name")}><Input id="f-name" autoComplete="name" value={d.name} onChange={(e) => set("name")(e.target.value)} /></Field>
                         <Field label="Years in the business" error={err("years")}><Input id="f-years" inputMode="numeric" value={d.years} placeholder="e.g. 6" onChange={(e) => set("years")(e.target.value.replace(/\D/g, "").slice(0, 2))} /></Field>
                       </div>
-                      <Field label="Department" error={err("position")}><Input id="f-position" value={d.position} start={<Film />} placeholder="e.g. Costume & wardrobe" onChange={(e) => set("position")(e.target.value)} /></Field>
+                      <Field label="Industry position / department" error={err("position")}><Input id="f-position" value={d.position} start={<Film />} placeholder="e.g. Costume & wardrobe" onChange={(e) => set("position")(e.target.value)} /></Field>
                       <Field label="IMDb profile link" optional error={err("imdb")} hint="Your IMDb name page, if you have one. It helps us confirm credits."><Input id="f-imdb" type="url" inputMode="url" value={d.imdb} start={<Link2 />} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} /></Field>
                       <Credits credits={d.credits} pins={d.creditPins ?? []} error={err("credits")}
                         onChange={(credits, pins) => { set("credits")(credits); set("creditPins")(pins); }} />
@@ -451,7 +451,7 @@ function Review({ d, notes, onEdit }: { d: ProfileFields; notes: { section: Prof
         const open = !closed.has(i);
         const summary = [note && "1 team note", missing && `${Object.keys(missing).length} to finish`].filter(Boolean).join(" · ");
         return (
-          <section key={section} aria-labelledby={`review-${section}`} className={cx("rounded-lg border p-4", missing || note ? "border-warning" : "border-line")}>
+          <section key={section} aria-labelledby={`review-${section}`} className={cx("rounded-xl border p-4", missing || note ? "border-warning" : "border-line")}>
             <div className={cx("flex flex-wrap items-center justify-between gap-2", open && "mb-2")}>
               <h3 id={`review-${section}`} className="font-display text-heading-md text-ink">
                 <button type="button" aria-expanded={open} aria-controls={`review-body-${section}`} onClick={() => toggle(i)}
