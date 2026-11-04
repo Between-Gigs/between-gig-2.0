@@ -95,7 +95,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
     <section aria-label={`About ${first}`} className="grid grid-cols-12 items-center gap-6 rounded-2xl bg-surface p-6 shadow-md sm:p-8">
       <div className={cx("grid justify-items-center gap-4 text-center", stats.length ? "col-span-7" : "col-span-12")}>
         <div className="relative size-28 sm:size-32">
-          {P("photo", !!f.photo, (
+          {P("photo", !!f.photo || !show, (
             <PersonPhoto id={person.id} morph={!editing} name={f.name} src={f.photo || undefined} alt={`Portrait of ${f.name}${sample ? " (fictional)" : ""}`}
               className="size-full rounded-full object-cover" textClass="text-display-sm" />
           ), "Add photo", "photo")}
@@ -171,7 +171,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
             <li>{P("where", !!where, <Fact icon="round_pushpin">Works in {where}</Fact>, "Where you work")}</li>
             <li>{P("availability", !!f.dates.trim() || !show, <Fact icon="spiral_calendar">{monthStatusLabel[f.monthStatus]}{f.dates && <span className="block text-body-md text-ink-muted">{f.dates}</span>}</Fact>, "When you're free this month")}</li>
             {(rate || show) && <li>{P("rate", !!rate, <Fact icon="money_bag">From {rate}</Fact>, "Your starting rate (optional)")}</li>}
-            {(f.languages || show) && <li>{P("languages", !!f.languages.trim(), <Fact icon="speaking_head">Speaks {f.languages}</Fact>, "Languages you speak (optional)")}</li>}
+            {(f.languages || show) && <li>{P("languages", !!f.languages.trim(), <Fact icon="world_map">Speaks {f.languages}</Fact>, "Languages you speak (optional)")}</li>}
             {!editing && <li><Fact icon="house">{modeLabel[f.mode]}{f.travel && ` · ${f.travel}`}</Fact></li>}
             {!editing && f.transport && <li><Fact icon="automobile">{f.transport}</Fact></li>}
             {!editing && !unseen && f.insurance === "yes" && <li><Fact icon="shield">{insuranceLabel[f.insurance]}</Fact></li>}

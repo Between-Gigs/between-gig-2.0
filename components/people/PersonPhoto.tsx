@@ -10,7 +10,7 @@ import { departmentIcon } from "@/lib/profile/department";
  * system's Avatar stops at 48px). `morph` gives it the shared view-transition name, so it flies between
  * the search card and the profile.
  *
- * `fallback="brand"` turns the no-photo state into a placeholder portrait: a silhouette on the forest
+ * `fallback="brand"` turns the no-photo state into a placeholder portrait: a silhouette on a soft light
  * surface with a "No photo yet" badge carrying their department icon, instead of giant initials.
  */
 export function PersonPhoto({ id, name, src, className, morph = false, alt, textClass = "text-display-sm", fallback = "plain", department, skills }: {
