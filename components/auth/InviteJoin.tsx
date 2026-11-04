@@ -58,7 +58,7 @@ function Details() {
           {errors.terms && <p id="terms-error" className="text-body-sm text-danger">{errors.terms}</p>}
         </div>
         <Button type="submit" variant="primary" size="lg" fullWidth className="glow-hover" iconEnd={<ArrowRight />}>Continue</Button>
-        <p className="text-center text-body-sm text-ink-muted">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2">Sign in</Link></p>
+        <p className="text-center text-body-sm text-ink-muted">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2">Log in</Link></p>
       </form>
     </AuthShell>
   );
@@ -90,15 +90,15 @@ function InviteOnly() {
     <AuthShell header="Sign up">
       <div className="grid gap-6">
         <div className="flex items-start gap-4">
-          <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-xl bg-surface-selected text-ink-brand [&_svg]:size-6"><MailCheck /></span>
+          <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-lg bg-surface-selected text-ink-brand [&_svg]:size-6"><MailCheck /></span>
           <div>
             <h1 className="font-display text-heading-lg text-ink">Joining is by invitation</h1>
             <p className="mt-1 text-body-md text-ink-muted">Open the link in your invitation email to create your account. No invitation yet? Get on the call sheet and we'll email you when it's your turn.</p>
           </div>
         </div>
-        <Banner tone="info" title="Already joined?">Sign in with the email your invitation was sent to.</Banner>
+        <Banner tone="info" title="Already joined?">Log in with the email your invitation was sent to.</Banner>
         <div className="flex flex-wrap gap-2 border-t border-line pt-6">
-          <ButtonLink href="/login/" variant="primary" iconEnd={<ArrowRight />}>Sign in</ButtonLink>
+          <ButtonLink href="/login/" variant="primary" iconEnd={<ArrowRight />}>Log in</ButtonLink>
           <ButtonLink href="/professionals/">Get on the call sheet</ButtonLink>
         </div>
       </div>

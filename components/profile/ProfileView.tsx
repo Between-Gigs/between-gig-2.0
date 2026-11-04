@@ -1,6 +1,6 @@
 "use client";
 import { Accordion, Button, Field, Input, Modal, Select, Textarea, cx, useToast } from "@ds/components";
-import { BadgeCheck, Check, ChevronLeft, ChevronRight, Heart, Info, MapPin, MessageSquare, Share } from "lucide-react";
+import { BadgeCheck, ChevronLeft, ChevronRight, Heart, MapPin, MessageSquare, Share } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { data, type Person, type Profile, type ProfileFields } from "@/lib/data";
@@ -86,13 +86,13 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
   // Only the numbers that say something: a zero reads as a weakness, so it's left out (the editor shows years to fill).
   const offered = helps.length || services.length;
   const stats: [string, string, boolean][] = ([
-    [f.years || "", f.years === "1" ? "Year on set" : "Years on set", !!f.years || editing],
+    [f.years || "", f.years === "1" ? "Year in the business" : "Years in the business", !!f.years || editing],
     [String(offered), offered === 1 ? "Service" : "Services", offered > 0],
     [String(credits.length), credits.length === 1 ? "Credit" : "Credits", credits.length > 0],
   ] as [string, string, boolean][]).filter(([, , keep]) => keep);
 
   const identity = (
-    <section aria-label={`About ${first}`} className="grid grid-cols-12 items-center gap-6 rounded-lg bg-surface p-6 shadow-md sm:p-8">
+    <section aria-label={`About ${first}`} className="grid grid-cols-12 items-center gap-6 rounded-2xl bg-surface p-6 shadow-md sm:p-8">
       <div className={cx("grid justify-items-center gap-4 text-center", stats.length ? "col-span-7" : "col-span-12")}>
         <div className="relative size-28 sm:size-32">
           {P("photo", !!f.photo, (
@@ -141,8 +141,8 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
     <section aria-labelledby={`${person.id}-checked`} className="px-1">
       <h2 id={`${person.id}-checked`} className="font-display text-heading-md text-ink">What we&apos;ve checked</h2>
       <ul className="mt-4 grid gap-3 text-body-md text-ink">
-        <li className="flex gap-3"><Check className="mt-0.5 size-5 shrink-0" aria-hidden="true" />Profile reviewed by the Between Gigs team</li>
-        <li className="flex gap-3"><Info className="mt-0.5 size-5 shrink-0 text-ink-muted" aria-hidden="true" /><span>Credits and details are shared by {first}, not independently verified</span></li>
+        <li className="flex items-center gap-3"><Icon3D name="check_mark_button" className="size-7 shrink-0" />Profile reviewed by the Between Gigs team</li>
+        <li className="flex items-center gap-3"><Icon3D name="speech_balloon" className="size-7 shrink-0" /><span>Credits and details are shared by {first}, not independently verified</span></li>
       </ul>
     </section>
   );
@@ -258,7 +258,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
             {similar.map(({ person: o, profile }) => (
               <li key={o.id}>
                 <Link href={`/p/${o.slug}/`} className="group block">
-                  <div className="aspect-square overflow-hidden rounded-md"><PersonPhoto id={o.id} name={o.name} src={profile.fields.photo || undefined} alt="" className="size-full transition-transform duration-slow group-hover:scale-105" /></div>
+                  <div className="aspect-square overflow-hidden rounded-lg"><PersonPhoto id={o.id} name={o.name} src={profile.fields.photo || undefined} alt="" className="size-full transition-transform duration-slow group-hover:scale-105" /></div>
                   <p className="mt-3 truncate text-label-md text-ink">{o.name}</p>
                   <p className="text-body-sm text-ink-muted">{profile.fields.position || profile.fields.services[0]}</p>
                   {profile.fields.rate && <p className="mt-1 text-body-sm text-ink"><b>${profile.fields.rate}</b> / {basisShort[profile.fields.basis]}</p>}
@@ -297,7 +297,7 @@ function Fact({ icon, children }: { icon: Icon3DName; children: React.ReactNode 
 /** Where a part of a draft will go, in the preview. */
 function Placeholder({ children, block = false }: { children: React.ReactNode; block?: boolean }) {
   return block
-    ? <p className="rounded-md bg-surface-sunken p-5 text-body-md text-ink-subtle">{children}</p>
+    ? <p className="rounded-lg bg-surface-sunken p-5 text-body-md text-ink-subtle">{children}</p>
     : <span className="text-body-md text-ink-subtle">{children}</span>;
 }
 
@@ -327,7 +327,7 @@ function Lightbox({ name, items, index, onIndex }: { name: string; items: { src:
     <Modal open={index !== null} onClose={() => onIndex(null)} size="lg" title={it?.caption ?? ""} description={`${name} · image ${index === null ? "" : index + 1} of ${n}`}>
       {it && (
         <div className="grid gap-3">
-          <img key={it.src} src={asset(it.src)} alt={it.caption} className="aspect-video w-full rounded-md object-cover" />
+          <img key={it.src} src={asset(it.src)} alt={it.caption} className="aspect-video w-full rounded-lg object-cover" />
           <div className="flex items-center justify-between">
             <Button variant="secondary" size="sm" iconStart={<ChevronLeft />} onClick={() => onIndex(((index ?? 0) - 1 + n) % n)}>Previous</Button>
             <span className="font-mono text-data-sm text-ink-subtle">{(index ?? 0) + 1} / {n}</span>

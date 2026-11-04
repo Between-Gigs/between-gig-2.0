@@ -27,10 +27,10 @@ export function OwnerGate({ children }: { children: (session: Session) => React.
         action={
           <div className="flex flex-wrap justify-center gap-2">
             {data.demo && <Button variant="primary" iconStart={<Users />} onClick={() => void data.demo?.signInAs("owner")}>Continue as owner (sample)</Button>}
-            <ButtonLink href="/login/?next=/owners/">Sign in</ButtonLink>
+            <ButtonLink href="/login/?next=/owners/">Log in</ButtonLink>
           </div>
         }>
-        {session ? "You're signed in as a Gigster. People search is for the Between Gigs owners." : "Sign in with an owner account to search everyone who has joined."}
+        {session ? "You're signed in as a Gigster. People search is for the Between Gigs owners." : "Log in with an owner account to search everyone who has joined."}
       </EmptyState>
     </Page>
   );

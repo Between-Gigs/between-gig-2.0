@@ -69,7 +69,7 @@ export const fieldStep: Partial<Record<keyof ProfileFields, number>> = {
 };
 
 export const fieldLabel: Partial<Record<keyof ProfileFields, string>> = {
-  photo: "Profile photo", name: "Full name", years: "Years in the business", position: "Industry position / department",
+  photo: "Profile photo", name: "Full name", years: "Years in the business", position: "Department",
   imdb: "IMDb profile link", credits: "Notable credits", skills: "On-set skills", services: "Off-set services",
   otherCity: "City / region and country", zip: "Home ZIP code", areas: "Service areas", dates: "Dates or times this month", about: "About me",
 };

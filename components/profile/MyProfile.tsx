@@ -1,32 +1,29 @@
 "use client";
-import { Banner, Button, Skeleton, Switch, useToast } from "@ds/components";
-import { ArrowRight, Copy, Eye, ListChecks, PartyPopper, PencilLine, Share2 } from "lucide-react";
+import { Button, Skeleton, useToast } from "@ds/components";
+import { ArrowRight, Copy, Eye, PencilLine, Share2 } from "lucide-react";
 import * as React from "react";
-import { data, type Person, type PersonSummary, type Profile, type ProfileFields } from "@/lib/data";
+import { data, type Person, type PersonSummary, type Profile } from "@/lib/data";
 import { blankFields } from "@/lib/data/fields";
 import { useRequireRole } from "@/lib/guard";
 import { absoluteUrl } from "@/lib/site";
-import { STEPS, sectionLabel } from "@/lib/profile/validate";
+import { sectionLabel } from "@/lib/profile/validate";
+import { Icon3D } from "@/components/ui/Icon3D";
+import { type Icon3DName } from "@/lib/icons3d";
 import { PersonStatusBadge } from "@/components/people/PersonStatusBadge";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { ProfilePreviewCard } from "./ProfilePreviewCard";
-import { ProfileView } from "./ProfileView";
 import { markArea } from "@/lib/split-area";
 
 markArea("bg-split:dashboard");
 
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric" }) : "");
 
-const stepHints: Record<(typeof STEPS)[number], string> = {
-  "About you": "Your photo, role, years in the business and a few credits.",
-  Skills: "Your on-set skills and the services you'd offer between gigs.",
-  "Where & when": "Where you work, when you're free this month and a starting rate.",
-  "Your story": "A few lines about the help you offer and how you work.",
-  Review: "Check it top to bottom, then send it to the Between Gigs team.",
-};
 
-/** /profile: the Gigster's own profile, with a banner that says where it stands and what to do next. */
+/**
+ * /profile: where the Gigster stands, in one light status card, beside the card clients see in search. One next step
+ * per state; the full profile lives on its own page (public once approved) and in Edit, so it isn't repeated here.
+ */
 export function MyProfile() {
   const session = useRequireRole("gigster");
   const [s, setS] = React.useState<PersonSummary | null>(null);
@@ -48,97 +45,69 @@ export function MyProfile() {
   // Show what's submitted when there is something submitted; before that, the working draft.
   const fields = profile?.fields ?? s.fields;
   const started = !!fields && s.completeness > 0;
-  const editLabel = person.status === "changes_requested" ? "Make the changes" : person.status === "draft" ? "Continue your profile" : "Edit profile";
-
-  const banner = {
-    invited: null,
-    registered: null,
-    draft: fields && <Banner tone="warning" title="Draft · not submitted yet">
-      Only you can see this. Finish the questionnaire and submit it for review when you're ready.
-      <div className="mt-3"><ButtonLink href="/profile/canvas/" size="sm" variant="primary" iconEnd={<ArrowRight />}>{editLabel}</ButtonLink></div>
-    </Banner>,
-    submitted: <Banner tone="info" title="Submitted for review">
-      Thanks, {first}. Our team is reviewing your profile{person.submittedAt && ` (sent ${when(person.submittedAt)})`}. We'll email you when it's approved or if we suggest a change.
-      <div className="mt-3"><ButtonLink href="/profile/canvas/" size="sm" iconStart={<PencilLine />}>Edit</ButtonLink></div>
-    </Banner>,
-    changes_requested: <Banner tone="warning" title="Changes requested">
-      <p>The Between Gigs team looked at your profile and asked for a few changes. Update them, then submit again.</p>
-      <ul className="mt-3 grid gap-2">
-        {(person.reviewNotes ?? []).map((n) => (
-          <li key={n.note} className="rounded-md border border-line bg-surface p-3 text-body-sm text-ink"><b className="block text-label-sm text-ink-muted">{sectionLabel[n.section]}</b>{n.note}</li>
-        ))}
-      </ul>
-      <div className="mt-3"><ButtonLink href="/profile/canvas/" size="sm" variant="primary" iconEnd={<ArrowRight />}>{editLabel}</ButtonLink></div>
-    </Banner>,
-    approved: null,
-  }[person.status];
+  const state = !started || !fields ? "new" : person.status;
 
   return (
     <Page>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="grid gap-2">
-          <p className="text-eyebrow text-ink-brand uppercase">My profile</p>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-display text-display-sm text-ink">Hi, {first}</h1>
-            <PersonStatusBadge status={person.status} audience="gigster" />
-          </div>
-        </div>
-        {started && person.status === "approved" && <ButtonLink href="/profile/canvas/" iconStart={<PencilLine />}>{editLabel}</ButtonLink>}
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="font-display text-display-sm text-ink">Hi, {first}</h1>
+        {state !== "new" && <PersonStatusBadge status={person.status} audience="gigster" />}
       </div>
 
-      {banner && <div className="mt-6">{banner}</div>}
-      {person.status === "approved" && fields && <Live person={person} fields={fields} />}
-
-      {!started || !fields ? (
-        <NotStarted person={person} />
-      ) : (
-        <div className="mt-10">
-          {person.status !== "approved" && <p className="mb-6 text-body-sm text-ink-muted">Preview: this is how clients will see your profile once it's approved.</p>}
-          <ProfileView person={person} fields={fields} extras={profile?.extras} mode="own" />
+      <div className="mt-8 grid items-start gap-10 lg:grid-cols-12 lg:gap-16">
+        <div className="lg:col-span-7">
+          {state === "approved" && fields ? <Live person={person} /> : <Status person={person} state={state} completeness={s.completeness} first={first} />}
         </div>
-      )}
+        <aside aria-label="Your card in search" className="grid gap-3 lg:col-span-5">
+          <p className="text-label-md text-ink-muted">Your card in search</p>
+          <ProfilePreviewCard fields={fields ?? blankFields(person.name)} personId={person.id} badge={state === "approved" ? null : state === "new" ? "Fills in as you go" : "Preview"} />
+        </aside>
+      </div>
     </Page>
   );
 }
 
-/** Before the first answer: the five steps, what the finished card looks like, and one way in. */
-function NotStarted({ person }: { person: Person }) {
+/** One card, one next step: not started, draft, with the team, or changes requested. */
+function Status({ person, state, completeness, first }: { person: Person; state: string; completeness: number; first: string }) {
+  const notes = person.reviewNotes ?? [];
+  const c = {
+    new: { icon: "waving_hand", title: "Let's build your profile", body: "Fill it in right on the page clients will see. It takes about 10 minutes and saves as you go.", cta: "Start your profile" },
+    registered: { icon: "waving_hand", title: "Let's build your profile", body: "Fill it in right on the page clients will see. It takes about 10 minutes and saves as you go.", cta: "Start your profile" },
+    invited: { icon: "waving_hand", title: "Let's build your profile", body: "Fill it in right on the page clients will see. It takes about 10 minutes and saves as you go.", cta: "Start your profile" },
+    draft: { icon: "memo", title: "Draft · not submitted yet", body: `Only you can see it. You're ${Math.round(completeness * 100)}% of the way there; send it to the Between Gigs team when it's ready.`, cta: "Continue your profile" },
+    submitted: { icon: "hourglass_done", title: "Submitted for review", body: `Thanks, ${first}. Our team is reviewing your profile${person.submittedAt ? ` (sent ${when(person.submittedAt)})` : ""}. We'll email you when it's approved or if we suggest a change.`, cta: null },
+    changes_requested: { icon: "memo", title: "Changes requested", body: "The Between Gigs team asked for a few changes. Update them, then send it again.", cta: "Make the changes" },
+  }[state] ?? { icon: "memo", title: "Your profile", body: "", cta: "Edit profile" };
   return (
-    <section aria-labelledby="start-h" className="mt-8 grid gap-8 rounded-2xl border border-line bg-surface p-6 shadow-lg sm:p-8 lg:grid-cols-12 lg:gap-12">
-      <div className="lg:col-span-7">
-        <p className="text-label-md text-ink-brand">Good work. Great people. Your next chapter.</p>
-        <h2 id="start-h" className="mt-3 font-display text-display-sm text-balance text-ink sm:text-display-md">Let's meet the person <span className="glow-text text-ink-brand">behind the experience.</span></h2>
-        <p className="mt-3 max-w-prose text-body-lg text-ink-muted">Bring your on-set know-how to everyday life. You'll fill in your profile right where clients will see it: about 10 minutes, and it saves as you go.</p>
-        <ol className="mt-6 grid gap-4">
-          {STEPS.map((step, i) => (
-            <li key={step} className="flex items-start gap-4">
-              <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full border-2 border-ink-brand text-label-sm text-ink-brand tabular-nums">{i + 1}</span>
-              <span className="grid gap-0.5"><b className="text-label-md text-ink">{step}</b><span className="text-body-sm text-ink-muted">{stepHints[step]}</span></span>
-            </li>
-          ))}
-        </ol>
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          <ButtonLink href="/profile/canvas/" variant="primary" size="lg" iconEnd={<ArrowRight />}>Start your profile</ButtonLink>
-          <ButtonLink href="/profile/edit/" size="lg" iconStart={<ListChecks />}>Prefer questions, step by step?</ButtonLink>
+    <section aria-labelledby="status-h" className="grid gap-6 rounded-lg border border-line bg-surface p-6 sm:p-8">
+      <div className="flex items-start gap-4">
+        <Icon3D name={c.icon as Icon3DName} className="size-12 shrink-0" />
+        <div className="grid gap-1.5">
+          <h2 id="status-h" className="font-display text-heading-lg text-ink">{c.title}</h2>
+          <p className="max-w-prose text-body-md text-ink-muted">{c.body}</p>
         </div>
       </div>
-      <div className="lg:col-span-5">
-        <p className="mb-3 text-label-md text-ink-muted">What clients will see</p>
-        <ProfilePreviewCard fields={blankFields(person.name)} personId={person.id} badge="Your card" />
-        <p className="mt-3 text-body-sm text-ink-subtle">It fills in as you go.</p>
+      {state === "changes_requested" && notes.length > 0 && (
+        <ul className="grid gap-2">
+          {notes.map((n) => (
+            <li key={n.note} className="rounded-md bg-surface-sunken p-4 text-body-md text-ink"><b className="block text-label-sm text-ink-muted">{sectionLabel[n.section]}</b>{n.note}</li>
+          ))}
+        </ul>
+      )}
+      <div className="flex flex-wrap gap-3 border-t border-line pt-6">
+        {c.cta
+          ? <ButtonLink href="/profile/canvas/" variant="primary" size="lg" iconEnd={<ArrowRight />}>{c.cta}</ButtonLink>
+          : <ButtonLink href="/profile/canvas/" size="lg" iconStart={<PencilLine />}>Edit profile</ButtonLink>}
       </div>
     </section>
   );
 }
 
-/** Approved: a small celebration, the live card, sharing, and this month's availability. */
-function Live({ person, fields }: { person: Person; fields: ProfileFields }) {
+/** Approved: the public link, sharing, and this month's availability, in one light card. */
+function Live({ person }: { person: Person }) {
   const toast = useToast();
   const first = person.name.split(" ")[0] || "there";
   const url = absoluteUrl(`/p/${person.slug}/`);
-  // Preview only: the data layer has no availability update for a live profile yet, so this stays on this page.
-  const [open, setOpen] = React.useState(fields.monthStatus !== "away");
-  const shown: ProfileFields = { ...fields, monthStatus: open ? (fields.monthStatus === "away" ? "available" : fields.monthStatus) : "away" };
   const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   const copy = async () => {
@@ -150,37 +119,26 @@ function Live({ person, fields }: { person: Person; fields: ProfileFields }) {
   };
 
   return (
-    <section aria-labelledby="live-h" className="mt-6 grid overflow-hidden rounded-2xl border border-line bg-surface shadow-lg lg:grid-cols-12">
-      <div data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots p-6 sm:p-8 lg:col-span-7">
-        <span aria-hidden="true" className="glow-horizon hidden opacity-50 lg:block" />
-        <div className="relative z-raised grid gap-5">
-          <span aria-hidden="true" className="grid size-12 place-items-center rounded-full bg-action text-on-action shadow-md"><PartyPopper className="size-6" /></span>
-          <div>
-            <p className="text-eyebrow text-ink-brand uppercase">Approved{person.approvedAt && ` · ${when(person.approvedAt)}`}</p>
-            <h2 id="live-h" className="mt-2 font-display text-display-sm text-balance text-ink">You're live, {first}.</h2>
-            <p className="mt-2 max-w-prose text-body-md text-ink-muted">The Between Gigs team reviewed your profile and it's now public. Share your link, and keep this month's availability current.</p>
-          </div>
-          <div className="grid gap-2">
-            <label htmlFor="live-url" className="text-label-sm text-ink-muted">Your public link</label>
-            <div className="flex flex-wrap gap-2">
-              <input id="live-url" readOnly value={url} onFocus={(e) => e.currentTarget.select()}
-                className="h-10 min-w-0 flex-1 basis-56 rounded-lg border border-line-strong bg-surface px-3 text-body-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-focus" />
-              <Button iconStart={<Copy />} onClick={copy}>Copy link</Button>
-              {canShare && <Button iconStart={<Share2 />} onClick={share}>Share</Button>}
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <ButtonLink href={`/p/${person.slug}/`} variant="primary" iconStart={<Eye />}>View public page</ButtonLink>
-          </div>
-          <div className="rounded-xl border border-line bg-surface p-4">
-            <Switch checked={open} onChange={setOpen} label="Taking requests this month"
-              description="Preview control: it updates the card here only and isn't saved yet. To change it for real, edit your profile's Where & when step." />
-          </div>
+    <section aria-labelledby="live-h" className="grid gap-6 rounded-lg border border-line bg-surface p-6 sm:p-8">
+      <div className="flex items-start gap-4">
+        <Icon3D name="party_popper" className="size-12 shrink-0" />
+        <div className="grid gap-1.5">
+          <h2 id="live-h" className="font-display text-heading-lg text-ink">You&apos;re live, {first}</h2>
+          <p className="max-w-prose text-body-md text-ink-muted">The Between Gigs team approved your profile{person.approvedAt && ` on ${when(person.approvedAt)}`}, and clients can find it now. Keep this month's availability current from Edit profile.</p>
         </div>
       </div>
-      <div className="grid content-center gap-3 p-6 sm:p-8 lg:col-span-5">
-        <p className="text-label-md text-ink-muted">Your card in search</p>
-        <ProfilePreviewCard fields={shown} personId={person.id} badge={null} />
+      <div className="grid gap-2">
+        <label htmlFor="live-url" className="text-label-md text-ink">Your public link</label>
+        <div className="flex flex-wrap gap-2">
+          <input id="live-url" readOnly value={url} onFocus={(e) => e.currentTarget.select()}
+            className="h-11 min-w-0 flex-1 basis-56 rounded-md border border-line-strong bg-surface px-3 text-body-md text-ink outline-none focus-visible:ring-2 focus-visible:ring-focus" />
+          <Button size="lg" iconStart={<Copy />} onClick={copy}>Copy</Button>
+          {canShare && <Button size="lg" iconStart={<Share2 />} onClick={share}>Share</Button>}
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-3 border-t border-line pt-6">
+        <ButtonLink href={`/p/${person.slug}/`} variant="primary" size="lg" iconStart={<Eye />}>View your public page</ButtonLink>
+        <ButtonLink href="/profile/canvas/" size="lg" iconStart={<PencilLine />}>Edit profile</ButtonLink>
       </div>
     </section>
   );

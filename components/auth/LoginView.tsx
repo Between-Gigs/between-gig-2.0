@@ -69,7 +69,7 @@ function ClerkLogin() {
           <h1 className="font-display text-heading-lg text-ink">Welcome back</h1>
           <p className="mt-2 text-body-md text-ink-muted">Use the email and password you created.</p>
         </div>
-        {params.get("signedOut") && <Banner tone="success" title="You're signed out">See you next time.</Banner>}
+        {params.get("signedOut") && <Banner tone="success" title="You're logged out">See you next time.</Banner>}
         {params.get("__clerk_status") === "client_mismatch" && <Banner tone="warning" title="This sign-in link is out of date">
           Open a fresh sign-in page to continue with your current account. <a className="text-link underline underline-offset-2" href={`${basePath}/login/`}>Reload sign-in</a>.
         </Banner>}
@@ -153,13 +153,13 @@ function SampleLogin() {
   return (
     <AuthShell header="Log in">
       <div ref={stage} className="vt-page">
-        {params.get("signedOut") && step === "email" && <Banner tone="success" className="mb-6" title="You're signed out">See you next time.</Banner>}
+        {params.get("signedOut") && step === "email" && <Banner tone="success" className="mb-6" title="You're logged out">See you next time.</Banner>}
 
         {step === "email" ? (
           <form noValidate onSubmit={send} className="grid gap-5">
             <div>
               <h1 className="font-display text-heading-lg text-ink">Welcome back</h1>
-              <p className="mt-2 text-body-md text-ink-muted">Sign in with the email you joined with. We'll send you a 6-digit code.</p>
+              <p className="mt-2 text-body-md text-ink-muted">Log in with the email you joined with. We'll send you a 6-digit code.</p>
             </div>
             <Field label="Email" error={error}>
               <Input type="email" inputMode="email" autoComplete="email" value={email} start={<Mail />} autoFocus
@@ -196,7 +196,7 @@ function SampleLogin() {
                   if (v.length === 6) void verify(v);
                 }} />
             </Field>
-            <Button type="submit" variant="primary" size="lg" fullWidth loading={busy} disabled={!!needsNewCode} iconEnd={<ArrowRight />}>Sign in</Button>
+            <Button type="submit" variant="primary" size="lg" fullWidth loading={busy} disabled={!!needsNewCode} iconEnd={<ArrowRight />}>Log in</Button>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <Button variant="ghost" size="sm" iconStart={<ArrowLeft />} onClick={back}>Use a different email</Button>
               <Button variant="ghost" size="sm" iconStart={<RotateCcw />} disabled={wait > 0 || busy} onClick={() => send()} title={wait > 0 ? "You can ask for a new code when the timer runs out" : undefined}>

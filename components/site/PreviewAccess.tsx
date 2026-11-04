@@ -59,10 +59,10 @@ export function PreviewAccess() {
       {state === "checking" && <div className="mx-auto max-w-xl py-20 text-center text-ink-subtle" aria-busy="true">Opening the preview…</div>}
       {state === "signed-out" && (
         <>
-          <h1 className="sr-only">Sign in</h1>
-          <EmptyState className="mx-auto max-w-xl py-20" icon={<LockKeyhole />} title="Sign in to continue" headingLevel={2}
+          <h1 className="sr-only">Log in</h1>
+          <EmptyState className="mx-auto max-w-xl py-20" icon={<LockKeyhole />} title="Log in to continue" headingLevel={2}
             action={<ButtonLink href={`/login/?next=${encodeURIComponent(`/preview-access/${typeof window === "undefined" ? "" : window.location.search}`)}`}>Sign in</ButtonLink>}>
-            Sign in with your Between Gigs account.
+            Log in with your Between Gigs account.
           </EmptyState>
         </>
       )}

@@ -95,7 +95,7 @@ export function Panel({ title, id, aside, footer, flush = false, landmark = true
     });
   };
   return (
-    <Tag aria-labelledby={title && landmark ? hid : undefined} className={cx("flex min-w-0 flex-col overflow-hidden rounded-xl border border-line bg-surface", className)}>
+    <Tag aria-labelledby={title && landmark ? hid : undefined} className={cx("flex min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-surface", className)}>
       {title && (
         <header className={cx("flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 py-3", open && "border-b border-line")}>
           {collapsible ? (
@@ -236,7 +236,7 @@ export function StatTab({ label, value, hint, icon, selected, attention = false,
   return (
     <button type="button" role="tab" aria-selected={selected} aria-controls={controls} onClick={onSelect} data-tilt=""
       aria-label={`${label}: ${value ?? "none"}, ${hint}${attention ? ", needs attention" : ""}`}
-      className={cx("lift group relative grid h-full min-w-0 gap-3 rounded-xl bg-surface p-5 text-left transition-shadow duration-fast",
+      className={cx("lift group relative grid h-full min-w-0 gap-3 rounded-lg bg-surface p-5 text-left transition-shadow duration-fast",
         selected ? "ring-2 ring-ink" : "ring-1 ring-line hover:shadow-md")}>
       {/* Airbnb-style tile: a 3D icon, the number, then what it counts. The one that needs doing today gets a dot. */}
       <span className="flex items-start justify-between gap-2">

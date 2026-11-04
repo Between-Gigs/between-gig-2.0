@@ -22,7 +22,7 @@ export function PrivacyRequest() {
     try { await data.funnel.privacyRequest(email, message, website || undefined); setState("done"); } catch { setState("error"); }
   };
   return (
-    <section id="request" aria-labelledby="request-h" className="grid scroll-mt-24 gap-3 rounded-2xl border border-line bg-surface p-6">
+    <section id="request" aria-labelledby="request-h" className="grid scroll-mt-24 gap-3 rounded-lg border border-line bg-surface p-6">
       <h2 id="request-h" className="font-display text-heading-lg text-ink">Contact us about your information</h2>
       <p className="text-body-md">Ask to access, correct, or delete your information, leave the waitlist, or ask a privacy question. We may need to verify your request before changing a record. Please do not include identity documents or sensitive information.</p>
       {state === "done" ? (

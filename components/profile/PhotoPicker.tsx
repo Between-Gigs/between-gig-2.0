@@ -89,7 +89,7 @@ function PhotoCropper({ src, onCancel, onSave }: { src: string; onCancel: () => 
       footer={<><Button variant="ghost" onClick={onCancel}>Cancel</Button><Button variant="primary" iconStart={<Check />} disabled={!img} onClick={save}>Use this photo</Button></>}>
       <div className="grid gap-4">
         <div ref={box} role="application" tabIndex={0} aria-label="Photo position. Drag, or use the arrow keys to move it."
-          className="relative mx-auto aspect-square w-full max-w-80 cursor-grab touch-none overflow-hidden rounded-xl bg-surface-sunken outline-none select-none focus-visible:ring-2 focus-visible:ring-ink-brand active:cursor-grabbing"
+          className="relative mx-auto aspect-square w-full max-w-80 cursor-grab touch-none overflow-hidden rounded-lg bg-surface-sunken outline-none select-none focus-visible:ring-2 focus-visible:ring-ink-brand active:cursor-grabbing"
           onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); drag.current = { px: e.clientX, py: e.clientY, x: c.x, y: c.y }; }}
           onPointerMove={(e) => {
             const d = drag.current, v = box.current?.clientWidth;
@@ -150,10 +150,10 @@ export function PhotoPicker({ value, name, onChange, error, id, personId: forPer
   };
   const message = problem ?? error;
   return (
-    <div className="flex flex-col items-start gap-4 rounded-xl border border-line bg-surface-sunken p-4 xs:flex-row xs:items-center">
+    <div className="flex flex-col items-start gap-4 rounded-lg border border-line bg-surface-sunken p-4 xs:flex-row xs:items-center">
       {value
-        ? <PersonPhoto id="self" name={name} src={value} alt="Your profile photo" className="size-20 shrink-0 rounded-xl shadow-md" />
-        : <span className="grid size-20 shrink-0 place-items-center rounded-xl border border-dashed border-line-strong text-ink-subtle"><ImagePlus aria-hidden="true" /></span>}
+        ? <PersonPhoto id="self" name={name} src={value} alt="Your profile photo" className="size-20 shrink-0 rounded-lg shadow-md" />
+        : <span className="grid size-20 shrink-0 place-items-center rounded-lg border border-dashed border-line-strong text-ink-subtle"><ImagePlus aria-hidden="true" /></span>}
       <div className="grid min-w-0 gap-2">
         <p id={`${id}-label`} className="text-label-md text-ink">Profile photo</p>
         <p className="text-body-sm text-ink-muted">A clear, friendly photo of you, face to camera. Clients see it first.</p>

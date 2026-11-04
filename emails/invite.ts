@@ -1,6 +1,7 @@
 /*
  * Invite to the ~500 waitlist sign-ups: their personal link to create a profile.
- * Copy: locked 4 Nov 2026 (one text for every style). It reuses approved phrases from the live site and the
+ * Copy: locked 4 Nov 2026 (one text for every style); subject shortened the same day so it fits a phone's inbox, and
+ * the button now comes straight after the greeting. It reuses approved phrases from the live site and the
  * welcome / coming-soon emails ("Your next chapter starts here", "the call sheet") and describes the new
  * three-step flow: open the link, fill in your page, send it for review.
  * Styles: "letter" (the default: a clean note from Patti & Peter), "pass" (an invitation card) and "classic"
@@ -28,7 +29,7 @@ const REASON = "You're receiving this because you joined the Between Gigs call s
 
 /** The locked text. */
 export const INVITE_COPY = {
-  subject: "You're on the call sheet: create your Between Gigs profile",
+  subject: "Your Between Gigs invitation is here",
   preheader: "Your invitation is here. Fill in your profile right on the page; it takes about 10 minutes.",
   eyebrow: "Los Angeles Call Sheet",
   title: "Your next chapter",
@@ -87,9 +88,9 @@ export function invite({ inviteUrl, email, style = "letter" }: InviteProps, ctx:
         `<h1 class="e-ink" style="margin:0 0 20px;font-family:${FONT_DISPLAY};font-size:28px;line-height:34px;font-weight:600;letter-spacing:-0.01em;color:${light.ink}">${esc(c.title)} <span class="e-brand" style="color:${light.inkBrand}">${esc(c.accent)}</span></h1>`,
         p("Hello,"),
         p(c.hello),
-        p(c.why),
         button(inviteUrl, c.cta),
         p(personal(email), { muted: true, size: 13, mb: 24 }),
+        p(c.why),
         ...how,
         ...close,
       ].join(""), "40px 44px 8px")
@@ -97,11 +98,10 @@ export function invite({ inviteUrl, email, style = "letter" }: InviteProps, ctx:
         style === "pass" ? pass(email) : hero({ eyebrow: c.eyebrow, title: c.title, accent: c.accent }),
         section([
           p(c.hello),
-          p(c.why, { muted: true }),
           button(inviteUrl, c.cta),
           style === "pass" ? "" : p(personal(email), { muted: true, size: 13, mb: 8 }),
         ].join("")),
-        section([...how, ...close].join(""), "16px 44px 8px"),
+        section([p(c.why, { muted: true }), ...how, ...close].join(""), "16px 44px 8px"),
       ].join("");
 
   const text = `${c.subject}
@@ -110,12 +110,12 @@ ${c.title} ${c.accent}
 
 ${style === "letter" ? "Hello,\n\n" : ""}${c.hello}
 
-${c.why}
-
 ${c.cta}:
 ${inviteUrl}
 
 This link is just for you (${email}) and works for 30 days.
+
+${c.why}
 
 ${c.howTitle.toUpperCase()}
 ${c.how.map(([t, d], i) => `0${i + 1} ${t}: ${d}`).join("\n")}

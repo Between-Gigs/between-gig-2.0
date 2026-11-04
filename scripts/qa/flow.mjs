@@ -33,7 +33,7 @@ export async function flow({ browser, base, outDir }) {
       await page.evaluate(() => window.bgSample.signInAs("invited"));
       await page.goto(`${base}/emails/`);
       await page.getByRole("radio", { name: /Sample outbox/ }).click();
-      await page.getByRole("link", { name: "You're on the call sheet: create your Between Gigs profile" }).click();
+      await page.getByRole("link", { name: "Your Between Gigs invitation is here" }).click();
       await page.waitForURL(/\/emails\/invite\/\?outbox=/);
       await page.locator("iframe").waitFor();
       const href = await page.frameLocator("iframe").getByRole("link", { name: /Create your profile/ }).getAttribute("href");
@@ -50,7 +50,7 @@ export async function flow({ browser, base, outDir }) {
       await page.getByRole("button", { name: "Create my profile" }).click();
       await page.waitForURL(/\/profile\/canvas\/?$/);
       // A brand-new account lands on its own blank profile, with the welcome.
-      await page.locator("dialog[open]").getByText("This is your page.").waitFor();
+      await page.getByRole("heading", { name: /This is your page\./ }).first().waitFor();
     })
     && await step("used-invite", async () => {
       await page.goto(`${base}/join/?invite=riley-7q2m`);
@@ -59,26 +59,27 @@ export async function flow({ browser, base, outDir }) {
     && await step("sign-out", async () => {
       await page.goto(`${base}/preview/`);
       await page.getByRole("button", { name: /Account:/ }).click();
-      await page.getByRole("menuitem", { name: "Sign out" }).click();
+      await page.getByRole("menuitem", { name: "Log out" }).click();
       await page.waitForURL(/\/login\/\?signedOut=1/);
-      await expectText("You're signed out");
+      await expectText("You're logged out");
     })
     && await step("sign-in-code", async () => {
       await page.getByLabel("Email").fill("riley.park@example.com");
       await page.getByRole("button", { name: "Email me a code" }).click();
       await page.getByLabel("6-digit code").waitFor();
       await page.getByLabel("6-digit code").fill("000000");
-      await page.getByRole("button", { name: "Sign in", exact: true }).click();
+      await page.getByRole("button", { name: "Log in", exact: true }).click();
       await expectText("doesn't match");
       const code = await page.evaluate(() => window.bgSample.peekCode("riley.park@example.com"));
       await page.getByLabel("6-digit code").fill(code);
       await page.waitForURL(/\/profile\/?$/);
-      await expectText("behind the experience.");
+      await expectText("Let's build your profile");
     })
     && await step("builder-about", async () => {
       // Start your profile now opens Edit on your profile; this flow walks the step-by-step questionnaire.
       await page.getByRole("link", { name: "Start your profile" }).waitFor();
-      await page.getByRole("link", { name: "Prefer questions, step by step?" }).click();
+      // The questionnaire isn't linked any more (editing happens on the page), but its route still works.
+      await page.goto(`${base}/profile/edit/`);
       await page.locator("[data-step='0']").waitFor();
       // Steps never block: Next moves on with nothing filled in; required answers are checked on Submit.
       await page.getByRole("button", { name: /^Next/ }).click();
@@ -89,7 +90,7 @@ export async function flow({ browser, base, outDir }) {
       // Every upload opens the cropper; keep the centred square.
       await page.getByRole("button", { name: "Use this photo" }).click();
       await page.getByLabel("Years in the business").fill("8");
-      await page.getByLabel("Industry position / department").fill("Set decoration");
+      await page.getByLabel("Department").fill("Set decoration");
       await page.getByLabel("IMDb profile link").fill("https://www.imdb.com/name/nm0000001/");
       await page.locator("#f-credits").fill("Fictional series · Set dresser (sample credit)");
       await page.getByRole("button", { name: /^Next/ }).click();
@@ -127,7 +128,7 @@ export async function flow({ browser, base, outDir }) {
       await page.getByRole("link", { name: "See my profile" }).click();
       await page.waitForURL(/\/profile\/?$/);
       await expectText("Submitted for review");
-      await page.getByRole("heading", { name: "Riley Park", level: 1 }).waitFor();
+      await page.getByRole("heading", { name: "Hi, Riley", level: 1 }).waitFor();
     })
     && await step("confirmation-email", async () => {
       await page.goto(`${base}/emails/`);
@@ -148,7 +149,7 @@ export async function flow({ browser, base, outDir }) {
       await page.getByRole("option", { name: /^Submitted/ }).click();
       await page.getByRole("link", { name: "Riley Park" }).click();
       await page.waitForURL(/\/owners\/people\/riley-park\/?$/);
-      await page.getByRole("heading", { name: "Riley Park", level: 1 }).waitFor();
+      await page.getByRole("heading", { name: "Hi, Riley", level: 1 }).waitFor();
       await page.locator("#review-h").waitFor();
     });
 

@@ -1,8 +1,7 @@
 "use client";
-import { Badge, Banner, Button, Field, Input, Modal, RadioGroup, SegmentedControl, Skeleton, Slider, Textarea, cx, useToast } from "@ds/components";
+import { Badge, Banner, Button, Field, Input, RadioGroup, SegmentedControl, Skeleton, Slider, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
-import { ArrowRight, Copy, Eye, Link2, ListChecks, MapPin, MessageSquareWarning, PartyPopper, PenLine, Pencil, Plus, Share2, Sparkles, UserRound, WandSparkles } from "lucide-react";
-import Link from "next/link";
+import { ArrowRight, Copy, Eye, Link2, MapPin, MessageSquareWarning, PartyPopper, PenLine, Pencil, Plus, Share2, UserRound, WandSparkles } from "lucide-react";
 import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
 import { basisLabel, laServiceAreas, monthStatusLabel, offSetServices, onSetSkills } from "@/lib/data/taxonomy";
@@ -108,25 +107,23 @@ export function ProfileCanvas() {
   return session?.personId ? <Canvas personId={session.personId} /> : <Page bare><Band /><CanvasSkeleton /></Page>;
 }
 
-function Band({ children }: { children?: React.ReactNode }) {
+/** Loading: the editor bar and the page's two columns, in the same light frame the editor opens in. */
+function Band() {
   return (
-    <section data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
-      <span aria-hidden="true" className="glow-horizon opacity-40" />
-      <div className="relative z-raised mx-auto max-w-7xl px-4 py-5 sm:px-6">
-        {children ?? <h1 className="font-display text-heading-lg text-ink">Your profile</h1>}
+    <div className="border-b border-line bg-bg">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-3 sm:px-6">
+        <div className="grid w-full max-w-80 gap-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-1.5" /></div>
+        <Skeleton className="h-9 w-40" />
       </div>
-    </section>
+    </div>
   );
 }
 
 function CanvasSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Loading your profile" className="mx-auto mt-8 grid max-w-7xl gap-8 px-4 pb-20 sm:px-6 lg:grid-cols-12">
-      <div className="grid gap-6 lg:col-span-8 sm:grid-cols-12">
-        <Skeleton shape="block" className="aspect-square sm:col-span-5" />
-        <div className="grid content-end gap-3 sm:col-span-7"><Skeleton className="h-4 w-1/3" /><Skeleton className="h-12 w-3/4" /><Skeleton /><Skeleton /></div>
-      </div>
-      <Skeleton shape="block" className="h-80 lg:col-span-4" />
+    <div aria-busy="true" aria-label="Loading your profile" className="mx-auto mt-10 grid max-w-7xl gap-10 px-4 pb-20 sm:px-6 lg:grid-cols-12 lg:gap-x-16">
+      <div className="grid content-start gap-6 lg:col-span-5 xl:col-span-4"><Skeleton shape="block" className="h-64" /><Skeleton shape="block" className="h-40" /></div>
+      <div className="grid content-start gap-5 lg:col-span-7 xl:col-span-8"><Skeleton className="h-9 w-1/3" /><Skeleton /><Skeleton /><Skeleton className="w-2/3" /><Skeleton shape="block" className="mt-6 h-40" /></div>
     </div>
   );
 }
@@ -157,7 +154,6 @@ function Canvas({ personId }: { personId: string }) {
   const [submitting, setSubmitting] = React.useState(false);
   const [sent, setSent] = React.useState(false);
   const [party, setParty] = React.useState(0);
-  const [intro, setIntro] = React.useState(false);
   const [rise, setRise] = React.useState(false);
   const [portrait, setPortrait] = React.useState(false);
   const wide = useWide();
@@ -199,21 +195,18 @@ function Canvas({ personId }: { personId: string }) {
   }, [d, flush]);
   React.useEffect(() => () => { void flush(); }, [flush]);
 
-  // The opening moment, once per person: a short welcome, then the blank page lights up spot by spot.
+  // The opening moment, once per person: no dialog in the way, the blank page lights up spot by spot.
   const INTRO = `bg-canvas-intro-${personId}`;
   const loaded = !!d;
   React.useEffect(() => {
     if (!loaded) return;
     let seen = true;
-    try { seen = localStorage.getItem(INTRO) === "1"; } catch { /* storage blocked: skip the intro */ }
-    if (!seen && latest.current && REQUIRED.filter((id) => isFilled(id, latest.current!)).length <= 1) setIntro(true);  
+    try { seen = localStorage.getItem(INTRO) === "1"; localStorage.setItem(INTRO, "1"); } catch { /* storage blocked: skip it */ }
+    if (seen) return;
+    setRise(true); // eslint-disable-line react-hooks/set-state-in-effect
+    const t = window.setTimeout(() => setRise(false), 2200);
+    return () => window.clearTimeout(t);
   }, [loaded, INTRO]);
-  const endIntro = () => {
-    try { localStorage.setItem(INTRO, "1"); } catch { /* ignore */ }
-    setIntro(false);
-    setRise(true);
-    window.setTimeout(() => setRise(false), 2200);
-  };
 
   // The portrait reveal: the moment a photo goes in, it opens like an iris, here and on the search card.
   const hadPhoto = React.useRef<boolean | null>(null);
@@ -361,31 +354,25 @@ function Canvas({ personId }: { personId: string }) {
                 </ul>
               </Banner>
             )}
+            {done <= 1 && (
+              <div className="mb-8 lg:hidden">
+                <h2 className="font-display text-heading-lg text-ink">Welcome, {first}. This is your page.</h2>
+                <p className="mt-1 text-body-md text-ink-muted">Tap any part to fill it in where it sits. It saves as you go.</p>
+              </div>
+            )}
             <div className={cx(rise && "canvas-rise")}>
               <ProfileView person={person} fields={d} mode="own"
                 part={(id, p) => <Spot id={id} kind={p.kind} hint={p.hint}>{p.content}</Spot>}
                 aside={<Rail first={first} panel={editing && wide ? <EditorPanel id={editing} body={editorFor(editing, d, set, personId, (go) => live.guard("photo", go))} /> : null} />} />
             </div>
             {editing && !wide && (
-              <div data-editor="" className="fixed inset-x-0 bottom-0 z-overlay max-h-3/4 overflow-y-auto rounded-t-2xl border-t border-line bg-surface-raised shadow-lg">
+              <div data-editor="" className="fixed inset-x-0 bottom-0 z-overlay max-h-3/4 overflow-y-auto rounded-t-xl border-t border-line bg-surface-raised shadow-lg">
                 <EditorPanel id={editing} sheet body={editorFor(editing, d, set, personId, (go) => live.guard("photo", go))} />
               </div>
             )}
           </CanvasCtx.Provider>
         )}
       </div>
-      <Modal open={intro} onClose={endIntro} size="md" title={`Welcome, ${first}. This is your page.`}
-        description="It's what clients will see, blank for now. Fill it in right where it sits: about ten minutes, and it saves as you go."
-        footer={<><Button variant="ghost" onClick={endIntro}>Look around first</Button><Button variant="primary" iconEnd={<ArrowRight />} onClick={() => { endIntro(); if (next) window.setTimeout(() => open(next), 700); }}>{next ? `Start with ${LABEL[next].toLowerCase()}` : "Start"}</Button></>}>
-        <ol className="grid gap-3">
-          {([[Plus, "Tap any part of the page to fill it in"], [Sparkles, "The highlighted part is next; Next carries you through"], [Eye, "Preview shows exactly what clients will see"]] as const).map(([Icon, text], i) => (
-            <li key={text} className="flex items-center gap-3 text-body-md text-ink">
-              <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-selected text-ink-brand"><Icon className="size-4" /></span>
-              <span><span className="sr-only">{i + 1}. </span>{text}</span>
-            </li>
-          ))}
-        </ol>
-      </Modal>
       {!sent && !editing && view === "edit" && (
         <Dock done={done} total={REQUIRED.length} next={next} ready={ready} resubmit={resubmit} canSend={!nothingToSend} submitting={submitting} onNext={() => next && open(next)} onSubmit={submit} />
       )}
@@ -451,15 +438,12 @@ function Rail({ first, panel }: { first: string; panel: React.ReactNode }) {
   return (
     <>
       <section aria-labelledby="rail-h" className="rounded-lg border border-line bg-surface p-6 max-lg:hidden">
-        <h2 id="rail-h" className="font-display text-heading-lg text-ink">{done <= 1 ? `Make it yours, ${first}` : next ? "Keep going" : "Ready when you are"}</h2>
+        <h2 id="rail-h" className="font-display text-heading-lg text-ink">{done <= 1 ? `Welcome, ${first}. This is your page.` : next ? "Keep going" : "Ready when you are"}</h2>
         <p className="mt-2 text-body-md text-ink-muted">{next
           ? "This is the page clients will see. Tap any part to fill it in where it sits; it saves as you go."
           : "Everything clients need is in. Preview it, then send it to the Between Gigs team."}</p>
         {next && <Button variant="primary" fullWidth className="mt-5" iconEnd={<ArrowRight />} onClick={() => open(next)}>Next: {LABEL[next]}</Button>}
       </section>
-      <Link href="/profile/edit/" className="inline-flex min-h-11 items-center gap-1.5 px-1 text-body-sm text-ink-muted underline underline-offset-2 hover:text-ink">
-        <ListChecks className="size-4" aria-hidden="true" />Prefer questions, step by step?
-      </Link>
     </>
   );
 }
@@ -500,7 +484,7 @@ function editorFor(id: SpotId, d: ProfileFields, set: <K extends keyof ProfileFi
     case "photo": return <PhotoEditor d={d} personId={personId} onChange={set("photo")} confirm={confirm} />;
     case "name": return <Field label="Full name"><Input id="f-name" size="lg" autoComplete="name" value={d.name} onChange={(e) => set("name")(e.target.value)} /></Field>;
     case "position": return <>
-      <Field label="Industry position / department" hint="Type your own, or tap one to start from."><Input id="f-position" value={d.position} placeholder="e.g. Costume & wardrobe" onChange={(e) => set("position")(e.target.value)} /></Field>
+      <Field label="Department" hint="Type your own, or tap one to start from."><Input id="f-position" value={d.position} placeholder="e.g. Costume & wardrobe" onChange={(e) => set("position")(e.target.value)} /></Field>
       <Quick options={onSetSkills} onPick={set("position")} current={d.position} />
     </>;
     case "years": return <YearsEditor value={d.years} onChange={set("years")} />;
@@ -597,7 +581,7 @@ function PhotoEditor({ d, personId, onChange, confirm }: { d: ProfileFields; per
           <div className="flex flex-wrap gap-2">
             {SAMPLE_PORTRAITS.map((src, i) => (
               <button key={src} type="button" aria-pressed={d.photo === src} aria-label={`Use sample portrait ${i + 1}`} onClick={() => onChange(src)}
-                className={cx("size-14 overflow-hidden rounded-xl border-2 transition-colors duration-fast", d.photo === src ? "border-ink-brand" : "border-transparent hover:border-line-strong")}>
+                className={cx("size-14 overflow-hidden rounded-lg border-2 transition-colors duration-fast", d.photo === src ? "border-ink-brand" : "border-transparent hover:border-line-strong")}>
                 <img src={asset(src)} alt="" className="size-full object-cover" />
               </button>
             ))}
@@ -655,7 +639,7 @@ function AboutEditor({ d, onChange }: { d: ProfileFields; onChange: (v: string) 
   return (
     <div className="grid gap-3">
       {!d.about.trim() && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-ink-brand bg-surface-selected p-3">
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-ink-brand bg-surface-selected p-3">
           <WandSparkles className="size-5 shrink-0 text-ink-brand" aria-hidden="true" />
           <p className="min-w-0 flex-1 text-body-sm text-ink">Not sure where to start? We'll write a first draft from your answers so far. Then make it sound like you.</p>
           <Button size="sm" variant="secondary" onClick={() => { onChange(starterAbout(d)); setDrafted(true); }}>Start me off</Button>
@@ -678,12 +662,12 @@ function ReadyCard({ first, slug, d, personId }: { first: string; slug: string; 
     try { await navigator.clipboard.writeText(url); toast({ message: "Link copied", tone: "success" }); } catch { toast({ message: "Couldn't copy. Select the link and copy it.", tone: "danger" }); }
   };
   return (
-    <Reveal effect="scale-in" className="grid gap-6 overflow-hidden rounded-2xl border border-line bg-surface p-5 shadow-lg sm:p-8 lg:grid-cols-12 lg:items-center">
+    <Reveal effect="scale-in" className="grid gap-6 overflow-hidden rounded-lg border border-line bg-surface p-5 shadow-lg sm:p-8 lg:grid-cols-12 lg:items-center">
       <div className="grid gap-4 lg:col-span-7">
         <span className="grid size-12 place-items-center rounded-full bg-action text-on-action"><PartyPopper className="size-6" aria-hidden="true" /></span>
         <h2 tabIndex={-1} className="font-display text-display-sm text-balance text-ink outline-none">Your page is ready, {first}.</h2>
         <p className="max-w-prose text-body-lg text-ink-muted">It's with the Between Gigs team now. Once they approve it, this is where clients will find you. Changes you make from here save as a draft until you send them again.</p>
-        <div className="flex min-w-0 items-center gap-2 rounded-xl border border-line bg-surface-sunken p-2 pl-3">
+        <div className="flex min-w-0 items-center gap-2 rounded-lg border border-line bg-surface-sunken p-2 pl-3">
           <Link2 className="size-4 shrink-0 text-ink-subtle" aria-hidden="true" />
           <span className="min-w-0 flex-1 truncate font-mono text-data-sm text-ink" title={url}>{url.replace(/^https?:\/\//, "")}</span>
           <Button size="sm" variant="primary" iconStart={<Copy />} onClick={copy}>Copy link</Button>

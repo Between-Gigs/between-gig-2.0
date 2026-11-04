@@ -123,7 +123,7 @@ function Preview({ name }: { name: EmailTemplate }) {
             </TabList>
             <TabPanel value="html" className="pt-4">
               <div className="grid justify-items-center rounded-lg border border-line bg-surface-sunken p-3 sm:p-6">
-                <div className={`${widths[width]} overflow-hidden rounded-xl border border-line bg-surface-embed shadow-md transition-all duration-slow`}>
+                <div className={`${widths[width]} overflow-hidden rounded-lg border border-line bg-surface-embed shadow-md transition-all duration-slow`}>
                   {email && <iframe ref={frame} title={`${t.label} email, ${scheme} theme`} sandbox="allow-same-origin" srcDoc={email.html} onLoad={fit} className="block h-240 w-full" />}
                 </div>
               </div>

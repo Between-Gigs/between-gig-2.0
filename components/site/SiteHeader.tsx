@@ -45,7 +45,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
       ? links.map((l) => ({ label: l.label, icon: l.href === "/owners/people/" ? <Users /> : undefined, checked: current(l.href) || undefined, onSelect: () => router.push(l.href) }))
       : [{ label: "My profile", icon: <UserRound />, onSelect: () => router.push("/profile/") }, { label: "Edit profile", icon: <PencilLine />, onSelect: () => router.push("/profile/canvas/") }]),
     "separator",
-    { label: "Sign out", icon: <LogOut />, onSelect: () => void signOut() },
+    { label: "Log out", icon: <LogOut />, onSelect: () => void signOut() },
   ] : [];
 
   return (
@@ -81,8 +81,8 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
               } />
           ) : (
             <>
-              {!pathname.startsWith("/login") && <Link href="/login/" className="hidden min-h-11 items-center rounded-full px-3 text-label-md text-ink hover:bg-surface-hover sm:inline-flex">Sign in</Link>}
-              <Menu align="end" items={[...links.map((l) => ({ label: l.label, checked: current(l.href) || undefined, onSelect: () => router.push(l.href) })), "separator" as const, { label: "Sign in", icon: <UserRound />, onSelect: () => router.push("/login/") }]}
+              {!pathname.startsWith("/login") && <Link href="/login/" className="hidden min-h-11 items-center rounded-full px-3 text-label-md text-ink hover:bg-surface-hover sm:inline-flex">Log in</Link>}
+              <Menu align="end" items={[...links.map((l) => ({ label: l.label, checked: current(l.href) || undefined, onSelect: () => router.push(l.href) })), "separator" as const, { label: "Log in", icon: <UserRound />, onSelect: () => router.push("/login/") }]}
                 trigger={
                   <button type="button" aria-label="Menu" className="inline-flex min-h-11 items-center gap-2.5 rounded-full border border-line bg-surface py-1 pr-1 pl-3 text-ink transition-shadow duration-fast hover:shadow-md">
                     <MenuIcon className="size-4" aria-hidden="true" />

@@ -199,7 +199,7 @@ function Waitlist() {
       {/* The bulk action bar: pinned to the bottom of the view while anyone is selected. */}
       <div aria-live="polite" className="sticky bottom-4 z-sticky -mt-6 empty:hidden">
         {n > 0 && (
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-ink-brand bg-surface-raised p-2 pl-4 shadow-lg">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-ink-brand bg-surface-raised p-2 pl-4 shadow-lg">
             <p className="text-label-md text-ink"><span className="tabular-nums">{n}</span> selected</p>
             <Button size="sm" variant="ghost" iconStart={<X />} onClick={() => setSelected([])}>Clear</Button>
             <div className="ml-auto flex gap-2">

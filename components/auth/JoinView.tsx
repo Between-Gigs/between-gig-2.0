@@ -91,7 +91,7 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
     const r = await data.auth.register({ token: matchingToken, email, name, acceptTerms: terms });
     if (!r.ok) {
       setBusy(false);
-      setErrors({ form: r.error === "existing-account" || r.error === "used" ? "This email already has an account. Sign in instead." : "Something went wrong. Try again, or contact us." });
+      setErrors({ form: r.error === "existing-account" || r.error === "used" ? "This email already has an account. Log in instead." : "Something went wrong. Try again, or contact us." });
       return;
     }
     toast({ message: "Account created", tone: "success" });
@@ -127,7 +127,7 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
             setBusy(true);
             void auth.signOut().catch(() => { setBusy(false); setErrors({ form: "We couldn't sign out. Try again." }); });
           }}>Use a different account</Button>
-          : <p className="text-center text-body-sm text-ink-muted">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2">Sign in</Link></p>}
+          : <p className="text-center text-body-sm text-ink-muted">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2">Log in</Link></p>}
       </form>
     </AuthShell>
   );
@@ -165,22 +165,22 @@ function InviteProblem({ lookup }: { lookup: InviteLookup }) {
     used: {
       icon: <UserCheck />, title: "You've already joined",
       body: `This invite has been used to create an account${email ? ` for ${email}` : ""}.`,
-      steps: ["Sign in with the same email.", "Use your existing sign-in method.", "You'll pick up your profile where you left off."],
-      primary: <ButtonLink href={`/login/?email=${encodeURIComponent(email ?? "")}`} variant="primary" iconEnd={<ArrowRight />}>Sign in</ButtonLink>,
+      steps: ["Log in with the same email.", "Use your existing sign-in method.", "You'll pick up your profile where you left off."],
+      primary: <ButtonLink href={`/login/?email=${encodeURIComponent(email ?? "")}`} variant="primary" iconEnd={<ArrowRight />}>Log in</ButtonLink>,
     },
     expired: {
       icon: <Clock />, title: "This invite has expired",
       body: "Invites last 30 days, and this one has run out.",
-      steps: ["You can create an account without an invite.", "Already created your account? Sign in instead."],
+      steps: ["You can create an account without an invite.", "Already created your account? Log in instead."],
       primary: <ButtonLink href="/join/" variant="primary" iconEnd={<ArrowRight />}>Create an account</ButtonLink>,
-      secondary: <ButtonLink href="/login/" iconEnd={<ArrowRight />}>Sign in</ButtonLink>,
+      secondary: <ButtonLink href="/login/" iconEnd={<ArrowRight />}>Log in</ButtonLink>,
     },
     unknown: {
       icon: <SearchX />, title: "We can't find that invite",
       body: "The link may be incomplete or mistyped. You can still sign up.",
-      steps: ["Create an account without an invite.", "Already joined? Sign in with your existing account."],
+      steps: ["Create an account without an invite.", "Already joined? Log in with your existing account."],
       primary: <ButtonLink href="/join/" variant="primary" iconEnd={<ArrowRight />}>Create an account</ButtonLink>,
-      secondary: <ButtonLink href="/login/" iconEnd={<ArrowRight />}>Sign in</ButtonLink>,
+      secondary: <ButtonLink href="/login/" iconEnd={<ArrowRight />}>Log in</ButtonLink>,
     },
     valid: { icon: <Mail />, title: "", body: "", steps: [] },
   };
@@ -190,7 +190,7 @@ function InviteProblem({ lookup }: { lookup: InviteLookup }) {
     <AuthShell header="Sign up">
       <div className="grid gap-6">
         <div className="flex items-start gap-4">
-          <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-xl bg-surface-selected text-ink-brand [&_svg]:size-6">{c.icon}</span>
+          <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-lg bg-surface-selected text-ink-brand [&_svg]:size-6">{c.icon}</span>
           <div>
             <h1 className="font-display text-heading-lg text-ink">{c.title}</h1>
             <p className="mt-1 text-body-md text-ink-muted">{c.body}</p>

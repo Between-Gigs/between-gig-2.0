@@ -72,7 +72,7 @@ try {
     assert.equal(await page.evaluate(() => window.qaSignedInWidgetMounts ?? 0), 0);
     assert.equal(await page.getByRole("form", { name: "Mock native Clerk login" }).count(), 0);
     await page.getByRole("button", { name: /Account: New Account/ }).click();
-    await page.getByRole("menuitem", { name: "Sign out", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Log out", exact: true }).click();
     await page.waitForURL((url) => url.pathname === `${basePath}/login/`);
     await page.getByLabel("Login email").fill(email);
     await page.getByLabel("Login password").fill("incorrect-test-password");
@@ -91,7 +91,7 @@ try {
     const accounts = await page.evaluate(() => JSON.parse(localStorage.getItem("qa-clerk-identities")));
     const googleBefore = accounts.find((user) => user.id === "existing-google-id") ?? { id: "existing-google-id", password: null };
     await page.getByRole("button", { name: /Account: New Account/ }).click();
-    await page.getByRole("menuitem", { name: "Sign out", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Log out", exact: true }).click();
     await page.waitForURL((url) => url.pathname === `${basePath}/login/`);
     await page.getByRole("button", { name: "Continue with test Google" }).click();
     await page.waitForURL(new RegExp(`${basePath}/join/$`));

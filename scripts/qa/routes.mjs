@@ -92,12 +92,8 @@ export const routes = [
   { name: "workspace-publish", path: "/workspace/site/", setup: reset, ready: "main iframe", act: async (page) => { await page.getByRole("button", { name: "Publish", exact: true }).click(); await page.locator("dialog[open]").waitFor(); } },
   { name: "workspace-notifications", path: "/workspace/", setup: reset, ready: "main h1", act: async (page) => { await page.getByRole("button", { name: /^Notifications/ }).click(); await page.getByText("Due soon").waitFor().catch(() => {}); } },
   { name: "workspace-shortcuts", path: "/workspace/", setup: reset, ready: "main h1", act: async (page) => { await page.locator("main").press("?"); await page.locator("dialog[open]").waitFor(); } },
-  { name: "canvas-intro", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "dialog[open]" },
-  { name: "canvas-blank", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "[data-spot]", act: async (page) => { await page.getByRole("button", { name: "Look around first" }).click(); await page.waitForTimeout(2400); } },
+  { name: "canvas-blank", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "[data-spot]", act: async (page) => { await page.waitForTimeout(2400); } },
   { name: "canvas-editing", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "[data-spot]", act: async (page) => {
-    // First visit opens the welcome; step past it.
-    const welcome = page.getByRole("button", { name: "Look around first" });
-    if (await welcome.isVisible()) { await welcome.click(); await page.waitForTimeout(400); }
     // Desktop: Next spot in the stage bar. Phones: the Next button in the bottom dock.
     const spot = page.getByRole("button", { name: "Next spot" });
     if (await spot.isVisible()) await spot.click(); else await page.getByRole("button", { name: /^Next:/ }).first().click();

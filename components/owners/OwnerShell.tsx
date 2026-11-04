@@ -206,7 +206,7 @@ function Account({ drawer, rail }: { drawer: boolean; rail: (cls: string) => str
         <span className="truncate text-label-md text-ink">{name}</span>
         <span className="truncate text-caption text-ink-subtle">{session.email}</span>
       </div>
-      <IconButton variant="ghost" size="sm" label="Sign out" icon={<LogOut />} onClick={() => void signOut()} />
+      <IconButton variant="ghost" size="sm" label="Log out" icon={<LogOut />} onClick={() => void signOut()} />
     </div>
   );
 }

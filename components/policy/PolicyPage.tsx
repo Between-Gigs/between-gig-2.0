@@ -69,7 +69,7 @@ export function PolicyPage({ title, sections, children }: { title: string; secti
       <div className="grid gap-8 lg:grid-cols-12 lg:gap-10">
         <aside className="lg:col-span-3">
           {/* Phones: the contents fold away so the policy starts on the first screen. */}
-          <details className="group rounded-xl border border-line bg-surface lg:hidden">
+          <details className="group rounded-lg border border-line bg-surface lg:hidden">
             <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 px-4 text-label-md text-ink">
               On this page <span className="text-ink-subtle">{sections.length} sections</span>
               <ChevronDown aria-hidden="true" className="size-4 text-ink-subtle transition-transform group-open:rotate-180" />
@@ -107,7 +107,7 @@ export function PolicyPage({ title, sections, children }: { title: string; secti
           </div>
         </article>
         <aside aria-label="Questions" className="hidden lg:col-span-3 lg:block">
-          <div className="sticky top-24 grid gap-3 rounded-2xl border border-line bg-surface p-5">
+          <div className="sticky top-24 grid gap-3 rounded-lg border border-line bg-surface p-5">
             <p className="font-display text-heading-sm text-ink">Questions about this policy?</p>
             <p className="text-body-sm text-ink-muted">Write to us and a person on the team will answer.</p>
             <a href="mailto:hello@between-gigs.com" className="inline-flex min-h-8 items-center gap-2 text-label-md text-link underline underline-offset-2"><Mail className="size-4" aria-hidden="true" />hello@between-gigs.com</a>
