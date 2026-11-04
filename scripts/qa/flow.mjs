@@ -149,7 +149,7 @@ export async function flow({ browser, base, outDir }) {
       await page.getByRole("option", { name: /^Submitted/ }).click();
       await page.getByRole("link", { name: "Riley Park" }).click();
       await page.waitForURL(/\/owners\/people\/riley-park\/?$/);
-      await page.getByRole("heading", { name: "Hi, Riley", level: 1 }).waitFor();
+      await page.getByRole("heading", { name: "Riley Park", level: 1 }).waitFor();
       await page.locator("#review-h").waitFor();
     });
 
