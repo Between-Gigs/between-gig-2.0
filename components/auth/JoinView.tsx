@@ -49,7 +49,7 @@ function JoinForToken({ token }: { token: string }) {
   if (!token) return <JoinForm key="open" />;
   if (!lookup) {
     return (
-      <AuthShell eyebrow="Professional onboarding" title="Your next chapter" accent="starts here.">
+      <AuthShell header="Sign up">
         <div className="grid gap-4" aria-busy="true" aria-label="Checking your invite"><Skeleton className="h-8 w-2/3" /><Skeleton /><Skeleton shape="block" className="h-40" /></div>
       </AuthShell>
     );
@@ -101,9 +101,9 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
   if (verify) return <ClerkAccount token={matchingToken} email={email.trim().toLowerCase()} name={name.trim()} />;
 
   return (
-    <AuthShell eyebrow="Professional onboarding" title="Your next chapter" accent="starts here."
+    <AuthShell header="Sign up"
       lead={<p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
-      <h1 className="font-display text-display-sm text-ink">{authenticated ? "Finish your account setup" : "Create your account"}</h1>
+      <h1 className="font-display text-heading-lg text-ink">{authenticated ? "Finish your account setup" : "Create your account"}</h1>
       <p className="mt-2 text-body-md text-ink-muted">{authenticated ? "You are signed in. Confirm your details and agree to the terms to create your profile." : "No invite needed. Enter your details to get started."}</p>
       <form noValidate onSubmit={submit} className="mt-8 grid gap-5">
         {errors.form && <Banner tone="danger" title="We couldn't create your account">{errors.form}</Banner>}
@@ -143,10 +143,10 @@ function ClerkAccount({ token, email, name }: { token?: string; email?: string; 
   React.useEffect(() => { if (!loading && session?.via === "clerk") router.replace("/profile/canvas/"); }, [session, loading, router]);
   const [firstName, ...rest] = (name ?? "").split(" ");
   return (
-    <AuthShell eyebrow="Professional onboarding" title="Your next chapter" accent="starts here."
+    <AuthShell header="Sign up"
       lead={<p>{email ? `Create a password for ${email}.` : "Continue your account setup."} You may need to verify your email before continuing.</p>}>
       <div className="grid gap-6">
-        <h1 className="font-display text-display-sm text-ink">{email ? "Create your password" : "Continue your signup"}</h1>
+        <h1 className="font-display text-heading-lg text-ink">{email ? "Create your password" : "Continue your signup"}</h1>
         <p className="text-body-md text-ink-muted">Use at least 8 characters. If Clerk asks for a 6-digit code afterward, that confirms your email; it does not replace your password.</p>
         <ClerkSlot label="Loading sign-up">
           <SignUp routing="hash" signInUrl={`${basePath}/login/`}
@@ -187,12 +187,12 @@ function InviteProblem({ lookup }: { lookup: InviteLookup }) {
   const c = copy[lookup.state];
 
   return (
-    <AuthShell eyebrow="Professional onboarding" title="Your next chapter" accent="starts here.">
+    <AuthShell header="Sign up">
       <div className="grid gap-6">
         <div className="flex items-start gap-4">
           <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-xl bg-surface-selected text-ink-brand [&_svg]:size-6">{c.icon}</span>
           <div>
-            <h1 className="font-display text-display-sm text-ink">{c.title}</h1>
+            <h1 className="font-display text-heading-lg text-ink">{c.title}</h1>
             <p className="mt-1 text-body-md text-ink-muted">{c.body}</p>
           </div>
         </div>

@@ -472,7 +472,7 @@ function Rail({ first, personId, panel }: { first: string; personId: string; pan
         </ol>
       </section>
       {!editing && (
-        <section aria-labelledby="canvas-card-h" className="grid gap-3">
+        <section aria-labelledby="canvas-card-h" className="grid gap-3 max-lg:hidden">
           <h2 id="canvas-card-h" className="text-label-md text-ink-subtle">How you'll appear in search</h2>
           <ProfilePreviewCard fields={d} personId={personId} badge={completeness(d) === 1 ? "Ready" : "Live preview"} />
         </section>
@@ -565,7 +565,7 @@ function Spot({ id, kind, hint, children }: { id: SpotId; kind: PartKind; hint: 
   const active = editing === id;
   const glow = id === next && !editing;
   const ring = active ? "ring-2 ring-ink-brand" : err ? "ring-2 ring-danger" : note ? "ring-2 ring-warning" : glow ? "ring-2 ring-ink-brand" : "";
-  const round = kind === "line" ? "rounded-full" : kind === "title" ? "rounded-xl" : "rounded-2xl";
+  const round = kind === "line" || kind === "photo" ? "rounded-full" : kind === "title" ? "rounded-xl" : "rounded-2xl";
   const label = `${filled ? "Edit" : "Add"} ${LABEL[id].toLowerCase()}${REQUIRED.includes(id) ? "" : " (optional)"}`;
 
   if (!filled) {
@@ -578,11 +578,9 @@ function Spot({ id, kind, hint, children }: { id: SpotId; kind: PartKind; hint: 
               : kind === "line" ? "inline-flex min-h-10 items-center gap-2 bg-surface-sunken py-1.5 pr-4 pl-2 hover:bg-surface-selected"
               : "flex w-full items-center gap-3 bg-surface-sunken p-5 hover:bg-surface-selected")}>
           {kind === "photo" ? (
-            <span className="relative block aspect-square">
-              <span data-theme="dark" className="absolute inset-0 grid place-items-center bg-surface-brand phosphor-dots">
-                <UserRound className="size-1/2 text-ink-brand opacity-30" strokeWidth={1} aria-hidden="true" />
-              </span>
-              <span className="absolute inset-x-4 bottom-4 flex items-center justify-center gap-2 rounded-full bg-surface/90 py-2.5 text-label-md text-ink shadow-sm backdrop-blur-sm"><Plus className="size-4" aria-hidden="true" />{hint}</span>
+            <span className="relative grid aspect-square place-items-center rounded-full bg-surface-sunken text-ink-muted group-hover:bg-surface-selected">
+              <UserRound className="absolute size-3/5 text-ink-subtle opacity-40" strokeWidth={1} aria-hidden="true" />
+              <span className="relative mt-auto mb-3 inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-label-sm text-ink shadow-sm"><Plus className="size-3.5" aria-hidden="true" />{hint}</span>
             </span>
           ) : <>
             <span aria-hidden="true" className={cx("grid shrink-0 place-items-center rounded-full bg-surface text-ink-brand shadow-xs", kind === "line" ? "size-7" : "size-9")}><Plus className="size-4" /></span>
@@ -597,10 +595,10 @@ function Spot({ id, kind, hint, children }: { id: SpotId; kind: PartKind; hint: 
     <div data-spot={id} style={order} className={cx("group relative", kind === "line" && "w-fit max-w-full")}>
       <div className={cx("transition duration-base", id === "photo" && portrait ? "portrait-reveal" : fresh === id && "spot-filled")}>{children}</div>
       <button type="button" data-spot-edit="" onClick={() => open(id)} aria-label={label} aria-pressed={active}
-        className={cx("absolute -inset-2 transition duration-fast hover:bg-ink-brand/5 hover:ring-2 hover:ring-ink-brand/40 focus-visible:ring-2 focus-visible:ring-focus", kind === "line" ? "rounded-xl" : "rounded-2xl", ring)}>
+        className={cx("absolute -inset-2 transition duration-fast hover:bg-ink-brand/5 hover:ring-2 hover:ring-ink-brand/40 focus-visible:ring-2 focus-visible:ring-focus", kind === "line" ? "rounded-xl" : kind === "photo" ? "rounded-full" : "rounded-2xl", ring)}>
         <span className={cx("absolute inline-flex items-center gap-1 rounded-full bg-action px-2.5 py-1 text-label-sm whitespace-nowrap text-on-action shadow-sm transition-opacity duration-fast",
           active || note ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
-          kind === "line" ? "top-1/2 left-full ml-3 -translate-y-1/2 max-sm:top-0 max-sm:right-2 max-sm:left-auto max-sm:-translate-y-1/2" : "top-3 right-3")}>
+          kind === "line" ? "top-1/2 left-full ml-3 -translate-y-1/2 max-sm:top-0 max-sm:right-2 max-sm:left-auto max-sm:-translate-y-1/2" : kind === "photo" ? "-bottom-2 left-1/2 -translate-x-1/2" : "top-3 right-3")}>
           <Pencil className="size-3" aria-hidden="true" />{note ? "Team note" : active ? "Editing" : "Edit"}
         </span>
       </button>

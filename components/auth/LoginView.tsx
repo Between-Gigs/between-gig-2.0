@@ -63,10 +63,10 @@ function ClerkLogin() {
   }, [isLoaded, isSignedIn, auth.onboarding, session, loading, params, router]);
 
   return (
-    <AuthShell eyebrow="Los Angeles call sheet" title="Your skills don't stop" accent="when the cameras do.">
+    <AuthShell header="Log in">
       <div className="grid gap-6">
         <div>
-          <h1 className="font-display text-display-sm text-ink">Welcome back</h1>
+          <h1 className="font-display text-heading-lg text-ink">Welcome back</h1>
           <p className="mt-2 text-body-md text-ink-muted">Use the email and password you created.</p>
         </div>
         {params.get("signedOut") && <Banner tone="success" title="You're signed out">See you next time.</Banner>}
@@ -151,14 +151,14 @@ function SampleLogin() {
   const needsNewCode = codeError && ["expired-code", "too-many-attempts", "no-code"].includes(codeError.kind);
 
   return (
-    <AuthShell eyebrow="Los Angeles call sheet" title="Your skills don't stop" accent="when the cameras do.">
+    <AuthShell header="Log in">
       <div ref={stage} className="vt-page">
         {params.get("signedOut") && step === "email" && <Banner tone="success" className="mb-6" title="You're signed out">See you next time.</Banner>}
 
         {step === "email" ? (
           <form noValidate onSubmit={send} className="grid gap-5">
             <div>
-              <h1 className="font-display text-display-sm text-ink">Welcome back</h1>
+              <h1 className="font-display text-heading-lg text-ink">Welcome back</h1>
               <p className="mt-2 text-body-md text-ink-muted">Sign in with the email you joined with. We'll send you a 6-digit code.</p>
             </div>
             <Field label="Email" error={error}>
@@ -177,7 +177,7 @@ function SampleLogin() {
         ) : (
           <form noValidate onSubmit={(e) => { e.preventDefault(); void verify(); }} className="grid gap-5">
             <div>
-              <h1 className="font-display text-display-sm text-ink">Check your email</h1>
+              <h1 className="font-display text-heading-lg text-ink">Check your email</h1>
               <p className="mt-2 text-body-md text-ink-muted">We sent a 6-digit code to <b className="text-ink">{email.trim().toLowerCase()}</b>. It expires in 10 minutes.</p>
             </div>
             {needsNewCode && (

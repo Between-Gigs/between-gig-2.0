@@ -29,7 +29,7 @@ function Preview({ name }: { name: EmailTemplate }) {
   const [scheme, setScheme] = React.useState<PreviewScheme>("light");
   const [width, setWidth] = React.useState<keyof typeof widths>("desktop");
   const [tab, setTab] = React.useState("html");
-  const [style, setStyle] = React.useState<InviteStyle>("pass");
+  const [style, setStyle] = React.useState<InviteStyle>("letter");
   const [queued, setQueued] = React.useState<OutboxEmail | null>(null);
   const [email, setEmail] = React.useState<ReturnType<typeof renderPreview> | null>(null);
   const frame = React.useRef<HTMLIFrameElement>(null);
@@ -91,7 +91,7 @@ function Preview({ name }: { name: EmailTemplate }) {
               <SegmentedControl label="Invite style" value={style} onChange={(v) => setStyle(v as InviteStyle)}
                 options={inviteStyles.map((s) => ({ value: s.id, label: s.label }))} />
               <p className="text-body-sm text-ink-muted">{inviteStyles.find((s) => s.id === style)?.note}</p>
-              <p className="text-body-sm text-ink-subtle">Same words in every style. Pass is what's sent unless you choose another.</p>
+              <p className="text-body-sm text-ink-subtle">Same words in every style. Letter is what's sent unless you choose another.</p>
             </section>
           )}
           <section aria-labelledby="view-h" className="grid gap-3 rounded-lg border border-line bg-surface p-5">

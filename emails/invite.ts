@@ -3,16 +3,16 @@
  * Copy: locked 4 Nov 2026 (one text for every style). It reuses approved phrases from the live site and the
  * welcome / coming-soon emails ("Your next chapter starts here", "the call sheet") and describes the new
  * three-step flow: open the link, fill in your page, send it for review.
- * Styles: "pass" (the chosen default: an invitation card), "letter" (a note from Patti & Peter) and "classic"
+ * Styles: "letter" (the default: a clean note from Patti & Peter), "pass" (an invitation card) and "classic"
  * (the forest banner). Compare them at /emails/invite/.
  */
-import { button, defaultContext, esc, hero, layout, link, p, section, signature, spacer, steps, textFooter, h2, FONT_DISPLAY, FONT_UI, type EmailContext, type RenderedEmail } from "./layout";
+import { button, defaultContext, esc, hero, layout, link, p, section, signature, spacer, textFooter, h2, FONT_DISPLAY, FONT_UI, type EmailContext, type RenderedEmail } from "./layout";
 import { dark, light } from "./tokens";
 
 export type InviteStyle = "pass" | "letter" | "classic";
 export const inviteStyles: { id: InviteStyle; label: string; note: string }[] = [
-  { id: "pass", label: "Pass", note: "An invitation card: it reads as a ticket onto the call sheet. Recommended." },
-  { id: "letter", label: "Letter", note: "A plain note from Patti & Peter: the most personal, and the most likely to land in the main inbox." },
+  { id: "letter", label: "Letter", note: "A clean note from Patti & Peter, the way Airbnb writes its emails: the most personal, and the most likely to land in the main inbox. Recommended." },
+  { id: "pass", label: "Pass", note: "An invitation card: it reads as a ticket onto the call sheet." },
   { id: "classic", label: "Classic", note: "The forest banner the other emails use." },
 ];
 
@@ -67,9 +67,14 @@ function pass(email: string) {
 </table>`;
 }
 
-export function invite({ inviteUrl, email, style = "pass" }: InviteProps, ctx: EmailContext = defaultContext): RenderedEmail {
+export function invite({ inviteUrl, email, style = "letter" }: InviteProps, ctx: EmailContext = defaultContext): RenderedEmail {
   const c = INVITE_COPY;
-  const how = [h2(c.howTitle), steps(c.how)];
+  // The three steps with the site's 3D icons (public/img/icons3d), PNGs from the same host as the logo.
+  const icons = ["envelope", "memo", "check_mark_button"];
+  const how = [h2(c.howTitle), `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 20px">${c.how.map(([t, d], i) => `<tr>
+<td valign="top" width="60" style="padding:12px 0"><img src="${esc(`${ctx.assetBase}/img/icons3d/${icons[i]}.png`)}" width="44" height="44" alt="" style="display:block;width:44px;height:44px;border:0"></td>
+<td valign="top" style="padding:12px 0;font-family:${FONT_UI}"><p class="e-ink" style="margin:0;font-size:16px;line-height:22px;font-weight:700;color:${light.ink}">${esc(t)}</p><p class="e-muted" style="margin:3px 0 0;font-size:15px;line-height:22px;color:${light.inkMuted}">${esc(d)}</p></td>
+</tr>`).join("")}</table>`];
   const close = [
     p(c.production, { muted: true, size: 15 }),
     signature(),
