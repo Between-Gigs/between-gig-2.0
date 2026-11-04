@@ -92,8 +92,8 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
   ] as [string, string, boolean][]).filter(([, , keep]) => keep);
 
   const identity = (
-    <section aria-label={`About ${first}`} className="grid grid-cols-12 items-center gap-6 rounded-2xl bg-surface p-6 shadow-md sm:p-8">
-      <div className={cx("grid justify-items-center gap-4 text-center", stats.length ? "col-span-7" : "col-span-12")}>
+    <section aria-label={`About ${first}`} className="flex items-center gap-6 rounded-2xl bg-surface p-6 shadow-md">
+      <div className="grid min-w-0 flex-1 justify-items-center gap-4 text-center">
         <div className="relative size-28 sm:size-32">
           {P("photo", !!f.photo || !show, (
             <PersonPhoto id={person.id} morph={!editing} name={f.name} src={f.photo || undefined} alt={`Portrait of ${f.name}${sample ? " (fictional)" : ""}`}
@@ -110,11 +110,11 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
           {P("position", !!f.position, <p className="text-body-md text-ink-muted">{f.position}</p>, "Department")}
         </div>
       </div>
-      {stats.length > 0 && <dl className="col-span-5 grid content-center divide-y divide-line">
+      {stats.length > 0 && <dl className="grid shrink-0 content-center divide-y divide-line">
         {stats.map(([v, k]) => (
           <div key={k} className="grid gap-0.5 py-3 first:pt-0 last:pb-0">
             <dt className="order-2 text-caption text-ink-muted">{k}</dt>
-            <dd className="order-1 font-display text-heading-lg text-ink tabular-nums">{k.startsWith("Year") && part ? part("years", { content: <span>{v}</span>, hint: "Years", kind: "line" }) : v}</dd>
+            <dd className="order-1 font-display text-heading-lg text-ink tabular-nums">{k.startsWith("Year") && part ? part("years", { content: <span>{v}</span>, hint: "Add", kind: "line" }) : v}</dd>
           </div>
         ))}
       </dl>}
@@ -141,8 +141,8 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
     <section aria-labelledby={`${person.id}-checked`} className="px-1">
       <h2 id={`${person.id}-checked`} className="font-display text-heading-md text-ink">What we&apos;ve checked</h2>
       <ul className="mt-4 grid gap-3 text-body-md text-ink">
-        <li className="flex items-center gap-3"><Icon3D name="check_mark_button" className="size-7 shrink-0" />Profile reviewed by the Between Gigs team</li>
-        <li className="flex items-center gap-3"><Icon3D name="speech_balloon" className="size-7 shrink-0" /><span>Credits and details are shared by {first}, not independently verified</span></li>
+        <li className="flex items-start gap-3"><Icon3D name="check_mark_button" className="size-6 shrink-0" />Profile reviewed by the Between Gigs team</li>
+        <li className="flex items-start gap-3"><Icon3D name="speech_balloon" className="size-6 shrink-0" /><span>Credits and details are shared by {first}, not independently verified</span></li>
       </ul>
     </section>
   );
@@ -291,7 +291,8 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
 
 /** One fact about the Gigster, Airbnb style: a 3D icon and a line. */
 function Fact({ icon, children }: { icon: Icon3DName; children: React.ReactNode }) {
-  return <span className="flex items-center gap-4 text-body-lg text-ink"><Icon3D name={icon} className="size-9 shrink-0" /><span className="min-w-0">{children}</span></span>;
+  // The icon sits on the first line, so a two-line fact reads from the top like the rest.
+  return <span className="flex items-start gap-4 text-body-lg text-ink"><Icon3D name={icon} className="size-8 shrink-0" /><span className="min-w-0 pt-0.5">{children}</span></span>;
 }
 
 /** Where a part of a draft will go, in the preview. */

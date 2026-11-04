@@ -59,8 +59,8 @@ export function MyProfile() {
           {state === "approved" && fields ? <Live person={person} /> : <Status person={person} state={state} completeness={s.completeness} first={first} />}
         </div>
         <aside aria-label="Your card in search" className="grid gap-3 lg:col-span-5">
-          <p className="text-label-md text-ink-muted">Your card in search</p>
           <ProfilePreviewCard fields={fields ?? blankFields(person.name)} personId={person.id} badge={state === "approved" ? null : state === "new" ? "Fills in as you go" : "Preview"} />
+          <p className="text-center text-body-sm text-ink-muted">Your card in search</p>
         </aside>
       </div>
     </Page>
@@ -131,7 +131,7 @@ function Live({ person }: { person: Person }) {
         <label htmlFor="live-url" className="text-label-md text-ink">Your public link</label>
         <div className="flex flex-wrap gap-2">
           <input id="live-url" readOnly value={url} onFocus={(e) => e.currentTarget.select()}
-            className="h-11 min-w-0 flex-1 basis-56 rounded-md border border-line-strong bg-surface px-3 text-body-md text-ink outline-none focus-visible:ring-2 focus-visible:ring-focus" />
+            className="h-12 min-w-0 flex-1 basis-56 rounded-md border border-line-strong bg-surface px-3 text-body-md text-ink outline-none focus-visible:ring-2 focus-visible:ring-focus" />
           <Button size="lg" iconStart={<Copy />} onClick={copy}>Copy</Button>
           {canShare && <Button size="lg" iconStart={<Share2 />} onClick={share}>Share</Button>}
         </div>

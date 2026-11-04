@@ -440,7 +440,7 @@ function Rail({ first, panel }: { first: string; panel: React.ReactNode }) {
       <section aria-labelledby="rail-h" className="rounded-lg border border-line bg-surface p-6 max-lg:hidden">
         <h2 id="rail-h" className="font-display text-heading-lg text-ink">{done <= 1 ? `Welcome, ${first}. This is your page.` : next ? "Keep going" : "Ready when you are"}</h2>
         <p className="mt-2 text-body-md text-ink-muted">{next
-          ? "This is the page clients will see. Tap any part to fill it in where it sits; it saves as you go."
+          ? done <= 1 ? "It's what clients will see. Tap any part to fill it in where it sits; it saves as you go." : "Tap any part to fill it in where it sits; it saves as you go."
           : "Everything clients need is in. Preview it, then send it to the Between Gigs team."}</p>
         {next && <Button variant="primary" fullWidth className="mt-5" iconEnd={<ArrowRight />} onClick={() => open(next)}>Next: {LABEL[next]}</Button>}
       </section>

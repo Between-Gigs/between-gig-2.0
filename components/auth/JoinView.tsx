@@ -102,7 +102,7 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
 
   return (
     <AuthShell header="Sign up"
-      lead={<p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
+      lead={token ? undefined : <p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
       <h1 className="font-display text-heading-lg text-ink">{authenticated ? "Finish your account setup" : "Create your account"}</h1>
       <p className="mt-2 text-body-md text-ink-muted">{authenticated ? "You're logged in. Confirm your details and agree to the terms to create your profile." : token ? "Your invitation is here. Add your name to get started." : "No invite needed. Enter your details to get started."}</p>
       <form noValidate onSubmit={submit} className="mt-8 grid gap-5">
