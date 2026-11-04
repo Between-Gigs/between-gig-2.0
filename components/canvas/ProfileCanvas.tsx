@@ -1,14 +1,14 @@
 "use client";
 import { Badge, Banner, Button, Field, Input, Modal, RadioGroup, SegmentedControl, Skeleton, Slider, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
-import { ArrowRight, Check, Copy, Eye, Link2, ListChecks, MapPin, MessageSquareWarning, PartyPopper, PenLine, Pencil, Plus, Share2, Sparkles, UserRound, WandSparkles } from "lucide-react";
+import { ArrowRight, Copy, Eye, Link2, ListChecks, MapPin, MessageSquareWarning, PartyPopper, PenLine, Pencil, Plus, Share2, Sparkles, UserRound, WandSparkles } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
 import { basisLabel, laServiceAreas, monthStatusLabel, offSetServices, onSetSkills } from "@/lib/data/taxonomy";
 import { useRequireRole } from "@/lib/guard";
 import { absoluteUrl, asset } from "@/lib/site";
-import { ABOUT_MAX, completeness, pinnedCredits, sectionLabel, validateAll, type FieldErrors } from "@/lib/profile/validate";
+import { ABOUT_MAX, pinnedCredits, sectionLabel, validateAll, type FieldErrors } from "@/lib/profile/validate";
 import { Credits, SaveIndicator, type SaveState } from "@/components/builder/ProfileBuilder";
 import { ChipPicker } from "@/components/profile/ChipPicker";
 import { PhotoPicker } from "@/components/profile/PhotoPicker";
@@ -364,7 +364,7 @@ function Canvas({ personId }: { personId: string }) {
             <div className={cx(rise && "canvas-rise")}>
               <ProfileView person={person} fields={d} mode="own"
                 part={(id, p) => <Spot id={id} kind={p.kind} hint={p.hint}>{p.content}</Spot>}
-                aside={<Rail first={first} personId={personId} panel={editing && wide ? <EditorPanel id={editing} body={editorFor(editing, d, set, personId, (go) => live.guard("photo", go))} /> : null} />} />
+                aside={<Rail first={first} panel={editing && wide ? <EditorPanel id={editing} body={editorFor(editing, d, set, personId, (go) => live.guard("photo", go))} /> : null} />} />
             </div>
             {editing && !wide && (
               <div data-editor="" className="fixed inset-x-0 bottom-0 z-overlay max-h-3/4 overflow-y-auto rounded-t-2xl border-t border-line bg-surface-raised shadow-lg">
@@ -443,41 +443,21 @@ function EditorBar({ done, total, ready, missing, save, view, editing, sent, sub
   );
 }
 
-/** The column beside the page while editing: the open part's controls, or the progress and the search card. */
-function Rail({ first, personId, panel }: { first: string; personId: string; panel: React.ReactNode }) {
-  const { d, next, open, editing } = useCanvas();
+/** The column beside the page while editing: the open part's controls, or a short note and the one next step. */
+function Rail({ first, panel }: { first: string; panel: React.ReactNode }) {
+  const { d, next, open } = useCanvas();
   const done = REQUIRED.filter((id) => isFilled(id, d)).length;
   if (panel) return <>{panel}</>;
   return (
     <>
-      <section aria-labelledby="rail-h" className="rounded-2xl border border-line bg-surface p-6 shadow-lg max-lg:hidden">
+      <section aria-labelledby="rail-h" className="rounded-lg border border-line bg-surface p-6 max-lg:hidden">
         <h2 id="rail-h" className="font-display text-heading-lg text-ink">{done <= 1 ? `Make it yours, ${first}` : next ? "Keep going" : "Ready when you are"}</h2>
         <p className="mt-2 text-body-md text-ink-muted">{next
           ? "This is the page clients will see. Tap any part to fill it in where it sits; it saves as you go."
           : "Everything clients need is in. Preview it, then send it to the Between Gigs team."}</p>
         {next && <Button variant="primary" fullWidth className="mt-5" iconEnd={<ArrowRight />} onClick={() => open(next)}>Next: {LABEL[next]}</Button>}
-        <ol className="mt-5 flex flex-wrap gap-1.5" aria-label="Parts of your profile">
-          {REQUIRED.map((id) => {
-            const ok = isFilled(id, d);
-            return (
-              <li key={id}>
-                <button type="button" onClick={() => open(id)} aria-label={`${LABEL[id]}${ok ? ", done" : ", to fill in"}`}
-                  className={cx("inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 text-label-sm transition-colors duration-fast",
-                    ok ? "bg-surface-selected text-ink-brand" : id === next ? "bg-surface text-ink ring-2 ring-ink-brand" : "bg-surface-sunken text-ink-muted hover:text-ink")}>
-                  {ok && <Check className="size-3.5" aria-hidden="true" />}{LABEL[id].replace(/^Your /, "").replace(/^\w/, (c) => c.toUpperCase())}
-                </button>
-              </li>
-            );
-          })}
-        </ol>
       </section>
-      {!editing && (
-        <section aria-labelledby="canvas-card-h" className="grid gap-3 max-lg:hidden">
-          <h2 id="canvas-card-h" className="text-label-md text-ink-subtle">How you'll appear in search</h2>
-          <ProfilePreviewCard fields={d} personId={personId} badge={completeness(d) === 1 ? "Ready" : "Live preview"} />
-        </section>
-      )}
-      <Link href="/profile/edit/" className="inline-flex min-h-11 items-center gap-1.5 text-body-sm text-ink-muted underline underline-offset-2 hover:text-ink">
+      <Link href="/profile/edit/" className="inline-flex min-h-11 items-center gap-1.5 px-1 text-body-sm text-ink-muted underline underline-offset-2 hover:text-ink">
         <ListChecks className="size-4" aria-hidden="true" />Prefer questions, step by step?
       </Link>
     </>
@@ -499,7 +479,7 @@ function EditorPanel({ id, body, sheet = false }: { id: SpotId; body: React.Reac
   return (
     <div ref={ref} data-editor="" role="group" aria-label={`Editing: ${LABEL[id]}`} onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); close(); } }}
       style={sheet ? undefined : { maxHeight: "calc(100dvh - 8rem)" }}
-      className={cx("grid gap-5", sheet ? "p-5 pb-6" : "overflow-y-auto rounded-2xl border border-ink-brand bg-surface-raised p-6 shadow-lg")}>
+      className={cx("grid gap-5", sheet ? "p-5 pb-6" : "overflow-y-auto rounded-lg border border-ink-brand bg-surface-raised p-6 shadow-md")}>
       <div className="flex items-center justify-between gap-3">
         <p className="flex items-center gap-2 font-display text-heading-md text-ink"><Pencil className="size-4 text-ink-brand" aria-hidden="true" />{LABEL[id]}</p>
         <Button size="sm" variant="ghost" onClick={close}>Done</Button>
@@ -565,7 +545,7 @@ function Spot({ id, kind, hint, children }: { id: SpotId; kind: PartKind; hint: 
   const active = editing === id;
   const glow = id === next && !editing;
   const ring = active ? "ring-2 ring-ink-brand" : err ? "ring-2 ring-danger" : note ? "ring-2 ring-warning" : glow ? "ring-2 ring-ink-brand" : "";
-  const round = kind === "line" || kind === "photo" ? "rounded-full" : kind === "title" ? "rounded-xl" : "rounded-2xl";
+  const round = kind === "photo" ? "rounded-full" : "rounded-md";
   const label = `${filled ? "Edit" : "Add"} ${LABEL[id].toLowerCase()}${REQUIRED.includes(id) ? "" : " (optional)"}`;
 
   if (!filled) {
@@ -574,20 +554,15 @@ function Spot({ id, kind, hint, children }: { id: SpotId; kind: PartKind; hint: 
         <button type="button" data-spot-edit="" onClick={() => open(id)} aria-label={label} aria-pressed={active}
           className={cx("group text-left transition duration-base", round, ring, glow && "spot-next",
             kind === "photo" ? "block w-full overflow-hidden"
-              : kind === "title" ? "flex w-full items-center justify-center gap-3 border border-dashed border-line-strong px-4 py-3 hover:border-ink"
-              : kind === "line" ? "inline-flex min-h-11 items-center gap-2.5 py-1 pr-3 pl-1 hover:bg-surface-hover"
-              : "flex w-full items-center justify-between gap-4 border border-line bg-surface px-5 py-4 hover:border-ink-muted hover:shadow-sm")}>
+              : cx("flex min-h-12 w-full items-center gap-3 border border-dashed border-line-strong px-4 py-2.5 hover:border-ink hover:bg-surface-hover", kind === "title" && "justify-center"))}>
           {kind === "photo" ? (
             <span className="relative grid aspect-square place-items-center rounded-full bg-surface-sunken text-ink-muted group-hover:bg-surface-selected">
               <UserRound className="absolute size-3/5 text-ink-subtle opacity-40" strokeWidth={1} aria-hidden="true" />
               <span className="relative mt-auto mb-3 inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-label-sm text-ink shadow-sm"><Plus className="size-3.5" aria-hidden="true" />{hint}</span>
             </span>
-          ) : kind === "block" ? <>
+          ) : <>
+            <span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-full bg-surface-sunken text-ink group-hover:bg-surface"><Plus className="size-4" /></span>
             <span className="text-body-md text-ink-muted group-hover:text-ink">{hint}</span>
-            <span className="shrink-0 text-label-md text-ink underline underline-offset-4">Add</span>
-          </> : <>
-            <span aria-hidden="true" className={cx("grid shrink-0 place-items-center rounded-full border border-line-strong text-ink", kind === "line" ? "size-7" : "size-9")}><Plus className="size-4" /></span>
-            <span className={cx("text-ink-muted group-hover:text-ink", kind === "title" ? "font-display text-heading-lg" : "text-body-md")}>{hint}</span>
           </>}
         </button>
         {note && <Badge tone="warning" size="sm" className="absolute -top-3 right-3 shadow-sm">Team note</Badge>}
@@ -598,7 +573,7 @@ function Spot({ id, kind, hint, children }: { id: SpotId; kind: PartKind; hint: 
     <div data-spot={id} style={order} className={cx("group relative", kind === "line" && "w-fit max-w-full")}>
       <div className={cx("transition duration-base", id === "photo" && portrait ? "portrait-reveal" : fresh === id && "spot-filled")}>{children}</div>
       <button type="button" data-spot-edit="" onClick={() => open(id)} aria-label={label} aria-pressed={active}
-        className={cx("absolute -inset-2 transition duration-fast hover:bg-ink-brand/5 hover:ring-2 hover:ring-ink-brand/40 focus-visible:ring-2 focus-visible:ring-focus", kind === "line" ? "rounded-xl" : kind === "photo" ? "rounded-full" : "rounded-2xl", ring)}>
+        className={cx("absolute -inset-2 transition duration-fast hover:bg-ink-brand/5 hover:ring-2 hover:ring-ink-brand/40 focus-visible:ring-2 focus-visible:ring-focus", kind === "photo" ? "rounded-full" : "rounded-md", ring)}>
         <span className={cx("absolute inline-flex items-center gap-1 rounded-full bg-action px-2.5 py-1 text-label-sm whitespace-nowrap text-on-action shadow-sm transition-opacity duration-fast",
           active || note ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
           kind === "line" ? "top-1/2 left-full ml-3 -translate-y-1/2 max-sm:top-0 max-sm:right-2 max-sm:left-auto max-sm:-translate-y-1/2" : kind === "photo" ? "-bottom-2 left-1/2 -translate-x-1/2" : "top-3 right-3")}>

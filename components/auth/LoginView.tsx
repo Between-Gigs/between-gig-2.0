@@ -168,7 +168,7 @@ function SampleLogin() {
             <Button type="submit" variant="primary" size="lg" fullWidth loading={busy} iconEnd={<ArrowRight />}>Email me a code</Button>
             <p className="text-center text-body-sm text-ink-muted">New here? <Link href="/join/" className="inline-flex min-h-11 items-center font-semibold text-link underline underline-offset-2">Create an account</Link>.</p>
             {data.kind === "sample" && (
-              <p className="rounded-lg border border-dashed border-line-dashed p-3 text-body-sm text-ink-subtle">
+              <p className="rounded-md bg-surface-sunken p-4 text-body-sm text-ink-muted">
                 Sample mode: the code shows on screen and no email is sent. Try <button type="button" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2" onClick={() => setEmail("maya.chen@example.com")}>maya.chen@example.com</button> (Gigster) or{" "}
                 <button type="button" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2" onClick={() => setEmail(SAMPLE_OWNER.email)}>{SAMPLE_OWNER.email}</button> (owner).
               </p>

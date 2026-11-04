@@ -11,9 +11,9 @@ export function AuthShell({ header, lead, children, className }: {
 }) {
   return (
     <Page className="max-w-6xl">
-      <div className="mx-auto w-full max-w-xl overflow-hidden rounded-2xl border border-line bg-surface shadow-lg sm:my-6">
+      <div className="mx-auto w-full max-w-xl overflow-hidden rounded-lg border border-line bg-surface shadow-md sm:my-8">
         <p className="border-b border-line px-6 py-5 text-center text-label-md text-ink">{header}</p>
-        <div className={cx("px-6 py-8 sm:px-8", className)}>
+        <div className={cx("p-6 sm:p-8", className)}>
           {children}
           {lead && <div className="mt-8 border-t border-line pt-5 text-body-sm text-ink-muted">{lead}</div>}
         </div>

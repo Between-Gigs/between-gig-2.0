@@ -3,13 +3,13 @@ import Link from "next/link";
 import { data } from "@/lib/data";
 import { showsPreviewNote } from "@/lib/preview-note";
 
-const linkClass = "inline-flex min-h-11 items-center text-body-md text-ink hover:underline hover:underline-offset-4 sm:min-h-9";
+const linkClass = "inline-flex min-h-11 items-center text-body-sm text-ink hover:underline hover:underline-offset-4 sm:min-h-9";
 
 /** Airbnb-style footer: a light band with three short columns, then one line with the small print. */
 export function SiteFooter() {
   return (
     <footer className="border-t border-line bg-surface-sunken embedded:hidden!">
-      <div className="mx-auto grid max-w-7xl gap-x-8 gap-y-8 px-4 py-12 sm:grid-cols-3 sm:px-6">
+      <div className="mx-auto grid max-w-7xl gap-x-8 gap-y-8 px-4 py-10 sm:grid-cols-3 sm:px-6">
         <div className="grid content-start gap-1">
           <h2 className="mb-2 text-label-md text-ink">Support</h2>
           <a className={linkClass} href="mailto:hello@between-gigs.com">hello@between-gigs.com</a>

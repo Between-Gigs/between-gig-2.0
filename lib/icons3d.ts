@@ -12,6 +12,7 @@ export type Icon3DName =
 
 const byCraft: [RegExp, Icon3DName][] = [
   [/alteration|sewing|tailor|hem/i, "sewing_needle"],
+  [/styling/i, "sparkles"],
   [/consult|advice|coach|mentor/i, "speech_balloon"],
   [/organi[sz]|closet|declutter/i, "basket"],
   [/custom|bespoke|piece/i, "scissors"],
