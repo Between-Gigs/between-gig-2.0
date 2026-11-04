@@ -52,8 +52,8 @@ try {
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Create test account" }).click();
     await page.waitForURL(new RegExp(`${basePath}/profile/canvas/$`));
-    // A new account lands on its own blank profile (Edit on your profile), welcome first.
-    await page.locator("dialog[open]").waitFor();
+    // A new account lands on its own blank profile (Edit on your profile), with the welcome on the page.
+    await page.getByRole("heading", { name: /This is your page\./ }).first().waitFor();
     await page.locator("[data-spot]").first().waitFor();
     await page.waitForTimeout(450); // allow delayed SDK initialization and role effects to settle
     assert.equal(new URL(page.url()).pathname, `${basePath}/profile/canvas/`, "signup callback must reach profile creation without a login bounce");
