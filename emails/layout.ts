@@ -54,7 +54,8 @@ const ogsc = darkCss.trim().split("\n").map((rule) => {
   return `${selectors.split(",").map((sel) => `[data-ogsc] ${sel}`).join(",")}{${decls}`;
 }).join("\n");
 
-export function layout({ title, preheader, body, reason, ctx }: { title: string; preheader: string; body: string; reason: string; ctx: EmailContext }) {
+/** `header: false` leaves out the logo above the card, for an email that carries its own (the invite). */
+export function layout({ title, preheader, body, reason, ctx, header = true }: { title: string; preheader: string; body: string; reason: string; ctx: EmailContext; header?: boolean }) {
   const site = ctx.siteUrl;
   const logo = (theme: "light" | "dark") => `${ctx.assetBase}/email/between-gigs-wide-on-${theme}.png`;
   // Pads the preheader so clients don't pull body text into the inbox preview.
@@ -84,6 +85,9 @@ a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important
 .e-pad{padding-left:24px!important;padding-right:24px!important}
 .e-h1{font-size:30px!important;line-height:36px!important}
 .e-btn a{display:block!important}
+.e-craft{padding:40px 16px!important}
+.e-craft-card{padding:36px 20px 28px!important}
+.e-craft-h1{font-size:34px!important;line-height:38px!important}
 }
 @media (prefers-color-scheme:dark){${darkCss}}
 ${ogsc}
@@ -95,12 +99,12 @@ ${ogsc}
 <tr><td align="center" style="padding:32px 12px">
 <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
 <table role="presentation" class="e-container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;border-collapse:separate;border-spacing:0">
-<tr><td class="e-pad" style="padding:0 8px 20px">
+${header ? `<tr><td class="e-pad" style="padding:0 8px 20px">
 <a href="${esc(site)}" style="text-decoration:none">
 <img class="e-logo-light" src="${esc(logo("light"))}" width="136" height="42" alt="Between Gigs" style="display:block;width:136px;height:42px;border:0;color:${light.ink};font-family:${FONT_DISPLAY};font-size:20px;font-weight:600">
 <!--[if !mso]><!--><div class="e-logo-dark" style="display:none;max-height:0;overflow:hidden;mso-hide:all"><img src="${esc(logo("dark"))}" width="136" height="42" alt="Between Gigs" style="display:block;width:136px;height:42px;border:0;color:${dark.ink};font-family:${FONT_DISPLAY};font-size:20px;font-weight:600"></div><!--<![endif]-->
 </a>
-</td></tr>
+</td></tr>` : ""}
 <tr><td class="e-card" bgcolor="${light.surface}" style="background-color:${light.surface};border:1px solid ${light.line};border-radius:20px;overflow:hidden">
 ${body}
 </td></tr>

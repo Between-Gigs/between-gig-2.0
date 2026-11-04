@@ -33,7 +33,7 @@ export async function flow({ browser, base, outDir }) {
       await page.evaluate(() => window.bgSample.signInAs("invited"));
       await page.goto(`${base}/emails/`);
       await page.getByRole("radio", { name: /Sample outbox/ }).click();
-      await page.getByRole("link", { name: "Your Between Gigs invitation is here" }).click();
+      await page.getByRole("link", { name: "You're invited to Between Gigs" }).click();
       await page.waitForURL(/\/emails\/invite\/\?outbox=/);
       await page.locator("iframe").waitFor();
       const href = await page.frameLocator("iframe").getByRole("link", { name: /Create your profile/ }).getAttribute("href");
