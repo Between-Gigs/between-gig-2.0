@@ -2,7 +2,8 @@
  * The friendly look (direction B · Warm & friendly, chosen 4 Nov 2026), on the product screens only: lib/look.ts lists
  * them and sets <html data-look="friendly">. Warm cream page, forest ink and forest primary buttons, pastel tints for
  * grouping, pill buttons, rounder cards, and Plus Jakarta Sans in place of Figtree and Sora. Dark mode keeps the
- * system's dark palette with the same shapes and type. The tints exist on every page so components can use them.
+ * system's forest-green dark with the same shapes, type and 3D icons; there the tints are quiet green-family tones so
+ * the blocks read as gentle steps of the forest rather than separate colours. The tints exist on every page so components can use them.
  */
 @font-face {
   font-family: "Plus Jakarta Sans";
@@ -39,11 +40,11 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme=light]) {
-    --tint-mint: #133829; --tint-peach: #3d2224; --tint-butter: #3a3115; --tint-sky: #172b3e; --tint-sage: #212f20; --tint-sand: #29241d; --tint-ink: #f4efe6;
+    --tint-mint: #16402e; --tint-peach: #2c2f26; --tint-butter: #263322; --tint-sky: #16343a; --tint-sage: #1b3527; --tint-sand: #1f3127; --tint-ink: #eaf4ee;
   }
 }
 :root[data-theme=dark] {
-  --tint-mint: #133829; --tint-peach: #3d2224; --tint-butter: #3a3115; --tint-sky: #172b3e; --tint-sage: #212f20; --tint-sand: #29241d; --tint-ink: #f4efe6;
+  --tint-mint: #16402e; --tint-peach: #2c2f26; --tint-butter: #263322; --tint-sky: #16343a; --tint-sage: #1b3527; --tint-sand: #1f3127; --tint-ink: #eaf4ee;
 }
 
 /* `friendly:` variant for the few shared components (site header) that differ on product screens. */
@@ -89,22 +90,3 @@
   }
 }
 
-/*
- * Dark theme on the product screens: a warm charcoal night instead of the system's forest-green dark, so the pastel
- * tints read as deep jewel tones (on green they turned muddy brown and olive). Warm off-white text, mint as the one
- * bright accent and the primary button colour.
- */
-:root[data-look=friendly][data-theme=dark] {
-  --bg: #12110e; --surface: #1c1a16; --surface-raised: #24211c; --surface-sunken: #0d0c0a; --surface-hover: #2a2620;
-  --surface-selected: #173a2b; --line: #2e2a23; --line-strong: #6f6757; --line-dashed: #3f392f;
-  --ink: #f4efe6; --ink-muted: #c7bfb1; --ink-subtle: #a9a193; --ink-brand: #3deba0;
-  --action: #1fdc8c; --action-hover: #4fe0a0; --on-action: #04180e; --neutral-soft: #24211c;
-}
-@media (prefers-color-scheme: dark) {
-  :root[data-look=friendly]:not([data-theme=light]) {
-    --bg: #12110e; --surface: #1c1a16; --surface-raised: #24211c; --surface-sunken: #0d0c0a; --surface-hover: #2a2620;
-    --surface-selected: #173a2b; --line: #2e2a23; --line-strong: #6f6757; --line-dashed: #3f392f;
-    --ink: #f4efe6; --ink-muted: #c7bfb1; --ink-subtle: #a9a193; --ink-brand: #3deba0;
-    --action: #1fdc8c; --action-hover: #4fe0a0; --on-action: #04180e; --neutral-soft: #24211c;
-  }
-}
