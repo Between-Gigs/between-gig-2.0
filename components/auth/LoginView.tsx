@@ -63,9 +63,12 @@ function ClerkLogin() {
   }, [isLoaded, isSignedIn, auth.onboarding, session, loading, params, router]);
 
   return (
-    <AuthShell eyebrow="Welcome back" title="Sign in to" accent="Between Gigs."
-      lead={<p>Use the email and password you created. Existing Google or email-code accounts can use their original sign-in method.</p>}>
+    <AuthShell eyebrow="Los Angeles call sheet" title="Your skills don't stop" accent="when the cameras do.">
       <div className="grid gap-6">
+        <div>
+          <h1 className="font-display text-display-sm text-ink">Welcome back</h1>
+          <p className="mt-2 text-body-md text-ink-muted">Sign in to your Between Gigs profile.</p>
+        </div>
         {params.get("signedOut") && <Banner tone="success" title="You're signed out">See you next time.</Banner>}
         {params.get("__clerk_status") === "client_mismatch" && <Banner tone="warning" title="This sign-in link is out of date">
           Open a fresh sign-in page to continue with your current account. <a className="text-link underline underline-offset-2" href={`${basePath}/login/`}>Reload sign-in</a>.
@@ -73,11 +76,11 @@ function ClerkLogin() {
         {isLoaded && isSignedIn ? <Banner tone="info" title="You're already signed in">
           {auth.onboarding ? <>Finish your account setup to continue. <Link className="text-link underline underline-offset-2" href="/join/">Continue setup</Link>.</> : "Opening your profile…"}
         </Banner> : <ClerkSlot label="Loading sign-in">
-          {isLoaded && <SignIn routing="hash" signUpUrl={`${basePath}/join/`} withSignUp={false} transferable={false}
+          {isLoaded && <SignIn routing="hash" appearance={{ elements: { header: "hidden" } }} signUpUrl={`${basePath}/join/`} withSignUp={false} transferable={false}
             initialValues={{ emailAddress: params.get("email") ?? undefined }}
             fallbackRedirectUrl={`${basePath}${destination(params.get("next"), "gigster")}`} />}
         </ClerkSlot>}
-        <p className="text-center text-body-sm text-ink-muted">New here? <Link href="/join/" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2">Create an account</Link>. Already joined with Google or an email code? Use that same sign-in method; account recovery keeps your existing identity.</p>
+        <p className="border-t border-line pt-5 text-body-sm text-ink-muted">New to Between Gigs? Joining is by invitation: open the link in your invite email to create your account. Joined with Google or an email code before? Sign in the same way.</p>
       </div>
     </AuthShell>
   );
@@ -148,16 +151,15 @@ function SampleLogin() {
   const needsNewCode = codeError && ["expired-code", "too-many-attempts", "no-code"].includes(codeError.kind);
 
   return (
-    <AuthShell eyebrow="Welcome back" title="Sign in to" accent="Between Gigs."
-      lead={<p>Offline sample mode: this demo uses a visible 6-digit code and sends no email. Password accounts use Clerk when it is configured.</p>}>
+    <AuthShell eyebrow="Los Angeles call sheet" title="Your skills don't stop" accent="when the cameras do.">
       <div ref={stage} className="vt-page">
         {params.get("signedOut") && step === "email" && <Banner tone="success" className="mb-6" title="You're signed out">See you next time.</Banner>}
 
         {step === "email" ? (
           <form noValidate onSubmit={send} className="grid gap-5">
             <div>
-              <h2 className="font-display text-display-sm text-ink">Sign in</h2>
-              <p className="mt-2 text-body-md text-ink-muted">Use the email you signed up with.</p>
+              <h1 className="font-display text-display-sm text-ink">Welcome back</h1>
+              <p className="mt-2 text-body-md text-ink-muted">Sign in with the email you joined with. We'll send you a 6-digit code.</p>
             </div>
             <Field label="Email" error={error}>
               <Input type="email" inputMode="email" autoComplete="email" value={email} start={<Mail />} autoFocus
@@ -167,7 +169,7 @@ function SampleLogin() {
             <p className="text-center text-body-sm text-ink-muted">New here? <Link href="/join/" className="inline-flex min-h-11 items-center font-semibold text-link underline underline-offset-2">Create an account</Link>.</p>
             {data.kind === "sample" && (
               <p className="rounded-lg border border-dashed border-line-dashed p-3 text-body-sm text-ink-subtle">
-                Sample accounts: <button type="button" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2" onClick={() => setEmail("maya.chen@example.com")}>maya.chen@example.com</button> (Gigster) or{" "}
+                Sample mode: the code shows on screen and no email is sent. Try <button type="button" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2" onClick={() => setEmail("maya.chen@example.com")}>maya.chen@example.com</button> (Gigster) or{" "}
                 <button type="button" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2" onClick={() => setEmail(SAMPLE_OWNER.email)}>{SAMPLE_OWNER.email}</button> (owner).
               </p>
             )}
@@ -175,7 +177,7 @@ function SampleLogin() {
         ) : (
           <form noValidate onSubmit={(e) => { e.preventDefault(); void verify(); }} className="grid gap-5">
             <div>
-              <h2 className="font-display text-display-sm text-ink">Check your email</h2>
+              <h1 className="font-display text-display-sm text-ink">Check your email</h1>
               <p className="mt-2 text-body-md text-ink-muted">We sent a 6-digit code to <b className="text-ink">{email.trim().toLowerCase()}</b>. It expires in 10 minutes.</p>
             </div>
             {needsNewCode && (

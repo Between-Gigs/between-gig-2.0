@@ -1,17 +1,23 @@
 "use client";
-import { Accordion, Badge, Button, Field, IconButton, Input, Modal, Select, Textarea, cx } from "@ds/components";
+import { Accordion, Button, Field, IconButton, Input, Modal, Select, Textarea, cx, useToast } from "@ds/components";
 import { Reveal } from "@ds/motion";
-import { ArrowRight, ArrowUpRight, Calendar, Check, ChevronLeft, ChevronRight, MapPin, MessageSquare, Star, Wallet } from "lucide-react";
+import { ArrowRight, ArrowUpRight, BadgeCheck, Calendar, ChevronLeft, ChevronRight, Clapperboard, Handshake, Info, MapPin, MessageSquare, Share2, Star } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { data, type Person, type Profile, type ProfileFields } from "@/lib/data";
 import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/data/taxonomy";
 import { locationLabel } from "@/lib/profile/location";
-import { asset } from "@/lib/site";
+import { absoluteUrl, asset } from "@/lib/site";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { pinnedCredits } from "@/lib/profile/validate";
 
 export type ProfileMode = "public" | "own" | "owner";
+
+/** The parts of a profile someone can fill in. The editor (/profile/canvas/) wraps each one to edit it in place. */
+export type ProfilePart = "photo" | "name" | "position" | "years" | "services" | "skills" | "where" | "availability" | "rate" | "about" | "credits" | "imdb" | "languages" | "details";
+/** How a part looks while empty in the editor: the portrait, the name, a line of the hero, or a block in the body. */
+export type PartKind = "photo" | "title" | "line" | "block";
+export type PartRenderer = (id: ProfilePart, part: { content: React.ReactNode; hint: string; kind: PartKind }) => React.ReactNode;
 
 interface Props {
   person: Person;
@@ -20,244 +26,284 @@ interface Props {
   /** public: what clients see. own: the Gigster's preview of it. owner: the team's view inside search. */
   mode: ProfileMode;
   similar?: { person: Person; profile: Profile }[];
-  /** A draft being previewed: empty parts show where they'll go instead of empty headings. */
+  /** A draft being previewed: empty parts show where they'll go instead of disappearing. */
   draft?: boolean;
+  /** Editing in place: every part is handed to this, filled or not, to wrap with its edit controls. */
+  part?: PartRenderer;
+  /** Replaces the booking card column (the editor puts its panel there). */
+  aside?: React.ReactNode;
 }
 
-const availabilityTone = { available: "success", limited: "info", away: "neutral" } as const;
+const dot = { available: "bg-success", limited: "bg-info", away: "bg-ink-subtle" } as const;
 const faqs = (first: string) => [
   { q: "How do I get started?", a: `Send a request with what you need, where and roughly when. ${first} replies to agree the scope, timing and final rate before anything starts.` },
   { q: "What does the rate cover?", a: "The rate is a starting point for time on your project. Materials, travel and the final scope are agreed together before you book." },
   { q: "Where can we work together?", a: "In your home or space across the Los Angeles area. Travel and work mode are agreed for each project." },
 ];
 
+/** "Production · Role" → the title and the role, as a film credit reads. */
+const splitCredit = (c: string) => { const [title, ...rest] = c.split("·").map((s) => s.trim()); return { title, role: rest.join(" · ") }; };
+
 /**
- * A Gigster's profile, rebuilt from the GigsterProfile template over real fields. One component for the
- * public page, the Gigster's own preview and the owner's view, so all three always match.
- * No reviews section: there are no real reviews yet, and we don't show invented ones.
+ * A Gigster's profile: one component for the public page, the Gigster's own preview, the owner's view and the editor,
+ * so all four always match. A portrait-led hero, then their story, services, work and credits, with the booking card
+ * beside them (a bar along the bottom on phones). No reviews section: there are none yet, and we don't invent them.
  */
-export function ProfileView({ person, fields: f, extras, mode, similar = [], draft = false }: Props) {
+export function ProfileView({ person, fields: f, extras, mode, similar = [], draft = false, part, aside }: Props) {
+  const toast = useToast();
   const first = f.name.split(" ")[0] || "this Gigster";
-  const helps = extras?.helps ?? f.services;
+  const services = f.services;
+  const offers = extras?.helps?.length ? extras.helps : services;
   const portfolio = extras?.portfolio ?? [];
   const sample = !!person.sample;
-  const [active, setActive] = React.useState("overview");
+  const editing = !!part;
+  const show = draft || editing;
   const [lightbox, setLightbox] = React.useState<number | null>(null);
   const [request, setRequest] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
-  const root = React.useRef<HTMLDivElement>(null);
   // The owner view already has the person's name as its page title.
   const Name = mode === "owner" ? "h2" : "h1";
   const rate = f.rate ? `$${f.rate}/${basisShort[f.basis]}` : null;
-  const where = locationLabel(f);
-  const sections = [["overview", "Overview"], ["services", "Services"], ...(portfolio.length ? [["portfolio", "Portfolio"]] : []), ["experience", "Experience"], ["faqs", "FAQs"]] as [string, string][];
-
-  // Scrollspy: the tab for the section in view lights up.
-  React.useEffect(() => {
-    const els = Array.from(root.current?.querySelectorAll<HTMLElement>("[data-section]") ?? []);
-    const io = new IntersectionObserver((es) => {
-      const vis = es.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-      if (vis) setActive(vis.target.getAttribute("data-section") ?? "overview");
-    }, { rootMargin: "-35% 0px -55% 0px" });
-    els.forEach((el) => io.observe(el));
-    return () => io.disconnect();
-  }, [person.id]);
-  const jump = (id: string) => root.current?.querySelector(`[data-section="${id}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-
-  // Live, the public page reads only what Company OS's public_reader may see: no ZIP, home city or insurance answer.
-  // The insurance row is left out rather than shown as the questionnaire's default; the city falls back in locationLabel.
+  const where = f.market === "la" ? (f.areas.length ? locationLabel(f) : "") : locationLabel(f);
+  const credits = pinnedCredits(f);
+  const years = f.years ? `${f.years} ${f.years === "1" ? "year" : "years"} in the business` : "";
+  // Live, the public page reads only what Company OS's public_reader may see: no insurance answer, so it's left out.
   const unseen = mode === "public" && data.kind === "live";
-  const glance: [string, React.ReactNode, string?][] = [
-    ["Location", where, f.zip ? `Based near ${f.zip}` : undefined],
-    ["Rate", rate ? <>From <b className="text-ink">{rate}</b></> : "Discussed per project", "Project scope agreed together"],
-    ["Availability", monthStatusLabel[f.monthStatus], [f.month, f.dates].filter(Boolean).join(" · ")],
-    ["Travel & work mode", modeLabel[f.mode], f.travel || undefined],
-    ...(f.tools ? [["Tools & equipment", f.tools] as [string, string]] : []),
-    ...(f.languages ? [["Languages", f.languages] as [string, string]] : []),
-    ...(unseen ? [] : [["Insurance", `${insuranceLabel[f.insurance]} · Not verified`] as [string, string]]),
-  ];
+  const details: [string, string][] = ([
+    ["Languages", f.languages],
+    ["Work mode", [modeLabel[f.mode], f.travel].filter(Boolean).join(" · ")],
+    ["Tools & equipment", f.tools],
+    ["Getting there", f.transport],
+    ...(unseen ? [] : [["Insurance", insuranceLabel[f.insurance]] as [string, string]]),
+  ] as [string, string][]).filter(([, v]) => v);
+
+  /** A part of the page: wrapped by the editor, else shown when filled (or as a quiet placeholder in a draft preview). */
+  const P = (id: ProfilePart, filled: boolean, content: React.ReactNode, hint: string, kind: PartKind = "line") =>
+    part ? <React.Fragment key={id}>{part(id, { content, hint, kind })}</React.Fragment>
+      : filled ? content : draft ? <Placeholder key={id} block={kind === "block"}>{hint}</Placeholder> : null;
+
+  const share = async () => {
+    const url = absoluteUrl(`/p/${person.slug}/`);
+    try {
+      if (typeof navigator.share === "function") await navigator.share({ title: `${f.name} · Between Gigs`, url });
+      else { await navigator.clipboard.writeText(url); toast({ message: "Link copied", tone: "success" }); }
+    } catch { /* closed the share sheet */ }
+  };
+
+  const booking = (
+    <div className="grid gap-4">
+      <section aria-label={`Book ${first}`} className="rounded-2xl border border-line bg-surface p-6 shadow-lg">
+        <div className="flex items-start justify-between gap-3">
+          <p className="grid">
+            {f.rate
+              ? <span><span className="font-display text-display-sm text-ink">${f.rate}</span><span className="text-body-md text-ink-muted"> / {basisShort[f.basis]}</span></span>
+              : <span className="font-display text-heading-lg text-ink">Rate on request</span>}
+            <span className="text-body-sm text-ink-muted">{f.rate ? "Starting rate · final scope agreed together" : "Agreed with you for each project"}</span>
+          </p>
+          {mode === "public" && <IconButton label={saved ? `Unsave ${first}` : `Save ${first}`} pressed={saved} onClick={() => setSaved(!saved)} variant="ghost" icon={<Star className={cx(saved && "fill-current")} />} />}
+        </div>
+        <p className="mt-4 flex items-center gap-2 text-body-md text-ink">
+          <span aria-hidden="true" className={cx("size-2 shrink-0 rounded-full", dot[f.monthStatus])} />{monthStatusLabel[f.monthStatus]}
+        </p>
+        {f.dates && <p className="mt-1 pl-4 text-body-sm text-ink-muted">{f.dates}</p>}
+        <Button variant="primary" size="lg" fullWidth className="mt-5 glow-hover" iconEnd={<ArrowRight />} disabled={mode !== "public"} aria-describedby={`${person.id}-request-note`} onClick={() => setRequest(true)}>
+          Request {first}
+        </Button>
+        <p id={`${person.id}-request-note`} className="mt-3 text-center text-body-sm text-ink-subtle">
+          {mode === "public" ? "Free to ask. Nothing is booked until you both agree." : mode === "own" ? "Clients see this card beside your profile." : "Owner view: requests are off here."}
+        </p>
+      </section>
+      <ul className="grid gap-3 rounded-2xl bg-surface-sunken p-5 text-body-sm text-ink-muted">
+        <li className="flex gap-3"><BadgeCheck className="mt-0.5 size-4 shrink-0 text-ink-brand" aria-hidden="true" />Reviewed by the Between Gigs team before going live</li>
+        <li className="flex gap-3"><Handshake className="mt-0.5 size-4 shrink-0 text-ink-brand" aria-hidden="true" />Scope, timing and the final rate agreed with you first</li>
+        <li className="flex gap-3"><Info className="mt-0.5 size-4 shrink-0 text-ink-subtle" aria-hidden="true" />Credits and details are shared by {first} and not independently verified</li>
+      </ul>
+    </div>
+  );
 
   return (
-    <div ref={root} data-client-locked="" className="relative approved-type">
-      {/* Ambient glow from the person's own work. */}
+    <div className="relative">
+      {/* Ambient light from the person's own work, behind the hero. */}
       {portfolio[0] && (
-        <div aria-hidden="true" className="pointer-events-none absolute -top-8 left-1/2 -z-0 h-96 w-screen -translate-x-1/2 overflow-hidden">
-          <img src={asset(portfolio[0].src)} alt="" className="size-full scale-125 object-cover opacity-30 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -top-10 left-1/2 h-112 w-screen -translate-x-1/2 overflow-hidden">
+          <img src={asset(portfolio[0].src)} alt="" className="size-full scale-125 object-cover opacity-25 blur-3xl" />
           <span className="absolute inset-0 bg-linear-to-b from-transparent to-bg" />
         </div>
       )}
 
-      <div className="relative grid gap-10 lg:grid-cols-12">
+      <div className="relative grid gap-12 lg:grid-cols-12 lg:gap-16">
         <div className="min-w-0 lg:col-span-8">
-          <section className="grid gap-6 sm:grid-cols-12 sm:items-end">
-            <div className="relative max-w-72 sm:col-span-5 sm:max-w-none">
-              <PersonPhoto id={person.id} morph name={f.name} src={f.photo || undefined} alt={`Portrait of ${f.name}${sample ? " (fictional)" : ""}`}
+      {/* Hero: the portrait and who they are, with the one action. */}
+      <header className="relative grid gap-8 md:grid-cols-12 md:items-end">
+        <div className="relative w-full max-w-xs md:col-span-5 md:max-w-none">
+          {P("photo", !!f.photo, (
+            <span className="relative block">
+              <PersonPhoto id={person.id} morph={!editing} name={f.name} src={f.photo || undefined} alt={`Portrait of ${f.name}${sample ? " (fictional)" : ""}`}
                 className="aspect-square w-full rounded-2xl shadow-lg ring-1 ring-line" textClass="text-display-xl" />
-              <Badge tone={availabilityTone[f.monthStatus]} className="absolute top-3 left-3 shadow-sm">{monthStatusLabel[f.monthStatus]}</Badge>
+              <span className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-full bg-surface/90 px-3 py-1.5 text-label-md text-ink shadow-sm backdrop-blur-sm">
+                <span aria-hidden="true" className={cx("size-2 rounded-full", dot[f.monthStatus])} />{monthStatusLabel[f.monthStatus]}
+              </span>
+            </span>
+          ), "Add your photo", "photo")}
+        </div>
+        <div className="min-w-0 md:col-span-7 md:pb-2">
+          <Reveal effect="fade-up">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              {P("position", !!f.position, <p className="text-eyebrow text-ink-brand uppercase">{f.position}</p>, "Your department, like Costume & wardrobe")}
+              {(!part && f.position && years) && <span aria-hidden="true" className="text-ink-subtle max-sm:hidden">·</span>}
+              {P("years", !!f.years, <p className="text-eyebrow text-ink-subtle uppercase">{years}</p>, "Years in the business")}
             </div>
-            <div className="min-w-0 sm:col-span-7">
-              <Reveal effect="fade-up"><p className="text-eyebrow text-ink-brand uppercase">{f.services[0] ?? f.position}{draft && !f.services[0] && !f.position && <Placeholder inline>Your department</Placeholder>}</p></Reveal>
-              <Reveal effect="fade-up" delay={80}><Name className="mt-2 font-display text-display-md break-words text-ink sm:text-display-lg">{f.name}</Name></Reveal>
-              <Reveal effect="fade-up" delay={160}>
-                <p className="mt-2 text-body-lg text-ink-muted">{helps.slice(0, 3).join(" · ")}{draft && !helps.length && <Placeholder inline>Your services</Placeholder>}</p>
-                <ul className="mt-5 grid gap-2 text-body-md text-ink">
-                  <li className="flex items-start gap-2"><MapPin className="mt-0.5 size-4 shrink-0 text-ink-brand" aria-hidden="true" />{where}</li>
-                  <li className="flex items-start gap-2"><Wallet className="mt-0.5 size-4 shrink-0 text-ink-brand" aria-hidden="true" />{rate ? <span>From <b>{rate}</b> · scope agreed together</span> : "Rate discussed per project"}</li>
-                  <li className="flex items-start gap-2"><Calendar className="mt-0.5 size-4 shrink-0 text-ink-brand" aria-hidden="true" />{monthStatusLabel[f.monthStatus]}{f.dates && ` · ${f.dates}`}</li>
-                </ul>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {sample && <Badge tone="neutral" size="sm">Fictional profile</Badge>}
-                  {(f.position || f.years) && <Badge tone="neutral" size="sm">{[f.position, f.years && `${f.years} years`].filter(Boolean).join(" · ")}</Badge>}
-                  <Badge tone="warning" size="sm">Credits not verified</Badge>
-                </div>
-              </Reveal>
-            </div>
-          </section>
-
-          <nav aria-label="Profile sections" className="sticky top-16 z-sticky -mx-4 mt-10 embedded:top-0 border-b border-line bg-bg/90 px-4 backdrop-blur-md sm:mx-0 sm:px-0">
-            <ul className="flex gap-1 overflow-x-auto">
-              {sections.map(([id, label]) => (
-                <li key={id}>
-                  <button type="button" onClick={() => jump(id)} aria-current={active === id ? "true" : undefined}
-                    className={cx("relative inline-flex min-h-12 items-center px-3 text-label-md whitespace-nowrap transition-colors duration-fast",
-                      active === id ? "text-ink after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-action" : "text-ink-muted hover:text-ink")}>
-                    {label}
-                  </button>
-                </li>
-              ))}
+          </Reveal>
+          <Reveal effect="fade-up" delay={60}>
+            <div className="mt-3">{P("name", !!f.name.trim(), <Name className="font-display text-display-lg text-balance break-words text-ink">{f.name}</Name>, "Your name", "title")}</div>
+          </Reveal>
+          <Reveal effect="fade-up" delay={120}>
+            {(extras?.tagline || offers.length > 0) && <p className="mt-4 max-w-xl text-body-lg text-ink-muted">{extras?.tagline ?? offers.slice(0, 3).join(" · ")}</p>}
+            <ul className="mt-6 grid gap-2.5 text-body-md text-ink">
+              <li>{P("where", !!where, <span className="flex items-start gap-2.5"><MapPin className="mt-0.5 size-5 shrink-0 text-ink-brand" aria-hidden="true" />{where}</span>, "Where you work")}</li>
+              <li className={cx(!part && !aside && "lg:hidden")}>{P("availability", !!f.dates.trim() || !show, <span className="flex items-start gap-2.5"><Calendar className="mt-0.5 size-5 shrink-0 text-ink-brand" aria-hidden="true" />{monthStatusLabel[f.monthStatus]}{f.dates && ` · ${f.dates}`}</span>, "When you're free this month")}</li>
+              {(rate || show) && <li className={cx(!part && !aside && "lg:hidden")}>{P("rate", !!rate, <span className="flex items-start gap-2.5"><span aria-hidden="true" className="grid size-5 shrink-0 place-items-center font-display text-label-md text-ink-brand">$</span>From <b className="ml-1">{rate}</b></span>, "Your starting rate (optional)")}</li>}
             </ul>
-          </nav>
+            {mode === "public" && (
+              <div className="mt-6 flex flex-wrap items-center gap-2 lg:hidden">
+                <Button variant="secondary" iconStart={<Share2 />} onClick={share}>Share profile</Button>
+              </div>
+            )}
+          </Reveal>
+        </div>
+      </header>
 
-          <Section name="overview" title="About me">
-            {f.about || !draft ? <p className="font-serif text-editorial-lg whitespace-pre-line text-ink">{f.about}</p> : <Placeholder>Your About me will show here: a few lines about you and the help you offer.</Placeholder>}
-            {sample && f.about && <p className="mt-2 text-caption text-ink-subtle">Illustrative biography for this fictional profile.</p>}
-            <h3 className="mt-10 font-display text-heading-lg text-ink">What I can help you with</h3>
-            {draft && !helps.length && <div className="mt-4"><Placeholder>The services you pick will show here.</Placeholder></div>}
-            <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-              {helps.map((h, i) => (
-                <li key={h}>
-                  <Reveal effect="fade-up" delay={i * 50} className="flex h-full items-center gap-3 rounded-xl border border-line bg-surface p-2.5">
-                    {portfolio.length
-                      ? <img src={asset(portfolio[i % portfolio.length].src)} alt="" className="size-12 shrink-0 rounded-lg object-cover" />
-                      : <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-lg bg-surface-selected text-ink-brand"><Check className="size-5" /></span>}
-                    <span className="text-label-md text-ink">{h}</span>
-                  </Reveal>
-                </li>
-              ))}
-            </ul>
+          <Section title="About" first>
+            {P("about", !!f.about.trim(), <p className="max-w-prose font-serif text-editorial-lg whitespace-pre-line text-ink">{f.about}</p>, "A few lines in your own words: your experience, the help you offer and what it's like to work with you.", "block")}
           </Section>
 
-          <Section name="services" title="Services" meta={rate ? "Starting rate; final scope agreed together" : undefined}>
-            {draft && !f.services.length && <Placeholder>Each service you offer gets a card here, with your starting rate.</Placeholder>}
-            <ul className="grid gap-4 sm:grid-cols-2">
-              {f.services.map((s, i) => (
-                <li key={s}>
-                  <Reveal effect="fade-up" delay={i * 70} className="flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface">
-                    {portfolio.length > 0 && <div className="aspect-video overflow-hidden"><img src={asset(portfolio[i % portfolio.length].src)} alt="" className="size-full object-cover" /></div>}
-                    <div className="grid gap-1 p-4">
-                      <h3 className="font-display text-heading-md text-ink">{s}</h3>
-                      <p className="text-body-sm text-ink-muted">Discuss scope and details</p>
-                      {rate && <p className="mt-2 text-body-sm text-ink-muted">From <b className="font-display text-heading-md text-ink">{rate}</b></p>}
-                    </div>
-                  </Reveal>
-                </li>
-              ))}
-            </ul>
+          <Section title="Services" meta={rate ? `From ${rate}` : undefined}>
+            {P("services", services.length > 0 || !!f.other.trim(), (
+              <div className="grid gap-5">
+                {services.length > 0 && (extras?.helps?.length
+                  ? <ul className="flex flex-wrap gap-2">{services.map((s) => <li key={s} className="rounded-full bg-surface-selected px-3 py-1.5 text-label-md text-ink-brand">{s}</li>)}</ul>
+                  : <ul className="grid gap-3 sm:grid-cols-2">{services.map((s) => (
+                      <li key={s} className="flex items-center justify-between gap-4 rounded-2xl border border-line bg-surface p-5">
+                        <span className="font-display text-heading-md text-ink">{s}</span>
+                        {rate && <span className="shrink-0 text-body-sm text-ink-muted">From <b className="text-ink">{rate}</b></span>}
+                      </li>
+                    ))}</ul>)}
+                {editing && f.other.trim() && <p className="text-body-sm text-ink-muted">Something else, in private review: {f.other}</p>}
+                {offers.length > 0 && !!extras?.helps?.length && (
+                  <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {offers.map((h, i) => (
+                      <li key={h}>
+                        <Reveal effect="fade-up" delay={i * 40} className="group h-full overflow-hidden rounded-2xl border border-line bg-surface">
+                          {portfolio.length > 0 && <div className="aspect-4/3 overflow-hidden"><img src={asset(portfolio[i % portfolio.length].src)} alt="" loading="lazy" className="size-full object-cover transition-transform duration-slow group-hover:scale-105" /></div>}
+                          <p className="p-3 text-label-md text-ink">{h}</p>
+                        </Reveal>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ), "The services you'd offer clients between gigs", "block")}
           </Section>
 
           {portfolio.length > 0 && (
-            <Section name="portfolio" title="Portfolio" meta={`${portfolio.length} images`}>
-              {sample && <p className="-mt-2 mb-4 text-body-sm text-ink-muted">Example imagery showing the kinds of projects we could discuss. Concept images, not completed client work.</p>}
-              <ul className={cx("grid grid-cols-2 gap-3", portfolio.length === 4 ? "md:grid-cols-4" : "md:grid-cols-3")}>
+            <Section title="Work" meta={`${portfolio.length} images`}>
+              <ul className="grid grid-cols-2 gap-3 md:grid-cols-4 md:grid-rows-2">
                 {portfolio.map((it, i) => (
-                  <li key={it.src} className={cx(i === 0 ? "col-span-2 row-span-2" : "h-36 md:h-44", portfolio.length === 4 && i === 1 && "col-span-2")}>
-                    <button type="button" onClick={() => setLightbox(i)} aria-label={`Open image: ${it.caption}`} className="group relative block size-full min-h-36 overflow-hidden rounded-xl">
-                      <img src={asset(it.src)} alt="" className="size-full object-cover transition-transform duration-slow group-hover:scale-105" />
-                      <span data-theme="dark" className="absolute inset-x-0 bottom-0 bg-linear-to-t from-surface-brand to-transparent p-3 pt-8 text-left text-label-md text-ink opacity-0 transition duration-base group-hover:opacity-100 group-focus-visible:opacity-100">{it.caption}</span>
+                  <li key={it.src} className={cx(i === 0 ? "col-span-2 md:row-span-2" : "aspect-square md:aspect-auto", portfolio.length === 4 && i === 1 && "md:col-span-2")}>
+                    <button type="button" onClick={() => setLightbox(i)} aria-label={`Open image: ${it.caption}`} className="group relative block size-full min-h-40 overflow-hidden rounded-2xl">
+                      <img src={asset(it.src)} alt="" loading="lazy" className="absolute inset-0 size-full object-cover transition-transform duration-slow group-hover:scale-105" />
+                      <span data-theme="dark" className="absolute inset-x-0 bottom-0 bg-linear-to-t from-surface-brand to-transparent p-3 pt-10 text-left text-label-md text-ink opacity-0 transition duration-base group-hover:opacity-100 group-focus-visible:opacity-100">{it.caption}</span>
                     </button>
                   </li>
                 ))}
               </ul>
+              {sample && <p className="mt-3 text-body-sm text-ink-subtle">Concept images showing the kind of work to discuss, not completed client projects.</p>}
             </Section>
           )}
 
-          <Section name="experience" title="Professional experience">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-line bg-surface p-5">
-                <h3 className="text-label-md text-ink">On set</h3>
-                <p className="mt-1 text-body-md text-ink-muted">{[f.position, ...f.skills.filter((s) => s !== f.position)].filter(Boolean).join(" · ")}{f.years && ` · ${f.years} years in the business`}</p>
-                {draft && !f.position && !f.skills.length && <Placeholder inline>Your department and on-set skills</Placeholder>}
-                {pinnedCredits(f).length > 0 && <>
-                  <h3 className="mt-5 text-label-md text-ink">Selected credits</h3>
-                  <ul className="mt-1 grid gap-1 text-body-sm text-ink-muted">{pinnedCredits(f).map((c) => <li key={c}>{c}</li>)}</ul>
-                </>}
-                {f.imdb && mode !== "public" && <p className="mt-3 text-body-sm"><a className="inline-flex min-h-11 items-center text-link underline underline-offset-2" href={f.imdb} target="_blank" rel="noreferrer">IMDb page<span className="sr-only"> (opens in a new tab)</span></a></p>}
-              </div>
-              <div className="rounded-2xl border border-line bg-surface p-5">
-                <h3 className="text-label-md text-ink">What's been checked</h3>
-                <p className="mt-1 text-body-sm text-ink-muted">Profile details and credits are self-reported. The Between Gigs team reviews each profile before it goes live; no identity, qualification or insurance checks are claimed.</p>
-                <h3 className="mt-5 text-label-md text-ink">Languages</h3>
-                <p className="mt-1 text-body-sm text-ink-muted">{f.languages || "Not specified."}</p>
-              </div>
+          <Section title="On set">
+            <div className="grid gap-6">
+              {P("skills", f.skills.length > 0, (
+                <ul className="flex flex-wrap gap-2">{f.skills.map((s) => <li key={s} className="rounded-full border border-line px-3 py-1.5 text-label-md text-ink">{s}</li>)}</ul>
+              ), "Your on-set skills", "block")}
+              {P("credits", credits.length > 0, (
+                <ol className="divide-y divide-line border-y border-line">
+                  {credits.map((c) => { const { title, role } = splitCredit(c); return (
+                    <li key={c} className="flex flex-wrap items-baseline gap-x-4 gap-y-0.5 py-3.5">
+                      <Clapperboard className="size-4 shrink-0 translate-y-0.5 text-ink-subtle" aria-hidden="true" />
+                      <span className="font-display text-heading-md text-ink">{title}</span>
+                      {role && <span className="text-body-md text-ink-muted">{role}</span>}
+                    </li>
+                  ); })}
+                </ol>
+              ), "Your notable credits, best first", "block")}
+              {mode !== "public" && P("imdb", !!f.imdb, (
+                <p className="text-body-sm text-ink-muted"><a className="inline-flex min-h-11 items-center text-link underline underline-offset-2" href={f.imdb} target="_blank" rel="noreferrer">IMDb page<span className="sr-only"> (opens in a new tab)</span></a> · only the Between Gigs team sees this</p>
+              ), "Your IMDb link (optional, only the team sees it)")}
             </div>
           </Section>
 
-          <Section name="faqs" title="FAQs">
-            <Accordion variant="flush" items={faqs(first).map((x, i) => ({ id: `${person.id}-faq-${i}`, title: x.q, content: x.a }))} />
-          </Section>
-
-          {similar.length > 0 && (
-            <section aria-labelledby="similar-h" className="mt-16">
-              <h2 id="similar-h" className="font-display text-display-sm text-ink">You might also like</h2>
-              <ul className="mt-5 grid gap-4 sm:grid-cols-3">
-                {similar.map(({ person: o, profile }) => (
-                  <li key={o.id}>
-                    <Link href={`/p/${o.slug}/`} className="group block overflow-hidden rounded-2xl border border-line bg-surface transition duration-base hover:-translate-y-0.5 hover:shadow-lg">
-                      <div className="aspect-video overflow-hidden"><PersonPhoto id={o.id} name={o.name} src={profile.fields.photo || undefined} alt="" className="size-full transition-transform duration-slow group-hover:scale-105" /></div>
-                      <div className="flex items-center justify-between gap-2 p-4">
-                        <span className="min-w-0"><b className="block truncate font-display text-heading-md text-ink">{o.name}</b><span className="text-body-sm text-ink-muted">{profile.fields.services[0]}</span></span>
-                        <ArrowUpRight className="size-5 shrink-0 text-ink-brand" aria-hidden="true" />
-                      </div>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
+          {(details.length > 0 || show) && (
+            <Section title="Details">
+              <div className="grid gap-4">
+                {P("languages", !!f.languages.trim(), <p className="text-body-md text-ink"><span className="text-ink-subtle">Speaks</span> {f.languages}</p>, "Languages you speak (optional)")}
+                {P("details", !!(f.tools.trim() || f.transport.trim()), (
+                  <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+                    {details.filter(([k]) => k !== "Languages").map(([k, v]) => (
+                      <div key={k} className="grid gap-0.5"><dt className="text-label-sm text-ink-subtle">{k}</dt><dd className="text-body-md text-ink">{v}</dd></div>
+                    ))}
+                  </dl>
+                ), "Tools, transport, insurance and how you work (optional)", "block")}
+              </div>
+            </Section>
           )}
+
+          {!editing && (
+            <Section title="Questions">
+              <Accordion variant="flush" items={faqs(first).map((x, i) => ({ id: `${person.id}-faq-${i}`, title: x.q, content: x.a }))} />
+            </Section>
+          )}
+          {sample && !editing && <p className="mt-10 text-body-sm text-ink-subtle">This is a fictional sample profile: the person, biography and credits are made up for the preview.</p>}
         </div>
 
-        <aside aria-label="Book and details" className="lg:col-span-4">
-          <div className="grid gap-5 lg:sticky lg:top-24 embedded:lg:top-6">
-            <div className="rounded-2xl border border-line bg-surface p-5 shadow-lg">
-              <div className="flex items-start justify-between gap-3">
-                <p>
-                  <span className="block text-caption text-ink-subtle">From</span>
-                  {f.rate ? <><span className="font-display text-display-sm text-ink">${f.rate}</span><span className="text-body-md text-ink-muted">/{basisShort[f.basis]}</span></> : <span className="font-display text-heading-lg text-ink">Rate on request</span>}
-                </p>
-                {mode === "public" && <IconButton label={saved ? `Unsave ${first}` : `Save ${first}`} pressed={saved} onClick={() => setSaved(!saved)} variant="ghost" icon={<Star className={cx(saved && "fill-current")} />} />}
-              </div>
-              <p className="mt-1 text-body-sm text-ink-muted">{monthStatusLabel[f.monthStatus]}</p>
-              <div className="mt-5 grid gap-2">
-                <Button variant="primary" size="lg" fullWidth className="glow-hover" iconEnd={<ArrowRight />} disabled={mode !== "public"} aria-describedby={`${person.id}-request-note`} onClick={() => setRequest(true)}>Request {first}</Button>
-              </div>
-              <p id={`${person.id}-request-note`} className="mt-3 text-center text-caption text-ink-subtle">
-                {mode === "public" ? "Preview only · requests open in a later milestone" : mode === "own" ? "This is how clients will see your booking card." : "Owner view · requests are off here"}
-              </p>
-            </div>
-            <section aria-labelledby={`${person.id}-glance`} className="rounded-2xl border border-line bg-surface p-5">
-              <h2 id={`${person.id}-glance`} className="font-display text-heading-lg text-ink">At a glance</h2>
-              <dl className="mt-3 grid gap-3">
-                {glance.map(([k, v, note]) => (
-                  <div key={k} className="grid gap-0.5 border-t border-line pt-3 first:border-0 first:pt-0">
-                    <dt className="text-label-sm text-ink-subtle">{k}</dt>
-                    <dd className="text-body-md break-words text-ink-muted">{v}{note && <span className="block text-caption text-ink-subtle">{note}</span>}</dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-          </div>
+        <aside aria-label={aside ? "Editor" : `Book ${first}`} className="lg:col-span-4">
+          <div className="grid gap-5 lg:sticky lg:top-24 embedded:lg:top-6">{aside ?? <div className="max-lg:hidden">{booking}</div>}</div>
         </aside>
       </div>
+
+      {similar.length > 0 && (
+        <section aria-labelledby="similar-h" className="relative mt-20 border-t border-line pt-12">
+          <h2 id="similar-h" className="font-display text-display-sm text-ink">More Gigsters like {first}</h2>
+          <ul className="mt-6 grid gap-5 sm:grid-cols-3">
+            {similar.map(({ person: o, profile }) => (
+              <li key={o.id}>
+                <Link href={`/p/${o.slug}/`} className="group block">
+                  <div className="aspect-4/5 overflow-hidden rounded-2xl"><PersonPhoto id={o.id} name={o.name} src={profile.fields.photo || undefined} alt="" className="size-full transition-transform duration-slow group-hover:scale-105" /></div>
+                  <div className="mt-3 flex items-start justify-between gap-2">
+                    <span className="min-w-0"><b className="block truncate font-display text-heading-md text-ink group-hover:underline group-hover:underline-offset-4">{o.name}</b><span className="text-body-md text-ink-muted">{profile.fields.position || profile.fields.services[0]}</span></span>
+                    <ArrowUpRight className="mt-1 size-5 shrink-0 text-ink-brand" aria-hidden="true" />
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Phones and tablets: the booking card becomes a bar that stays in reach. */}
+      {mode === "public" && !aside && (
+        <div className="fixed inset-x-0 bottom-0 z-sticky border-t border-line bg-bg/95 px-4 py-3 shadow-lg backdrop-blur-md lg:hidden">
+          <div className="mx-auto flex max-w-xl items-center justify-between gap-4">
+            <p className="grid">
+              <span className="text-label-md text-ink">{rate ? <>From {rate}</> : "Rate on request"}</span>
+              <span className="flex items-center gap-1.5 text-body-sm text-ink-muted"><span aria-hidden="true" className={cx("size-1.5 rounded-full", dot[f.monthStatus])} />{monthStatusLabel[f.monthStatus]}</span>
+            </p>
+            <Button variant="primary" iconEnd={<ArrowRight />} onClick={() => setRequest(true)}>Request {first}</Button>
+          </div>
+        </div>
+      )}
+      {mode !== "public" && !aside && <div className="mt-10 lg:hidden">{booking}</div>}
+      {mode === "public" && !aside && <div aria-hidden="true" className="h-20 lg:hidden" />}
 
       <Lightbox name={f.name} items={portfolio} index={lightbox} onIndex={setLightbox} />
       <RequestModal first={first} open={request} onClose={() => setRequest(false)} />
@@ -265,19 +311,20 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
   );
 }
 
-/** Where a part of a draft will go, in the client view. */
-function Placeholder({ children, inline = false }: { children: React.ReactNode; inline?: boolean }) {
-  return inline
-    ? <span className="text-ink-subtle normal-case italic">{children}</span>
-    : <p className="rounded-xl border border-dashed border-line-strong p-4 text-body-md text-ink-subtle italic">{children}</p>;
+/** Where a part of a draft will go, in the preview. */
+function Placeholder({ children, block = false }: { children: React.ReactNode; block?: boolean }) {
+  return block
+    ? <p className="rounded-2xl bg-surface-sunken p-5 text-body-md text-ink-subtle">{children}</p>
+    : <span className="text-body-md text-ink-subtle">{children}</span>;
 }
 
-function Section({ name, title, meta, children }: { name: string; title: string; meta?: string; children: React.ReactNode }) {
+function Section({ title, meta, first = false, children }: { title: string; meta?: string; first?: boolean; children: React.ReactNode }) {
+  const id = React.useId();
   return (
-    <section data-section={name} aria-labelledby={`sec-${name}`} className="scroll-mt-32 pt-14">
+    <section aria-labelledby={id} className={cx("pb-12", first ? "mt-16" : "border-t border-line pt-8")}>
       <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id={`sec-${name}`} className="font-display text-display-sm text-ink">{title}</h2>
-        {meta && <span className="text-caption text-ink-subtle">{meta}</span>}
+        <h2 id={id} className="font-display text-heading-lg text-ink">{title}</h2>
+        {meta && <span className="text-body-sm text-ink-subtle">{meta}</span>}
       </div>
       {children}
     </section>
@@ -309,14 +356,14 @@ function Lightbox({ name, items, index, onIndex }: { name: string; items: { src:
   );
 }
 
-/** Booking requests are out of scope for Milestone 2; the modal shows the proposed shape and sends nothing. */
+/** Booking requests aren't open yet; the modal shows the proposed shape and sends nothing. */
 function RequestModal({ first, open, onClose }: { first: string; open: boolean; onClose: () => void }) {
   const [sent, setSent] = React.useState(false);
   const [what, setWhat] = React.useState("");
   const [err, setErr] = React.useState<string>();
   React.useEffect(() => { if (!open) { setSent(false); setErr(undefined); } }, [open]); // eslint-disable-line react-hooks/set-state-in-effect
   return (
-    <Modal open={open} onClose={onClose} title={sent ? "Request drafted" : `Request ${first}`} description={sent ? undefined : "Preview only. Nothing is sent in this milestone."}
+    <Modal open={open} onClose={onClose} title={sent ? "Request drafted" : `Request ${first}`} description={sent ? undefined : "Preview only. Requests aren't sent yet."}
       footer={sent ? <Button variant="primary" onClick={onClose}>Done</Button> : (
         <>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>

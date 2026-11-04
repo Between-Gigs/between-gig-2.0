@@ -105,7 +105,7 @@ export const routes = [
   } },
   { name: "canvas-draft", path: "/profile/canvas/", setup: as("gigster", "elena-petrova"), ready: "[data-spot]" },
   { name: "canvas-changes", path: "/profile/canvas/", setup: as("gigster", "hana-kim"), ready: "[data-spot]" },
-  { name: "canvas-client", path: "/profile/canvas/", setup: as("gigster", "elena-petrova"), ready: "[data-spot]", act: async (page) => { await page.getByRole("radio", { name: "Client view" }).click(); await page.waitForTimeout(400); } },
+  { name: "canvas-client", path: "/profile/canvas/", setup: as("gigster", "elena-petrova"), ready: "[data-spot]", act: async (page) => { await page.getByRole("radio", { name: "Preview" }).click(); await page.waitForTimeout(400); } },
   { name: "public-maya", path: "/p/maya/", setup: reset, ready: "h1" },
   { name: "public-monogram", path: "/p/dana-whitfield/", setup: reset, ready: "h1" },
   { name: "public-not-yet", path: "/p/imani-carter/", setup: reset, ready: "h1" },

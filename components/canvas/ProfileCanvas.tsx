@@ -1,20 +1,19 @@
 "use client";
 import { Badge, Banner, Button, Field, Input, Modal, RadioGroup, SegmentedControl, Skeleton, Slider, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
-import { ArrowRight, Calendar, Check, Copy, Eye, Link2, ListChecks, MapPin, MessageSquareWarning, PartyPopper, PenLine, Pencil, Plus, Share2, Sparkles, Wallet, WandSparkles } from "lucide-react";
+import { ArrowRight, Check, Copy, Eye, Link2, ListChecks, MapPin, MessageSquareWarning, PartyPopper, PenLine, Pencil, Plus, Share2, Sparkles, UserRound, WandSparkles } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
-import { basisLabel, basisShort, insuranceLabel, laServiceAreas, modeLabel, monthStatusLabel, offSetServices, onSetSkills } from "@/lib/data/taxonomy";
+import { basisLabel, laServiceAreas, monthStatusLabel, offSetServices, onSetSkills } from "@/lib/data/taxonomy";
 import { useRequireRole } from "@/lib/guard";
 import { absoluteUrl, asset } from "@/lib/site";
 import { ABOUT_MAX, completeness, pinnedCredits, sectionLabel, validateAll, type FieldErrors } from "@/lib/profile/validate";
 import { Credits, SaveIndicator, type SaveState } from "@/components/builder/ProfileBuilder";
-import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { ChipPicker } from "@/components/profile/ChipPicker";
 import { PhotoPicker } from "@/components/profile/PhotoPicker";
 import { ProfilePreviewCard } from "@/components/profile/ProfilePreviewCard";
-import { ProfileView } from "@/components/profile/ProfileView";
+import { ProfileView, type PartKind, type ProfilePart } from "@/components/profile/ProfileView";
 import { useLiveEditWarning } from "@/components/profile/LiveEditWarning";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
@@ -29,7 +28,7 @@ markArea("bg-split:dashboard");
  * Same draft, autosave and submit checks as the questionnaire (/profile/edit/), so people can switch between the two.
  */
 
-type SpotId = "photo" | "name" | "position" | "years" | "services" | "skills" | "where" | "availability" | "rate" | "about" | "credits" | "imdb" | "languages" | "details";
+type SpotId = ProfilePart;
 
 const AUTOSAVE_MS = 700;
 const thisMonth = () => new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
@@ -132,6 +131,19 @@ function CanvasSkeleton() {
   );
 }
 
+/** Wide screens edit in the column beside the page; narrower ones in a sheet from the bottom. */
+function useWide() {
+  const [wide, setWide] = React.useState(true);
+  React.useEffect(() => {
+    const mq = window.matchMedia("(min-width: 64rem)");
+    const on = () => setWide(mq.matches);
+    on();
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return wide;
+}
+
 function Canvas({ personId }: { personId: string }) {
   const toast = useToast();
   const [person, setPerson] = React.useState<Person | null>(null);
@@ -148,6 +160,7 @@ function Canvas({ personId }: { personId: string }) {
   const [intro, setIntro] = React.useState(false);
   const [rise, setRise] = React.useState(false);
   const [portrait, setPortrait] = React.useState(false);
+  const wide = useWide();
   const stage = React.useRef<HTMLDivElement>(null);
   const dirty = React.useRef(false);
   const step = React.useRef(0);
@@ -230,7 +243,7 @@ function Canvas({ personId }: { personId: string }) {
     if (!editing) return;
     const onDown = (e: PointerEvent) => {
       const t = e.target as HTMLElement;
-      if (t.closest(`[data-spot="${editing}"], aside, [role=dialog], header, [data-stage]`)) return;
+      if (t.closest(`[data-spot], [data-editor], aside, [role=dialog], header, [data-stage]`)) return;
       setEditing(null);
     };
     document.addEventListener("pointerdown", onDown);
@@ -248,10 +261,13 @@ function Canvas({ personId }: { personId: string }) {
   const nextOf = (from?: SpotId): SpotId | null => firstEmpty(d, from);
   const next = nextOf();
 
+  // Bring the part into view: centred beside the panel on wide screens, near the top above the sheet on phones.
   const reveal = (id: SpotId) => requestAnimationFrame(() => {
     const el = document.querySelector<HTMLElement>(`[data-spot="${id}"]`);
-    el?.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-    el?.querySelector<HTMLElement>("input:not([type=hidden]), textarea, button[aria-pressed], [role=radio], button")?.focus({ preventScroll: true });
+    if (!el) return;
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    if (wide) el.scrollIntoView({ block: "center", behavior });
+    else window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 140, behavior });
   });
   const open = (id: SpotId) => {
     if (view !== "edit") setView("edit");
@@ -323,54 +339,46 @@ function Canvas({ personId }: { personId: string }) {
   return (
     <Page bare>
       {live.dialog}
-      <Band>
-        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-          <div className="grid gap-1">
-            <p className="text-eyebrow text-ink-brand uppercase">Edit on your profile</p>
-            <h1 className="font-display text-heading-lg text-ink sm:text-display-sm">{done <= 1 && !sent ? `This is your profile, ${first}. Make it yours.` : sent ? "Sent to the Between Gigs team" : `Your profile, ${first}`}</h1>
-            <p className="max-w-2xl text-body-md text-ink-muted">{sent
-              ? "We review every profile before it goes live and email you when it's approved or if we suggest a change."
-              : "It's the page clients will see. Tap any dashed spot to fill it in right where it sits; the glowing one is next. It saves as you go."}</p>
-          </div>
-          {!sent && <Link href="/profile/edit/" className="inline-flex min-h-11 items-center gap-1.5 text-body-sm text-ink-muted underline underline-offset-2 hover:text-ink">
-            <ListChecks className="size-4" aria-hidden="true" />Prefer questions, step by step?
-          </Link>}
-        </div>
-      </Band>
+      <EditorBar done={done} total={REQUIRED.length} ready={ready} missing={Object.keys(fieldErrors).length} save={save} view={view} editing={!!editing} sent={sent} submitting={submitting} resubmit={resubmit} canSend={!nothingToSend}
+        onRetry={() => { dirty.current = true; void flush(); }} onView={switchView} onSubmit={submit} />
 
-      <StageBar done={done} total={REQUIRED.length} ready={ready} missing={Object.keys(fieldErrors).length} save={save} view={view} editing={!!editing} sent={sent} submitting={submitting} resubmit={resubmit} canSend={!nothingToSend}
-        onRetry={() => { dirty.current = true; void flush(); }} onView={switchView} onNext={() => next && open(next)} onSubmit={submit} />
-
-      <div ref={stage} className="vt-page relative mx-auto max-w-7xl px-4 pt-8 pb-32 sm:px-6 sm:pb-24">
+      <div ref={stage} className="vt-page relative mx-auto max-w-7xl px-4 pt-10 pb-40 sm:px-6 sm:pb-24">
         {party > 0 && <Confetti key={party} />}
         {view === "client" ? (
-          <div className="grid gap-6">
-            {sent ? (
-              <ReadyCard first={first} slug={person.slug} d={d} personId={personId} />
-            ) : (
-              <Banner tone="info" title="Client view">This is exactly what clients will see. Switch back to Edit to change anything.</Banner>
-            )}
+          <div className="grid gap-8">
+            {sent
+              ? <ReadyCard first={first} slug={person.slug} d={d} personId={personId} />
+              : <Banner tone="info" title="Preview">This is exactly what clients will see. Switch back to Edit to change anything.</Banner>}
             <ProfileView person={person} fields={d} mode="own" draft={!sent} />
           </div>
         ) : (
           <CanvasCtx.Provider value={ctx}>
             {notes.length > 0 && (
-              <Banner tone="warning" className="mb-6" title="Changes requested">
+              <Banner tone="warning" className="mb-8" title="Changes requested">
                 The Between Gigs team left {notes.length === 1 ? "a note" : `${notes.length} notes`}. Each one is pinned to the part it's about.
                 <ul className="mt-2 flex flex-wrap gap-2">
                   {notes.map((n) => <li key={n.note}><Button size="sm" variant="secondary" iconStart={<MessageSquareWarning />} onClick={() => open(SECTION_SPOT[n.section])}>{sectionLabel[n.section]}</Button></li>)}
                 </ul>
               </Banner>
             )}
-            <EditView d={d} set={set} personId={personId} confirm={(go) => live.guard("photo", go)} />
+            <div className={cx(rise && "canvas-rise")}>
+              <ProfileView person={person} fields={d} mode="own"
+                part={(id, p) => <Spot id={id} kind={p.kind} hint={p.hint}>{p.content}</Spot>}
+                aside={<Rail first={first} personId={personId} panel={editing && wide ? <EditorPanel id={editing} body={editorFor(editing, d, set, personId, (go) => live.guard("photo", go))} /> : null} />} />
+            </div>
+            {editing && !wide && (
+              <div data-editor="" className="fixed inset-x-0 bottom-0 z-overlay max-h-3/4 overflow-y-auto rounded-t-2xl border-t border-line bg-surface-raised shadow-lg">
+                <EditorPanel id={editing} sheet body={editorFor(editing, d, set, personId, (go) => live.guard("photo", go))} />
+              </div>
+            )}
           </CanvasCtx.Provider>
         )}
       </div>
       <Modal open={intro} onClose={endIntro} size="md" title={`Welcome, ${first}. This is your page.`}
-        description="It's blank for now: fill it in right where clients will see it. About ten minutes, and it saves as you go."
-        footer={<><Button variant="ghost" onClick={endIntro}>Look around first</Button><Button variant="primary" iconEnd={<ArrowRight />} onClick={() => { endIntro(); if (next) window.setTimeout(() => open(next), 900); }}>{next ? `Start with ${LABEL[next].toLowerCase()}` : "Start"}</Button></>}>
+        description="It's what clients will see, blank for now. Fill it in right where it sits: about ten minutes, and it saves as you go."
+        footer={<><Button variant="ghost" onClick={endIntro}>Look around first</Button><Button variant="primary" iconEnd={<ArrowRight />} onClick={() => { endIntro(); if (next) window.setTimeout(() => open(next), 700); }}>{next ? `Start with ${LABEL[next].toLowerCase()}` : "Start"}</Button></>}>
         <ol className="grid gap-3">
-          {([[Plus, "Tap any dashed spot to fill it in"], [Sparkles, "The glowing one is next; Next carries you through"], [Eye, "Client view shows exactly what clients will see"]] as const).map(([Icon, text], i) => (
+          {([[Plus, "Tap any part of the page to fill it in"], [Sparkles, "The highlighted part is next; Next carries you through"], [Eye, "Preview shows exactly what clients will see"]] as const).map(([Icon, text], i) => (
             <li key={text} className="flex items-center gap-3 text-body-md text-ink">
               <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-selected text-ink-brand"><Icon className="size-4" /></span>
               <span><span className="sr-only">{i + 1}. </span>{text}</span>
@@ -390,8 +398,8 @@ function Dock({ done, total, next, ready, resubmit, canSend, submitting, onNext,
   done: number; total: number; next: SpotId | null; ready: boolean; resubmit: boolean; canSend: boolean; submitting: boolean; onNext: () => void; onSubmit: () => void;
 }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-sticky border-t border-line bg-bg/95 px-4 py-3 shadow-lg backdrop-blur-md sm:hidden">
-      <div className="flex items-center gap-3">
+    <div className="fixed inset-x-0 bottom-0 z-sticky border-t border-line bg-bg/95 px-4 py-3 shadow-lg backdrop-blur-md lg:hidden">
+      <div className="mx-auto flex max-w-xl items-center gap-3">
         <span role="img" aria-label={`${done} of ${total} required parts filled`} style={{ "--p": Math.round((done / total) * 100) } as React.CSSProperties}
           className="progress-ring grid size-10 shrink-0 place-items-center rounded-full">
           <span className="grid size-8 place-items-center rounded-full bg-bg text-caption text-ink tabular-nums">{done}/{total}</span>
@@ -404,30 +412,29 @@ function Dock({ done, total, next, ready, resubmit, canSend, submitting, onNext,
   );
 }
 
-function StageBar({ done, total, ready, missing, save, view, editing, sent, submitting, resubmit, canSend, onRetry, onView, onNext, onSubmit }: {
+/** The slim bar above the page: progress, saving, Edit or Preview, and Send. */
+function EditorBar({ done, total, ready, missing, save, view, editing, sent, submitting, resubmit, canSend, onRetry, onView, onSubmit }: {
   done: number; total: number; ready: boolean; missing: number; save: SaveState; view: "edit" | "client"; editing: boolean; sent: boolean; submitting: boolean; resubmit: boolean; canSend: boolean;
-  onRetry: () => void; onView: (v: string) => void; onNext: () => void; onSubmit: () => void;
+  onRetry: () => void; onView: (v: string) => void; onSubmit: () => void;
 }) {
   const pct = Math.round((done / total) * 100);
-  const line = ready ? "Ready to send" : done === 0 ? "Start anywhere" : done < total / 2 ? "Taking shape" : "Nearly there";
+  const line = sent ? "Sent for review" : missing ? `${missing} ${missing === 1 ? "thing" : "things"} to finish` : ready ? "Ready to send" : `${done} of ${total} done`;
   return (
     <div data-stage="" className="z-sticky border-b border-line bg-bg/90 backdrop-blur-md sm:sticky sm:top-16 embedded:sm:top-0">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:px-6">
-        <div className="flex min-w-0 items-center gap-3">
-          <span role="img" aria-label={`${done} of ${total} required parts filled`} style={{ "--p": pct } as React.CSSProperties}
-            className="progress-ring grid size-11 shrink-0 place-items-center rounded-full">
-            <span className="grid size-9 place-items-center rounded-full bg-bg text-label-sm text-ink tabular-nums">{ready ? <Check className="size-4 text-ink-brand" aria-hidden="true" /> : `${done}/${total}`}</span>
-          </span>
-          <span className="grid">
-            <b className={cx("text-label-md", missing && !sent ? "text-danger" : "text-ink")}>{sent ? "Sent for review" : missing ? `${missing} ${missing === 1 ? "thing" : "things"} to finish` : line}</b>
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
+        <div className="grid min-w-0 flex-1 gap-1.5 sm:max-w-80">
+          <div className="flex items-baseline justify-between gap-3">
+            <b className={cx("text-label-md", missing && !sent ? "text-danger" : "text-ink")}>{line}</b>
             <SaveIndicator state={save} onRetry={onRetry} />
+          </div>
+          <span role="progressbar" aria-label="Profile progress" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} className="h-1.5 overflow-hidden rounded-full bg-surface-sunken">
+            <span className="block h-full rounded-full bg-action transition-all duration-slow" style={{ width: `${sent ? 100 : pct}%` }} />
           </span>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <SegmentedControl label="View" size="sm" value={view} onChange={onView}
-            options={[{ value: "edit", label: "Edit", icon: <PenLine /> }, { value: "client", label: "Client view", icon: <Eye /> }]} />
-          {!ready && !sent && <Button size="sm" variant="secondary" iconStart={<Sparkles />} className="max-sm:hidden" onClick={onNext}>Next spot</Button>}
-          {!sent && canSend && <Button size="sm" variant={ready && !editing ? "primary" : "secondary"} className={cx("max-sm:hidden", ready && "glow-hover")} loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}>
+            options={[{ value: "edit", label: "Edit", icon: <PenLine /> }, { value: "client", label: "Preview", icon: <Eye /> }]} />
+          {!sent && canSend && <Button size="sm" variant={ready && !editing ? "primary" : "secondary"} className={cx("max-lg:hidden", ready && "glow-hover")} loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}>
             {resubmit ? "Send again" : "Send for review"}
           </Button>}
         </div>
@@ -436,264 +443,165 @@ function StageBar({ done, total, ready, missing, save, view, editing, sent, subm
   );
 }
 
-/** The profile, laid out like the public page (ProfileView), with every part a spot. */
-function EditView({ d, set, personId, confirm }: { d: ProfileFields; set: <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K]) => void; personId: string; confirm: (go: () => void) => void }) {
-  const { open, next, editing, portrait, rise } = useCanvas();
-  const rate = d.rate ? `$${d.rate}/${basisShort[d.basis]}` : null;
-  const where = d.market === "la" ? (d.areas.length ? `${d.areas.join(" · ")}, Los Angeles area` : "") : d.otherCity;
-  const credits = pinnedCredits(d);
+/** The column beside the page while editing: the open part's controls, or the progress and the search card. */
+function Rail({ first, personId, panel }: { first: string; personId: string; panel: React.ReactNode }) {
+  const { d, next, open, editing } = useCanvas();
   const done = REQUIRED.filter((id) => isFilled(id, d)).length;
-
+  if (panel) return <>{panel}</>;
   return (
-    <div data-client-locked="" className={cx("approved-type relative grid gap-10 lg:grid-cols-12", rise && "canvas-rise")}>
-      {/* Spotlight: while a spot is open the rest of the page steps back, except the search card, which updates as they type. */}
-      {editing && <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-raised bg-bg/50" />}
-      <div className="min-w-0 lg:col-span-8">
-        <section aria-label="Introduction" className="grid gap-6 sm:grid-cols-12 sm:items-end">
-          <Spot id="photo" className="max-w-72 sm:col-span-5 sm:max-w-none" round="rounded-2xl"
-            empty={<span className="relative block aspect-square overflow-hidden rounded-2xl">
-              <PersonPhoto id={personId} name={d.name} fallback="brand" department={d.position} skills={d.skills} alt="" className="size-full" />
-              <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 bg-surface-brand/80 p-3 text-label-md text-ink-on-brand backdrop-blur-sm"><Plus className="size-4" aria-hidden="true" />Add your photo</span>
-            </span>}
-            editor={<PhotoEditor d={d} personId={personId} onChange={set("photo")} confirm={confirm} />}>
-            <span className="relative block">
-              <PersonPhoto id={personId} name={d.name} src={d.photo} alt="" className="aspect-square w-full rounded-2xl shadow-lg ring-1 ring-line" />
-              <Badge tone={d.monthStatus === "available" ? "success" : d.monthStatus === "limited" ? "info" : "neutral"} className="absolute top-3 left-3 shadow-sm">{monthStatusLabel[d.monthStatus]}</Badge>
-            </span>
-          </Spot>
-          <div className="grid min-w-0 gap-2 sm:col-span-7">
-            <Spot id="position" inline empty="Your department, like Costume & wardrobe"
-              editor={<>
-                <Field label="Industry position / department" hint="Type your own, or tap one to start from."><Input id="f-position" value={d.position} placeholder="e.g. Costume & wardrobe" onChange={(e) => set("position")(e.target.value)} /></Field>
-                <Quick options={onSetSkills} onPick={set("position")} current={d.position} />
-              </>}>
-              <p className="text-eyebrow text-ink-brand uppercase">{d.position}</p>
-            </Spot>
-            <Spot id="name" inline empty={<span className="font-display text-display-sm">Your name</span>}
-              editor={<Field label="Full name"><Input id="f-name" size="lg" autoComplete="name" value={d.name} onChange={(e) => set("name")(e.target.value)} /></Field>}>
-              <h2 className="font-display text-display-md break-words text-ink sm:text-display-lg">{d.name}</h2>
-            </Spot>
-            <p className={cx("text-body-lg", d.services.length ? "text-ink-muted" : "text-ink-subtle italic")}>{d.services.length ? d.services.slice(0, 3).join(" · ") : "Your services will show here"}</p>
-            <ul className="mt-2 grid gap-1.5 text-body-md text-ink">
-              <li><Spot id="where" inline icon={<MapPin />} empty="Where you work"
-                editor={<WhereEditor d={d} set={set} />}>
-                <span className="flex items-start gap-2"><MapPin className="mt-0.5 size-4 shrink-0 text-ink-brand" aria-hidden="true" />{where}</span>
-              </Spot></li>
-              <li><Spot id="rate" inline icon={<Wallet />} empty="Your starting rate (optional)"
-                editor={<div className="grid gap-4 sm:grid-cols-2 sm:items-start">
-                  <Field label="Rate" optional hint="Final scope and rate are agreed with each client."><Input id="f-rate" inputMode="numeric" value={d.rate} start={<span className="text-label-md">$</span>} end={<span className="text-label-sm text-ink-subtle">USD</span>} onChange={(e) => set("rate")(e.target.value.replace(/\D/g, "").slice(0, 4))} /></Field>
-                  <RadioGroup name="f-basis" label="Rate basis" value={d.basis} onChange={(v) => set("basis")(v as ProfileFields["basis"])} options={Object.entries(basisLabel).map(([value, label]) => ({ value, label }))} />
-                </div>}>
-                <span className="flex items-start gap-2"><Wallet className="mt-0.5 size-4 shrink-0 text-ink-brand" aria-hidden="true" />{rate && <span>From <b>{rate}</b> · scope agreed together</span>}</span>
-              </Spot></li>
-              <li><Spot id="availability" inline icon={<Calendar />} empty="When you're free this month"
-                editor={<div className="grid gap-4">
-                  <RadioGroup name="f-monthStatus" label={`This month · ${d.month}`} value={d.monthStatus} onChange={(v) => set("monthStatus")(v as ProfileFields["monthStatus"])} options={Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))} />
-                  <Field label="Dates or times this month" hint="Exact project dates are agreed with each client."><Input id="f-dates" value={d.dates} placeholder="e.g. Weekday mornings" onChange={(e) => set("dates")(e.target.value)} /></Field>
-                  <Quick options={["Weekday mornings", "Weekday evenings", "Weekends", "Most days", "Between shoots, ask me"]} onPick={set("dates")} current={d.dates} />
-                </div>}>
-                <span className="flex items-start gap-2"><Calendar className="mt-0.5 size-4 shrink-0 text-ink-brand" aria-hidden="true" />{monthStatusLabel[d.monthStatus]}{d.dates && ` · ${d.dates}`}</span>
-              </Spot></li>
-            </ul>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Spot id="years" inline empty="Years in the business"
-                editor={<YearsEditor value={d.years} onChange={set("years")} />}>
-                <Badge tone="neutral" size="sm">{d.position || "In the business"} · {d.years} {d.years === "1" ? "year" : "years"}</Badge>
-              </Spot>
-              <Badge tone="warning" size="sm">Credits not verified</Badge>
-            </div>
-          </div>
+    <>
+      <section aria-labelledby="rail-h" className="rounded-2xl border border-line bg-surface p-6 shadow-lg max-lg:hidden">
+        <h2 id="rail-h" className="font-display text-heading-lg text-ink">{done <= 1 ? `Make it yours, ${first}` : next ? "Keep going" : "Ready when you are"}</h2>
+        <p className="mt-2 text-body-md text-ink-muted">{next
+          ? "This is the page clients will see. Tap any part to fill it in where it sits; it saves as you go."
+          : "Everything clients need is in. Preview it, then send it to the Between Gigs team."}</p>
+        {next && <Button variant="primary" fullWidth className="mt-5" iconEnd={<ArrowRight />} onClick={() => open(next)}>Next: {LABEL[next]}</Button>}
+        <ol className="mt-5 flex flex-wrap gap-1.5" aria-label="Parts of your profile">
+          {REQUIRED.map((id) => {
+            const ok = isFilled(id, d);
+            return (
+              <li key={id}>
+                <button type="button" onClick={() => open(id)} aria-label={`${LABEL[id]}${ok ? ", done" : ", to fill in"}`}
+                  className={cx("inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 text-label-sm transition-colors duration-fast",
+                    ok ? "bg-surface-selected text-ink-brand" : id === next ? "bg-surface text-ink ring-2 ring-ink-brand" : "bg-surface-sunken text-ink-muted hover:text-ink")}>
+                  {ok && <Check className="size-3.5" aria-hidden="true" />}{LABEL[id].replace(/^Your /, "").replace(/^\w/, (c) => c.toUpperCase())}
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+      {!editing && (
+        <section aria-labelledby="canvas-card-h" className="grid gap-3">
+          <h2 id="canvas-card-h" className="text-label-md text-ink-subtle">How you'll appear in search</h2>
+          <ProfilePreviewCard fields={d} personId={personId} badge={completeness(d) === 1 ? "Ready" : "Live preview"} />
         </section>
+      )}
+      <Link href="/profile/edit/" className="inline-flex min-h-11 items-center gap-1.5 text-body-sm text-ink-muted underline underline-offset-2 hover:text-ink">
+        <ListChecks className="size-4" aria-hidden="true" />Prefer questions, step by step?
+      </Link>
+    </>
+  );
+}
 
-        <Block title="About me" hint="In your own words: your experience, the help you offer and what it's like to work with you.">
-          <Spot id="about" empty="Write a few lines about you. We can start you off with a first draft from your answers."
-            editor={<AboutEditor d={d} onChange={set("about")} />}>
-            <p className="font-serif text-editorial-lg whitespace-pre-line text-ink">{d.about}</p>
-          </Spot>
-          <div className="mt-4">
-            <Spot id="languages" inline empty="Languages you speak (optional)"
-              editor={<Field label="Languages" optional><Input id="f-languages" value={d.languages} placeholder="e.g. English, Spanish" onChange={(e) => set("languages")(e.target.value)} /></Field>}>
-              <p className="text-body-md text-ink-muted"><b className="text-ink">Languages</b> · {d.languages}</p>
-            </Spot>
-          </div>
-        </Block>
-
-        <Block title="Services" hint="What you'd offer clients between gigs. Tap everything that fits.">
-          <Spot id="services" empty="Pick the services you'd offer"
-            editor={<>
-              <ChipPicker id="f-services" label="Off-set services" options={offSetServices} value={d.services} onChange={set("services")} />
-              <Field label="Something else?" optional hint="Other services go to a private review. They don't appear on your profile automatically."><Textarea id="f-other" rows={2} value={d.other} onChange={(e) => set("other")(e.target.value)} /></Field>
-            </>}>
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {d.services.map((s) => (
-                <li key={s} className="rounded-2xl border border-line bg-surface p-4">
-                  <h3 className="font-display text-heading-md text-ink">{s}</h3>
-                  <p className="text-body-sm text-ink-muted">{rate ? <>From <b className="text-ink">{rate}</b> · </> : null}Discuss scope and details</p>
-                </li>
-              ))}
-              {d.other.trim() && <li className="rounded-2xl border border-dashed border-line bg-surface-sunken p-4 text-body-sm text-ink-muted">Something else, in private review: {d.other}</li>}
-            </ul>
-          </Spot>
-        </Block>
-
-        <Block title="Professional experience" hint="Your background on set. It tells clients why your work is good.">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Spot id="skills" empty="Your on-set skills"
-              editor={<ChipPicker id="f-skills" label="On-set skills" options={onSetSkills} value={d.skills} onChange={set("skills")} />}>
-              <div className="rounded-2xl border border-line bg-surface p-5">
-                <h3 className="text-label-md text-ink">On set</h3>
-                <p className="mt-1 text-body-md text-ink-muted">{d.skills.join(" · ")}{d.years && ` · ${d.years} years in the business`}</p>
-              </div>
-            </Spot>
-            <Spot id="credits" empty="Your notable credits, best first"
-              editor={<Credits credits={d.credits} pins={d.creditPins ?? []} onChange={(c, p) => { set("credits")(c); set("creditPins")(p); }} />}>
-              <div className="rounded-2xl border border-line bg-surface p-5">
-                <h3 className="text-label-md text-ink">Selected credits</h3>
-                <ul className="mt-1 grid gap-1 text-body-sm text-ink-muted">{credits.map((c) => <li key={c}>{c}</li>)}</ul>
-              </div>
-            </Spot>
-          </div>
-          <div className="mt-4">
-            <Spot id="imdb" inline empty="Your IMDb link (optional, only the team sees it)"
-              editor={<Field label="IMDb profile link" optional hint="Your IMDb name page. It helps us confirm credits; clients don't see it."><Input id="f-imdb" type="url" inputMode="url" value={d.imdb} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} /></Field>}>
-              <p className="text-body-sm text-ink-muted"><b className="text-ink">IMDb</b> · {d.imdb} <span className="text-ink-subtle">(only the team sees this)</span></p>
-            </Spot>
-          </div>
-        </Block>
-
-        <Block title="Work details" hint="Optional. They set expectations before anyone books.">
-          <Spot id="details" empty="Tools, transport, insurance and how you work (optional)"
-            editor={<div className="grid gap-4">
-              <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
-                <RadioGroup name="f-mode" label="Work mode" value={d.mode} onChange={(v) => set("mode")(v as ProfileFields["mode"])} options={[{ value: "on-site", label: "On site" }, { value: "studio", label: "At my studio" }, { value: "both", label: "Both" }]} />
-                <RadioGroup name="f-insurance" label="Insurance · self-reported" value={d.insurance} onChange={(v) => set("insurance")(v as ProfileFields["insurance"])} options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance" }]} />
-              </div>
-              <Field label="Tools / equipment" optional><Input id="f-tools" value={d.tools} onChange={(e) => set("tools")(e.target.value)} /></Field>
-              <Field label="Transport" optional><Input id="f-transport" value={d.transport} onChange={(e) => set("transport")(e.target.value)} /></Field>
-            </div>}>
-            <dl className="grid gap-3 rounded-2xl border border-line bg-surface p-5 sm:grid-cols-2">
-              {([["Work mode", modeLabel[d.mode]], ["Insurance", insuranceLabel[d.insurance]], ["Tools & equipment", d.tools], ["Transport", d.transport]] as [string, string][]).filter(([, v]) => v).map(([k, v]) => (
-                <div key={k}><dt className="text-label-sm text-ink-subtle">{k}</dt><dd className="text-body-md text-ink-muted">{v}</dd></div>
-              ))}
-            </dl>
-          </Spot>
-        </Block>
+/** The controls for the open part: in the column beside the page on wide screens, a sheet from the bottom on phones. */
+function EditorPanel({ id, body, sheet = false }: { id: SpotId; body: React.ReactNode; sheet?: boolean }) {
+  const { d, errors, noted, close, advance } = useCanvas();
+  const after = firstEmpty(d, id);
+  const err = errors[id];
+  const note = noted[id];
+  const ref = React.useRef<HTMLDivElement>(null);
+  // Focus the first control as the part opens, so typing starts right away.
+  React.useEffect(() => {
+    const el = ref.current?.querySelector<HTMLElement>("input:not([type=hidden]):not([type=file]), textarea, [role=radio], button[aria-pressed]");
+    el?.focus({ preventScroll: true });
+  }, [id]);
+  return (
+    <div ref={ref} data-editor="" role="group" aria-label={`Editing: ${LABEL[id]}`} onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); close(); } }}
+      style={sheet ? undefined : { maxHeight: "calc(100dvh - 8rem)" }}
+      className={cx("grid gap-5", sheet ? "p-5 pb-6" : "overflow-y-auto rounded-2xl border border-ink-brand bg-surface-raised p-6 shadow-lg")}>
+      <div className="flex items-center justify-between gap-3">
+        <p className="flex items-center gap-2 font-display text-heading-md text-ink"><Pencil className="size-4 text-ink-brand" aria-hidden="true" />{LABEL[id]}</p>
+        <Button size="sm" variant="ghost" onClick={close}>Done</Button>
       </div>
-
-      <aside aria-label="Checklist and search card" className="relative lg:col-span-4" style={editing ? { zIndex: 20 } : undefined}>
-        <div className="grid gap-5 lg:sticky lg:top-36 embedded:lg:top-20">
-          <section aria-labelledby="canvas-list-h" className="rounded-2xl border border-line bg-surface p-5 shadow-lg">
-            <div className="flex items-baseline justify-between gap-2">
-              <h2 id="canvas-list-h" className="font-display text-heading-lg text-ink">Your profile</h2>
-              <span className="text-label-md text-ink-subtle tabular-nums">{done} of {REQUIRED.length}</span>
-            </div>
-            <ol className="mt-3 grid gap-0.5">
-              {REQUIRED.map((id) => {
-                const ok = isFilled(id, d);
-                return (
-                  <li key={id}>
-                    <button type="button" onClick={() => open(id)} className={cx("flex min-h-11 w-full items-center gap-2.5 rounded-lg px-2 text-left text-body-md transition-colors duration-fast hover:bg-surface-hover",
-                      id === next ? "text-ink" : ok ? "text-ink-muted" : "text-ink-muted")}>
-                      <span aria-hidden="true" className={cx("grid size-6 shrink-0 place-items-center rounded-full border", ok ? "border-ink-brand bg-ink-brand text-bg" : id === next ? "border-ink-brand text-ink-brand" : "border-line-strong")}>
-                        {ok ? <Check className="size-3.5" /> : id === next ? <ArrowRight className="size-3.5" /> : null}
-                      </span>
-                      <span className="flex-1">{LABEL[id]}</span>
-                      <span className="sr-only">{ok ? ", done" : ", to fill in"}</span>
-                      {id === next && <Badge tone="success" size="sm">Next</Badge>}
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-          </section>
-          <section aria-labelledby="canvas-card-h" className="grid gap-3">
-            <h2 id="canvas-card-h" className="text-label-md text-ink-subtle">How you'll appear in search</h2>
-            <div className={cx("rounded-2xl", portrait && "portrait-reveal")}><ProfilePreviewCard fields={d} personId={personId} badge={completeness(d) === 1 ? "Ready" : "Live preview"} /></div>
-          </section>
-        </div>
-      </aside>
+      {note && <p className="flex gap-2 rounded-md bg-warning-soft p-3 text-body-sm text-ink"><MessageSquareWarning className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" /><span><b>Team note:</b> {note}</span></p>}
+      {body}
+      {err && <ul className="grid gap-1 text-body-sm text-danger">{err.map((m) => <li key={m}>{m}</li>)}</ul>}
+      <div className="flex items-center justify-end gap-3 border-t border-line pt-4">
+        <Button variant="primary" iconEnd={<ArrowRight />} onClick={() => advance(id)}>{after ? `Next: ${LABEL[after]}` : "Done"}</Button>
+      </div>
     </div>
   );
 }
 
-function Block({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
-  return (
-    <section className="pt-14">
-      <div className="mb-5 grid gap-1">
-        <h2 className="font-display text-display-sm text-ink">{title}</h2>
-        <p className="text-body-sm text-ink-subtle">{hint}</p>
-      </div>
-      {children}
-    </section>
-  );
+/** The editor for each part. */
+function editorFor(id: SpotId, d: ProfileFields, set: <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K]) => void, personId: string, confirm: (go: () => void) => void): React.ReactNode {
+  switch (id) {
+    case "photo": return <PhotoEditor d={d} personId={personId} onChange={set("photo")} confirm={confirm} />;
+    case "name": return <Field label="Full name"><Input id="f-name" size="lg" autoComplete="name" value={d.name} onChange={(e) => set("name")(e.target.value)} /></Field>;
+    case "position": return <>
+      <Field label="Industry position / department" hint="Type your own, or tap one to start from."><Input id="f-position" value={d.position} placeholder="e.g. Costume & wardrobe" onChange={(e) => set("position")(e.target.value)} /></Field>
+      <Quick options={onSetSkills} onPick={set("position")} current={d.position} />
+    </>;
+    case "years": return <YearsEditor value={d.years} onChange={set("years")} />;
+    case "where": return <WhereEditor d={d} set={set} />;
+    case "rate": return <div className="grid gap-4">
+      <Field label="Starting rate" optional hint="Final scope and rate are agreed with each client."><Input id="f-rate" inputMode="numeric" value={d.rate} start={<span className="text-label-md">$</span>} end={<span className="text-label-sm text-ink-subtle">USD</span>} onChange={(e) => set("rate")(e.target.value.replace(/\D/g, "").slice(0, 4))} /></Field>
+      <RadioGroup name="f-basis" label="Rate basis" orientation="horizontal" value={d.basis} onChange={(v) => set("basis")(v as ProfileFields["basis"])} options={Object.entries(basisLabel).map(([value, label]) => ({ value, label }))} />
+    </div>;
+    case "availability": return <div className="grid gap-4">
+      <RadioGroup name="f-monthStatus" label={`This month · ${d.month}`} value={d.monthStatus} onChange={(v) => set("monthStatus")(v as ProfileFields["monthStatus"])} options={Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))} />
+      <Field label="Dates or times this month" hint="Exact project dates are agreed with each client."><Input id="f-dates" value={d.dates} placeholder="e.g. Weekday mornings" onChange={(e) => set("dates")(e.target.value)} /></Field>
+      <Quick options={["Weekday mornings", "Weekday evenings", "Weekends", "Most days", "Between shoots, ask me"]} onPick={set("dates")} current={d.dates} />
+    </div>;
+    case "about": return <AboutEditor d={d} onChange={set("about")} />;
+    case "languages": return <Field label="Languages" optional><Input id="f-languages" value={d.languages} placeholder="e.g. English, Spanish" onChange={(e) => set("languages")(e.target.value)} /></Field>;
+    case "services": return <>
+      <ChipPicker id="f-services" label="Off-set services" options={offSetServices} value={d.services} onChange={set("services")} />
+      <Field label="Something else?" optional hint="Other services go to a private review. They don't appear on your profile automatically."><Textarea id="f-other" rows={2} value={d.other} onChange={(e) => set("other")(e.target.value)} /></Field>
+    </>;
+    case "skills": return <ChipPicker id="f-skills" label="On-set skills" options={onSetSkills} value={d.skills} onChange={set("skills")} />;
+    case "credits": return <Credits credits={d.credits} pins={d.creditPins ?? []} onChange={(c, p) => { set("credits")(c); set("creditPins")(p); }} />;
+    case "imdb": return <Field label="IMDb profile link" optional hint="Your IMDb name page. It helps us confirm credits; clients don't see it."><Input id="f-imdb" type="url" inputMode="url" value={d.imdb} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} /></Field>;
+    case "details": return <div className="grid gap-4">
+      <RadioGroup name="f-mode" label="Work mode" value={d.mode} onChange={(v) => set("mode")(v as ProfileFields["mode"])} options={[{ value: "on-site", label: "On site" }, { value: "studio", label: "At my studio" }, { value: "both", label: "Both" }]} />
+      <RadioGroup name="f-insurance" label="Insurance · self-reported" value={d.insurance} onChange={(v) => set("insurance")(v as ProfileFields["insurance"])} options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance" }]} />
+      <Field label="Tools / equipment" optional><Input id="f-tools" value={d.tools} onChange={(e) => set("tools")(e.target.value)} /></Field>
+      <Field label="Transport" optional><Input id="f-transport" value={d.transport} onChange={(e) => set("transport")(e.target.value)} /></Field>
+    </div>;
+  }
 }
 
 /**
- * One editable part of the profile. Empty: a dashed spot that says what goes there. Filled: the content as clients see
- * it, outlined with an Edit tag on hover. Editing: the controls open in place, with Next to carry on.
+ * One part of the page. Filled: the content as clients see it, with an Edit tag on hover. Empty: a soft placeholder
+ * that says what goes there (the next one highlighted). Open: outlined while its controls are in the panel.
  */
-function Spot({ id, children, empty, editor, inline = false, className, round = inline ? "rounded-lg" : "rounded-2xl" }: {
-  id: SpotId; children: React.ReactNode; empty: React.ReactNode; editor: React.ReactNode; inline?: boolean; className?: string; round?: string; icon?: React.ReactNode;
-}) {
-  const { d, editing, next, fresh, errors, noted, open, close, advance, portrait } = useCanvas();
+function Spot({ id, kind, hint, children }: { id: SpotId; kind: PartKind; hint: string; children: React.ReactNode }) {
+  const { d, editing, next, fresh, errors, noted, open, portrait } = useCanvas();
   const order = { "--i": ORDER.indexOf(id) } as React.CSSProperties;
   const filled = isFilled(id, d);
   const err = errors[id];
   const note = noted[id];
-  const required = REQUIRED.includes(id);
-
-  if (editing === id) {
-    const after = firstEmpty(d, id);
-    return (
-      <div data-spot={id} role="group" aria-label={`Editing: ${LABEL[id]}`} onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); close(); } }}
-        style={{ zIndex: 20 }} className={cx("relative grid gap-4 rounded-2xl border border-ink-brand bg-surface-raised p-4 shadow-lg sm:p-5", className)}>
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="flex items-center gap-2 text-label-md text-ink-brand"><Pencil className="size-4" aria-hidden="true" />{LABEL[id]}</p>
-          <span className="text-caption text-ink-subtle max-sm:hidden">Esc to close</span>
-        </div>
-        {note && <p className="flex gap-2 rounded-md bg-warning-soft p-2.5 text-body-sm text-ink"><MessageSquareWarning className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" /><span><b>Team note:</b> {note}</span></p>}
-        {editor}
-        {err && <ul className="grid gap-1 text-body-sm text-danger">{err.map((m) => <li key={m}>{m}</li>)}</ul>}
-        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line pt-3">
-          <Button size="sm" variant="ghost" onClick={close}>Close</Button>
-          <Button size="sm" variant="primary" iconEnd={<ArrowRight />} onClick={() => advance(id)}>{after ? `Next: ${LABEL[after]}` : "Done"}</Button>
-        </div>
-      </div>
-    );
-  }
-
+  const active = editing === id;
   const glow = id === next && !editing;
-  // Submit's misses show as one count in the stage bar and a red edge here; only team notes get a tag.
-  const flag = note ? "Team note" : null;
+  const ring = active ? "ring-2 ring-ink-brand" : err ? "ring-2 ring-danger" : note ? "ring-2 ring-warning" : glow ? "ring-2 ring-ink-brand" : "";
+  const round = kind === "line" ? "rounded-full" : kind === "title" ? "rounded-xl" : "rounded-2xl";
+  const label = `${filled ? "Edit" : "Add"} ${LABEL[id].toLowerCase()}${REQUIRED.includes(id) ? "" : " (optional)"}`;
+
   if (!filled) {
     return (
-      <div data-spot={id} style={order} className={cx("relative", className)}>
-        <button type="button" data-spot-edit="" onClick={() => open(id)} aria-label={`Add ${LABEL[id].toLowerCase()}${required ? "" : " (optional)"}`}
-          className={cx("group block w-full border-dashed text-left transition duration-base hover:border-ink-brand hover:bg-surface-selected focus-visible:border-ink-brand",
-            // Small parts (a line in the hero) are a dashed underline; the big ones a dashed box.
-            inline ? "rounded-md border-b-2 px-1.5 py-1.5" : cx("border-2", round, typeof empty === "string" ? "p-6" : "overflow-hidden"),
-            err ? "border-danger" : note ? "border-warning" : glow ? "border-ink-brand" : "border-line-strong",
-            glow && "spot-next")}>
-          {typeof empty === "string"
-            ? <span className={cx("flex items-center gap-2 text-ink-muted group-hover:text-ink", inline ? "text-body-md" : "text-body-lg")}>
-                <span aria-hidden="true" className={cx("grid shrink-0 place-items-center rounded-full bg-surface-selected text-ink-brand", inline ? "size-6" : "size-7")}><Plus className="size-4" /></span>{empty}
+      <div data-spot={id} style={order} className="relative">
+        <button type="button" data-spot-edit="" onClick={() => open(id)} aria-label={label} aria-pressed={active}
+          className={cx("group text-left transition duration-base", round, ring, glow && "spot-next",
+            kind === "photo" ? "block w-full overflow-hidden"
+              : kind === "title" ? "flex w-full items-center gap-3 bg-surface-sunken px-4 py-3 hover:bg-surface-selected"
+              : kind === "line" ? "inline-flex min-h-10 items-center gap-2 bg-surface-sunken py-1.5 pr-4 pl-2 hover:bg-surface-selected"
+              : "flex w-full items-center gap-3 bg-surface-sunken p-5 hover:bg-surface-selected")}>
+          {kind === "photo" ? (
+            <span className="relative block aspect-square">
+              <span data-theme="dark" className="absolute inset-0 grid place-items-center bg-surface-brand phosphor-dots">
+                <UserRound className="size-1/2 text-ink-brand opacity-30" strokeWidth={1} aria-hidden="true" />
               </span>
-            : empty}
+              <span className="absolute inset-x-4 bottom-4 flex items-center justify-center gap-2 rounded-full bg-surface/90 py-2.5 text-label-md text-ink shadow-sm backdrop-blur-sm"><Plus className="size-4" aria-hidden="true" />{hint}</span>
+            </span>
+          ) : <>
+            <span aria-hidden="true" className={cx("grid shrink-0 place-items-center rounded-full bg-surface text-ink-brand shadow-xs", kind === "line" ? "size-7" : "size-9")}><Plus className="size-4" /></span>
+            <span className={cx("text-ink-muted group-hover:text-ink", kind === "title" ? "font-display text-display-sm" : kind === "line" ? "text-body-md" : "text-body-lg")}>{hint}</span>
+          </>}
         </button>
-        {flag && <Badge tone={err ? "danger" : "warning"} size="sm" className="absolute -top-3 right-3 shadow-sm">{flag}</Badge>}
+        {note && <Badge tone="warning" size="sm" className="absolute -top-3 right-3 shadow-sm">Team note</Badge>}
       </div>
     );
   }
   return (
-    <div data-spot={id} style={order} className={cx("group relative", inline && "flex min-h-8 w-fit max-w-full items-center", className)}>
-      <div className={cx("transition duration-base", round, id === "photo" && portrait ? "portrait-reveal" : fresh === id && "spot-filled")}>{children}</div>
-      <button type="button" data-spot-edit="" onClick={() => open(id)} aria-label={`Edit ${LABEL[id].toLowerCase()}`}
-        className={cx("absolute -inset-1.5 outline-2 outline-transparent transition duration-fast hover:outline-dashed hover:outline-ink-brand focus-visible:outline-solid focus-visible:outline-focus", round,
-          (err || note) && "outline-dashed outline-warning")}>
-        {/* The Edit tag sits beside a line, or inside a block's corner, so it never covers a neighbour. */}
-        <span className={cx("absolute inline-flex items-center gap-1 rounded-full bg-action px-2 py-0.5 text-label-sm whitespace-nowrap text-on-action opacity-0 shadow-sm transition-opacity duration-fast group-hover:opacity-100 group-focus-within:opacity-100",
-          inline ? "top-1/2 left-full ml-3 -translate-y-1/2 max-sm:top-0 max-sm:right-0 max-sm:left-auto max-sm:-translate-y-full" : "top-3 right-3")}>
-          <Pencil className="size-3" aria-hidden="true" />{flag ?? "Edit"}
+    <div data-spot={id} style={order} className={cx("group relative", kind === "line" && "w-fit max-w-full")}>
+      <div className={cx("transition duration-base", id === "photo" && portrait ? "portrait-reveal" : fresh === id && "spot-filled")}>{children}</div>
+      <button type="button" data-spot-edit="" onClick={() => open(id)} aria-label={label} aria-pressed={active}
+        className={cx("absolute -inset-2 transition duration-fast hover:bg-ink-brand/5 hover:ring-2 hover:ring-ink-brand/40 focus-visible:ring-2 focus-visible:ring-focus", kind === "line" ? "rounded-xl" : "rounded-2xl", ring)}>
+        <span className={cx("absolute inline-flex items-center gap-1 rounded-full bg-action px-2.5 py-1 text-label-sm whitespace-nowrap text-on-action shadow-sm transition-opacity duration-fast",
+          active || note ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+          kind === "line" ? "top-1/2 left-full ml-3 -translate-y-1/2 max-sm:top-0 max-sm:right-2 max-sm:left-auto max-sm:-translate-y-1/2" : "top-3 right-3")}>
+          <Pencil className="size-3" aria-hidden="true" />{note ? "Team note" : active ? "Editing" : "Edit"}
         </span>
       </button>
     </div>

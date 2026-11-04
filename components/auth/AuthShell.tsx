@@ -3,39 +3,45 @@ import { Reveal } from "@ds/motion";
 import { Page } from "@/components/site/Page";
 import { asset } from "@/lib/site";
 
-const faces = ["maya", "jordan", "alex", "priya", "sam", "morgan"];
+/** Three columns of Gigsters and their work, offset like a contact sheet. */
+const mosaic = [
+  ["img/people/maya.jpg", "img/people/jordan-1.jpg", "img/people/priya.jpg"],
+  ["img/people/alex-2.jpg", "img/people/sam.jpg", "img/people/morgan-3.jpg"],
+  ["img/people/jordan.jpg", "img/people/maya-3.jpg", "img/people/morgan.jpg"],
+];
 
 /**
- * Sign-in and join share one frame: the forest brand panel (BRAND.md: "the sign-in panel") beside a
- * form card. On phones the panel is a short band (eyebrow and title only, no horizon line) so the form
- * starts high; the lead moves to the top of the form there.
+ * Sign-in and join share one frame: a forest panel of Gigsters and their work (BRAND.md: "the sign-in panel") with
+ * one line of brand voice, beside the form. The form side carries the page's only heading, so nothing reads twice.
+ * On phones the panel is a short band with the line alone, so the form starts high.
  */
 export function AuthShell({ eyebrow, title, accent, lead, children, className }: {
   eyebrow: string; title: string; accent?: string; lead?: React.ReactNode; children: React.ReactNode; className?: string;
 }) {
   return (
     <Page className="max-w-6xl">
-      <div className="grid grid-cols-1 overflow-hidden rounded-2xl border border-line bg-surface shadow-lg lg:grid-cols-12">
-        <section data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots px-6 py-5 sm:px-10 sm:py-8 lg:col-span-5 lg:py-14">
-          <span aria-hidden="true" className="glow-horizon hidden opacity-60 lg:block" />
-          <div className="relative z-raised flex h-full flex-col">
+      <div className="grid grid-cols-1 overflow-hidden rounded-2xl border border-line bg-surface shadow-lg lg:min-h-160 lg:grid-cols-12">
+        <section data-theme="dark" aria-label="Between Gigs" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots lg:col-span-5">
+          <div aria-hidden="true" className="absolute inset-0 hidden grid-cols-3 gap-3 p-3 lg:grid">
+            {mosaic.map((col, c) => (
+              <ul key={c} className={cx("grid content-start gap-3", c === 1 ? "-translate-y-16" : c === 2 ? "-translate-y-6" : "")}>
+                {col.map((src, i) => (
+                  <li key={src}><Reveal effect="fade-up" delay={(c * 3 + i) * 60}><img src={asset(src)} alt="" className="aspect-3/4 w-full rounded-xl object-cover" /></Reveal></li>
+                ))}
+              </ul>
+            ))}
+          </div>
+          <span aria-hidden="true" className="absolute inset-0 hidden bg-linear-to-t from-surface-brand via-surface-brand/80 to-surface-brand/10 lg:block" />
+          <div className="relative z-raised flex h-full flex-col justify-end px-6 py-5 sm:px-10 sm:py-8 lg:py-12">
             <p className="text-eyebrow text-ink-brand uppercase">{eyebrow}</p>
-            <h1 className="mt-2 font-display text-heading-lg text-balance text-ink sm:text-display-sm lg:mt-3 lg:text-display-md">
+            <p className="mt-2 font-display text-heading-lg text-balance text-ink sm:text-display-sm lg:mt-3">
               {title}{accent && <> <span className="glow-text text-ink-brand">{accent}</span></>}
-            </h1>
-            {lead && <div className="mt-4 hidden text-body-lg text-ink-muted lg:block">{lead}</div>}
-            <ul aria-hidden="true" className="mt-8 hidden -space-x-3 lg:mt-auto lg:flex lg:pt-10">
-              {faces.map((f, i) => (
-                <li key={f}><Reveal effect="fade-up" delay={i * 50}><img src={asset(`img/people/${f}.jpg`)} alt="" className="size-11 rounded-full border-2 border-surface-brand object-cover shadow-md" /></Reveal></li>
-              ))}
-            </ul>
+            </p>
+            {lead && <div className="mt-3 hidden text-body-md text-ink-muted lg:block">{lead}</div>}
           </div>
         </section>
-        <div className={cx("px-6 py-6 sm:px-10 sm:py-12 lg:col-span-7", className)}>
-          <div className="mx-auto max-w-md">
-            {lead && <div className="mb-6 text-body-md text-ink-muted lg:hidden">{lead}</div>}
-            {children}
-          </div>
+        <div className={cx("flex items-center px-6 py-8 sm:px-10 sm:py-14 lg:col-span-7", className)}>
+          <div className="mx-auto w-full max-w-md">{children}</div>
         </div>
       </div>
     </Page>

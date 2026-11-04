@@ -44,7 +44,7 @@ function Details() {
   return (
     <AuthShell eyebrow="Professional onboarding" title="Your next chapter" accent="starts here."
       lead={<p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
-      <h2 className="font-display text-display-sm text-ink">Create your account</h2>
+      <h1 className="font-display text-display-sm text-ink">Create your account</h1>
       <p className="mt-2 text-body-md text-ink-muted">Your invitation confirms your email. Tell us your name to get started.</p>
       <form noValidate onSubmit={submit} className="mt-8 grid gap-5">
         <Field label="Full name" error={errors.name}>
@@ -73,7 +73,7 @@ function TicketSignUp({ name }: { name?: string }) {
   return (
     <AuthShell eyebrow="Professional onboarding" title="Your next chapter" accent="starts here.">
       <div className="grid gap-6">
-        <h2 className="font-display text-display-sm text-ink">Finish your account</h2>
+        <h1 className="font-display text-display-sm text-ink">Finish your account</h1>
         <ClerkSlot label="Loading sign-up">
           <SignUp routing="hash" signInUrl={`${basePath}/login/`}
             initialValues={name ? { firstName, lastName: rest.join(" ") || undefined } : undefined}
@@ -92,7 +92,7 @@ function InviteOnly() {
         <div className="flex items-start gap-4">
           <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-xl bg-surface-selected text-ink-brand [&_svg]:size-6"><MailCheck /></span>
           <div>
-            <h2 className="font-display text-display-sm text-ink">Joining is by invitation</h2>
+            <h1 className="font-display text-display-sm text-ink">Joining is by invitation</h1>
             <p className="mt-1 text-body-md text-ink-muted">Open the link in your invitation email to create your account. No invitation yet? Get on the call sheet and we'll email you when it's your turn.</p>
           </div>
         </div>

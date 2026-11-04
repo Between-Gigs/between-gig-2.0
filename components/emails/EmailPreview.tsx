@@ -7,7 +7,8 @@ import { emailTemplates } from "@/emails";
 import { data, type EmailTemplate, type OutboxEmail } from "@/lib/data";
 import { AppPage } from "@/components/site/AppPage";
 import { OwnerPage } from "@/components/owners/kit";
-import { renderPreview, type PreviewScheme } from "./preview";
+import { renderPreview, sampleProps, type PreviewScheme } from "./preview";
+import { inviteStyles, type InviteStyle } from "@/emails/invite";
 import { basePath } from "@/lib/site";
 
 const widths = { desktop: "w-full max-w-160", mobile: "w-full max-w-sm" } as const;
@@ -28,6 +29,7 @@ function Preview({ name }: { name: EmailTemplate }) {
   const [scheme, setScheme] = React.useState<PreviewScheme>("light");
   const [width, setWidth] = React.useState<keyof typeof widths>("desktop");
   const [tab, setTab] = React.useState("html");
+  const [style, setStyle] = React.useState<InviteStyle>("pass");
   const [queued, setQueued] = React.useState<OutboxEmail | null>(null);
   const [email, setEmail] = React.useState<ReturnType<typeof renderPreview> | null>(null);
   const frame = React.useRef<HTMLIFrameElement>(null);
@@ -38,8 +40,9 @@ function Preview({ name }: { name: EmailTemplate }) {
   }, [outboxId, name]);
 
   React.useEffect(() => {
-    setEmail(renderPreview(name, queued?.props, scheme)); // eslint-disable-line react-hooks/set-state-in-effect
-  }, [name, queued, scheme]);
+    const props = name === "invite" ? { ...(queued?.props ?? sampleProps(name) ?? {}), style } : queued?.props;
+    setEmail(renderPreview(name, props, scheme)); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [name, queued, scheme, style]);
 
   // Grow the frame to the email's height, so the page scrolls, not the frame.
   const fit = () => {
@@ -82,6 +85,15 @@ function Preview({ name }: { name: EmailTemplate }) {
             </dl>
             {!queued && <p className="mt-3 border-t border-line pt-3 text-body-sm text-ink-subtle">Shown with fictional sample details.</p>}
           </section>
+          {name === "invite" && (
+            <section aria-labelledby="style-h" className="grid gap-3 rounded-lg border border-line bg-surface p-5">
+              <h2 id="style-h" className="font-display text-heading-md text-ink">Style</h2>
+              <SegmentedControl label="Invite style" value={style} onChange={(v) => setStyle(v as InviteStyle)}
+                options={inviteStyles.map((s) => ({ value: s.id, label: s.label }))} />
+              <p className="text-body-sm text-ink-muted">{inviteStyles.find((s) => s.id === style)?.note}</p>
+              <p className="text-body-sm text-ink-subtle">Same words in every style. Pass is what's sent unless you choose another.</p>
+            </section>
+          )}
           <section aria-labelledby="view-h" className="grid gap-3 rounded-lg border border-line bg-surface p-5">
             <h2 id="view-h" className="font-display text-heading-md text-ink">View</h2>
             <SegmentedControl label="Mail client theme" value={scheme} onChange={(v) => setScheme(v as PreviewScheme)}
