@@ -54,8 +54,14 @@ const ogsc = darkCss.trim().split("\n").map((rule) => {
   return `${selectors.split(",").map((sel) => `[data-ogsc] ${sel}`).join(",")}{${decls}`;
 }).join("\n");
 
-/** `header: false` leaves out the logo above the card, for an email that carries its own (the invite). */
-export function layout({ title, preheader, body, reason, ctx, header = true }: { title: string; preheader: string; body: string; reason: string; ctx: EmailContext; header?: boolean }) {
+/**
+ * `header: false` leaves out the logo above the card, for an email that carries its own (the invite). `paper` sets
+ * a warm page colour and card edge for an email built around photography; `edge: true` lets the card run edge to
+ * edge on phones.
+ */
+export function layout({ title, preheader, body, reason, ctx, header = true, paper, edge = false }: { title: string; preheader: string; body: string; reason: string; ctx: EmailContext; header?: boolean; paper?: { canvas: string; line: string }; edge?: boolean }) {
+  const canvas = paper?.canvas ?? light.bg;
+  const cardLine = paper?.line ?? light.line;
   const site = ctx.siteUrl;
   const logo = (theme: "light" | "dark") => `${ctx.assetBase}/email/between-gigs-wide-on-${theme}.png`;
   // Pads the preheader so clients don't pull body text into the inbox preview.
@@ -85,18 +91,25 @@ a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important
 .e-pad{padding-left:24px!important;padding-right:24px!important}
 .e-h1{font-size:30px!important;line-height:36px!important}
 .e-btn a{display:block!important}
-.e-craft{padding:40px 16px!important}
-.e-craft-card{padding:36px 20px 28px!important}
+.e-edge{padding:0!important}
+.e-edge-card{border-radius:0!important;border-left:0!important;border-right:0!important}
+.e-craft-pad{padding-left:24px!important;padding-right:24px!important}
+.e-craft-hero{padding-top:36px!important;padding-bottom:36px!important}
 .e-craft-h1{font-size:34px!important;line-height:38px!important}
+}
+@media (max-width:360px){
+.e-craft-h1{font-size:29px!important;line-height:33px!important}
+.e-craft-h2{font-size:22px!important;line-height:28px!important}
+.e-craft-pad{padding-left:20px!important;padding-right:20px!important}
 }
 @media (prefers-color-scheme:dark){${darkCss}}
 ${ogsc}
 </style>
 </head>
-<body class="e-body" style="margin:0;padding:0;background-color:${light.bg};color:${light.ink};font-family:${FONT_UI}">
-<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:${light.bg};opacity:0">${esc(preheader)}${spacer}</div>
-<table role="presentation" class="e-outer" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${light.bg}" style="background-color:${light.bg}">
-<tr><td align="center" style="padding:32px 12px">
+<body class="e-body" style="margin:0;padding:0;background-color:${canvas};color:${light.ink};font-family:${FONT_UI}">
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:${canvas};opacity:0">${esc(preheader)}${spacer}</div>
+<table role="presentation" class="e-outer" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${canvas}" style="background-color:${canvas}">
+<tr><td align="center" class="${edge ? "e-edge" : ""}" style="padding:32px 12px">
 <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
 <table role="presentation" class="e-container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;border-collapse:separate;border-spacing:0">
 ${header ? `<tr><td class="e-pad" style="padding:0 8px 20px">
@@ -105,7 +118,7 @@ ${header ? `<tr><td class="e-pad" style="padding:0 8px 20px">
 <!--[if !mso]><!--><div class="e-logo-dark" style="display:none;max-height:0;overflow:hidden;mso-hide:all"><img src="${esc(logo("dark"))}" width="136" height="42" alt="Between Gigs" style="display:block;width:136px;height:42px;border:0;color:${dark.ink};font-family:${FONT_DISPLAY};font-size:20px;font-weight:600"></div><!--<![endif]-->
 </a>
 </td></tr>` : ""}
-<tr><td class="e-card" bgcolor="${light.surface}" style="background-color:${light.surface};border:1px solid ${light.line};border-radius:20px;overflow:hidden">
+<tr><td class="e-card${edge ? " e-edge-card" : ""}" bgcolor="${light.surface}" style="background-color:${light.surface};border:1px solid ${cardLine};border-radius:${edge ? 12 : 20}px;overflow:hidden">
 ${body}
 </td></tr>
 <tr><td class="e-pad" style="padding:24px 16px 8px;font-family:${FONT_UI};font-size:12px;line-height:18px;color:${light.inkSubtle}">
