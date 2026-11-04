@@ -532,7 +532,8 @@ function Anchored({ id, children }: { id: SpotId; children: React.ReactNode }) {
       <span aria-hidden="true" className="absolute -top-2 size-4 rotate-45 rounded-xs border-t-2 border-l-2 border-ink bg-surface" style={{ left: pos.arrow - 8 }} />
       {children}
     </div>,
-    document.body,
+    // Inside <main>, so it stays in the page's main landmark; main isn't positioned, so document coordinates hold.
+    document.getElementById("main") ?? document.body,
   );
 }
 
