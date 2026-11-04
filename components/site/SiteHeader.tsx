@@ -39,6 +39,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
     if (auth.provider === "sample") router.push("/login/?signedOut=1");
   };
 
+  const displayName = session ? (session.name || session.email).replace(/\s*\(.*\)$/, "") : "";
   const menu: MenuEntry[] = session ? [
     { heading: session.role === "owner" ? "Signed in as owner" : "Signed in" },
     ...(session.role === "owner"
@@ -71,12 +72,17 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
           <ThemeToggle size="sm" showLabel={false} className="pr-0.5!" />
           {app ? null : loading ? <span className="h-11 w-20" aria-hidden="true" /> : session ? (
             <Menu align="end" items={menu}
-              header={<div className="px-3 pt-1 pb-2"><p className="truncate text-label-md text-ink">{session.name || "Gigster"}</p><p className="truncate text-body-sm text-ink-muted">{session.email}</p></div>}
+              header={
+                <div className="flex items-center gap-3 px-3 pt-2 pb-3">
+                  <Avatar name={displayName} size="lg" />
+                  <div className="min-w-0"><p className="truncate text-label-md text-ink">{session.name || "Gigster"}</p><p className="truncate text-body-sm text-ink-muted">{session.email}</p></div>
+                </div>
+              }
               trigger={
+                // The avatar is the account button: a ring that brightens on hover and while the menu is open.
                 <button type="button" aria-label={`Account: ${session.name || session.email}`}
-                  className="inline-flex min-h-11 items-center gap-2.5 rounded-full border border-line bg-surface py-1 pr-1 pl-3 text-ink transition-shadow duration-fast hover:shadow-md">
-                  <MenuIcon className="size-4" aria-hidden="true" />
-                  <Avatar name={(session.name || session.email).replace(/\s*\(.*\)$/, "")} size="sm" />
+                  className="grid size-11 place-items-center rounded-full ring-2 ring-line transition-shadow duration-fast hover:ring-ink-brand aria-expanded:ring-ink-brand">
+                  <Avatar name={displayName} size="md" />
                 </button>
               } />
           ) : (
@@ -84,9 +90,8 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
               {!pathname.startsWith("/login") && <Link href="/login/" className="hidden min-h-11 items-center rounded-full px-3 text-label-md text-ink hover:bg-surface-hover friendly:border-2 friendly:border-line friendly:px-4 sm:inline-flex">Log in</Link>}
               <Menu align="end" items={[...links.map((l) => ({ label: l.label, checked: current(l.href) || undefined, onSelect: () => router.push(l.href) })), "separator" as const, { label: "Log in", icon: <UserRound />, onSelect: () => router.push("/login/") }]}
                 trigger={
-                  <button type="button" aria-label="Menu" className="inline-flex min-h-11 items-center gap-2.5 rounded-full border border-line bg-surface py-1 pr-1 pl-3 text-ink transition-shadow duration-fast hover:shadow-md">
-                    <MenuIcon className="size-4" aria-hidden="true" />
-                    <span aria-hidden="true" className="grid size-8 place-items-center rounded-full bg-ink-subtle text-bg"><UserRound className="size-4" /></span>
+                  <button type="button" aria-label="Menu" className="grid size-11 place-items-center rounded-full ring-2 ring-line transition-shadow duration-fast hover:ring-ink-brand aria-expanded:ring-ink-brand">
+                    <span aria-hidden="true" className="grid size-8 place-items-center rounded-full bg-surface-selected text-ink-brand"><UserRound className="size-4" /></span>
                   </button>
                 } />
             </>

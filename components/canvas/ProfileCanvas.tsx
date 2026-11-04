@@ -3,6 +3,7 @@ import { Badge, Banner, Button, Field, Input, RadioGroup, SegmentedControl, Skel
 import { Reveal, startPageTransition } from "@ds/motion";
 import { ArrowRight, Check, Copy, Eye, Link2, MapPin, MessageSquareWarning, PartyPopper, PenLine, Pencil, Plus, Share2, WandSparkles } from "lucide-react";
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
 import { basisLabel, laServiceAreas, monthStatusLabel, offSetServices, onSetSkills } from "@/lib/data/taxonomy";
 import { useRequireRole } from "@/lib/guard";
@@ -382,8 +383,13 @@ function Canvas({ personId }: { personId: string }) {
             <div className={cx(rise && "canvas-rise")}>
               <ProfileView person={person} fields={d} mode="own"
                 part={(id, p) => <Spot id={id} kind={p.kind} hint={p.hint}>{p.content}</Spot>}
-                aside={<Rail first={first} panel={editing && wide ? <EditorPanel id={editing} body={editorFor(editing, d, set, personId, (go) => live.guard("photo", go))} /> : null} />} />
+                aside={<Rail first={first} panel={null} />} />
             </div>
+            {editing && wide && (
+              <Anchored id={editing}>
+                <EditorPanel id={editing} body={editorFor(editing, d, set, personId, (go) => live.guard("photo", go))} />
+              </Anchored>
+            )}
             {editing && !wide && (
               <div data-editor="" className="fixed inset-x-0 bottom-0 z-overlay max-h-3/4 overflow-y-auto rounded-t-xl border-t border-line bg-surface-raised shadow-lg">
                 <EditorPanel id={editing} sheet body={editorFor(editing, d, set, personId, (go) => live.guard("photo", go))} />
@@ -493,6 +499,43 @@ function Rail({ first, panel }: { first: string; panel: React.ReactNode }) {
   );
 }
 
+/**
+ * Wide screens: the open part's controls float right under the part that was clicked, with a small pointer to it, so
+ * editing happens where the eye already is. Placed in the page (portal) from the part's position, kept inside the
+ * viewport's width, and re-measured as the page reflows; it scrolls into view as it opens.
+ */
+function Anchored({ id, children }: { id: SpotId; children: React.ReactNode }) {
+  const [pos, setPos] = React.useState<{ top: number; left: number; width: number; arrow: number } | null>(null);
+  const box = React.useRef<HTMLDivElement>(null);
+  React.useLayoutEffect(() => {
+    const spot = document.querySelector<HTMLElement>(`[data-spot="${id}"]`);
+    if (!spot) return;
+    const place = () => {
+      const r = spot.getBoundingClientRect();
+      const width = Math.min(480, window.innerWidth - 32);
+      const left = Math.max(16, Math.min(r.left + window.scrollX, window.innerWidth - width - 16));
+      const arrow = Math.max(24, Math.min(r.left + window.scrollX + Math.min(r.width, 64) / 2 - left, width - 24));
+      setPos({ top: r.bottom + window.scrollY + 14, left, width, arrow });
+    };
+    place();
+    const ro = new ResizeObserver(place);
+    ro.observe(spot); ro.observe(document.body);
+    window.addEventListener("resize", place);
+    return () => { ro.disconnect(); window.removeEventListener("resize", place); };
+  }, [id]);
+  React.useEffect(() => {
+    if (pos) box.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [pos?.top, id]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!pos) return null;
+  return createPortal(
+    <div ref={box} data-anchored="" className="absolute z-overlay scroll-mb-6" style={{ top: pos.top, left: pos.left, width: pos.width }}>
+      <span aria-hidden="true" className="absolute -top-2 size-4 rotate-45 rounded-xs border-t-2 border-l-2 border-ink bg-surface" style={{ left: pos.arrow - 8 }} />
+      {children}
+    </div>,
+    document.body,
+  );
+}
+
 /** The controls for the open part: in the column beside the page on wide screens, a sheet from the bottom on phones. */
 function EditorPanel({ id, body, sheet = false }: { id: SpotId; body: React.ReactNode; sheet?: boolean }) {
   const { d, errors, noted, close, advance } = useCanvas();
@@ -507,7 +550,7 @@ function EditorPanel({ id, body, sheet = false }: { id: SpotId; body: React.Reac
   }, [id]);
   return (
     <div ref={ref} data-editor="" role="group" aria-label={`Editing: ${LABEL[id]}`} onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); close(); } }}
-      style={sheet ? undefined : { maxHeight: "calc(100dvh - 8rem)" }}
+      style={sheet ? undefined : { maxHeight: "calc(100dvh - 10rem)" }}
       className={cx("grid gap-5", sheet ? "p-5 pb-6" : "overflow-y-auto rounded-xl border-2 border-ink bg-surface p-6 shadow-lg")}>
       <div className="flex items-center justify-between gap-3">
         <p className="flex items-center gap-3 font-display text-heading-md text-ink"><Icon3D name={ICON[id]} className="size-9" />{LABEL[id]}</p>
