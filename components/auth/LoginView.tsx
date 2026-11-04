@@ -67,7 +67,7 @@ function ClerkLogin() {
       <div className="grid gap-6">
         <div>
           <h1 className="font-display text-display-sm text-ink">Welcome back</h1>
-          <p className="mt-2 text-body-md text-ink-muted">Sign in to your Between Gigs profile.</p>
+          <p className="mt-2 text-body-md text-ink-muted">Use the email and password you created.</p>
         </div>
         {params.get("signedOut") && <Banner tone="success" title="You're signed out">See you next time.</Banner>}
         {params.get("__clerk_status") === "client_mismatch" && <Banner tone="warning" title="This sign-in link is out of date">
@@ -80,7 +80,7 @@ function ClerkLogin() {
             initialValues={{ emailAddress: params.get("email") ?? undefined }}
             fallbackRedirectUrl={`${basePath}${destination(params.get("next"), "gigster")}`} />}
         </ClerkSlot>}
-        <p className="border-t border-line pt-5 text-body-sm text-ink-muted">New to Between Gigs? Joining is by invitation: open the link in your invite email to create your account. Joined with Google or an email code before? Sign in the same way.</p>
+        <p className="border-t border-line pt-5 text-body-sm text-ink-muted">New here? <Link href="/join/" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2">Create an account</Link>. Already joined with Google or an email code? Use that same sign-in method; account recovery keeps your existing identity.</p>
       </div>
     </AuthShell>
   );
