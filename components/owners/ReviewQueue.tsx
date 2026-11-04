@@ -62,7 +62,7 @@ function Queue() {
             <ol>
               {rows.map(({ person: p, fields, completeness }, i) => (
                 <Row key={p.id} href={reviewHref(p.id)} title={p.name}
-                  leading={<PersonPhoto id={p.id} name={p.name} src={fields?.photo || undefined} alt="" className="size-10 rounded-md" textClass="text-label-md" />}
+                  leading={<PersonPhoto id={p.id} name={p.name} src={fields?.photo || undefined} alt="" className="size-10 rounded-full" textClass="text-label-md" />}
                   badge={i === 0 ? <Badge tone="neutral" size="sm">Oldest</Badge> : undefined}
                   subtitle={[fields?.position, fields?.services.join(", ")].filter(Boolean).join(" · ")}
                   meta={<><Meter value={completeness * 100} label="Profile complete" /><span className="w-36 text-right">Sent {p.submittedAt ? ago(p.submittedAt).toLowerCase() : ""}</span></>} />

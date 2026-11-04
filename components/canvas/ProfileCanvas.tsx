@@ -574,17 +574,20 @@ function Spot({ id, kind, hint, children }: { id: SpotId; kind: PartKind; hint: 
         <button type="button" data-spot-edit="" onClick={() => open(id)} aria-label={label} aria-pressed={active}
           className={cx("group text-left transition duration-base", round, ring, glow && "spot-next",
             kind === "photo" ? "block w-full overflow-hidden"
-              : kind === "title" ? "flex w-full items-center gap-3 bg-surface-sunken px-4 py-3 hover:bg-surface-selected"
-              : kind === "line" ? "inline-flex min-h-10 items-center gap-2 bg-surface-sunken py-1.5 pr-4 pl-2 hover:bg-surface-selected"
-              : "flex w-full items-center gap-3 bg-surface-sunken p-5 hover:bg-surface-selected")}>
+              : kind === "title" ? "flex w-full items-center justify-center gap-3 border border-dashed border-line-strong px-4 py-3 hover:border-ink"
+              : kind === "line" ? "inline-flex min-h-11 items-center gap-2.5 py-1 pr-3 pl-1 hover:bg-surface-hover"
+              : "flex w-full items-center justify-between gap-4 border border-line bg-surface px-5 py-4 hover:border-ink-muted hover:shadow-sm")}>
           {kind === "photo" ? (
             <span className="relative grid aspect-square place-items-center rounded-full bg-surface-sunken text-ink-muted group-hover:bg-surface-selected">
               <UserRound className="absolute size-3/5 text-ink-subtle opacity-40" strokeWidth={1} aria-hidden="true" />
               <span className="relative mt-auto mb-3 inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-label-sm text-ink shadow-sm"><Plus className="size-3.5" aria-hidden="true" />{hint}</span>
             </span>
-          ) : <>
-            <span aria-hidden="true" className={cx("grid shrink-0 place-items-center rounded-full bg-surface text-ink-brand shadow-xs", kind === "line" ? "size-7" : "size-9")}><Plus className="size-4" /></span>
-            <span className={cx("text-ink-muted group-hover:text-ink", kind === "title" ? "font-display text-display-sm" : kind === "line" ? "text-body-md" : "text-body-lg")}>{hint}</span>
+          ) : kind === "block" ? <>
+            <span className="text-body-md text-ink-muted group-hover:text-ink">{hint}</span>
+            <span className="shrink-0 text-label-md text-ink underline underline-offset-4">Add</span>
+          </> : <>
+            <span aria-hidden="true" className={cx("grid shrink-0 place-items-center rounded-full border border-line-strong text-ink", kind === "line" ? "size-7" : "size-9")}><Plus className="size-4" /></span>
+            <span className={cx("text-ink-muted group-hover:text-ink", kind === "title" ? "font-display text-heading-lg" : "text-body-md")}>{hint}</span>
           </>}
         </button>
         {note && <Badge tone="warning" size="sm" className="absolute -top-3 right-3 shadow-sm">Team note</Badge>}

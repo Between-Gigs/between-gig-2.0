@@ -95,7 +95,7 @@ export function Panel({ title, id, aside, footer, flush = false, landmark = true
     });
   };
   return (
-    <Tag aria-labelledby={title && landmark ? hid : undefined} className={cx("flex min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-surface", className)}>
+    <Tag aria-labelledby={title && landmark ? hid : undefined} className={cx("flex min-w-0 flex-col overflow-hidden rounded-xl border border-line bg-surface", className)}>
       {title && (
         <header className={cx("flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 py-3", open && "border-b border-line")}>
           {collapsible ? (
@@ -235,15 +235,18 @@ export function StatTab({ label, value, hint, icon, selected, attention = false,
 }) {
   return (
     <button type="button" role="tab" aria-selected={selected} aria-controls={controls} onClick={onSelect} data-tilt=""
-      className={cx("lift group grid h-full min-w-0 gap-2 rounded-lg border p-4 text-left",
-        selected ? "border-ink-brand bg-surface-selected" : "border-line bg-surface hover:border-line-strong hover:bg-surface-hover")}>
-      <span className="flex min-w-0 items-center gap-2.5 text-label-md text-ink-muted">
-        <span className={cx("grid size-7 shrink-0 place-items-center rounded-md [&_svg]:size-4", attention ? "bg-action text-on-action" : selected ? "bg-surface text-ink-brand" : "bg-surface-sunken text-ink-muted")}>{icon}</span>
-        <span className="truncate">{label}</span>
+      aria-label={`${label}: ${value ?? "none"}, ${hint}${attention ? ", needs attention" : ""}`}
+      className={cx("lift group relative grid h-full min-w-0 gap-3 rounded-xl bg-surface p-5 text-left transition-shadow duration-fast",
+        selected ? "ring-2 ring-ink" : "ring-1 ring-line hover:shadow-md")}>
+      {/* Airbnb-style tile: a 3D icon, the number, then what it counts. The one that needs doing today gets a dot. */}
+      <span className="flex items-start justify-between gap-2">
+        <span className="shrink-0">{icon}</span>
+        {attention && <span className="mt-1 size-2.5 rounded-full bg-action ring-4 ring-surface-selected" aria-hidden="true" />}
       </span>
-      <span className="flex items-baseline gap-2">
-        <span className="font-display text-heading-lg text-ink tabular-nums">{value ?? "—"}</span>
-        <span className="truncate text-body-sm text-ink-subtle max-sm:hidden">{hint}</span>
+      <span className="grid gap-0.5">
+        <span className="font-display text-display-sm text-ink tabular-nums">{value ?? "—"}</span>
+        <span className="truncate text-label-md text-ink">{label}</span>
+        <span className="truncate text-body-sm text-ink-muted max-sm:hidden">{hint}</span>
       </span>
     </button>
   );

@@ -84,11 +84,14 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
     } catch { /* closed the share sheet */ }
   };
 
-  const stats: [string, string][] = [
-    [f.years || "–", f.years === "1" ? "Year on set" : "Years on set"],
-    [String(credits.length), credits.length === 1 ? "Credit" : "Credits"],
-    [shortMonth[f.monthStatus], "This month"],
-  ];
+  // Only the numbers that say something: a zero reads as a weakness, so it's left out (the editor shows years to fill).
+  const offered = helps.length || services.length;
+  const stats: [string, string, boolean][] = ([
+    [f.years || "", f.years === "1" ? "Year on set" : "Years on set", !!f.years || editing],
+    [String(offered), offered === 1 ? "Service" : "Services", offered > 0],
+    [String(credits.length), credits.length === 1 ? "Credit" : "Credits", credits.length > 0],
+  ] as [string, string, boolean][]).filter(([, , keep]) => keep);
+  if (stats.length < 2) stats.push([shortMonth[f.monthStatus], "This month", true]);
 
   const identity = (
     <section aria-label={`About ${first}`} className="grid grid-cols-12 items-center gap-4 rounded-2xl bg-surface p-6 shadow-lg sm:p-8">
@@ -110,10 +113,10 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
         </div>
       </div>
       <dl className="col-span-5 grid divide-y divide-line">
-        {stats.map(([v, k], i) => (
+        {stats.map(([v, k]) => (
           <div key={k} className="grid gap-0.5 py-3 first:pt-0 last:pb-0">
             <dt className="order-2 text-caption text-ink-muted">{k}</dt>
-            <dd className="order-1 font-display text-heading-lg text-ink">{i === 0 && part ? part("years", { content: <span>{v}</span>, hint: "Add", kind: "line" }) : v}</dd>
+            <dd className="order-1 font-display text-heading-lg text-ink">{k.startsWith("Year") && part ? part("years", { content: <span>{v}</span>, hint: "Years", kind: "line" }) : v}</dd>
           </div>
         ))}
       </dl>

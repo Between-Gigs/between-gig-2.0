@@ -186,7 +186,7 @@ function PersonRow({ row }: { row: PersonSummary }) {
   const { person: p, fields: f } = row;
   return (
     <Row href={`/owners/people/${p.id}/`} title={p.name || p.email}
-      leading={<Avatar row={row} className="size-10 rounded-md" />}
+      leading={<Avatar row={row} className="size-10 rounded-full" />}
       badge={<PersonStatusBadge status={p.status} size="sm" />}
       subtitle={f?.position ? [f.position, f.areas.join(" · ")].filter(Boolean).join(" · ") : p.name ? p.email : `Waitlist · ZIP ${p.waitlistZip}`}
       meta={<>{progress(row)}<span className="w-36 text-right">Active {ago(p.updatedAt).toLowerCase()}</span></>} />

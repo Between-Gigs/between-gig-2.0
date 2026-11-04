@@ -1,6 +1,7 @@
 "use client";
 import { Button, EmptyState, SegmentedControl, Skeleton, cx } from "@ds/components";
-import { CircleCheck, ClipboardCheck, Inbox, ListPlus, MessageSquareWarning, Play, Send } from "lucide-react";
+import { Inbox, Play, Send } from "lucide-react";
+import { Icon3D } from "@/components/ui/Icon3D";
 import * as React from "react";
 import { data, type DashboardSummary, type PersonStatus, type PersonSummary, type Session, type WaitlistRow } from "@/lib/data";
 import { waitlistCategoryLabel } from "@/lib/data/taxonomy";
@@ -113,10 +114,10 @@ function Dashboard({ session }: { session: Session }) {
           </>
         }>
         <div role="tablist" aria-label="At a glance" className="grid shrink-0 grid-cols-2 gap-3 xl:grid-cols-4">
-          <StatTab controls="dash-list" label="Waiting for review" value={d.counts.submitted} hint="oldest first" icon={<ClipboardCheck />} attention={d.counts.submitted > 0} selected={cohort === "all" && view === "submitted"} onSelect={() => pick("submitted")} />
-          <StatTab controls="dash-list" label="Making edits" value={d.counts.changes_requested} hint="sent back with notes" icon={<MessageSquareWarning />} selected={cohort === "all" && view === "changes_requested"} onSelect={() => pick("changes_requested")} />
-          <StatTab controls="dash-list" label="Live profiles" value={d.counts.approved} hint="clients can find them" icon={<CircleCheck />} selected={cohort === "all" && view === "approved"} onSelect={() => pick("approved")} />
-          <StatTab controls="dash-list" label="Ready to invite" value={d.waitlist.not_invited} hint={`of ${d.waitlist.total}`} icon={<ListPlus />} selected={cohort === "all" && view === "not_invited"} onSelect={() => pick("not_invited")} />
+          <StatTab controls="dash-list" label="Waiting for review" value={d.counts.submitted} hint="oldest first" icon={<Icon3D name="clipboard" className="size-10" />} attention={d.counts.submitted > 0} selected={cohort === "all" && view === "submitted"} onSelect={() => pick("submitted")} />
+          <StatTab controls="dash-list" label="Making edits" value={d.counts.changes_requested} hint="sent back with notes" icon={<Icon3D name="memo" className="size-10" />} selected={cohort === "all" && view === "changes_requested"} onSelect={() => pick("changes_requested")} />
+          <StatTab controls="dash-list" label="Live profiles" value={d.counts.approved} hint="clients can find them" icon={<Icon3D name="check_mark_button" className="size-10" />} selected={cohort === "all" && view === "approved"} onSelect={() => pick("approved")} />
+          <StatTab controls="dash-list" label="Ready to invite" value={d.waitlist.not_invited} hint={`of ${d.waitlist.total}`} icon={<Icon3D name="envelope" className="size-10" />} selected={cohort === "all" && view === "not_invited"} onSelect={() => pick("not_invited")} />
         </div>
 
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 lg:grid-cols-12">
@@ -135,7 +136,7 @@ function Dashboard({ session }: { session: Session }) {
                 <ul>
                   {waitlist.map((w, i) => (
                     <li key={w.signup.id} data-fit="" className={cx("flex min-h-14 min-w-0 items-center gap-4 border-t border-line px-5 py-2.5 first:border-t-0", i >= PHONE_ROWS && !expanded && "max-lg:hidden")}>
-                      <span className="grid size-10 shrink-0 place-items-center rounded-md bg-surface-sunken text-ink-subtle"><Send className="size-4" aria-hidden="true" /></span>
+                      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-surface-sunken text-ink-subtle"><Send className="size-4" aria-hidden="true" /></span>
                       <span className="grid min-w-0 flex-1">
                         <span className="truncate text-label-md text-ink">{w.signup.email}</span>
                         <span className="truncate text-body-sm text-ink-muted tabular-nums">ZIP {w.signup.zip}{w.signup.category ? ` · ${waitlistCategoryLabel(w.signup.category)}` : ""}</span>
@@ -151,7 +152,7 @@ function Dashboard({ session }: { session: Session }) {
                     return (
                       <Row key={p.id} onOpen={() => setDrawer({ rows, index: i, from: view, invitedOnly: cohort === "invited" })} title={p.name || p.email}
                         className={cx(i >= PHONE_ROWS && !expanded && "max-lg:hidden")}
-                        leading={<PersonPhoto id={p.id} name={p.name || "?"} src={r.fields?.photo || undefined} alt="" className="size-10 rounded-md" textClass="text-label-md" />}
+                        leading={<PersonPhoto id={p.id} name={p.name || "?"} src={r.fields?.photo || undefined} alt="" className="size-10 rounded-full" textClass="text-label-md" />}
                         badge={view === "building" ? <PersonStatusBadge status={p.status} size="sm" /> : undefined}
                         subtitle={r.fields?.position ? [r.fields.position, r.fields.areas.join(" · ")].filter(Boolean).join(" · ") : p.email}
                         meta={<>{r.fields && <Meter value={r.completeness * 100} label="Profile complete" />}<span className="w-24 text-right">{ago((view === "submitted" ? p.submittedAt : p.updatedAt) ?? p.updatedAt)}</span></>} />
