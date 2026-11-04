@@ -1,7 +1,7 @@
 // Thumbnails for the Preview guide (/preview/): a small screenshot of every page its links open, so the
 // links show where they go. Run after `pnpm build` (uses out/ and the preinstalled Chromium):
 //   pnpm thumbs            (or: node scripts/preview-thumbs.mjs canvas elena  for just those)
-// Writes public/thumbs/<name>.jpg (640×400, dark theme, the site's default). Commit them; re-run when a
+// Writes public/thumbs/<name>.jpg (1280×800, dark theme, the site's default; sharp on high-density screens). Commit them; re-run when a
 // page changes enough that its thumbnail no longer matches.
 import fs from "node:fs";
 import path from "node:path";
@@ -28,7 +28,9 @@ export const thumbs = [
   { name: "owner", path: "/owners/", setup: as("owner") },
   { name: "invite", path: "/join/?invite=riley-7q2m", setup: "window.bgSample.reset()" },
   { name: "grace", path: "/profile/", setup: as("gigster", "grace-liu") },
-  { name: "elena", path: "/profile/edit/", setup: as("gigster", "elena-petrova") },
+  { name: "elena", path: "/profile/canvas/", setup: as("gigster", "elena-petrova") },
+  { name: "curtain", path: "/preview/curtain/", wait: 4500 },
+  { name: "studio", path: "/studio/" },
   { name: "workspace", path: "/workspace/" },
   { name: "canvas", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair") },
   { name: "imani", path: "/profile/", setup: as("gigster", "imani-carter") },
@@ -43,8 +45,8 @@ const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PAT
 try {
   const only = process.argv.slice(2);
   for (const t of thumbs.filter((x) => !only.length || only.includes(x.name))) {
-    // 1280×800 at half scale: a 640×400 image of what a laptop shows.
-    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 0.5, colorScheme: "dark", reducedMotion: "reduce" });
+    // What a laptop shows, at full size so the cards stay crisp.
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, colorScheme: "dark", reducedMotion: t.wait ? "no-preference" : "reduce" });
     await context.addInitScript(() => { try { localStorage.setItem("bg-theme", "dark"); } catch { /* ignore */ } });
     const page = await context.newPage();
     if (t.setup) {
@@ -55,8 +57,8 @@ try {
     await page.goto(`${url}${t.path}`);
     await page.waitForLoadState("networkidle");
     await page.locator("h1").first().waitFor({ timeout: 8000 }).catch(() => {});
-    await page.waitForTimeout(600);
-    await page.screenshot({ path: path.join(OUT, `${t.name}.jpg`), type: "jpeg", quality: 72 });
+    await page.waitForTimeout(t.wait ?? 600); // the curtain opens over a few seconds
+    await page.screenshot({ path: path.join(OUT, `${t.name}.jpg`), type: "jpeg", quality: 70 });
     await context.close();
     process.stdout.write(`thumb ${t.name} ✓\n`);
   }
