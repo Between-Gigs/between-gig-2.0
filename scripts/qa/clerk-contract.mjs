@@ -11,7 +11,7 @@ const preset = process.env.BG_CONTRACT_DIR;
 const isolated = preset ?? fs.mkdtempSync(path.join(path.dirname(root), ".bg-clerk-contract-"));
 const basePath = "/between-gig-2.0";
 async function build() {
-  for (const name of ["app", "components", "content", "emails", "lib", "packages", "public", "scripts", "package.json", "tsconfig.json", "postcss.config.mjs", "pnpm-lock.yaml"])
+  for (const name of ["app", "components", "content", "emails", "lib", "packages", "public", "scripts", "styles", "package.json", "tsconfig.json", "postcss.config.mjs", "pnpm-lock.yaml"])
     fs.cpSync(path.join(root, name), path.join(isolated, name), { recursive: true });
   fs.symlinkSync(path.join(root, "node_modules"), path.join(isolated, "node_modules"), "dir");
   fs.writeFileSync(path.join(isolated, "next.config.ts"), `import type { NextConfig } from "next";
