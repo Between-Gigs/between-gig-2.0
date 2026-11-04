@@ -209,7 +209,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
             <Section title="Work" meta={`${portfolio.length} images`}>
               <ul className="grid grid-cols-2 gap-3 md:grid-cols-4 md:grid-rows-2">
                 {portfolio.map((it, i) => (
-                  <li key={it.src} className={cx(i === 0 ? "col-span-2 md:row-span-2" : "aspect-square md:aspect-auto", portfolio.length === 4 && i === 1 && "md:col-span-2")}>
+                  <li key={it.src} className={cx(i === 0 ? "col-span-2 aspect-video md:row-span-2 md:aspect-auto" : "aspect-square md:aspect-auto", portfolio.length === 4 && i === 1 && "md:col-span-2", portfolio.length % 2 === 0 && i === portfolio.length - 1 && "max-md:col-span-2 max-md:aspect-video")}>
                     <button type="button" onClick={() => setLightbox(i)} aria-label={`Open image: ${it.caption}`} className="group relative block size-full min-h-40 overflow-hidden rounded-2xl">
                       <img src={asset(it.src)} alt="" loading="lazy" className="absolute inset-0 size-full object-cover transition-transform duration-slow group-hover:scale-105" />
                       <span data-theme="dark" className="absolute inset-x-0 bottom-0 bg-linear-to-t from-surface-brand to-transparent p-3 pt-10 text-left text-label-md text-ink opacity-0 transition duration-base group-hover:opacity-100 group-focus-visible:opacity-100">{it.caption}</span>
