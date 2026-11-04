@@ -1,19 +1,16 @@
 /*
  * Invite to the ~500 waitlist sign-ups: their personal link to create a profile.
- * Design: direction B, "Warm & friendly" (chosen by the client, Nov 2026). The centred logo sits above a white
- * card: a peach hero with the "You're invited" pill, the 800-weight headline with a mint highlighter under
- * "More possibilities.", the lead, one forest pill button, the tagline and the personal-link pill; then the
- * flat-lay photo band; "Three steps, about 10 minutes" as three pastel cards (mint, butter, sage) with number
- * circles and 3D icons; the dashed "Production comes first" note; the founders' sign-off and the plain link.
- * Built as an email, not a page: tables, inline styles, 600px wide and fluid below that; the button and pills are
- * bulletproof table cells. Plus Jakarta Sans loads by <link> where clients allow it and falls back to system sans.
- * The highlighter is a background gradient over a solid mint fallback, so a client that drops gradients shows a
- * mint marker block, and one that drops both shows plain forest text. The card's own palette stays light in every
- * client and theme (only the canvas and footer follow dark mode). On phones (≤620px) the padding, type and button
- * adapt and the step icons hide; Outlook desktop shows square corners.
- * The photo band (public/email/craft-top.jpg) is cropped from generated concept art, not a photograph: Figma AI
- * (gpt-image-2.5-flare), 4 Nov 2026, flat-lay of the tools of the trade; full image public/email/craft-border.jpg,
- * source file figma.com/design/LhX02bL5JSOZ3xrKngyfaQ. The 3D icons are public/img/icons3d (see its README).
+ * Design: the client's confirmed invite, "Your craft. More possibilities." (Justin, 4 Nov 2026: "this is the email we
+ * will use"), built faithfully: a flat-lay of the tools of the trade frames a cream card with the logo, "You're
+ * invited", the serif headline, one dark-green button and the tagline. It stays this design even though the site's
+ * product screens moved to direction B; the email is its own approved piece. Below the frame, on the same warm
+ * paper: the three steps, the founders' note and the plain link.
+ * Responsive: on wide screens the photo frames the card (a background image, with a sand colour where a client hides
+ * backgrounds, e.g. Outlook on Windows); on phones the frame's padding drops and a strip of the same photo sits above
+ * the card instead, so the photo is never just a sliver.
+ * The photo is generated concept art matching the approved concept, not a photograph: Figma AI (gpt-image-2.5-flare),
+ * 4 Nov 2026; public/email/craft-border.jpg (frame) and craft-top.jpg (phone strip), source file
+ * figma.com/design/LhX02bL5JSOZ3xrKngyfaQ. Swap them for the original photograph when it's available.
  */
 import { defaultContext, esc, layout, textFooter, type EmailContext, type RenderedEmail } from "./layout";
 
@@ -24,14 +21,11 @@ export interface InviteProps {
 }
 
 const REASON = "You're receiving this because you joined the Between Gigs call sheet.";
-const FONT = "'Plus Jakarta Sans','Avenir Next','Segoe UI',Helvetica,Arial,sans-serif";
-const FONT_HREF = "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap";
-/** Direction B's palette (the mockup's friendly.css), literal so the card looks the same in every client and theme. */
-const b = {
-  canvas: "#f4eee4", white: "#ffffff", peach: "#ffe2cc", note: "#fff6f0", mint: "#1fdc8c",
-  mintSoft: "#d6f6e6", butter: "#fff0bf", sage: "#e3ebdd", dash: "#e7d9c6",
-  ink: "#0f3d29", body: "#2b4a3b", muted: "#4b6357", noteInk: "#3c5a4b",
-} as const;
+const SANS = "Figtree,'Segoe UI',Helvetica,Arial,sans-serif";
+const SERIF = "Newsreader,Georgia,'Times New Roman',serif";
+const FONT_HREF = "https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Newsreader:opsz,wght@6..72,500&display=swap";
+/** The concept's own palette: a warm studio table and a cream card, light in every client and theme. */
+const k = { canvas: "#efe9df", sand: "#e9e1d3", cream: "#fbf8f2", paper: "#f7f3ec", ink: "#0f3d29", muted: "#4a5249", rule: "#1fdc8c", line: "#e4dccd" } as const;
 
 /** The locked text. */
 export const INVITE_COPY = {
@@ -51,85 +45,71 @@ export const INVITE_COPY = {
   production: "Production comes first. Pause your availability when the call comes, and come back when you're ready.",
 } as const;
 
-const lead = () => INVITE_COPY.lead.join(" ").replace("— ", "—");
 const T = `role="presentation" cellpadding="0" cellspacing="0" border="0"`;
-const icon = (ctx: EmailContext, name: string, size: number) =>
-  `<img src="${esc(`${ctx.assetBase}/img/icons3d/${name}.png`)}" width="${size}" height="${size}" alt="" style="display:block;width:${size}px;height:${size}px;border:0">`;
 
-/** Peach hero: pill, headline with the highlighter, lead, button, tagline, personal-link pill. */
+/** The hero: the flat-lay frames the cream card (phones: a photo strip above it instead). */
 function hero(inviteUrl: string, email: string, ctx: EmailContext) {
   const c = INVITE_COPY;
-  // Solid mint first, then the gradient that leaves the top of the letters clear: drops gracefully either way.
-  const hl = `background-color:${b.mint};background-image:linear-gradient(${b.peach} 0%,${b.peach} 58%,${b.mint} 58%,${b.mint} 92%,${b.peach} 92%);padding:0 4px;-webkit-box-decoration-break:clone;box-decoration-break:clone`;
-  return `<table ${T} width="100%" bgcolor="${b.peach}" style="background-color:${b.peach};border-radius:27px 27px 0 0;border-collapse:separate;border-spacing:0">
-<tr><td class="e-inv-pad e-inv-hero" align="center" style="padding:40px 44px 36px;font-family:${FONT};text-align:center;color:${b.ink}">
-<table ${T} align="center" style="margin:0 auto;border-collapse:separate"><tr><td bgcolor="${b.white}" style="background-color:${b.white};border-radius:999px;padding:7px 16px 7px 10px;mso-padding-alt:7px 16px 7px 10px">
-<table ${T}><tr><td valign="middle" style="padding-right:6px">${icon(ctx, "waving_hand", 22)}</td>
-<td valign="middle" style="font-family:${FONT};font-size:14px;line-height:20px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:${b.ink}">${esc(c.eyebrow)}</td></tr></table>
+  const frame = `${ctx.assetBase}/email/craft-border.jpg`;
+  const strip = `${ctx.assetBase}/email/craft-top.jpg`;
+  const logo = `${ctx.assetBase}/email/between-gigs-wide-on-light.png`;
+  return `<!--[if !mso]><!--><div class="e-k-strip" style="display:none;max-height:0;overflow:hidden;mso-hide:all"><img src="${esc(strip)}" width="600" alt="" style="display:block;width:100%;height:auto;border:0"></div><!--<![endif]-->
+<table ${T} width="100%" bgcolor="${k.sand}" background="${esc(frame)}" style="background-color:${k.sand};background-image:url('${esc(frame)}');background-size:cover;background-position:center">
+<tr><td class="e-k-frame" align="center" style="padding:88px 60px">
+<table ${T} width="100%" bgcolor="${k.cream}" style="background-color:${k.cream};border-radius:2px;box-shadow:0 18px 40px rgba(15,61,41,.18)">
+<tr><td class="e-k-card" align="center" style="padding:44px 36px 34px;font-family:${SANS};text-align:center">
+<img src="${esc(logo)}" width="112" height="35" alt="Between Gigs" style="display:block;margin:0 auto;width:112px;height:35px;border:0;color:${k.ink};font-size:18px;font-weight:600">
+<p style="margin:28px 0 10px;font-size:11px;line-height:14px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:${k.muted}">${esc(c.eyebrow)}</p>
+<div style="margin:0 auto 22px;width:28px;height:2px;line-height:2px;font-size:1px;background-color:${k.rule}">&nbsp;</div>
+<h1 class="e-k-h1" style="margin:0 0 18px;font-family:${SERIF};font-size:46px;line-height:48px;font-weight:500;letter-spacing:-0.02em;color:${k.ink}">${c.title.map((t) => `<span style="white-space:nowrap">${esc(t)}</span>`).join("<br>")}</h1>
+<p class="e-k-lead" style="margin:0 0 26px;font-size:16px;line-height:24px;color:${k.muted}">${c.lead.map(esc).join("<br>")}</p>
+<table ${T} align="center" style="margin:0 auto"><tr><td bgcolor="${k.ink}" style="background-color:${k.ink};border-radius:3px">
+<a href="${esc(inviteUrl)}" style="display:inline-block;padding:14px 30px;font-family:${SANS};font-size:15px;line-height:20px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:3px">${esc(c.cta)}&nbsp;&nbsp;&rarr;</a>
 </td></tr></table>
-<h1 class="e-inv-h1" style="margin:20px 0 14px;font-family:${FONT};font-size:42px;line-height:46px;font-weight:800;letter-spacing:-0.025em;color:${b.ink}">${esc(c.title[0])}<br><span style="${hl}">${esc(c.title[1])}</span></h1>
-<p class="e-inv-lead" style="margin:0 auto 26px;max-width:440px;font-size:18px;line-height:28px;color:${b.body}">${esc(lead())}</p>
-<table ${T} class="e-inv-btn" align="center" style="margin:0 auto;border-collapse:separate"><tr><td align="center" bgcolor="${b.ink}" style="background-color:${b.ink};border-radius:999px;mso-padding-alt:18px 34px">
-<a href="${esc(inviteUrl)}" style="display:inline-block;padding:18px 34px;font-family:${FONT};font-size:17px;line-height:20px;font-weight:800;color:${b.white};text-decoration:none;border-radius:999px">${esc(c.cta)}&nbsp;&rarr;</a>
+<p style="margin:18px 0 0;font-size:13px;line-height:20px;color:${k.muted}">${esc(c.tagline)}</p>
+<div style="margin:26px auto 14px;height:1px;line-height:1px;font-size:1px;background-color:${k.line}">&nbsp;</div>
+<p style="margin:0;font-size:12px;line-height:18px;color:${k.muted}">This link is just for you (${esc(email)}) and works for 30 days.</p>
 </td></tr></table>
-<p style="margin:18px 0 0;font-size:16px;line-height:24px;font-weight:600;color:${b.body}">${esc(c.tagline)}</p>
-<table ${T} align="center" style="margin:16px auto 0;border-collapse:separate"><tr><td class="e-inv-note" bgcolor="${b.note}" style="background-color:${b.note};border-radius:999px;padding:8px 16px;font-family:${FONT};font-size:14px;line-height:20px;color:${b.noteInk};text-align:center">Just for you <span style="white-space:nowrap">(${esc(email)})</span> · works for 30 days</td></tr></table>
 </td></tr></table>`;
 }
 
-/** The flat-lay band: a real <img>, so every client shows it, full card width and fluid on phones. */
-const photo = (ctx: EmailContext) =>
-  `<img src="${esc(`${ctx.assetBase}/email/craft-top.jpg`)}" width="600" height="246" alt="" style="display:block;width:100%;max-width:600px;height:auto;border:0">`;
-
-/** The three steps as pastel cards, the dashed production note, the sign-off and the plain link. */
-function details(inviteUrl: string, ctx: EmailContext) {
+/** Below the frame: the three steps with serif numerals, the founders' note and the plain link. */
+function details(inviteUrl: string) {
   const c = INVITE_COPY;
-  const tints = [b.mintSoft, b.butter, b.sage];
-  const icons = ["key", "memo", "party_popper"];
-  const cards = c.how.map(([t, d], i) => `<table ${T} width="100%" style="border-collapse:separate;margin:0 0 12px"><tr><td class="e-inv-card" bgcolor="${tints[i]}" style="background-color:${tints[i]};border-radius:20px;padding:20px 22px">
-<table ${T} width="100%"><tr>
-<td class="e-inv-num" valign="top" width="56" style="width:56px"><table ${T} style="border-collapse:separate"><tr><td width="44" height="44" align="center" valign="middle" bgcolor="${b.white}" style="width:44px;height:44px;background-color:${b.white};border-radius:22px;font-family:${FONT};font-size:18px;line-height:44px;font-weight:800;color:${b.ink};text-align:center">${i + 1}</td></tr></table></td>
-<td valign="top" style="font-family:${FONT}"><h3 style="margin:2px 0 4px;font-size:18px;line-height:24px;font-weight:800;letter-spacing:-0.01em;color:${b.ink}">${esc(t)}</h3><p style="margin:0;font-size:16px;line-height:25px;color:${b.body}">${esc(d)}</p></td>
-<td class="e-inv-icon" valign="top" align="right" width="52" style="width:52px;padding-left:12px">${icon(ctx, icons[i], 40)}</td>
-</tr></table>
-</td></tr></table>`).join("\n");
-  const cut = c.production.indexOf(". ") + 1;
-  return `<table ${T} width="100%" bgcolor="${b.white}" style="background-color:${b.white};border-radius:0 0 27px 27px;border-collapse:separate;border-spacing:0">
-<tr><td class="e-inv-pad" style="padding:36px 44px 40px;font-family:${FONT};color:${b.ink}">
-<h2 class="e-inv-h2" style="margin:0 0 22px;font-family:${FONT};font-size:26px;line-height:32px;font-weight:800;letter-spacing:-0.02em;color:${b.ink}">${esc(c.howTitle)}</h2>
-${cards}
-<table ${T} width="100%" style="border-collapse:separate;margin:16px 0 0"><tr><td class="e-inv-pause" style="border:2px dashed ${b.dash};border-radius:20px;padding:22px 24px">
-<table ${T} width="100%"><tr>
-<td class="e-inv-pico" valign="middle" width="54" style="width:54px">${icon(ctx, "clapper_board", 38)}</td>
-<td valign="middle" style="font-family:${FONT};font-size:16px;line-height:25px;color:${b.body}"><strong style="font-weight:800;color:${b.ink}">${esc(c.production.slice(0, cut))}</strong>${esc(c.production.slice(cut))}</td>
-</tr></table>
-</td></tr></table>
-<p style="margin:28px 0 0;font-size:20px;line-height:28px;font-weight:800;letter-spacing:-0.01em;color:${b.ink}">Patti &amp; Peter</p>
-<p style="margin:0;font-size:16px;line-height:24px;color:${b.muted}">Founders, Between Gigs</p>
-<p style="margin:24px 0 0;font-size:13px;line-height:20px;color:${b.muted}">Button not working? Paste this link into your browser:<br><a href="${esc(inviteUrl)}" style="color:${b.ink};text-decoration:underline;word-break:break-all">${esc(inviteUrl)}</a></p>
+  const steps = c.how.map(([t, d], i) => `<tr>
+<td valign="top" width="52" style="padding:18px 0;border-top:1px solid ${k.line};font-family:${SERIF};font-size:26px;line-height:28px;color:${k.ink}">0${i + 1}</td>
+<td valign="top" style="padding:18px 0;border-top:1px solid ${k.line};font-family:${SANS}"><p style="margin:0;font-size:16px;line-height:22px;font-weight:600;color:${k.ink}">${esc(t)}</p><p style="margin:4px 0 0;font-size:15px;line-height:23px;color:${k.muted}">${esc(d)}</p></td>
+</tr>`).join("");
+  return `<table ${T} width="100%" bgcolor="${k.paper}" style="background-color:${k.paper}">
+<tr><td class="e-k-pad" style="padding:40px 56px 36px;font-family:${SANS}">
+<h2 class="e-k-h2" style="margin:0 0 14px;font-family:${SERIF};font-size:26px;line-height:32px;font-weight:500;color:${k.ink}">${esc(c.howTitle)}</h2>
+<table ${T} width="100%">${steps}</table>
+<p style="margin:20px 0 0;padding-top:20px;border-top:1px solid ${k.line};font-size:15px;line-height:23px;color:${k.muted}">${esc(c.production)}</p>
+<p style="margin:22px 0 0;font-family:${SERIF};font-size:20px;line-height:26px;font-style:italic;color:${k.ink}">Patti &amp; Peter</p>
+<p style="margin:2px 0 0;font-size:13px;line-height:20px;color:${k.muted}">Founders, Between Gigs</p>
+<p style="margin:28px 0 0;font-size:12px;line-height:19px;color:${k.muted}">Button not working? Paste this link into your browser:<br><a href="${esc(inviteUrl)}" style="color:${k.ink};text-decoration:underline;word-break:break-all">${esc(inviteUrl)}</a></p>
 </td></tr></table>`;
 }
 
 export function invite({ inviteUrl, email }: InviteProps, ctx: EmailContext = defaultContext): RenderedEmail {
   const c = INVITE_COPY;
-  const body = hero(inviteUrl, email, ctx) + photo(ctx) + details(inviteUrl, ctx);
-
+  const body = hero(inviteUrl, email, ctx) + details(inviteUrl);
   const text = `${c.subject}
 
 ${c.eyebrow.toUpperCase()}
 
 ${c.title.join(" ")}
 
-${lead()}
+${c.lead.join(" ").replace("— ", "—")}
 
 ${c.cta}:
 ${inviteUrl}
 
 ${c.tagline}
-Just for you (${email}) · works for 30 days.
+This link is just for you (${email}) and works for 30 days.
 
 ${c.howTitle.toUpperCase()}
-${c.how.map(([t, d], i) => `${i + 1}. ${t}: ${d}`).join("\n")}
+${c.how.map(([t, d], i) => `0${i + 1} ${t}: ${d}`).join("\n")}
 
 ${c.production}
 
@@ -140,6 +120,6 @@ ${textFooter(REASON, ctx.siteUrl)}`;
 
   return {
     subject: c.subject, preheader: c.preheader, text,
-    html: layout({ title: c.subject, preheader: c.preheader, body, reason: REASON, ctx, center: true, radius: 28, font: { family: FONT, href: FONT_HREF }, paper: { canvas: b.canvas, line: b.canvas } }),
+    html: layout({ title: c.subject, preheader: c.preheader, body, reason: REASON, ctx, header: false, edge: true, paper: { canvas: k.canvas, line: k.line }, font: { family: SANS, href: FONT_HREF } }),
   };
 }

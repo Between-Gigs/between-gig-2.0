@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Profile design sign-off</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf8f2;--card:#fff;--ink:#0f3d29;--muted:#4b6357;--line:#e7e0d4;--mint:#1fdc8c;--mintsoft:#d6f6e6;--peach:#ffe2cc;--butter:#fff0bf;--sage:#e3ebdd}
+@media (prefers-color-scheme:dark){:root{--bg:#071a11;--card:#0e2419;--ink:#eaf4ee;--muted:#a9c2b3;--line:#1f3d2d;--mintsoft:#16402e;--peach:#2c2f26;--butter:#263322;--sage:#1b3527}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Plus Jakarta Sans",system-ui,sans-serif}
+main{max-width:1200px;margin:0 auto;padding:48px 16px 80px}
+.k{display:inline-block;background:var(--mintsoft);border-radius:999px;padding:6px 14px;font-weight:700;font-size:13px;letter-spacing:.04em}
+h1{font-size:clamp(32px,5vw,52px);line-height:1.08;letter-spacing:-.02em;font-weight:800;margin:16px 0 10px}
+h2{font-size:24px;font-weight:800;margin:0 0 12px}
+p.l{color:var(--muted);max-width:720px;font-size:18px;margin:0}
+.grid{display:grid;gap:20px;margin-top:32px}
+@media(min-width:900px){.two{grid-template-columns:1fr 1fr}.shots{grid-template-columns:3fr 1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:24px}
+.tint{border:0}.peach{background:var(--peach)}.butter{background:var(--butter)}.sage{background:var(--sage)}
+ul{margin:0;padding-left:20px}li{margin:6px 0}
+.shot{border-radius:16px;overflow:hidden;border:1px solid var(--line);max-height:900px;overflow-y:auto}
+.shot img{display:block;width:100%}
+.cap{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.tabs{display:flex;gap:8px;margin:28px 0 0}.tabs button{font:inherit;font-weight:700;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:10px 18px;min-height:44px;cursor:pointer}
+.tabs button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+a.btn{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:0 22px;border-radius:999px;background:var(--ink);color:var(--bg);font-weight:700;text-decoration:none}
+a.link{color:inherit;font-weight:700}
+.step{display:flex;gap:12px;align-items:flex-start}.n{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:999px;background:var(--mint);color:#04180e;font-weight:800;font-size:14px}
+</style></head><body><main>
+<span class="k">Between Gigs 2.0 · For sign-off</span>
+<h1>Profile page design, ready to lock</h1>
+<p class="l">This is the profile clients will see (Maya Chen, a fictional sample). Once you approve it, we treat this design as locked: later work keeps it as is, and any change to it comes back to you first.</p>
+<p style="margin-top:20px"><a class="btn" href="../../p/maya/">Open the live profile →</a></p>
+
+<div class="tabs" role="group" aria-label="Theme">
+  <button type="button" aria-pressed="true" data-t="light">Light</button>
+  <button type="button" aria-pressed="false" data-t="dark">Dark</button>
+</div>
+<div class="grid shots">
+  <div><p class="cap">Desktop · 1440px</p><div class="shot"><img id="d" src="public-light-1440.jpg" alt="Maya Chen's profile on a desktop screen"></div></div>
+  <div><p class="cap">Phone · 390px</p><div class="shot"><img id="m" src="public-light-390.jpg" alt="Maya Chen's profile on a phone"></div></div>
+</div>
+
+<div class="grid two">
+  <section class="card tint sage"><h2>What gets locked</h2><ul>
+    <li>The layout: identity panel on top, the story on the left, the booking card on the right (a bar at the bottom on phones).</li>
+    <li>The sections and their order: about, facts, what they offer, work, on set, what we've checked, more Gigsters.</li>
+    <li>The look: direction B (warm and friendly), Plus Jakarta Sans, pastel fact blocks, 3D icons, light and dark.</li>
+    <li>The no-photo state: the person's craft in a spotlight.</li>
+  </ul></section>
+  <section class="card tint butter"><h2>What can still change</h2><ul>
+    <li>Real photos and words: each Gigster fills in their own.</li>
+    <li>Booking: "Request" is a preview until requests open.</li>
+    <li>Small fixes for accessibility or broken layouts, without changing the design.</li>
+  </ul></section>
+</div>
+
+<section class="card" style="margin-top:20px"><h2>How to sign off</h2>
+  <div class="grid" style="margin-top:8px;gap:12px">
+    <div class="step"><span class="n">1</span><div>Open the live profile in light and dark, on a laptop and a phone.</div></div>
+    <div class="step"><span class="n">2</span><div>Reply "Approved" (or list what to change) on WhatsApp.</div></div>
+    <div class="step"><span class="n">3</span><div>We record the approval and lock this design.</div></div>
+  </div>
+</section>
+<p style="margin-top:24px;color:var(--muted);font-size:14px">Status: <b>waiting for approval</b> · 4 November 2026 · <a class="link" href="../onboarding-flows/">Onboarding flows to compare</a> · <a class="link" href="../onboarding-flow/">Onboarding flow map</a></p>
+</main>
+<script>
+document.querySelectorAll(".tabs button").forEach(function(b){b.addEventListener("click",function(){var t=b.dataset.t;document.querySelectorAll(".tabs button").forEach(function(x){x.setAttribute("aria-pressed",String(x===b))});document.getElementById("d").src="public-"+t+"-1440.jpg";document.getElementById("m").src="public-"+t+"-390.jpg"})});
+</script></body></html>

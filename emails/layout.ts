@@ -97,21 +97,18 @@ a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important
 .e-btn a{display:block!important}
 .e-edge{padding:0!important}
 .e-edge-card{border-radius:0!important;border-left:0!important;border-right:0!important}
-.e-inv-pad{padding-left:20px!important;padding-right:20px!important}
-.e-inv-hero{padding-top:30px!important;padding-bottom:28px!important}
-.e-inv-h1{font-size:34px!important;line-height:38px!important}
-.e-inv-lead{font-size:17px!important;line-height:26px!important}
-.e-inv-btn{width:100%!important}
-.e-inv-btn a{display:block!important;padding-left:16px!important;padding-right:16px!important}
-.e-inv-note{border-radius:18px!important}
-.e-inv-h2{font-size:23px!important;line-height:29px!important}
-.e-inv-card{padding:18px 16px!important}
-.e-inv-num{width:52px!important}
-.e-inv-icon{display:none!important;width:0!important;max-height:0!important;overflow:hidden!important}
-.e-inv-pause{padding:18px 16px!important}
+.e-k-strip{display:block!important;max-height:none!important;overflow:visible!important}
+.e-k-frame{padding:0!important}
+.e-k-card{padding:34px 20px 28px!important}
+.e-k-h1{font-size:36px!important;line-height:40px!important}
+.e-k-pad{padding-left:22px!important;padding-right:22px!important}
+.e-k-h2{font-size:23px!important;line-height:29px!important}
 }
 @media (max-width:360px){
-.e-inv-pad{padding-left:16px!important;padding-right:16px!important}
+.e-k-h1{font-size:31px!important;line-height:35px!important}
+.e-k-card{padding:30px 16px 24px!important}
+.e-k-pad{padding-left:16px!important;padding-right:16px!important}
+}
 .e-inv-h1{font-size:29px!important;line-height:33px!important}
 .e-inv-h2{font-size:21px!important;line-height:27px!important}
 .e-inv-card{padding:16px 14px!important}
