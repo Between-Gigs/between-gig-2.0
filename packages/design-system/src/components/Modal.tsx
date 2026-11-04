@@ -48,7 +48,7 @@ export function Modal({ open, onClose, title, description, children, footer, pla
       <div
         className={cx(
           "flex flex-col bg-surface-raised shadow-lg",
-          placement === "center" && "max-h-full rounded-xl",
+          placement === "center" && "max-h-full rounded-lg",
           placement === "right" && "h-full rounded-l-xl",
           placement === "left" && "h-full rounded-r-xl",
         )}

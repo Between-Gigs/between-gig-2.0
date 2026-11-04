@@ -51,7 +51,7 @@ export function CommandPalette({ open, onClose, commands, placeholder = "Search 
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       className="fixed inset-x-4 top-24 mx-auto w-auto max-w-xl border-0 bg-transparent p-0 text-ink backdrop:bg-scrim"
     >
-      <div className="overflow-hidden rounded-xl border border-line bg-surface-raised shadow-lg">
+      <div className="overflow-hidden rounded-lg border border-line bg-surface-raised shadow-lg">
         <input
           autoFocus
           role="combobox"

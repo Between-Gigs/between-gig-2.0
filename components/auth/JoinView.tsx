@@ -104,10 +104,10 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
     <AuthShell header="Sign up"
       lead={<p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
       <h1 className="font-display text-heading-lg text-ink">{authenticated ? "Finish your account setup" : "Create your account"}</h1>
-      <p className="mt-2 text-body-md text-ink-muted">{authenticated ? "You are signed in. Confirm your details and agree to the terms to create your profile." : "No invite needed. Enter your details to get started."}</p>
+      <p className="mt-2 text-body-md text-ink-muted">{authenticated ? "You're logged in. Confirm your details and agree to the terms to create your profile." : token ? "Your invitation is here. Add your name to get started." : "No invite needed. Enter your details to get started."}</p>
       <form noValidate onSubmit={submit} className="mt-8 grid gap-5">
         {errors.form && <Banner tone="danger" title="We couldn't create your account">{errors.form}</Banner>}
-        <Field label="Email" error={errors.email} hint={authenticated ? "You are signed in with this email." : "Use the email you want to sign in with."}>
+        <Field label="Email" error={errors.email} hint={authenticated ? "You're logged in with this email." : token ? "From your invitation. You can change it." : "Use the email you want to log in with."}>
           <Input type="email" value={email} readOnly={authenticated} autoComplete="email" start={<Mail />} onChange={(e) => { setEmail(e.target.value); setErrors((x) => ({ ...x, email: undefined })); }} />
         </Field>
         <Field label="Full name" error={errors.name}>

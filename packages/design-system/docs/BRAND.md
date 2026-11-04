@@ -115,10 +115,12 @@ Rules:
 
 ## Radius
 
-- `radius-md` for every control (buttons, inputs, selects, segmented controls, menu items).
-- `radius-lg` for cards, menus, popovers and toasts. `radius-xl` for panels, modals, drawers and the prompt bar.
-- `radius-full` for badges, count pills, avatars, toggles and progress bars.
-- Nested corners: the inner radius is the outer radius minus the padding between them. A `radius-lg` card holding an image with `space-2` padding gives the image `radius-sm`.
+- Corners follow Airbnb: small and consistent, so content leads and nothing looks inflated.
+- `radius-md` (8px) for every control: buttons of every size, inputs, selects, text areas, segmented controls, menu items.
+- `radius-lg` (12px) for cards, photos, menus, popovers, toasts and modals. `radius-xl` (16px) for panels, drawers, bottom sheets and the prompt bar.
+- `radius-2xl` (24px) for at most one showcase card on a page, such as the profile identity card.
+- `radius-full` for avatars, search bars, filter chips, badges, count pills, toggles and progress bars. Never for buttons or inputs.
+- Nested corners: the inner radius is the outer radius minus the padding between them, never below `radius-xs`. A `radius-lg` card holding an image with `space-1` padding gives the image `radius-md`.
 
 ## Elevation and borders
 
