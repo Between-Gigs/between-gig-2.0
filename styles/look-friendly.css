@@ -39,11 +39,11 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme=light]) {
-    --tint-mint: #123a2a; --tint-peach: #3b2a1f; --tint-butter: #34301a; --tint-sky: #172b3a; --tint-sage: #1c2d22; --tint-sand: #2a241b; --tint-ink: #eaf4ee;
+    --tint-mint: #133829; --tint-peach: #3d2224; --tint-butter: #3a3115; --tint-sky: #172b3e; --tint-sage: #212f20; --tint-sand: #29241d; --tint-ink: #f4efe6;
   }
 }
 :root[data-theme=dark] {
-  --tint-mint: #123a2a; --tint-peach: #3b2a1f; --tint-butter: #34301a; --tint-sky: #172b3a; --tint-sage: #1c2d22; --tint-sand: #2a241b; --tint-ink: #eaf4ee;
+  --tint-mint: #133829; --tint-peach: #3d2224; --tint-butter: #3a3115; --tint-sky: #172b3e; --tint-sage: #212f20; --tint-sand: #29241d; --tint-ink: #f4efe6;
 }
 
 /* `friendly:` variant for the few shared components (site header) that differ on product screens. */
@@ -86,5 +86,25 @@
     --surface-selected: #d6f6e6; --line: #e7e0d4; --line-strong: #8a8070; --line-dashed: #cfc5b3;
     --ink: #0f3d29; --ink-muted: #4b6357; --ink-subtle: #5a6d62; --ink-brand: #17633f;
     --action: #0f3d29; --action-hover: #175a3d; --on-action: #ffffff; --neutral-soft: #f6ecdf;
+  }
+}
+
+/*
+ * Dark theme on the product screens: a warm charcoal night instead of the system's forest-green dark, so the pastel
+ * tints read as deep jewel tones (on green they turned muddy brown and olive). Warm off-white text, mint as the one
+ * bright accent and the primary button colour.
+ */
+:root[data-look=friendly][data-theme=dark] {
+  --bg: #12110e; --surface: #1c1a16; --surface-raised: #24211c; --surface-sunken: #0d0c0a; --surface-hover: #2a2620;
+  --surface-selected: #173a2b; --line: #2e2a23; --line-strong: #6f6757; --line-dashed: #3f392f;
+  --ink: #f4efe6; --ink-muted: #c7bfb1; --ink-subtle: #a9a193; --ink-brand: #3deba0;
+  --action: #1fdc8c; --action-hover: #4fe0a0; --on-action: #04180e; --neutral-soft: #24211c;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-look=friendly]:not([data-theme=light]) {
+    --bg: #12110e; --surface: #1c1a16; --surface-raised: #24211c; --surface-sunken: #0d0c0a; --surface-hover: #2a2620;
+    --surface-selected: #173a2b; --line: #2e2a23; --line-strong: #6f6757; --line-dashed: #3f392f;
+    --ink: #f4efe6; --ink-muted: #c7bfb1; --ink-subtle: #a9a193; --ink-brand: #3deba0;
+    --action: #1fdc8c; --action-hover: #4fe0a0; --on-action: #04180e; --neutral-soft: #24211c;
   }
 }

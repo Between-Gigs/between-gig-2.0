@@ -203,7 +203,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
             <li>{P("where", !!where, <Fact icon="round_pushpin" tint="bg-tint-peach" label="Works in">{where}</Fact>, "Where you work", "block")}</li>
             <li>{P("availability", !!f.dates.trim() || !show, <Fact icon="spiral_calendar" tint="bg-tint-mint" label={f.dates ? monthStatusLabel[f.monthStatus] : "This month"}>{f.dates || monthStatusLabel[f.monthStatus]}</Fact>, "When you're free this month", "block")}</li>
             {(rate || show) && <li>{P("rate", !!rate, <Fact icon="money_bag" tint="bg-tint-butter" label="Rate">From {rate}</Fact>, "Your starting rate (optional)", "block")}</li>}
-            {(f.languages || show) && <li>{P("languages", !!f.languages.trim(), <Fact icon="speaking_head" tint="bg-tint-sky" label="Speaks">{f.languages}</Fact>, "Languages you speak (optional)", "block")}</li>}
+            {(f.languages || show) && <li>{P("languages", !!f.languages.trim(), <Fact icon="world_map" tint="bg-tint-sky" label="Speaks">{f.languages}</Fact>, "Languages you speak (optional)", "block")}</li>}
             {!editing && <li className="sm:col-span-2"><Fact icon="briefcase" tint="bg-tint-sage" label={`How ${first} works`}>{how.join(" · ")}</Fact></li>}
             {editing && <li className="sm:col-span-2">{P("details", !!(f.tools.trim() || f.transport.trim()), (
               <Fact icon="briefcase" tint="bg-tint-sage" label="How you work">{[modeLabel[f.mode], f.transport, f.tools, insuranceLabel[f.insurance]].filter(Boolean).join(" · ")}</Fact>
