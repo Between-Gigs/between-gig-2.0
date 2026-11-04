@@ -40,3 +40,7 @@ const byCraft: [RegExp, Icon3DName][] = [
 /** The 3D icon for a department, service or offer. */
 export const craftIcon = (label: string, fallback?: string): Icon3DName =>
   byCraft.find(([re]) => re.test(label))?.[1] ?? (fallback ? craftIcon(fallback) : "sparkles");
+
+/** The pastel panels a 3D icon sits on (direction B), in the order a row of tiles cycles through them. */
+export const iconTints = ["bg-tint-peach", "bg-tint-mint", "bg-tint-butter", "bg-tint-sky", "bg-tint-sage", "bg-tint-sand"] as const;
+export const iconTint = (i: number) => iconTints[((i % iconTints.length) + iconTints.length) % iconTints.length];

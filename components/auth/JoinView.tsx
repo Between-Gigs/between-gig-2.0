@@ -12,6 +12,8 @@ import { clerkEnabled } from "@/lib/auth/clerk";
 import { useSession } from "@/lib/session";
 import { basePath } from "@/lib/site";
 import { AuthShell } from "./AuthShell";
+import { type Icon3DName } from "@/lib/icons3d";
+import { Icon3D } from "@/components/ui/Icon3D";
 import { InviteJoin } from "./InviteJoin";
 import { ClerkSlot } from "./ClerkSlot";
 
@@ -102,8 +104,8 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
 
   return (
     <AuthShell header="Sign up"
-      lead={token ? undefined : <p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
-      <h1 className="font-display text-heading-lg text-ink">{authenticated ? "Finish your account setup" : "Create your account"}</h1>
+      lead={token ? <p className="flex items-center justify-center gap-2"><Icon3D name="shield" className="size-5" />Your page stays private until our team approves it.</p> : <p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
+      <h1 className="font-display text-display-sm text-balance text-ink">{authenticated ? "Finish your account setup" : "Create your account"}</h1>
       <p className="mt-2 text-body-md text-ink-muted">{authenticated ? "You're logged in. Confirm your details and agree to the terms to create your profile." : token ? "Your invitation is here. Add your name to get started." : "No invite needed. Enter your details to get started."}</p>
       <form noValidate onSubmit={submit} className="mt-8 grid gap-5">
         {errors.form && <Banner tone="danger" title="We couldn't create your account">{errors.form}</Banner>}
@@ -146,7 +148,7 @@ function ClerkAccount({ token, email, name }: { token?: string; email?: string; 
     <AuthShell header="Sign up"
       lead={<p>{email ? `Create a password for ${email}.` : "Continue your account setup."} You may need to verify your email before continuing.</p>}>
       <div className="grid gap-6">
-        <h1 className="font-display text-heading-lg text-ink">{email ? "Create your password" : "Continue your signup"}</h1>
+        <h1 className="font-display text-display-sm text-balance text-ink">{email ? "Create your password" : "Continue your signup"}</h1>
         <p className="text-body-md text-ink-muted">Use at least 8 characters. If Clerk asks for a 6-digit code afterward, that confirms your email; it does not replace your password.</p>
         <ClerkSlot label="Loading sign-up">
           <SignUp routing="hash" signInUrl={`${basePath}/login/`}
@@ -158,6 +160,8 @@ function ClerkAccount({ token, email, name }: { token?: string; email?: string; 
     </AuthShell>
   );
 }
+
+const problemIcon = { used: "check_mark_button", expired: "hourglass_done", unknown: "eyes", valid: "envelope" } as const satisfies Record<InviteLookup["state"], Icon3DName>;
 
 function InviteProblem({ lookup }: { lookup: InviteLookup }) {
   const email = lookup.invite?.email;
@@ -187,14 +191,11 @@ function InviteProblem({ lookup }: { lookup: InviteLookup }) {
   const c = copy[lookup.state];
 
   return (
-    <AuthShell header="Sign up">
+    <AuthShell header="Sign up" icon={problemIcon[lookup.state]}>
       <div className="grid gap-6">
-        <div className="flex items-start gap-4">
-          <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-lg bg-surface-selected text-ink-brand [&_svg]:size-6">{c.icon}</span>
-          <div>
-            <h1 className="font-display text-heading-lg text-ink">{c.title}</h1>
-            <p className="mt-1 text-body-md text-ink-muted">{c.body}</p>
-          </div>
+        <div>
+          <h1 className="font-display text-display-sm text-balance text-ink">{c.title}</h1>
+          <p className="mt-2 text-body-md text-ink-muted">{c.body}</p>
         </div>
         <div>
           <h2 className="text-label-md text-ink">What to do next</h2>

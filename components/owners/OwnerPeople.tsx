@@ -1,15 +1,14 @@
 "use client";
 import { Button, Drawer, EmptyState, Input, SegmentedControl, Select, cx } from "@ds/components";
-import { ChevronRight, LayoutGrid, List, Mail, MapPin, Search, SearchX, SlidersHorizontal, X } from "lucide-react";
+import { ArrowRight, LayoutGrid, List, Mail, MapPin, Search, SearchX, SlidersHorizontal, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { data, personStatuses, type PeopleQuery, type PeopleSort, type PersonStatus, type PersonSummary, type ProfileFilter } from "@/lib/data";
 import { crafts } from "@/lib/profile/department";
 import { laServiceAreas, monthStatusLabel, offSetServices } from "@/lib/data/taxonomy";
-import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { PersonStatusBadge, personStatusMeta } from "@/components/people/PersonStatusBadge";
-import { Meter, OwnerPage, Panel, Row, RowSkeletons } from "./kit";
+import { AgoPill, Meter, OwnerAvatar, OwnerPage, Panel, Row, RowSkeletons } from "./kit";
 import { OwnerShell } from "./OwnerShell";
 import { OwnerGate } from "./OwnerGate";
 import { markArea } from "@/lib/split-area";
@@ -103,7 +102,7 @@ function People() {
 
   return (
     <OwnerShell>
-      <OwnerPage title="People" meta={counts ? total : "–"}
+      <OwnerPage title="People" icon="handshake" meta={counts ? total : "–"}
         description="Everyone from the waitlist on: who has joined, how far along their profile is, and who is waiting for review.">
         {/* Search and status on one line; from md the other filters sit in a row beneath, on phones behind Filters. */}
         <div className="grid gap-3">
@@ -172,8 +171,8 @@ function People() {
 
 /** Someone invited who hasn't joined: no name or photo yet, so an envelope instead of a "?". */
 function Avatar({ row: { person: p, fields: f }, className }: { row: PersonSummary; className: string }) {
-  if (!p.name) return <span className={cx("grid place-items-center bg-surface-sunken text-ink-subtle", className)}><Mail className="size-4" aria-hidden="true" /></span>;
-  return <PersonPhoto id={p.id} name={p.name} src={f?.photo || undefined} alt="" className={className} textClass="text-label-md" />;
+  if (!p.name) return <span className={cx("grid place-items-center bg-tint-sage text-tint-ink", className)}><Mail className="size-5" aria-hidden="true" /></span>;
+  return <OwnerAvatar id={p.id} name={p.name} src={f?.photo || undefined} className={className} textClass="text-heading-sm" />;
 }
 
 function progress({ person: p, completeness, fromDraft }: PersonSummary) {
@@ -186,33 +185,33 @@ function PersonRow({ row }: { row: PersonSummary }) {
   const { person: p, fields: f } = row;
   return (
     <Row href={`/owners/people/${p.id}/`} title={p.name || p.email}
-      leading={<Avatar row={row} className="size-10 rounded-full" />}
+      leading={<Avatar row={row} className="size-12 rounded-md" />}
       badge={<PersonStatusBadge status={p.status} size="sm" />}
       subtitle={f?.position ? [f.position, f.areas.join(" · ")].filter(Boolean).join(" · ") : p.name ? p.email : `Waitlist · ZIP ${p.waitlistZip}`}
-      meta={<>{progress(row)}<span className="w-36 text-right">Active {ago(p.updatedAt).toLowerCase()}</span></>} />
+      meta={<>{progress(row)}<AgoPill tone="sand" className="min-w-36">Active {ago(p.updatedAt).toLowerCase()}</AgoPill></>} />
   );
 }
 
 function PersonCard({ row }: { row: PersonSummary }) {
   const { person: p, fields: f } = row;
   return (
-    <article data-tilt="" className="lift group relative flex h-full min-w-0 flex-col gap-4 rounded-md border border-line bg-surface p-4 hover:border-line-strong">
+    <article data-tilt="" className="lift group relative flex h-full min-w-0 flex-col gap-4 rounded-lg bg-surface p-4 ring-1 ring-line hover:ring-line-strong">
       <div className="flex min-w-0 items-center gap-3">
-        <Avatar row={row} className="size-12 shrink-0 rounded-md" />
+        <Avatar row={row} className="size-14 shrink-0 rounded-lg" />
         <div className="grid min-w-0 gap-0.5">
-          <h2 className="truncate text-label-md text-ink">
+          <h2 className="truncate text-heading-sm text-ink">
             <Link href={`/owners/people/${p.id}/`} className="after:absolute after:inset-0">{p.name || p.email}</Link>
           </h2>
           <p className="truncate text-body-sm text-ink-muted">{f?.position || (p.name ? p.email : `ZIP ${p.waitlistZip}`)}</p>
         </div>
       </div>
       {f?.areas.length ? <p className="flex min-w-0 items-center gap-1 text-body-sm text-ink-subtle"><MapPin className="size-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{f.areas.join(" · ")}</span></p> : null}
-      <div className="mt-auto flex items-center justify-between gap-3 border-t border-line pt-3 text-body-sm">
+      <div className="mt-auto flex items-center justify-between gap-3 border-t-2 border-dashed border-line pt-3 text-body-sm">
         <PersonStatusBadge status={p.status} size="sm" />
         {progress(row)}
       </div>
       {p.sample && <span className="sr-only">(fictional sample)</span>}
-      <ChevronRight className="absolute top-4 right-4 size-4 text-ink-subtle" aria-hidden="true" />
+      <span aria-hidden="true" className="absolute top-4 right-4 grid size-8 place-items-center rounded-full bg-surface-selected text-ink group-hover:bg-highlight"><ArrowRight className="size-4" /></span>
     </article>
   );
 }

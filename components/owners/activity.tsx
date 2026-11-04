@@ -1,20 +1,21 @@
 import { cx } from "@ds/components";
-import { CircleCheck, Mail, MailOpen, MessageSquareWarning, Send, UserCheck, UserPlus } from "lucide-react";
 import Link from "next/link";
 import type { ActivityEvent, ActivityKind } from "@/lib/data";
 import { markArea } from "@/lib/split-area";
+import { Icon3D } from "@/components/ui/Icon3D";
+import type { Icon3DName } from "@/lib/icons3d";
 
 markArea("bg-split:dashboard");
 
-/** Each kind of event has its own icon and soft tone, so a glance tells them apart. Never colour alone: the verb says it. */
-const meta: Record<ActivityKind, { verb: string; Icon: typeof Mail; tone: string }> = {
-  joined_waitlist: { verb: "joined the call sheet", Icon: UserPlus, tone: "bg-surface-sunken text-ink-muted" },
-  invited: { verb: "was invited", Icon: Mail, tone: "bg-surface-sunken text-ink-muted" },
-  opened: { verb: "opened their invite", Icon: MailOpen, tone: "bg-info-soft text-info" },
-  registered: { verb: "created their account", Icon: UserCheck, tone: "bg-surface-selected text-ink-brand" },
-  submitted: { verb: "submitted their profile", Icon: Send, tone: "bg-info-soft text-info" },
-  approved: { verb: "was approved", Icon: CircleCheck, tone: "bg-success-soft text-success" },
-  changes_requested: { verb: "was sent suggested edits", Icon: MessageSquareWarning, tone: "bg-warning-soft text-warning" },
+/** Each kind of event has its own 3D icon on its own pastel tile, so a glance tells them apart. Never colour alone: the verb says it. */
+const meta: Record<ActivityKind, { verb: string; icon: Icon3DName; tone: string }> = {
+  joined_waitlist: { verb: "joined the call sheet", icon: "admission_tickets", tone: "bg-tint-sand" },
+  invited: { verb: "was invited", icon: "envelope", tone: "bg-tint-sage" },
+  opened: { verb: "opened their invite", icon: "eyes", tone: "bg-tint-sky" },
+  registered: { verb: "created their account", icon: "waving_hand", tone: "bg-tint-sky" },
+  submitted: { verb: "submitted their profile", icon: "envelope", tone: "bg-tint-peach" },
+  approved: { verb: "was approved", icon: "check_mark_button", tone: "bg-tint-mint" },
+  changes_requested: { verb: "was sent suggested edits", icon: "memo", tone: "bg-tint-butter" },
 };
 
 export const ago = (iso: string) => {
@@ -47,22 +48,22 @@ export function ActivityList({ events, className, onOpen }: { events: ActivityEv
     if (last && last[0] === label) last[1].push(e); else days.push([label, [e]]);
   }
   return (
-    <div className={cx("grid", className)}>
+    <div className={cx("grid gap-1 px-2 pb-2 sm:px-3", className)}>
       {days.map(([label, list]) => (
-        <section key={label} aria-label={label} data-fit-group="" className="border-t border-line first:border-t-0">
-          <h3 className="bg-surface-sunken/50 px-5 py-1.5 text-label-sm text-ink-subtle">{label}</h3>
+        <section key={label} aria-label={label} data-fit-group="">
+          <h3 className="px-3 pt-2 pb-1 text-label-sm text-ink-subtle">{label}</h3>
           <ol>
             {list.map((e) => {
               const m = meta[e.kind];
               return (
-                <li key={e.id} data-fit="" className="flex min-h-12 items-center gap-3 px-5 py-2">
-                  <span className={cx("grid size-7 shrink-0 place-items-center rounded-md", m.tone)}><m.Icon className="size-3.5" aria-hidden="true" /></span>
-                  <p className="min-w-0 flex-1 truncate text-body-sm text-ink-muted">
-                    {e.personId && onOpen ? <button type="button" onClick={() => onOpen(e.personId!)} className="inline-flex min-h-6 items-center font-semibold text-ink hover:text-ink-brand">{e.who}</button>
-                      : e.personId ? <Link href={`/owners/people/${e.personId}/`} className="font-semibold text-ink hover:text-ink-brand">{e.who}</Link> : <b className="font-semibold text-ink">{e.who}</b>}{" "}
+                <li key={e.id} data-fit="" className="relative flex min-h-16 items-start gap-3 px-3 py-2.5 before:absolute before:inset-x-3 before:top-0 before:border-t-2 before:border-dashed before:border-line first:before:hidden">
+                  <span className={cx("grid size-11 shrink-0 place-items-center rounded-md", m.tone)}><Icon3D name={m.icon} className="size-7" /></span>
+                  <p className="min-w-0 flex-1 text-body-md text-ink-muted">
+                    {e.personId && onOpen ? <button type="button" onClick={() => onOpen(e.personId!)} className="inline-flex min-h-6 items-center font-bold text-ink hover:text-ink-brand hover:underline">{e.who}</button>
+                      : e.personId ? <Link href={`/owners/people/${e.personId}/`} className="font-bold text-ink hover:text-ink-brand hover:underline">{e.who}</Link> : <b className="font-bold text-ink">{e.who}</b>}{" "}
                     {m.verb}{e.by && <span className="text-ink-subtle"> · {e.by.replace(/\s*\(sample\)$/, "")}</span>}
+                    <time dateTime={e.at} className="block text-body-sm font-semibold text-ink-subtle tabular-nums">{clock(e.at)}</time>
                   </p>
-                  <time dateTime={e.at} className="shrink-0 text-body-sm whitespace-nowrap text-ink-subtle tabular-nums">{clock(e.at)}</time>
                 </li>
               );
             })}

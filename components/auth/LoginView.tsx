@@ -66,7 +66,7 @@ function ClerkLogin() {
     <AuthShell header="Log in">
       <div className="grid gap-6">
         <div>
-          <h1 className="font-display text-heading-lg text-ink">Welcome back</h1>
+          <h1 className="font-display text-display-sm text-balance text-ink">Welcome back</h1>
           <p className="mt-2 text-body-md text-ink-muted">Use the email and password you created.</p>
         </div>
         {params.get("signedOut") && <Banner tone="success" title="You're logged out">See you next time.</Banner>}
@@ -158,7 +158,7 @@ function SampleLogin() {
         {step === "email" ? (
           <form noValidate onSubmit={send} className="grid gap-5">
             <div>
-              <h1 className="font-display text-heading-lg text-ink">Welcome back</h1>
+              <h1 className="font-display text-display-sm text-balance text-ink">Welcome back</h1>
               <p className="mt-2 text-body-md text-ink-muted">Log in with the email you joined with. We'll send you a 6-digit code.</p>
             </div>
             <Field label="Email" error={error}>
@@ -177,7 +177,7 @@ function SampleLogin() {
         ) : (
           <form noValidate onSubmit={(e) => { e.preventDefault(); void verify(); }} className="grid gap-5">
             <div>
-              <h1 className="font-display text-heading-lg text-ink">Check your email</h1>
+              <h1 className="font-display text-display-sm text-balance text-ink">Check your email</h1>
               <p className="mt-2 text-body-md text-ink-muted">We sent a 6-digit code to <b className="text-ink">{email.trim().toLowerCase()}</b>. It expires in 10 minutes.</p>
             </div>
             {needsNewCode && (

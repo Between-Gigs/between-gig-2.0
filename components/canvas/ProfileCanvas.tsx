@@ -1,7 +1,7 @@
 "use client";
 import { Badge, Banner, Button, Field, Input, RadioGroup, SegmentedControl, Skeleton, Slider, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
-import { ArrowRight, Copy, Eye, Link2, MapPin, MessageSquareWarning, PartyPopper, PenLine, Pencil, Plus, Share2, UserRound, WandSparkles } from "lucide-react";
+import { ArrowRight, Check, Copy, Eye, Link2, MapPin, MessageSquareWarning, PartyPopper, PenLine, Pencil, Plus, Share2, WandSparkles } from "lucide-react";
 import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
 import { basisLabel, laServiceAreas, monthStatusLabel, offSetServices, onSetSkills } from "@/lib/data/taxonomy";
@@ -16,6 +16,8 @@ import { ProfileView, type PartKind, type ProfilePart } from "@/components/profi
 import { useLiveEditWarning } from "@/components/profile/LiveEditWarning";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
+import { Icon3D } from "@/components/ui/Icon3D";
+import type { Icon3DName } from "@/lib/icons3d";
 import { markArea } from "@/lib/split-area";
 
 markArea("bg-split:dashboard");
@@ -40,6 +42,12 @@ const LABEL: Record<SpotId, string> = {
   photo: "Your photo", name: "Your name", position: "Your department", years: "Years in the business", services: "Services you offer",
   skills: "On-set skills", where: "Where you work", availability: "This month", rate: "Starting rate", about: "About me",
   credits: "Notable credits", imdb: "IMDb link", languages: "Languages", details: "Work details",
+};
+/** The 3D object for each part, on its empty tile, the open editor and the Next banner. */
+const ICON: Record<SpotId, Icon3DName> = {
+  photo: "camera", name: "memo", position: "clapper_board", years: "hourglass_done", services: "sparkles", skills: "hammer_and_wrench",
+  where: "round_pushpin", availability: "spiral_calendar", rate: "money_bag", about: "memo", credits: "film_frames", imdb: "ticket",
+  languages: "speech_balloon", details: "briefcase",
 };
 /** Which spot shows each field's submit error. */
 const FIELD_SPOT: Partial<Record<keyof ProfileFields, SpotId>> = {
@@ -360,6 +368,17 @@ function Canvas({ personId }: { personId: string }) {
                 <p className="mt-1 text-body-md text-ink-muted">Tap any part to fill it in where it sits. It saves as you go.</p>
               </div>
             )}
+            {next && !editing && (
+              <section aria-labelledby="next-h" className="mb-8 flex flex-wrap items-center gap-4 rounded-xl bg-tint-butter p-5 text-tint-ink sm:px-6">
+                <Icon3D name="sparkles" className="size-10" />
+                <div className="grid min-w-0 flex-1 gap-0.5">
+                  <p className="text-eyebrow text-tint-ink uppercase">Next</p>
+                  <h2 id="next-h" className="font-display text-heading-md text-tint-ink">{LABEL[next]}</h2>
+                  <p className="text-body-sm text-tint-ink">It&apos;s highlighted on your page. Tap it to fill it in where it sits; it saves as you go.</p>
+                </div>
+                <Button variant="primary" className="max-lg:hidden" iconEnd={<ArrowRight />} onClick={() => open(next)}>Next: {LABEL[next]}</Button>
+              </section>
+            )}
             <div className={cx(rise && "canvas-rise")}>
               <ProfileView person={person} fields={d} mode="own"
                 part={(id, p) => <Spot id={id} kind={p.kind} hint={p.hint}>{p.content}</Spot>}
@@ -415,7 +434,7 @@ function EditorBar({ done, total, ready, missing, save, view, editing, sent, sub
             <SaveIndicator state={save} onRetry={onRetry} />
           </div>
           <span role="progressbar" aria-label="Profile progress" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} className="h-1.5 overflow-hidden rounded-full bg-surface-sunken">
-            <span className="block h-full rounded-full bg-action transition-all duration-slow" style={{ width: `${sent ? 100 : pct}%` }} />
+            <span className="block h-full rounded-full bg-mint-500 transition-all duration-slow" style={{ width: `${sent ? 100 : pct}%` }} />
           </span>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -430,21 +449,47 @@ function EditorBar({ done, total, ready, missing, save, view, editing, sent, sub
   );
 }
 
-/** The column beside the page while editing: the open part's controls, or a short note and the one next step. */
+/** The column beside the page while editing: the open part's controls, or a progress card with every part to tap. */
 function Rail({ first, panel }: { first: string; panel: React.ReactNode }) {
-  const { d, next, open } = useCanvas();
+  const { d, next, editing, open } = useCanvas();
   const done = REQUIRED.filter((id) => isFilled(id, d)).length;
   if (panel) return <>{panel}</>;
+  const parts = ORDER.filter((id) => REQUIRED.includes(id) || id === "rate" || id === "languages");
   return (
-    <>
-      <section aria-labelledby="rail-h" className="rounded-lg border border-line bg-surface p-6 max-lg:hidden">
-        <h2 id="rail-h" className="font-display text-heading-lg text-ink">{done <= 1 ? `Welcome, ${first}. This is your page.` : next ? "Keep going" : "Ready when you are"}</h2>
-        <p className="mt-2 text-body-md text-ink-muted">{next
-          ? done <= 1 ? "It's what clients will see. Tap any part to fill it in where it sits; it saves as you go." : "Tap any part to fill it in where it sits; it saves as you go."
-          : "Everything clients need is in. Preview it, then send it to the Between Gigs team."}</p>
-        {next && <Button variant="primary" fullWidth className="mt-5" iconEnd={<ArrowRight />} onClick={() => open(next)}>Next: {LABEL[next]}</Button>}
-      </section>
-    </>
+    <section aria-labelledby="rail-h" className="rounded-xl border border-line bg-surface p-6 shadow-md max-lg:hidden">
+      <div className="flex items-center gap-4">
+        <span role="img" aria-label={`${done} of ${REQUIRED.length} required parts filled`} style={{ "--p": Math.round((done / REQUIRED.length) * 100) } as React.CSSProperties}
+          className="progress-ring grid size-16 shrink-0 place-items-center rounded-full">
+          <span className="grid size-13 place-items-center rounded-full bg-surface font-display text-label-md text-ink tabular-nums">{done}/{REQUIRED.length}</span>
+        </span>
+        <div className="grid min-w-0 gap-0.5">
+          <h2 id="rail-h" className="font-display text-heading-md text-ink">{done <= 1 ? `Welcome, ${first}. This is your page.` : next ? "Keep going" : "Ready when you are"}</h2>
+          <p className="text-body-sm text-ink-muted">{next
+            ? done <= 1 ? "It's what clients will see. Tap any part to fill it in where it sits; it saves as you go." : "Tap any part to fill it in where it sits; it saves as you go."
+            : "Everything clients need is in. Preview it, then send it to the Between Gigs team."}</p>
+        </div>
+      </div>
+      <ul className="mt-5 grid gap-1">
+        {parts.map((id) => {
+          const filled = isFilled(id, d);
+          const isNext = id === next;
+          return (
+            <li key={id}>
+              <button type="button" onClick={() => open(id)} aria-current={editing === id ? "step" : undefined}
+                className={cx("flex min-h-11 w-full items-center gap-3 rounded-full px-3 text-left text-body-md transition-colors duration-fast",
+                  isNext ? "bg-tint-butter font-semibold text-tint-ink" : "text-ink hover:bg-surface-hover")}>
+                <span aria-hidden="true" className={cx("grid size-6 shrink-0 place-items-center rounded-full",
+                  filled ? "bg-action text-on-action" : isNext ? "border-4 border-ink bg-surface" : "border-2 border-line-strong")}>
+                  {filled && <Check className="size-3.5" strokeWidth={3} />}
+                </span>
+                <span className="min-w-0 flex-1">{LABEL[id]}<span className="sr-only">{filled ? " (done)" : " (to do)"}</span></span>
+                {isNext ? <span className="text-label-sm">Next</span> : !REQUIRED.includes(id) && <span className="text-label-sm text-ink-muted">Optional</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
@@ -463,9 +508,9 @@ function EditorPanel({ id, body, sheet = false }: { id: SpotId; body: React.Reac
   return (
     <div ref={ref} data-editor="" role="group" aria-label={`Editing: ${LABEL[id]}`} onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); close(); } }}
       style={sheet ? undefined : { maxHeight: "calc(100dvh - 8rem)" }}
-      className={cx("grid gap-5", sheet ? "p-5 pb-6" : "overflow-y-auto rounded-lg border border-ink-brand bg-surface-raised p-6 shadow-md")}>
+      className={cx("grid gap-5", sheet ? "p-5 pb-6" : "overflow-y-auto rounded-xl border-2 border-ink bg-surface p-6 shadow-lg")}>
       <div className="flex items-center justify-between gap-3">
-        <p className="flex items-center gap-2 font-display text-heading-md text-ink"><Pencil className="size-4 text-ink-brand" aria-hidden="true" />{LABEL[id]}</p>
+        <p className="flex items-center gap-3 font-display text-heading-md text-ink"><Icon3D name={ICON[id]} className="size-9" />{LABEL[id]}</p>
         <Button size="sm" variant="ghost" onClick={close}>Done</Button>
       </div>
       {note && <p className="flex gap-2 rounded-md bg-warning-soft p-3 text-body-sm text-ink"><MessageSquareWarning className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" /><span><b>Team note:</b> {note}</span></p>}
@@ -529,24 +574,34 @@ function Spot({ id, kind, hint, children }: { id: SpotId; kind: PartKind; hint: 
   const active = editing === id;
   const glow = id === next && !editing;
   const ring = active ? "ring-2 ring-ink-brand" : err ? "ring-2 ring-danger" : note ? "ring-2 ring-warning" : glow ? "ring-2 ring-ink-brand" : "";
-  const round = kind === "photo" ? "rounded-full" : "rounded-md";
-  const label = `${filled ? "Edit" : "Add"} ${LABEL[id].toLowerCase()}${REQUIRED.includes(id) ? "" : " (optional)"}`;
+  const optional = !REQUIRED.includes(id);
+  const label = `${filled ? "Edit" : "Add"} ${LABEL[id].toLowerCase()}${optional ? " (optional)" : ""}`;
+  const plus = <span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-full bg-action text-on-action"><Plus className="size-4" strokeWidth={2.5} /></span>;
 
   if (!filled) {
     return (
-      <div data-spot={id} style={order} className="relative">
+      <div data-spot={id} style={order} className={cx("relative", kind === "block" && "h-full")}>
         <button type="button" data-spot-edit="" onClick={() => open(id)} aria-label={label} aria-pressed={active}
-          className={cx("group text-left transition duration-base", round, ring, glow && "spot-next",
-            kind === "photo" ? "block w-full overflow-hidden"
-              : cx("flex min-h-12 w-full items-center gap-3 border border-dashed border-line-strong px-4 py-2.5 hover:border-ink hover:bg-surface-hover", kind === "title" && "justify-center"))}>
+          className={cx("group text-left transition duration-base", ring, glow && "spot-next",
+            kind === "photo" ? "block w-full rounded-2xl"
+              : kind === "block" ? "flex h-full min-h-20 w-full items-center gap-4 rounded-lg border-2 border-dashed border-line-strong bg-surface/60 p-4 hover:border-ink hover:bg-surface"
+              : cx("inline-flex min-h-11 max-w-full items-center gap-2.5 rounded-full border-2 border-dashed border-line-strong bg-surface/70 py-1.5 pr-4 pl-2 hover:border-ink hover:bg-surface", kind === "title" && "justify-center"))}>
           {kind === "photo" ? (
-            <span className="relative grid aspect-square place-items-center rounded-full bg-surface-sunken text-ink-muted group-hover:bg-surface-selected">
-              <UserRound className="absolute size-3/5 text-ink-subtle opacity-40" strokeWidth={1} aria-hidden="true" />
-              <span className="relative mt-auto mb-3 inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-label-sm text-ink shadow-sm"><Plus className="size-3.5" aria-hidden="true" />{hint}</span>
+            <span className="grid aspect-square place-content-center justify-items-center gap-1 rounded-2xl border-2 border-dashed border-line-strong bg-surface/70 p-3 text-center group-hover:border-ink group-hover:bg-surface">
+              <Icon3D name="camera" className="mb-1 size-12" />
+              <span className="text-label-md text-ink">{hint}</span>
+              <span className="text-body-sm text-ink-muted">A friendly face helps</span>
             </span>
-          ) : <>
-            <span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-full bg-surface-sunken text-ink group-hover:bg-surface"><Plus className="size-4" /></span>
-            <span className="text-body-md text-ink-muted group-hover:text-ink">{hint}</span>
+          ) : kind === "block" ? <>
+            <Icon3D name={ICON[id]} className="size-9" />
+            <span className="grid min-w-0 flex-1 gap-0.5">
+              <span className="flex flex-wrap items-center gap-2 text-label-md text-ink">{LABEL[id]}{optional && <span className="rounded-full bg-tint-sand px-2 py-0.5 text-label-sm text-tint-ink">Optional</span>}</span>
+              {hint !== LABEL[id] && <span className="text-body-sm text-ink-muted group-hover:text-ink">{hint}</span>}
+            </span>
+            <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-tint-mint text-tint-ink transition-transform duration-fast group-hover:scale-110"><Plus className="size-5" strokeWidth={2.5} /></span>
+          </> : <>
+            {plus}
+            <span className="truncate text-label-md text-ink">{id === "position" ? LABEL.position : hint}</span>
           </>}
         </button>
         {note && <Badge tone="warning" size="sm" className="absolute -top-3 right-3 shadow-sm">Team note</Badge>}
@@ -557,7 +612,7 @@ function Spot({ id, kind, hint, children }: { id: SpotId; kind: PartKind; hint: 
     <div data-spot={id} style={order} className={cx("group relative", kind === "line" && "w-fit max-w-full")}>
       <div className={cx("transition duration-base", id === "photo" && portrait ? "portrait-reveal" : fresh === id && "spot-filled")}>{children}</div>
       <button type="button" data-spot-edit="" onClick={() => open(id)} aria-label={label} aria-pressed={active}
-        className={cx("absolute -inset-2 transition duration-fast hover:bg-ink-brand/5 hover:ring-2 hover:ring-ink-brand/40 focus-visible:ring-2 focus-visible:ring-focus", kind === "photo" ? "rounded-full" : "rounded-md", ring)}>
+        className={cx("absolute -inset-2 transition duration-fast hover:bg-ink-brand/5 hover:ring-2 hover:ring-ink-brand/40 focus-visible:ring-2 focus-visible:ring-focus", kind === "photo" ? "rounded-2xl" : "rounded-lg", ring)}>
         <span className={cx("absolute inline-flex items-center gap-1 rounded-full bg-action px-2.5 py-1 text-label-sm whitespace-nowrap text-on-action shadow-sm transition-opacity duration-fast",
           active || note ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
           kind === "line" ? "top-1/2 left-full ml-3 -translate-y-1/2 max-sm:top-0 max-sm:right-2 max-sm:left-auto max-sm:-translate-y-1/2" : kind === "photo" ? "-bottom-2 left-1/2 -translate-x-1/2" : "top-3 right-3")}>

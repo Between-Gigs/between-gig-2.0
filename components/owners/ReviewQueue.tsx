@@ -1,13 +1,13 @@
 "use client";
 import { Badge, cx } from "@ds/components";
-import { ArrowRight, CircleCheck, MessageSquareWarning, PartyPopper, Users } from "lucide-react";
+import { ArrowRight, MessageSquareWarning, Users } from "lucide-react";
+import { Icon3D } from "@/components/ui/Icon3D";
 import * as React from "react";
 import { data, type ActivityEvent, type PersonSummary, type ProfileFields } from "@/lib/data";
 import { fieldLabel, validateAll } from "@/lib/profile/validate";
-import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { ago } from "./activity";
-import { HeaderSkeleton, Meter, OwnerPage, Panel, Row, RowSkeletons } from "./kit";
+import { AgoPill, HeaderSkeleton, Meter, OwnerAvatar, OwnerPage, Panel, Row, RowSkeletons } from "./kit";
 import { OwnerGate } from "./OwnerGate";
 import { OwnerShell } from "./OwnerShell";
 import { isHeld } from "./hold";
@@ -39,7 +39,7 @@ function Queue() {
       <OwnerShell>
         <div aria-busy="true" aria-label="Loading queue">
           <HeaderSkeleton />
-          <div aria-hidden="true" className="mt-5 overflow-hidden rounded-lg border border-line bg-surface"><div className="h-14 border-b border-line" /><RowSkeletons count={4} /></div>
+          <div aria-hidden="true" className="mt-6 overflow-hidden rounded-xl bg-surface shadow-sm ring-1 ring-line/70"><div className="h-16" /><RowSkeletons count={4} /></div>
         </div>
       </OwnerShell>
     );
@@ -53,36 +53,36 @@ function Queue() {
 
   return (
     <OwnerShell>
-      <OwnerPage title="Review queue" meta={rows.length}
+      <OwnerPage title="Review queue" icon="eyes" meta={rows.length}
         description="Submitted profiles, oldest first. Open one to approve it or suggest edits, then move straight to the next."
         actions={rows.length > 0 && <ButtonLink href={reviewHref(rows[0].person.id)} variant="primary" iconEnd={<ArrowRight />}>Start with the oldest</ButtonLink>}>
         {rows.length === 0 ? <Wrap today={decided.filter((e) => isToday(e.at))} /> : (
-          <Panel title="Waiting for review" flush collapsible="queue-waiting"
+          <Panel title="Waiting for review" count={rows.length} flush collapsible="queue-waiting"
             aside={common && <span className="inline-flex items-center gap-1.5"><MessageSquareWarning className="size-4 text-warning" aria-hidden="true" /><span className="tabular-nums">{common[1]} of {rows.length}</span> missing {common[0].toLowerCase()}</span>}>
             <ol>
               {rows.map(({ person: p, fields, completeness }, i) => (
                 <Row key={p.id} href={reviewHref(p.id)} title={p.name}
-                  leading={<PersonPhoto id={p.id} name={p.name} src={fields?.photo || undefined} alt="" className="size-10 rounded-full" textClass="text-label-md" />}
-                  badge={i === 0 ? <Badge tone="neutral" size="sm">Oldest</Badge> : undefined}
+                  leading={<OwnerAvatar id={p.id} name={p.name} src={fields?.photo || undefined} className="size-12 rounded-md" textClass="text-heading-sm" />}
+                  badge={i === 0 ? <Badge tone="warning" size="sm">Oldest</Badge> : undefined}
                   subtitle={[fields?.position, fields?.services.join(", ")].filter(Boolean).join(" · ")}
-                  meta={<><Meter value={completeness * 100} label="Profile complete" /><span className="w-36 text-right">Sent {p.submittedAt ? ago(p.submittedAt).toLowerCase() : ""}</span></>} />
+                  meta={<><Meter value={completeness * 100} label="Profile complete" /><AgoPill className="min-w-36">Sent {p.submittedAt ? ago(p.submittedAt).toLowerCase() : ""}</AgoPill></>} />
               ))}
             </ol>
           </Panel>
         )}
 
         <Panel title="Decided recently" flush collapsible="queue-decided" aside={decided.length > 0 && <span>Undo is in the toast right after each decision</span>}>
-          {decided.length === 0 ? <p className="px-5 py-4 text-body-sm text-ink-muted">Nothing decided yet. Approvals and suggested edits show up here.</p> : (
+          {decided.length === 0 ? <p className="px-5 pb-5 text-body-md text-ink-muted sm:px-6">Nothing decided yet. Approvals and suggested edits show up here.</p> : (
             <ul>
               {decided.slice(0, 5).map((e) => {
                 const approved = e.kind === "approved";
                 return (
                   <Row key={e.id} href={e.personId ? `/owners/people/${e.personId}/` : "/owners/people/"} title={e.who}
-                    leading={<span className={cx("grid size-10 place-items-center rounded-md", approved ? "bg-success-soft text-success" : "bg-warning-soft text-warning")}>
-                      {approved ? <CircleCheck className="size-5" aria-hidden="true" /> : <MessageSquareWarning className="size-5" aria-hidden="true" />}
+                    leading={<span className={cx("grid size-12 place-items-center rounded-md", approved ? "bg-tint-mint" : "bg-tint-butter")}>
+                      <Icon3D name={approved ? "check_mark_button" : "memo"} className="size-7" />
                     </span>}
                     subtitle={approved ? "Approved · live on the site" : "Sent suggested edits"}
-                    meta={<span className="w-28 text-right">{ago(e.at)}</span>} />
+                    meta={<AgoPill tone="sand" className="min-w-28">{ago(e.at)}</AgoPill>} />
                 );
               })}
             </ul>
@@ -100,8 +100,8 @@ function Wrap({ today }: { today: ActivityEvent[] }) {
   return (
     <Panel>
       <div className="mx-auto grid max-w-xl justify-items-center gap-3 py-8 text-center">
-        <span className="grid size-12 place-items-center rounded-md bg-surface-selected text-ink-brand"><PartyPopper className="size-6" aria-hidden="true" /></span>
-        <h2 className="font-display text-heading-lg text-ink">That&apos;s a wrap.</h2>
+        <span className="grid size-20 place-items-center rounded-xl bg-tint-mint"><Icon3D name="party_popper" className="size-12" /></span>
+        <h2 className="font-display text-display-sm text-ink">That&apos;s a wrap.</h2>
         <p className="text-body-md text-ink-muted">
           {today.length
             ? <>Nobody is waiting on you. Today you approved <b className="text-ink tabular-nums">{approved}</b> and suggested edits to <b className="text-ink tabular-nums">{edits}</b>.</>

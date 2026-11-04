@@ -8,6 +8,7 @@ import { SECTIONS, fieldLabel, sectionLabel, validateAll } from "@/lib/profile/v
 import { typingOrDialog } from "./format";
 import { HOLD_MS, holdDecision, type Hold } from "./hold";
 import { Panel } from "./kit";
+import { Icon3D } from "@/components/ui/Icon3D";
 import { markArea } from "@/lib/split-area";
 
 markArea("bg-split:dashboard");
@@ -102,8 +103,8 @@ export function ReviewWorkspace({ person, fields, queue, header, children }: {
   // reach wherever you've scrolled to. Both share one set of ticks.
   const checklist = (where: "page" | "bar") => (
     <>
-      <p className={cx("flex items-start gap-2 rounded-md p-3 text-body-sm text-ink", missing.length ? "bg-warning-soft" : "bg-success-soft")}>
-        {missing.length ? <MessageSquareWarning className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" /> : <CircleCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />}
+      <p className={cx("flex items-start gap-3 rounded-lg p-4 text-body-md text-tint-ink", missing.length ? "bg-tint-butter" : "bg-tint-mint")}>
+        <Icon3D name={missing.length ? "memo" : "check_mark_button"} className="size-7" />
         <span>{missing.length ? <>Missing: {missing.map((m) => m.label).join(", ")}. Suggest edits to ask {first} for it; the note is filled in for you.</> : "Every required answer is filled in."}</span>
       </p>
       <ul className={cx("mt-4 grid gap-4", where === "page" && "sm:grid-cols-2 xl:grid-cols-4")}>

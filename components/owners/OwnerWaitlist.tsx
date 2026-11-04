@@ -114,7 +114,7 @@ function Waitlist() {
 
   return (
     <OwnerShell>
-      <OwnerPage title="Waitlist" meta={counts ? total : "–"}
+      <OwnerPage title="Waitlist" icon="hourglass_done" meta={counts ? total : "–"}
         description="Everyone who got on the call sheet, and where they are with their invite. Pick people and send their personal “Create your profile” link.">
       {/* One line: search, invite status (with counts), interest and order. On phones they wrap. */}
       <div className="flex flex-wrap items-center gap-2">
@@ -125,7 +125,7 @@ function Waitlist() {
       </div>
 
       <Panel flush title={<><span className="tabular-nums">{rows?.length ?? 0}</span> sign-ups</>}
-        aside={allNotInvited.length > 0 && n < allNotInvited.length && <button type="button" className="inline-flex min-h-8 items-center text-label-md text-ink-muted hover:text-ink" onClick={() => setSelected(allNotInvited)}>Select all {allNotInvited.length} not invited{query.text || query.category !== "all" ? " in this view" : ""}</button>}
+        aside={allNotInvited.length > 0 && n < allNotInvited.length && <button type="button" className="inline-flex min-h-10 items-center rounded-full bg-tint-mint px-4 text-label-md text-tint-ink transition-colors duration-fast hover:bg-highlight" onClick={() => setSelected(allNotInvited)}>Select all {allNotInvited.length} not invited{query.text || query.category !== "all" ? " in this view" : ""}</button>}
         footer={pageCount > 1 ? <Pager page={page} pageCount={pageCount} onChange={setPage} itemLabel="page of sign-ups" /> : undefined}>
       <div data-results={rows ? "" : undefined}>
         {!rows && <RowSkeletons count={8} />}
@@ -133,9 +133,9 @@ function Waitlist() {
         <div className={cx("hidden overflow-x-auto", rows && "md:block")}>
           <table className="w-full border-collapse text-left text-body-md">
             <caption className="sr-only">Waitlist sign-ups</caption>
-            <thead className="bg-surface-sunken">
+            <thead className="bg-tint-sand">
               <tr className="text-label-sm text-ink-muted">
-                <th scope="col" className="h-10 w-12 border-b border-line px-3">
+                <th scope="col" className="h-11 w-12 border-b border-line px-3 first:pl-5">
                   <Checkbox aria-label="Select everyone on this page who isn't invited" checked={allOnPage} disabled={!invitable.length}
                     ref={(el) => { if (el) el.indeterminate = someOnPage && !allOnPage; }} onChange={(e) => togglePage(e.target.checked)} />
                 </th>
@@ -153,7 +153,7 @@ function Waitlist() {
                 return (
                   <tr key={r.signup.id}
                     className={cx("border-b border-line transition-colors duration-fast last:border-b-0", on ? "bg-surface-selected" : "hover:bg-surface-hover")}>
-                    <td className={cx("h-10 border-l-4 px-3", on ? "border-l-ink-brand" : "border-l-transparent")}>
+                    <td className={cx("h-12 border-l-4 px-3 pl-4", on ? "border-l-ink-brand" : "border-l-transparent")}>
                       {r.inviteStatus === "not_invited"
                         ? <Checkbox aria-label={`Select ${r.signup.email}`} checked={on} onChange={(e) => toggle(r.signup.id, e.target.checked)} />
                         : <span className="sr-only">Already invited</span>}
@@ -199,7 +199,7 @@ function Waitlist() {
       {/* The bulk action bar: pinned to the bottom of the view while anyone is selected. */}
       <div aria-live="polite" className="sticky bottom-4 z-sticky -mt-6 empty:hidden">
         {n > 0 && (
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-ink-brand bg-surface-raised p-2 pl-4 shadow-lg">
+          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-surface-raised p-2 pl-5 shadow-lg ring-2 ring-ink">
             <p className="text-label-md text-ink"><span className="tabular-nums">{n}</span> selected</p>
             <Button size="sm" variant="ghost" iconStart={<X />} onClick={() => setSelected([])}>Clear</Button>
             <div className="ml-auto flex gap-2">

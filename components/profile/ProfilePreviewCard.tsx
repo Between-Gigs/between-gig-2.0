@@ -48,8 +48,8 @@ export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview"
   const ring = (n: number) => cx(live && "-mx-2.5 rounded-l-none! rounded-r-md border-l-2 pr-2.5 pl-2 transition-colors", live && (step === n ? "border-ink-brand bg-surface-selected" : "border-transparent"));
   const later = (n: number, what: string) => <span className="text-body-sm text-ink-subtle italic">{what} · added in step {n + 1}</span>;
   return (
-    <article aria-label={badge ? `${badge} of your profile card` : `${d.name || "Profile"} card`} className={cx("overflow-hidden rounded-lg border border-line bg-surface shadow-lg", className)}>
-      <div className="relative aspect-video overflow-hidden">
+    <article aria-label={badge ? `${badge} of your profile card` : `${d.name || "Profile"} card`} className={cx("overflow-hidden rounded-xl border border-line bg-surface shadow-md", className)}>
+      <div className="relative m-2 mb-0 aspect-video overflow-hidden rounded-lg">
         <PersonPhoto id={personId} name={d.name} src={d.photo || undefined} alt={d.photo ? `Profile photo of ${d.name || "you"}` : "No photo yet"}
           fallback="brand" department={d.position} skills={d.skills} iconClass="size-10" textClass="text-heading-lg" className="size-full" />
         <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">

@@ -13,7 +13,7 @@ import { ProfileView } from "@/components/profile/ProfileView";
 import { OwnerShell } from "./OwnerShell";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { OwnerGate } from "./OwnerGate";
-import { HeaderSkeleton, Panel, useScrolledPast } from "./kit";
+import { HeaderSkeleton, OwnerAvatar, Panel, useScrolledPast } from "./kit";
 import { ReviewWorkspace, type QueueItem } from "./ReviewPanel";
 import { shortDate } from "./format";
 import { isHeld } from "./hold";
@@ -69,12 +69,12 @@ function Person({ id }: { id: string }) {
 
   // A slim header: who, where they are, and the four steps so far as a timeline.
   const header = (
-    <header className="mt-2 grid gap-5 rounded-lg border border-line bg-surface p-5 lg:grid-cols-12 lg:items-center">
+    <header className="mt-4 grid gap-5 rounded-xl bg-surface p-5 shadow-sm ring-1 ring-line/70 sm:p-6 lg:grid-cols-12 lg:items-center">
       <div className="flex min-w-0 items-center gap-4 lg:col-span-6">
-        <PersonPhoto id={p.id} name={p.name || "?"} src={fields?.photo || undefined} alt="" className="size-14 shrink-0 rounded-md" textClass="text-heading-md" />
+        <OwnerAvatar id={p.id} name={p.name} src={fields?.photo || undefined} className="size-16 shrink-0 rounded-lg" textClass="text-heading-lg" />
         <div className="grid min-w-0 gap-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <h1 className="min-w-0 truncate font-display text-heading-lg text-ink">{name}</h1>
+            <h1 className="min-w-0 truncate font-display text-display-sm text-ink">{name}</h1>
             <PersonStatusBadge status={p.status} size="sm" />
           </div>
           <p className="flex min-w-0 flex-wrap gap-x-3 text-body-sm text-ink-muted">
@@ -88,8 +88,8 @@ function Person({ id }: { id: string }) {
         {timeline.map(([k, v], i) => (
           <li key={k} className="relative grid gap-1.5 pr-1 xs:pr-2">
             <span aria-hidden="true" className="flex items-center">
-              <span className={cx("size-2.5 shrink-0 rounded-full", v ? "bg-action" : "border-2 border-line-strong")} />
-              {i < timeline.length - 1 && <span className={cx("h-0.5 flex-1", timeline[i + 1][1] ? "bg-action" : "bg-line")} />}
+              <span className={cx("size-3.5 shrink-0 rounded-full", v ? "bg-action ring-4 ring-surface-selected" : "border-2 border-line-strong")} />
+              {i < timeline.length - 1 && <span className={cx("h-1 flex-1 rounded-full", timeline[i + 1][1] ? "bg-action" : "border-t-2 border-dashed border-line-strong")} />}
             </span>
             <span className="text-caption text-ink-muted xs:text-label-sm">{k}</span>
             <span className="text-body-sm whitespace-nowrap text-ink tabular-nums">{v ?? <span className="text-ink-subtle">Not yet</span>}</span>

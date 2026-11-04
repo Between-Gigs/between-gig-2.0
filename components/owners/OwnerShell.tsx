@@ -1,6 +1,7 @@
 "use client";
-import { Avatar, Count, Drawer, IconButton, Input, cx } from "@ds/components";
-import { ClipboardCheck, LayoutDashboard, ListPlus, LogOut, Mail, PanelLeftClose, PanelLeftOpen, Search, Users } from "lucide-react";
+import { Drawer, IconButton, Input, cx } from "@ds/components";
+import { initials } from "@ds/components/Avatar";
+import { LogOut, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
@@ -9,6 +10,8 @@ import { useAuthActions } from "@/lib/auth/context";
 import { useSession } from "@/lib/session";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { markArea } from "@/lib/split-area";
+import { Icon3D } from "@/components/ui/Icon3D";
+import type { Icon3DName } from "@/lib/icons3d";
 
 markArea("bg-split:dashboard");
 
@@ -16,20 +19,20 @@ markArea("bg-split:dashboard");
 export const COLLAPSED_KEY = "bg2-owner-nav-collapsed";
 
 type CountKey = "review" | "people" | "waitlist";
-interface Item { href: string; label: string; icon: React.ReactNode; exact?: boolean; count?: CountKey; hint?: string }
+interface Item { href: string; label: string; icon: Icon3DName; exact?: boolean; count?: CountKey; hint?: string }
 
 /** The owners' sections, grouped by the job: see the day, look after Gigsters, talk to people. */
 const sections: { title: string; items: Item[] }[] = [
-  { title: "Overview", items: [{ href: "/owners/", label: "Dashboard", icon: <LayoutDashboard />, exact: true }] },
+  { title: "Overview", items: [{ href: "/owners/", label: "Dashboard", icon: "house", exact: true }] },
   {
     title: "Gigsters",
     items: [
-      { href: "/owners/review/", label: "Review queue", icon: <ClipboardCheck />, count: "review", hint: "waiting for review" },
-      { href: "/owners/people/", label: "People", icon: <Users />, count: "people", hint: "invited so far" },
-      { href: "/owners/waitlist/", label: "Waitlist", icon: <ListPlus />, count: "waitlist", hint: "not invited yet" },
+      { href: "/owners/review/", label: "Review queue", icon: "eyes", count: "review", hint: "waiting for review" },
+      { href: "/owners/people/", label: "People", icon: "handshake", count: "people", hint: "invited so far" },
+      { href: "/owners/waitlist/", label: "Waitlist", icon: "hourglass_done", count: "waitlist", hint: "not invited yet" },
     ],
   },
-  { title: "Messages", items: [{ href: "/emails/", label: "Emails", icon: <Mail /> }] },
+  { title: "Messages", items: [{ href: "/emails/", label: "Emails", icon: "envelope" }] },
 ];
 
 function countsFrom(d: DashboardSummary): Record<CountKey, number> {
@@ -111,7 +114,7 @@ export function OwnerFrame({ children, section: fixed, fit: fixedFit = false }: 
       <div className="flex h-dvh flex-col bg-bg text-ink">
         <SiteHeader app onOpenNav={() => setDrawer(true)} />
         <div className="flex min-h-0 flex-1">
-          <nav aria-label="Owner workspace" className="hidden embedded:hidden! w-62 shrink-0 flex-col border-r border-line bg-surface lg:flex nav-collapsed:w-16">
+          <nav aria-label="Owner workspace" className="hidden embedded:hidden! w-66 shrink-0 flex-col border-r border-line bg-tint-sand lg:flex nav-collapsed:w-18">
             <OwnerNav counts={counts} section={section} searchRef={search} onOpenSearch={openSearch}
               toggle={
                 <>
@@ -156,7 +159,7 @@ function OwnerNav({ counts, section, toggle, searchRef, onOpenSearch, onNavigate
     <div className={cx("flex min-h-0 flex-1 flex-col gap-4", !drawer && "py-3")}>
       {!drawer && (
         <div className="flex h-9 items-center justify-between gap-2 pr-2 pl-5 nav-collapsed:justify-center nav-collapsed:px-0">
-          <span className="truncate text-eyebrow text-ink-subtle uppercase nav-collapsed:hidden">Owner workspace</span>
+          <span className="truncate text-label-md text-ink-muted nav-collapsed:hidden">Owner workspace</span>
           {toggle}
         </div>
       )}
@@ -169,8 +172,8 @@ function OwnerNav({ counts, section, toggle, searchRef, onOpenSearch, onNavigate
 
       <div className={cx("no-scrollbar grid min-h-0 flex-1 content-start gap-5 overflow-x-hidden overflow-y-auto", !drawer && "px-3", rail("nav-collapsed:justify-items-center nav-collapsed:gap-3"))}>
         {sections.map((s) => (
-          <div key={s.title} className={cx("grid gap-0.5", rail("nav-collapsed:border-t nav-collapsed:border-line nav-collapsed:pt-3 nav-collapsed:first:border-0 nav-collapsed:first:pt-0"))}>
-            <span className={cx("px-3 pb-1 text-eyebrow text-ink-subtle uppercase", rail("nav-collapsed:hidden"))}>{s.title}</span>
+          <div key={s.title} className={cx("grid gap-1", rail("nav-collapsed:border-t nav-collapsed:border-line nav-collapsed:pt-3 nav-collapsed:first:border-0 nav-collapsed:first:pt-0"))}>
+            <span className={cx("px-3 pb-1 text-label-sm text-ink-subtle", rail("nav-collapsed:hidden"))}>{s.title}</span>
             {s.items.map((i) => {
               const n = i.count && counts ? counts[i.count] : undefined;
               return (
@@ -200,8 +203,8 @@ function Account({ drawer, rail }: { drawer: boolean; rail: (cls: string) => str
     if (auth.provider === "sample") router.push("/login/?signedOut=1");
   };
   return (
-    <div className={cx("flex items-center gap-3 border-t border-line pt-3", !drawer && "px-3", rail("nav-collapsed:flex-col nav-collapsed:gap-2 nav-collapsed:px-0"))}>
-      <span title={`${name} · ${session.email}`} className="inline-flex"><Avatar name={name} size="md" /></span>
+    <div className={cx("flex items-center gap-3 rounded-lg bg-surface p-3 shadow-xs", !drawer && "mx-3", rail("nav-collapsed:mx-auto nav-collapsed:flex-col nav-collapsed:gap-2 nav-collapsed:bg-transparent nav-collapsed:p-0 nav-collapsed:shadow-none"))}>
+      <span title={`${name} · ${session.email}`} aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full bg-tint-peach font-display text-label-md text-tint-ink">{initials(name)}</span>
       <div className={cx("grid min-w-0 flex-1", rail("nav-collapsed:hidden"))}>
         <span className="truncate text-label-md text-ink">{name}</span>
         <span className="truncate text-caption text-ink-subtle">{session.email}</span>
@@ -222,22 +225,25 @@ function NavLink({ item: i, count, active, attention, onNavigate, rail }: {
   return (
     <Link href={i.href} onClick={onNavigate} aria-current={active ? "page" : undefined} aria-label={name} title={name}
       className={cx(
-        "group flex min-h-11 items-center gap-3 rounded-md px-3 py-1.5 text-label-md transition-colors duration-fast [&_svg]:size-5 [&_svg]:shrink-0",
-        rail("nav-collapsed:size-10 nav-collapsed:min-h-10 nav-collapsed:justify-center nav-collapsed:p-0"),
-        active ? "bg-surface-selected text-ink" : "text-ink-muted hover:bg-surface-hover hover:text-ink",
+        "group flex min-h-12 items-center gap-3 rounded-lg px-3 py-1.5 text-label-md transition-colors duration-fast",
+        rail("nav-collapsed:size-12 nav-collapsed:min-h-12 nav-collapsed:justify-center nav-collapsed:p-0"),
+        active ? "bg-surface-selected font-bold text-ink" : "text-ink-muted hover:bg-surface-hover hover:text-ink",
       )}>
-      <span className={cx("relative inline-flex", active ? "text-ink-brand" : "text-ink-subtle group-hover:text-ink-muted")}>
-        {i.icon}
-        {attention && <span aria-hidden="true" className={cx("absolute -top-1 -right-1 hidden size-2.5 rounded-full border-2 border-surface bg-action", rail("nav-collapsed:block"))} />}
+      <span className="relative inline-flex">
+        <Icon3D name={i.icon} className="size-7" />
+        {attention && <span aria-hidden="true" className={cx("absolute -top-1 -right-1 hidden size-2.5 rounded-full border-2 border-tint-sand bg-ink", rail("nav-collapsed:block"))} />}
       </span>
       <span aria-hidden="true" className={cx("grid min-w-0 flex-1", rail("nav-collapsed:hidden"))}>
-        <span className="truncate">{i.label}</span>
+        <span className="truncate text-body-md font-bold">{i.label}</span>
         {/* Says what the number counts, so 476 on the Waitlist isn't read as everyone on it. */}
         {i.hint && <span className="truncate text-caption text-ink-subtle">{i.hint}</span>}
       </span>
       {i.count && (
-        <span aria-hidden="true" className={cx("inline-flex min-w-8 justify-end", rail("nav-collapsed:hidden"))}>
-          {count !== undefined && <Count value={count} max={999} tone={attention ? "accent" : "quiet"} />}
+        <span aria-hidden="true" className={cx("inline-flex min-w-9 justify-end", rail("nav-collapsed:hidden"))}>
+          {count !== undefined && (
+            <span className={cx("inline-flex h-6 min-w-8 items-center justify-center rounded-full px-2.5 text-label-sm font-extrabold tabular-nums",
+              attention ? "bg-tint-peach text-tint-ink" : "bg-surface text-ink ring-1 ring-line")}>{count > 999 ? "999+" : count}</span>
+          )}
         </span>
       )}
     </Link>

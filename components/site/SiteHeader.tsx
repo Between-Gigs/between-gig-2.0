@@ -61,7 +61,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
             {links.map((l) => (
               <Link key={l.href} href={l.href} aria-current={current(l.href) ? "page" : undefined}
                 className={cx("relative inline-flex min-h-11 items-center px-3 text-label-md transition-colors duration-fast",
-                  current(l.href) ? "text-ink after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:rounded-full after:bg-ink" : "text-ink-muted hover:text-ink")}>
+                  current(l.href) ? "text-ink after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:rounded-full after:bg-ink friendly:rounded-full friendly:bg-surface-selected friendly:after:hidden" : "text-ink-muted hover:text-ink friendly:rounded-full friendly:hover:bg-surface-hover")}>
                 {l.label}
               </Link>
             ))}
@@ -81,7 +81,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
               } />
           ) : (
             <>
-              {!pathname.startsWith("/login") && <Link href="/login/" className="hidden min-h-11 items-center rounded-full px-3 text-label-md text-ink hover:bg-surface-hover sm:inline-flex">Log in</Link>}
+              {!pathname.startsWith("/login") && <Link href="/login/" className="hidden min-h-11 items-center rounded-full px-3 text-label-md text-ink hover:bg-surface-hover friendly:border-2 friendly:border-line friendly:px-4 sm:inline-flex">Log in</Link>}
               <Menu align="end" items={[...links.map((l) => ({ label: l.label, checked: current(l.href) || undefined, onSelect: () => router.push(l.href) })), "separator" as const, { label: "Log in", icon: <UserRound />, onSelect: () => router.push("/login/") }]}
                 trigger={
                   <button type="button" aria-label="Menu" className="inline-flex min-h-11 items-center gap-2.5 rounded-full border border-line bg-surface py-1 pr-1 pl-3 text-ink transition-shadow duration-fast hover:shadow-md">
