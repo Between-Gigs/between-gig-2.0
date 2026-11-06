@@ -1,6 +1,6 @@
 "use client";
 import { Banner, Button, Checkbox, Field, IconButton, Kbd, Modal, Popover, Tag, Textarea, Tooltip, cx, useToast } from "@ds/components";
-import { ArrowRight, ChevronLeft, ChevronRight, CircleCheck, Keyboard, ListChecks, MessageSquareWarning } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, CircleCheck, CircleDashed, Keyboard, ListChecks, MessageSquareWarning } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
@@ -8,7 +8,6 @@ import { SECTIONS, fieldLabel, sectionLabel, validateAll } from "@/lib/profile/v
 import { typingOrDialog } from "./format";
 import { HOLD_MS, holdDecision, type Hold } from "./hold";
 import { Panel } from "./kit";
-import { Icon3D } from "@/components/ui/Icon3D";
 import { markArea } from "@/lib/split-area";
 
 markArea("bg-split:dashboard");
@@ -103,8 +102,8 @@ export function ReviewWorkspace({ person, fields, queue, header, children }: {
   // reach wherever you've scrolled to. Both share one set of ticks.
   const checklist = (where: "page" | "bar") => (
     <>
-      <p className={cx("flex items-start gap-3 rounded-lg p-4 text-body-md text-tint-ink", missing.length ? "bg-tint-butter" : "bg-tint-mint")}>
-        <Icon3D name={missing.length ? "memo" : "check_mark_button"} className="size-7" />
+      <p className={cx("flex items-start gap-3 border-l-4 p-4 text-body-md text-ink", missing.length ? "border-warning bg-warning-soft" : "border-line-strong bg-surface-sunken")}>
+        {missing.length ? <CircleDashed aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-warning" /> : <CircleCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-ink" />}
         <span>{missing.length ? <>Missing: {missing.map((m) => m.label).join(", ")}. Suggest edits to ask {first} for it; the note is filled in for you.</> : "Every required answer is filled in."}</span>
       </p>
       <ul className={cx("mt-4 grid gap-4", where === "page" && "sm:grid-cols-2 xl:grid-cols-4")}>
@@ -120,10 +119,10 @@ export function ReviewWorkspace({ person, fields, queue, header, children }: {
 
   return (
     <>
-      <div className="sticky top-0 z-sticky -mx-4 mt-2 flex h-16 items-center gap-2 border-b border-line bg-bg/90 px-4 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
+      <div className="sticky top-0 z-sticky -mx-4 mt-2 flex h-16 items-center gap-2 border-b-4 border-line-strong bg-bg px-4 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
         <nav aria-label="Review queue" className="flex min-w-0 items-center gap-1">
           <IconButton variant="ghost" size="sm" label={prev ? `Previous in queue: ${prev.name} (K)` : "Previous in queue"} icon={<ChevronLeft />} disabled={!prev} onClick={() => go(prev)} />
-          <p className="px-1 text-label-md whitespace-nowrap text-ink tabular-nums">
+          <p className="px-1 font-display text-label-md font-extrabold whitespace-nowrap text-ink tabular-nums">
             {index >= 0 ? <>{index + 1} of {queue.length}<span className="max-sm:sr-only"> in queue</span></> : "Review"}
           </p>
           <IconButton variant="ghost" size="sm" label={next ? `Next in queue: ${next.name} (J)` : "Next in queue"} icon={<ChevronRight />} disabled={!next} onClick={() => go(next)} />
@@ -153,7 +152,7 @@ export function ReviewWorkspace({ person, fields, queue, header, children }: {
 
       {header}
 
-      <Panel className="mt-6" id="review-h" title="Review checklist" collapsible="review-checklist"
+      <Panel className="mt-8" id="review-h" title="Review checklist" collapsible="review-checklist"
         aside={<span className="tabular-nums">{ticked.length} of {checks.length} checked · a guide, nothing is saved until you decide</span>}>
         {checklist("page")}
       </Panel>

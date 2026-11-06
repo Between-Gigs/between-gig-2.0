@@ -89,7 +89,7 @@ function PhotoCropper({ src, onCancel, onSave }: { src: string; onCancel: () => 
       footer={<><Button variant="ghost" onClick={onCancel}>Cancel</Button><Button variant="primary" iconStart={<Check />} disabled={!img} onClick={save}>Use this photo</Button></>}>
       <div className="grid gap-4">
         <div ref={box} role="application" tabIndex={0} aria-label="Photo position. Drag, or use the arrow keys to move it."
-          className="relative mx-auto aspect-square w-full max-w-80 cursor-grab touch-none overflow-hidden rounded-lg bg-surface-sunken outline-none select-none focus-visible:ring-2 focus-visible:ring-ink-brand active:cursor-grabbing"
+          className="relative mx-auto aspect-square w-full max-w-80 cursor-grab touch-none overflow-hidden bg-surface-sunken outline-none select-none focus-visible:ring-2 focus-visible:ring-ink-brand active:cursor-grabbing"
           onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); drag.current = { px: e.clientX, py: e.clientY, x: c.x, y: c.y }; }}
           onPointerMove={(e) => {
             const d = drag.current, v = box.current?.clientWidth;
@@ -150,22 +150,22 @@ export function PhotoPicker({ value, name, onChange, error, id, personId: forPer
   };
   const message = problem ?? error;
   return (
-    <div className="flex flex-col items-start gap-4 rounded-lg border border-line bg-surface-sunken p-4 xs:flex-row xs:items-center">
+    <div className="flex flex-col items-start gap-4 border-2 border-line bg-surface-sunken p-4 sm:flex-row sm:items-center">
       {value
-        ? <PersonPhoto id="self" name={name} src={value} alt="Your profile photo" className="size-20 shrink-0 rounded-lg shadow-md" />
-        : <span className="grid size-20 shrink-0 place-items-center rounded-lg border border-dashed border-line-strong text-ink-subtle"><ImagePlus aria-hidden="true" /></span>}
+        ? <PersonPhoto id="self" name={name} src={value} alt="Your profile photo" className="size-24 shrink-0" />
+        : <span className="grid size-24 shrink-0 place-items-center border-2 border-line bg-bg text-ink-muted"><ImagePlus aria-hidden="true" /></span>}
       <div className="grid min-w-0 gap-2">
-        <p id={`${id}-label`} className="text-label-md text-ink">Profile photo</p>
+        <p id={`${id}-label`} className="font-display text-label-md font-bold text-ink">Profile photo</p>
         <p className="text-body-sm text-ink-muted">A clear, friendly photo of you, face to camera. Clients see it first.</p>
         {message && <p id={`${id}-error`} className="text-body-sm text-danger">{message}</p>}
         <div className="flex flex-wrap gap-2">
           <input ref={input} id={id} type="file" accept="image/*" className="sr-only" tabIndex={-1} aria-labelledby={`${id}-label`}
             onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = ""; }} />
-          <Button size="sm" variant="secondary" iconStart={<ImagePlus />} aria-describedby={message ? `${id}-error` : undefined} onClick={() => input.current?.click()}>
+          <Button variant="secondary" className="min-h-11 border-2 font-display font-bold" iconStart={<ImagePlus />} aria-describedby={message ? `${id}-error` : undefined} onClick={() => input.current?.click()}>
             {value ? "Replace photo" : "Upload a photo"}
           </Button>
-          {value && <Button size="sm" variant="ghost" iconStart={<CropIcon />} onClick={() => (confirm ? confirm(() => setCropping(value)) : setCropping(value))}>Crop</Button>}
-          {value && <Button size="sm" variant="ghost" iconStart={<Trash2 />} onClick={() => onChange("")}>Remove</Button>}
+          {value && <Button variant="ghost" className="min-h-11" iconStart={<CropIcon />} onClick={() => (confirm ? confirm(() => setCropping(value)) : setCropping(value))}>Crop</Button>}
+          {value && <Button variant="ghost" className="min-h-11" iconStart={<Trash2 />} onClick={() => onChange("")}>Remove</Button>}
         </div>
       </div>
       {cropping && <PhotoCropper src={cropping} onCancel={() => setCropping(null)} onSave={use} />}

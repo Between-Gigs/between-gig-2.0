@@ -1,13 +1,12 @@
 "use client";
-import { Badge, cx } from "@ds/components";
-import { ArrowRight, MessageSquareWarning, Users } from "lucide-react";
-import { Icon3D } from "@/components/ui/Icon3D";
+import { Badge } from "@ds/components";
+import { ArrowRight, CircleCheck, MessageSquareWarning, PartyPopper, PencilLine, Users } from "lucide-react";
 import * as React from "react";
 import { data, type ActivityEvent, type PersonSummary, type ProfileFields } from "@/lib/data";
 import { fieldLabel, validateAll } from "@/lib/profile/validate";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { ago } from "./activity";
-import { AgoPill, HeaderSkeleton, Meter, OwnerAvatar, OwnerPage, Panel, Row, RowSkeletons } from "./kit";
+import { AgoPill, forestButton, HeaderSkeleton, Meter, OwnerAvatar, OwnerPage, Panel, Row, RowSkeletons } from "./kit";
 import { OwnerGate } from "./OwnerGate";
 import { OwnerShell } from "./OwnerShell";
 import { isHeld } from "./hold";
@@ -39,7 +38,7 @@ function Queue() {
       <OwnerShell>
         <div aria-busy="true" aria-label="Loading queue">
           <HeaderSkeleton />
-          <div aria-hidden="true" className="mt-6 overflow-hidden rounded-xl bg-surface shadow-sm ring-1 ring-line/70"><div className="h-16" /><RowSkeletons count={4} /></div>
+          <div aria-hidden="true" className="mt-8 overflow-hidden border-t-4 border-line-strong"><div className="h-16" /><RowSkeletons count={4} /></div>
         </div>
       </OwnerShell>
     );
@@ -53,36 +52,37 @@ function Queue() {
 
   return (
     <OwnerShell>
-      <OwnerPage title="Review queue" icon="eyes" meta={rows.length}
+      <OwnerPage title="Review queue" kicker="Oldest first" meta={rows.length}
         description="Submitted profiles, oldest first. Open one to approve it or suggest edits, then move straight to the next."
-        actions={rows.length > 0 && <ButtonLink href={reviewHref(rows[0].person.id)} variant="primary" iconEnd={<ArrowRight />}>Start with the oldest</ButtonLink>}>
+        actions={rows.length > 0 && <ButtonLink href={reviewHref(rows[0].person.id)} variant="strong" size="lg" className={forestButton} iconEnd={<ArrowRight />}>Start with the oldest</ButtonLink>}>
         {rows.length === 0 ? <Wrap today={decided.filter((e) => isToday(e.at))} /> : (
-          <Panel title="Waiting for review" count={rows.length} flush collapsible="queue-waiting"
+          <Panel number="01" title="Waiting for review" count={rows.length} flush collapsible="queue-waiting"
             aside={common && <span className="inline-flex items-center gap-1.5"><MessageSquareWarning className="size-4 text-warning" aria-hidden="true" /><span className="tabular-nums">{common[1]} of {rows.length}</span> missing {common[0].toLowerCase()}</span>}>
-            <ol>
+            <ol className="@container border-t-2 border-line-strong">
               {rows.map(({ person: p, fields, completeness }, i) => (
                 <Row key={p.id} href={reviewHref(p.id)} title={p.name}
-                  leading={<OwnerAvatar id={p.id} name={p.name} src={fields?.photo || undefined} className="size-12 rounded-md" textClass="text-heading-sm" />}
+                  leading={<OwnerAvatar id={p.id} name={p.name} src={fields?.photo || undefined} className="size-12 @md:size-16" textClass="text-heading-sm" />}
+                  action="Review" strong={i === 0}
                   badge={i === 0 ? <Badge tone="warning" size="sm">Oldest</Badge> : undefined}
                   subtitle={[fields?.position, fields?.services.join(", ")].filter(Boolean).join(" · ")}
-                  meta={<><Meter value={completeness * 100} label="Profile complete" /><AgoPill className="min-w-36">Sent {p.submittedAt ? ago(p.submittedAt).toLowerCase() : ""}</AgoPill></>} />
+                  meta={<><Meter value={completeness * 100} label="Profile complete" /><AgoPill className="min-w-32">Sent {p.submittedAt ? ago(p.submittedAt).toLowerCase() : ""}</AgoPill></>} />
               ))}
             </ol>
           </Panel>
         )}
 
-        <Panel title="Decided recently" flush collapsible="queue-decided" aside={decided.length > 0 && <span>Undo is in the toast right after each decision</span>}>
-          {decided.length === 0 ? <p className="px-5 pb-5 text-body-md text-ink-muted sm:px-6">Nothing decided yet. Approvals and suggested edits show up here.</p> : (
-            <ul>
+        <Panel number={rows.length ? "02" : "01"} title="Decided recently" flush collapsible="queue-decided" aside={decided.length > 0 && <span>Undo is in the toast right after each decision</span>}>
+          {decided.length === 0 ? <p className="pb-5 text-body-md text-ink-muted">Nothing decided yet. Approvals and suggested edits show up here.</p> : (
+            <ul className="border-t-2 border-line-strong">
               {decided.slice(0, 5).map((e) => {
                 const approved = e.kind === "approved";
                 return (
                   <Row key={e.id} href={e.personId ? `/owners/people/${e.personId}/` : "/owners/people/"} title={e.who}
-                    leading={<span className={cx("grid size-12 place-items-center rounded-md", approved ? "bg-tint-mint" : "bg-tint-butter")}>
-                      <Icon3D name={approved ? "check_mark_button" : "memo"} className="size-7" />
+                    leading={<span className="grid size-12 place-items-center bg-surface-sunken text-ink">
+                      {approved ? <CircleCheck aria-hidden="true" className="size-5" strokeWidth={1.75} /> : <PencilLine aria-hidden="true" className="size-5" strokeWidth={1.75} />}
                     </span>}
                     subtitle={approved ? "Approved · live on the site" : "Sent suggested edits"}
-                    meta={<AgoPill tone="sand" className="min-w-28">{ago(e.at)}</AgoPill>} />
+                    meta={<AgoPill className="min-w-28">{ago(e.at)}</AgoPill>} />
                 );
               })}
             </ul>
@@ -99,17 +99,17 @@ function Wrap({ today }: { today: ActivityEvent[] }) {
   const edits = today.length - approved;
   return (
     <Panel>
-      <div className="mx-auto grid max-w-xl justify-items-center gap-3 py-8 text-center">
-        <span className="grid size-20 place-items-center rounded-xl bg-tint-mint"><Icon3D name="party_popper" className="size-12" /></span>
-        <h2 className="font-display text-display-sm text-ink">That&apos;s a wrap.</h2>
+      <div className="grid max-w-2xl justify-items-start gap-4 border-t-4 border-line-strong pt-6 pb-8">
+        <span className="grid size-16 place-items-center bg-tint-mint text-forest-950"><PartyPopper aria-hidden="true" className="size-8" strokeWidth={1.75} /></span>
+        <h2 className="font-display text-display-sm text-ink sm:text-display-md">That&apos;s a wrap.</h2>
         <p className="text-body-md text-ink-muted">
           {today.length
             ? <>Nobody is waiting on you. Today you approved <b className="text-ink tabular-nums">{approved}</b> and suggested edits to <b className="text-ink tabular-nums">{edits}</b>.</>
             : "Nobody is waiting on you. New submissions appear here as soon as a Gigster sends their profile."}
         </p>
-        <div className="mt-2 flex flex-wrap justify-center gap-2">
-          <ButtonLink href="/owners/" variant="primary" iconEnd={<ArrowRight />}>Back to the dashboard</ButtonLink>
-          <ButtonLink href="/owners/people/" variant="secondary" iconStart={<Users />}>See everyone</ButtonLink>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <ButtonLink href="/owners/" variant="strong" className={forestButton} iconEnd={<ArrowRight />}>Back to the dashboard</ButtonLink>
+          <ButtonLink href="/owners/people/" variant="secondary" className="border-2" iconStart={<Users />}>See everyone</ButtonLink>
         </div>
       </div>
     </Panel>

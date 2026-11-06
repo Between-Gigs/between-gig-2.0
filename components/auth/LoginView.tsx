@@ -66,7 +66,7 @@ function ClerkLogin() {
     <AuthShell header="Log in">
       <div className="grid gap-6">
         <div>
-          <h1 className="font-display text-display-sm text-balance text-ink">Welcome back</h1>
+          <h1 className="font-display text-heading-lg text-balance text-ink">Welcome back</h1>
           <p className="mt-2 text-body-md text-ink-muted">Use the email and password you created.</p>
         </div>
         {params.get("signedOut") && <Banner tone="success" title="You're logged out">See you next time.</Banner>}
@@ -80,7 +80,7 @@ function ClerkLogin() {
             initialValues={{ emailAddress: params.get("email") ?? undefined }}
             fallbackRedirectUrl={`${basePath}${destination(params.get("next"), "gigster")}`} />}
         </ClerkSlot>}
-        <p className="border-t border-line pt-5 text-body-sm text-ink-muted">New here? <Link href="/join/" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2">Create an account</Link>. Already joined with Google or an email code? Use that same sign-in method; account recovery keeps your existing identity.</p>
+        <p className="border-t border-line pt-5 text-body-sm text-ink-muted">New here? <Link href="/join/" className="inline-flex min-h-6 items-center font-bold text-ink underline underline-offset-4">Create an account</Link>. Already joined with Google or an email code? Use that same sign-in method; account recovery keeps your existing identity.</p>
       </div>
     </AuthShell>
   );
@@ -158,15 +158,15 @@ function SampleLogin() {
         {step === "email" ? (
           <form noValidate onSubmit={send} className="grid gap-5">
             <div>
-              <h1 className="font-display text-display-sm text-balance text-ink">Welcome back</h1>
+              <h1 className="font-display text-heading-lg text-balance text-ink">Welcome back</h1>
               <p className="mt-2 text-body-md text-ink-muted">Log in with the email you joined with. We'll send you a 6-digit code.</p>
             </div>
             <Field label="Email" error={error}>
               <Input type="email" inputMode="email" autoComplete="email" value={email} start={<Mail />} autoFocus
                 onChange={(e) => { setEmail(e.target.value); setError(undefined); }} />
             </Field>
-            <Button type="submit" variant="primary" size="lg" fullWidth loading={busy} iconEnd={<ArrowRight />}>Email me a code</Button>
-            <p className="text-center text-body-sm text-ink-muted">New here? <Link href="/join/" className="inline-flex min-h-11 items-center font-semibold text-link underline underline-offset-2">Create an account</Link>.</p>
+            <Button type="submit" variant="primary" size="lg" fullWidth className="swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm" loading={busy} iconEnd={<ArrowRight />}>Email me a code</Button>
+            <p className="text-body-md text-ink">New here? <Link href="/join/" className="inline-flex min-h-11 items-center font-bold text-ink underline underline-offset-4">Create an account</Link>.</p>
             {data.kind === "sample" && (
               <p className="rounded-md bg-surface-sunken p-4 text-body-sm text-ink-muted">
                 Sample mode: the code shows on screen and no email is sent. Try <button type="button" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2" onClick={() => setEmail("maya.chen@example.com")}>maya.chen@example.com</button> (Gigster) or{" "}
@@ -177,7 +177,7 @@ function SampleLogin() {
         ) : (
           <form noValidate onSubmit={(e) => { e.preventDefault(); void verify(); }} className="grid gap-5">
             <div>
-              <h1 className="font-display text-display-sm text-balance text-ink">Check your email</h1>
+              <h1 className="font-display text-heading-lg text-balance text-ink">Check your email</h1>
               <p className="mt-2 text-body-md text-ink-muted">We sent a 6-digit code to <b className="text-ink">{email.trim().toLowerCase()}</b>. It expires in 10 minutes.</p>
             </div>
             {needsNewCode && (
@@ -196,7 +196,7 @@ function SampleLogin() {
                   if (v.length === 6) void verify(v);
                 }} />
             </Field>
-            <Button type="submit" variant="primary" size="lg" fullWidth loading={busy} disabled={!!needsNewCode} iconEnd={<ArrowRight />}>Log in</Button>
+            <Button type="submit" variant="primary" size="lg" fullWidth className="swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm" loading={busy} disabled={!!needsNewCode} iconEnd={<ArrowRight />}>Log in</Button>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <Button variant="ghost" size="sm" iconStart={<ArrowLeft />} onClick={back}>Use a different email</Button>
               <Button variant="ghost" size="sm" iconStart={<RotateCcw />} disabled={wait > 0 || busy} onClick={() => send()} title={wait > 0 ? "You can ask for a new code when the timer runs out" : undefined}>

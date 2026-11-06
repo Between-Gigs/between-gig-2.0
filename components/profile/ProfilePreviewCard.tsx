@@ -34,7 +34,8 @@ function Live({ value, className, children }: { value: unknown; className?: stri
 
 /**
  * The client's view of a profile card, as it appears in search. Beside the builder it updates as they
- * type; on My profile it shows the finished card. Empty fields show quiet placeholders, not prompts.
+ * type; on My profile it shows the finished card. Empty fields show quiet placeholders, not prompts. In the Swiss look it
+ * hangs from a thick rule with the photo hard-cropped, no box or shadow.
  */
 export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview", className, step }: {
   fields: ProfileFields; personId: string; badge?: string | null; className?: string;
@@ -48,16 +49,16 @@ export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview"
   const ring = (n: number) => cx(live && "-mx-2.5 rounded-l-none! rounded-r-md border-l-2 pr-2.5 pl-2 transition-colors", live && (step === n ? "border-ink-brand bg-surface-selected" : "border-transparent"));
   const later = (n: number, what: string) => <span className="text-body-sm text-ink-subtle italic">{what} · added in step {n + 1}</span>;
   return (
-    <article aria-label={badge ? `${badge} of your profile card` : `${d.name || "Profile"} card`} className={cx("overflow-hidden rounded-xl border border-line bg-surface shadow-md", className)}>
-      <div className="relative m-2 mb-0 aspect-video overflow-hidden rounded-lg">
+    <article aria-label={badge ? `${badge} of your profile card` : `${d.name || "Profile"} card`} className={cx("overflow-hidden border-t-4 border-line-strong bg-surface", className)}>
+      <div className="relative mt-3 aspect-video overflow-hidden">
         <PersonPhoto id={personId} name={d.name} src={d.photo || undefined} alt={d.photo ? `Profile photo of ${d.name || "you"}` : "No photo yet"}
           fallback="brand" department={d.position} skills={d.skills} iconClass="size-10" textClass="text-heading-lg" className="size-full" />
         <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
-          {badge ? <Badge tone="brand" size="sm" className="shadow-sm">{badge}</Badge> : <span />}
-          <Live value={d.monthStatus}><Badge tone={availabilityTone[d.monthStatus]} size="sm" className="shadow-sm">{monthStatusLabel[d.monthStatus]}</Badge></Live>
+          {badge ? <Badge tone="brand" size="sm">{badge}</Badge> : <span />}
+          <Live value={d.monthStatus}><Badge tone={availabilityTone[d.monthStatus]} size="sm">{monthStatusLabel[d.monthStatus]}</Badge></Live>
         </div>
       </div>
-      <div className="grid gap-3 p-5">
+      <div className="grid gap-3 py-4">
         <div className="flex items-start justify-between gap-3">
           <div className={cx("min-w-0", ring(0))}>
             <h3 className="font-display text-heading-lg break-words text-ink">
@@ -82,12 +83,12 @@ export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview"
         <Live value={d.services} className={cx("flex min-h-5 flex-wrap gap-1.5", ring(1))}>
           {shown.length
             ? <>{shown.map((t) => <Badge key={t} tone="brand" size="sm">{t}</Badge>)}{d.services.length > 3 && <Badge tone="neutral" size="sm">+{d.services.length - 3}</Badge>}</>
-            : live ? later(1, "Your services") : <><span aria-hidden="true" className="h-5 w-24 rounded-full bg-surface-sunken" /><span aria-hidden="true" className="h-5 w-16 rounded-full bg-surface-sunken" /></>}
+            : live ? later(1, "Your services") : <><span aria-hidden="true" className="h-5 w-24 bg-surface-sunken" /><span aria-hidden="true" className="h-5 w-16 bg-surface-sunken" /></>}
         </Live>
         <Live value={d.about} className={cx("block", ring(3))}>
           {d.about.trim()
             ? <span className="block text-body-sm whitespace-pre-line text-ink-muted">{d.about}</span>
-            : live ? later(3, "A few lines about you") : <span aria-hidden="true" className="grid gap-2 py-1"><span className="h-2.5 w-full rounded-full bg-surface-sunken" /><span className="h-2.5 w-11/12 rounded-full bg-surface-sunken" /><span className="h-2.5 w-2/3 rounded-full bg-surface-sunken" /></span>}
+            : live ? later(3, "A few lines about you") : <span aria-hidden="true" className="grid gap-2 py-1"><span className="h-2.5 w-full bg-surface-sunken" /><span className="h-2.5 w-11/12 bg-surface-sunken" /><span className="h-2.5 w-2/3 bg-surface-sunken" /></span>}
         </Live>
         <div className="flex items-center justify-between gap-3 border-t border-line pt-3 text-body-sm">
           <Live value={[d.market, d.areas, d.otherCity]} className={cx("flex min-w-0 items-center gap-1 text-ink-subtle", ring(2))}>

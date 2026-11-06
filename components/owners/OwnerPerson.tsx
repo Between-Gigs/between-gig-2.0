@@ -69,12 +69,12 @@ function Person({ id }: { id: string }) {
 
   // A slim header: who, where they are, and the four steps so far as a timeline.
   const header = (
-    <header className="mt-4 grid gap-5 rounded-xl bg-surface p-5 shadow-sm ring-1 ring-line/70 sm:p-6 lg:grid-cols-12 lg:items-center">
+    <header className="mt-6 grid gap-x-6 gap-y-5 border-b border-line pb-6 lg:grid-cols-12 lg:items-end">
       <div className="flex min-w-0 items-center gap-4 lg:col-span-6">
-        <OwnerAvatar id={p.id} name={p.name} src={fields?.photo || undefined} className="size-16 shrink-0 rounded-lg" textClass="text-heading-lg" />
+        <OwnerAvatar id={p.id} name={p.name} src={fields?.photo || undefined} className="size-20 shrink-0 sm:size-24" textClass="text-heading-lg" />
         <div className="grid min-w-0 gap-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <h1 className="min-w-0 truncate font-display text-display-sm text-ink">{name}</h1>
+            <h1 className="min-w-0 truncate font-display text-heading-lg text-ink sm:text-display-sm">{name}</h1>
             <PersonStatusBadge status={p.status} size="sm" />
           </div>
           <p className="flex min-w-0 flex-wrap gap-x-3 text-body-sm text-ink-muted">
@@ -88,11 +88,11 @@ function Person({ id }: { id: string }) {
         {timeline.map(([k, v], i) => (
           <li key={k} className="relative grid gap-1.5 pr-1 xs:pr-2">
             <span aria-hidden="true" className="flex items-center">
-              <span className={cx("size-3.5 shrink-0 rounded-full", v ? "bg-action ring-4 ring-surface-selected" : "border-2 border-line-strong")} />
-              {i < timeline.length - 1 && <span className={cx("h-1 flex-1 rounded-full", timeline[i + 1][1] ? "bg-action" : "border-t-2 border-dashed border-line-strong")} />}
+              <span className={cx("size-3.5 shrink-0", v ? "bg-ink" : "border-2 border-line-strong")} />
+              {i < timeline.length - 1 && <span className={cx("flex-1", timeline[i + 1][1] ? "h-1 bg-ink" : "border-t-2 border-dashed border-line-strong")} />}
             </span>
-            <span className="text-caption text-ink-muted xs:text-label-sm">{k}</span>
-            <span className="text-body-sm whitespace-nowrap text-ink tabular-nums">{v ?? <span className="text-ink-subtle">Not yet</span>}</span>
+            <span className="truncate text-caption font-bold tracking-wide text-ink-muted uppercase sm:tracking-widest">{k}</span>
+            <span className="text-body-sm whitespace-nowrap text-ink tabular-nums">{v ?? <span className="text-ink-muted">Not yet</span>}</span>
           </li>
         ))}
       </ol>
@@ -106,16 +106,16 @@ function Person({ id }: { id: string }) {
   const condensed = (reviewBar: boolean) => (
     <div className={cx("sticky z-sticky h-0", reviewBar ? "top-16" : "top-0")}>
       <div inert={!pastHero} aria-hidden={!pastHero}
-        className={cx("absolute inset-x-0 -mx-4 flex h-14 items-center gap-3 border-b border-line bg-bg/90 px-4 backdrop-blur-md transition duration-base ease-standard sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10",
-          pastHero ? "translate-y-0 opacity-100 shadow-md" : "pointer-events-none -translate-y-2 opacity-0")}>
-        <PersonPhoto id={p.id} name={p.name || "?"} src={fields?.photo || undefined} alt="" className="size-8 shrink-0 rounded-md" textClass="text-label-sm" />
-        <span className="min-w-0 truncate text-label-md text-ink">{name}</span>
+        className={cx("absolute inset-x-0 -mx-4 flex h-14 items-center gap-3 border-b-4 border-line-strong bg-bg px-4 transition duration-base ease-standard sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10",
+          pastHero ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0")}>
+        <PersonPhoto id={p.id} name={p.name || "?"} src={fields?.photo || undefined} alt="" className="size-9 shrink-0" textClass="text-label-sm" />
+        <span className="min-w-0 truncate font-display text-label-md font-extrabold text-ink">{name}</span>
         <PersonStatusBadge status={p.status} size="sm" className="max-sm:hidden" />
         <ol aria-label="Timeline" className="ml-auto hidden items-center md:flex">
           {timeline.map(([k, v], i) => (
             <li key={k} className="flex items-center" title={`${k}${v ? ` ${v}` : ": not yet"}`}>
-              {i > 0 && <span aria-hidden="true" className={cx("h-0.5 w-6", v ? "bg-action" : "bg-line")} />}
-              <span aria-hidden="true" className={cx("size-2 rounded-full", v ? "bg-action" : "border-2 border-line-strong", i === stepAt && "ring-4 ring-action/25")} />
+              {i > 0 && <span aria-hidden="true" className={cx("h-0.5 w-6", v ? "bg-ink" : "bg-line")} />}
+              <span aria-hidden="true" className={cx("size-2.5", v ? "bg-ink" : "border-2 border-line-strong", i === stepAt && "outline-2 outline-offset-2 outline-ink")} />
               <span className="sr-only">{k}: {v ?? "not yet"}</span>
             </li>
           ))}
@@ -128,11 +128,11 @@ function Person({ id }: { id: string }) {
 
   // The profile as clients would see it, framed so it doesn't read as part of this page.
   const preview = fields ? (
-    <Panel className="mt-6" landmark={false} collapsible="person-preview" title="What clients see" aside={fromDraft ? "Unsubmitted draft, shown as it stands" : p.status === "approved" ? "Live on the site" : "Not public yet"} bodyClassName="p-4 sm:p-6">
+    <Panel className="mt-10" landmark={false} collapsible="person-preview" title="What clients see" aside={fromDraft ? "Unsubmitted draft, shown as it stands" : p.status === "approved" ? "Live on the site" : "Not public yet"} bodyClassName="p-4 sm:p-6">
       <ProfileView person={p} fields={fields} extras={profile?.extras} mode="owner" />
     </Panel>
   ) : (
-    <Panel className="mt-6">
+    <Panel className="mt-10">
       <EmptyState className="py-12" icon={<Sparkles />} title={p.status === "invited" ? "Hasn't joined yet" : "Hasn't started their profile"} headingLevel={2}>
         {p.status === "invited" ? "They've been invited but haven't created an account yet." : "They've created an account. Their answers appear here as they fill in the questionnaire."}
       </EmptyState>

@@ -1,0 +1,127 @@
+/*
+ * The Swiss look (direction G · Swiss grid, chosen 6 Nov 2026), on the product screens only: lib/look.ts lists them
+ * and sets <html data-look="swiss">. International Typographic Style: a strict grid, oversized Inter Tight display type
+ * at 800 with tight tracking, Inter for text, flush-left text, thick black rules instead of boxes, no rounding and no
+ * shadows. Forest is the main action and availability; mint is used as ONE solid block per screen (the current step,
+ * the booking panel, "Waiting for review"). Dark is near-black with off-white ink; there the main button turns mint.
+ * The dotted green texture, glow and curtain stay wherever the product already uses them. The tint tokens are kept so
+ * components can group things: on white they are greys, in the dark steps of near-black.
+ */
+@font-face {
+  font-family: "Inter Tight";
+  src: url("../app/fonts/InterTight-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: Inter;
+  src: url("../app/fonts/Inter-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: Inter;
+  src: url("../app/fonts/Inter-Italic-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+@theme {
+  --color-tint-mint: var(--tint-mint);
+  --color-tint-peach: var(--tint-peach);
+  --color-tint-butter: var(--tint-butter);
+  --color-tint-sky: var(--tint-sky);
+  --color-tint-sage: var(--tint-sage);
+  --color-tint-sand: var(--tint-sand);
+  --color-tint-ink: var(--tint-ink);
+}
+:root {
+  --tint-mint: #1fdc8c;
+  --tint-peach: #f1f1ee;
+  --tint-butter: #f1f1ee;
+  --tint-sky: #f1f1ee;
+  --tint-sage: #e7ede9;
+  --tint-sand: #f1f1ee;
+  --tint-ink: #0a0a0a;
+}
+
+/* `swiss:` variant for the few shared components (site header) that differ on product screens. */
+@custom-variant swiss (&:where([data-look=swiss], [data-look=swiss] *));
+
+/* Type and shapes, both themes. */
+:root[data-look=swiss] {
+  --font-sans: Inter, "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-display: "Inter Tight", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --text-display-xl: 8.5rem;
+  --text-display-xl--line-height: 0.86;
+  --text-display-xl--letter-spacing: -0.05em;
+  --text-display-xl--font-weight: 800;
+  --text-display-lg: 6rem;
+  --text-display-lg--line-height: 0.88;
+  --text-display-lg--letter-spacing: -0.045em;
+  --text-display-lg--font-weight: 800;
+  --text-display-md: 4rem;
+  --text-display-md--line-height: 0.92;
+  --text-display-md--letter-spacing: -0.04em;
+  --text-display-md--font-weight: 800;
+  --text-display-sm: 3rem;
+  --text-display-sm--line-height: 0.95;
+  --text-display-sm--letter-spacing: -0.035em;
+  --text-display-sm--font-weight: 800;
+  --text-stat: 5.5rem;
+  --text-stat--line-height: 0.9;
+  --text-stat--letter-spacing: -0.05em;
+  --text-stat--font-weight: 800;
+  --text-heading-lg: 2.25rem;
+  --text-heading-lg--line-height: 1;
+  --text-heading-lg--letter-spacing: -0.035em;
+  --text-heading-lg--font-weight: 800;
+  --text-heading-md: 1.75rem;
+  --text-heading-md--line-height: 1.05;
+  --text-heading-md--letter-spacing: -0.025em;
+  --text-heading-md--font-weight: 700;
+  --text-heading-sm--font-weight: 700;
+}
+:root[data-look=swiss] *, :root[data-look=swiss] *::before, :root[data-look=swiss] *::after { box-shadow: none; }
+
+/* White and black, light theme (explicit light, or the system's light with no saved choice). */
+:root[data-look=swiss][data-theme=light] {
+    --bg: #ffffff; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #f1f1ee; --surface-hover: #f1f1ee;
+    --surface-selected: #e7ede9; --line: #d4d4d0; --line-strong: #0a0a0a; --line-dashed: #a8a8a3;
+    --ink: #0a0a0a; --ink-muted: #5c5c5c; --ink-subtle: #5c5c5c; --ink-brand: #0f3d29;
+    --action: #0a0a0a; --action-hover: #0f3d29; --on-action: #ffffff; --neutral-soft: #f1f1ee;
+  }
+@media (prefers-color-scheme: light) {
+  :root[data-look=swiss]:not([data-theme=dark]) {
+    --bg: #ffffff; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #f1f1ee; --surface-hover: #f1f1ee;
+    --surface-selected: #e7ede9; --line: #d4d4d0; --line-strong: #0a0a0a; --line-dashed: #a8a8a3;
+    --ink: #0a0a0a; --ink-muted: #5c5c5c; --ink-subtle: #5c5c5c; --ink-brand: #0f3d29;
+    --action: #0a0a0a; --action-hover: #0f3d29; --on-action: #ffffff; --neutral-soft: #f1f1ee;
+  }
+}
+/* Near-black and off-white, dark theme (explicit dark, or the system's dark with no saved choice). */
+:root[data-look=swiss][data-theme=dark] {
+    --bg: #0c0d0c; --surface: #0c0d0c; --surface-raised: #161816; --surface-sunken: #161816; --surface-hover: #1c1f1c;
+    --surface-selected: #16251d; --line: #2e312e; --line-strong: #f3f3ef; --line-dashed: #4a4e4a;
+    --ink: #f3f3ef; --ink-muted: #a3a7a1; --ink-subtle: #a3a7a1; --ink-brand: #5fe8ad;
+    --action: #1fdc8c; --action-hover: #3deba0; --on-action: #0a0a0a; --neutral-soft: #161816;
+    --tint-mint: #1fdc8c; --tint-peach: #161816; --tint-butter: #161816; --tint-sky: #161816; --tint-sage: #16251d; --tint-sand: #161816; --tint-ink: #f3f3ef;
+  }
+@media (prefers-color-scheme: dark) {
+  :root[data-look=swiss]:not([data-theme=light]) {
+    --bg: #0c0d0c; --surface: #0c0d0c; --surface-raised: #161816; --surface-sunken: #161816; --surface-hover: #1c1f1c;
+    --surface-selected: #16251d; --line: #2e312e; --line-strong: #f3f3ef; --line-dashed: #4a4e4a;
+    --ink: #f3f3ef; --ink-muted: #a3a7a1; --ink-subtle: #a3a7a1; --ink-brand: #5fe8ad;
+    --action: #1fdc8c; --action-hover: #3deba0; --on-action: #0a0a0a; --neutral-soft: #161816;
+    --tint-mint: #1fdc8c; --tint-peach: #161816; --tint-butter: #161816; --tint-sky: #161816; --tint-sage: #16251d; --tint-sand: #161816; --tint-ink: #f3f3ef;
+  }
+}

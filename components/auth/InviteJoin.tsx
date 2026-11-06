@@ -44,7 +44,7 @@ function Details() {
   return (
     <AuthShell header="Sign up"
       lead={<p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
-      <h1 className="font-display text-display-sm text-balance text-ink">Create your account</h1>
+      <h1 className="font-display text-heading-lg text-balance text-ink">Create your account</h1>
       <p className="mt-2 text-body-md text-ink-muted">Your invitation confirms your email. Tell us your name to get started.</p>
       <form noValidate onSubmit={submit} className="mt-8 grid gap-5">
         <Field label="Full name" error={errors.name}>
@@ -57,8 +57,8 @@ function Details() {
             description="You can ask us to delete your account at any time." />
           {errors.terms && <p id="terms-error" className="text-body-sm text-danger">{errors.terms}</p>}
         </div>
-        <Button type="submit" variant="primary" size="lg" fullWidth className="glow-hover" iconEnd={<ArrowRight />}>Continue</Button>
-        <p className="text-center text-body-sm text-ink-muted">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2">Log in</Link></p>
+        <Button type="submit" variant="primary" size="lg" fullWidth className="glow-hover swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm" iconEnd={<ArrowRight />}>Continue</Button>
+        <p className="text-body-md text-ink">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-bold text-ink underline underline-offset-4">Log in</Link></p>
       </form>
     </AuthShell>
   );
@@ -73,7 +73,7 @@ function TicketSignUp({ name }: { name?: string }) {
   return (
     <AuthShell header="Sign up">
       <div className="grid gap-6">
-        <h1 className="font-display text-display-sm text-balance text-ink">Finish your account</h1>
+        <h1 className="font-display text-heading-lg text-balance text-ink">Finish your account</h1>
         <ClerkSlot label="Loading sign-up">
           <SignUp routing="hash" signInUrl={`${basePath}/login/`}
             initialValues={name ? { firstName, lastName: rest.join(" ") || undefined } : undefined}
@@ -87,10 +87,10 @@ function TicketSignUp({ name }: { name?: string }) {
 
 function InviteOnly() {
   return (
-    <AuthShell header="Sign up" icon="envelope">
+    <AuthShell header="Sign up" steps={false}>
       <div className="grid gap-6">
         <div>
-            <h1 className="font-display text-display-sm text-balance text-ink">Joining is by invitation</h1>
+            <h1 className="font-display text-heading-lg text-balance text-ink">Joining is by invitation</h1>
             <p className="mt-2 text-body-md text-ink-muted">Open the link in your invitation email to create your account. No invitation yet? Get on the call sheet and we'll email you when it's your turn.</p>
         </div>
         <Banner tone="info" title="Already joined?">Log in with the email your invitation was sent to.</Banner>

@@ -102,7 +102,7 @@ function People() {
 
   return (
     <OwnerShell>
-      <OwnerPage title="People" icon="handshake" meta={counts ? total : "–"}
+      <OwnerPage title="People" kicker="Everyone invited" meta={counts ? total : "–"}
         description="Everyone from the waitlist on: who has joined, how far along their profile is, and who is waiting for review.">
         {/* Search and status on one line; from md the other filters sit in a row beneath, on phones behind Filters. */}
         <div className="grid gap-3">
@@ -114,11 +114,11 @@ function People() {
               options={[{ value: "all", label: `Everyone${counts ? ` · ${total}` : ""}` }, ...personStatuses.map((st) => ({ value: st, label: `${personStatusMeta[st].label}${counts ? ` · ${counts[st]}` : ""}` }))]} />
             <Button type="button" variant="secondary" className="shrink-0 md:hidden" iconStart={<SlidersHorizontal />} onClick={() => setFilters(true)}
               aria-label={active ? `More filters, ${active} on` : "More filters"}>
-              Filters{active > 0 && <span aria-hidden="true" className="ml-1 inline-grid size-5 place-items-center rounded-full bg-action text-label-sm text-on-action tabular-nums">{active}</span>}
+              Filters{active > 0 && <span aria-hidden="true" className="ml-1 inline-grid size-5 place-items-center bg-ink text-label-sm text-bg tabular-nums">{active}</span>}
             </Button>
           </form>
           <div role="group" aria-label="Filters" className="hidden flex-wrap items-center gap-2 md:flex">
-            <SlidersHorizontal className="size-4 text-ink-subtle" aria-hidden="true" />
+            <SlidersHorizontal className="size-4 text-ink-muted" aria-hidden="true" />
             {selects(true)}
             {active > 0 && <Button size="sm" variant="ghost" iconStart={<X />} onClick={clearExtra}>Clear {active} {active === 1 ? "filter" : "filters"}</Button>}
           </div>
@@ -127,7 +127,7 @@ function People() {
               {extra.map(([k, , label]) => (
                 <li key={k}>
                   <button type="button" onClick={() => set(k)("all")} aria-label={`Remove filter: ${label}`}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-full border border-ink-brand bg-surface-selected pr-2 pl-3 text-label-sm text-ink hover:bg-surface-hover">
+                    className="inline-flex min-h-11 items-center gap-1.5 border-2 border-line-strong pr-2 pl-3 text-label-sm font-bold text-ink hover:bg-surface-hover">
                     {label}<X className="size-3.5" aria-hidden="true" />
                   </button>
                 </li>
@@ -140,7 +140,7 @@ function People() {
           <div className="grid gap-3">{selects(false)}</div>
         </Drawer>
 
-        <Panel flush title={<span aria-live="polite">{rows ? <><span className="tabular-nums">{rows.length}</span> {rows.length === 1 ? "person" : "people"}{filtered && " match"}</> : "People"}</span>}
+        <Panel flush number="01" title={<span aria-live="polite">{rows ? <><span className="tabular-nums">{rows.length}</span> {rows.length === 1 ? "person" : "people"}{filtered && " match"}</> : "People"}</span>}
           aside={
             <>
               {filtered && <Button size="sm" variant="ghost" onClick={reset}>Reset filters</Button>}
@@ -156,11 +156,11 @@ function People() {
                 Try fewer filters, or search for part of a name or email.
               </EmptyState>
             ) : view === "grid" ? (
-              <ul className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
+              <ul className="grid grid-cols-1 gap-x-6 gap-y-8 pt-4 sm:grid-cols-2 xl:grid-cols-3">
                 {rows.map((r) => <li key={r.person.id}><PersonCard row={r} /></li>)}
               </ul>
             ) : (
-              <ul>{rows.map((r) => <PersonRow key={r.person.id} row={r} />)}</ul>
+              <ul className="@container border-t-2 border-line-strong">{rows.map((r) => <PersonRow key={r.person.id} row={r} />)}</ul>
             )}
           </section>
         </Panel>
@@ -171,13 +171,13 @@ function People() {
 
 /** Someone invited who hasn't joined: no name or photo yet, so an envelope instead of a "?". */
 function Avatar({ row: { person: p, fields: f }, className }: { row: PersonSummary; className: string }) {
-  if (!p.name) return <span className={cx("grid place-items-center bg-tint-sage text-tint-ink", className)}><Mail className="size-5" aria-hidden="true" /></span>;
+  if (!p.name) return <span className={cx("grid place-items-center bg-surface-sunken text-ink", className)}><Mail className="size-5" strokeWidth={1.75} aria-hidden="true" /></span>;
   return <OwnerAvatar id={p.id} name={p.name} src={f?.photo || undefined} className={className} textClass="text-heading-sm" />;
 }
 
 function progress({ person: p, completeness, fromDraft }: PersonSummary) {
-  if (p.status === "invited") return <span className="text-ink-subtle">Hasn&apos;t joined yet</span>;
-  if (p.status === "registered") return <span className="text-ink-subtle">Not started</span>;
+  if (p.status === "invited") return <span className="w-24 whitespace-normal text-ink-muted">Hasn&apos;t joined yet</span>;
+  if (p.status === "registered") return <span className="w-24 text-ink-muted">Not started</span>;
   return <Meter value={completeness * 100} label={fromDraft ? "Draft complete" : "Profile complete"} />;
 }
 
@@ -185,33 +185,33 @@ function PersonRow({ row }: { row: PersonSummary }) {
   const { person: p, fields: f } = row;
   return (
     <Row href={`/owners/people/${p.id}/`} title={p.name || p.email}
-      leading={<Avatar row={row} className="size-12 rounded-md" />}
+      leading={<Avatar row={row} className="size-12 @md:size-16" />}
       badge={<PersonStatusBadge status={p.status} size="sm" />}
       subtitle={f?.position ? [f.position, f.areas.join(" · ")].filter(Boolean).join(" · ") : p.name ? p.email : `Waitlist · ZIP ${p.waitlistZip}`}
-      meta={<>{progress(row)}<AgoPill tone="sand" className="min-w-36">Active {ago(p.updatedAt).toLowerCase()}</AgoPill></>} />
+      meta={<>{progress(row)}<AgoPill className="min-w-36">Active {ago(p.updatedAt).toLowerCase()}</AgoPill></>} />
   );
 }
 
 function PersonCard({ row }: { row: PersonSummary }) {
   const { person: p, fields: f } = row;
   return (
-    <article data-tilt="" className="lift group relative flex h-full min-w-0 flex-col gap-4 rounded-lg bg-surface p-4 ring-1 ring-line hover:ring-line-strong">
-      <div className="flex min-w-0 items-center gap-3">
-        <Avatar row={row} className="size-14 shrink-0 rounded-lg" />
+    <article className="group relative flex h-full min-w-0 flex-col gap-4 border-t-4 border-line-strong pt-4 transition-colors duration-fast hover:bg-surface-hover">
+      <div className="flex min-w-0 items-center gap-3 pr-14">
+        <Avatar row={row} className="size-16 shrink-0" />
         <div className="grid min-w-0 gap-0.5">
-          <h2 className="truncate text-heading-sm text-ink">
-            <Link href={`/owners/people/${p.id}/`} className="after:absolute after:inset-0">{p.name || p.email}</Link>
+          <h2 className="truncate font-display text-heading-sm font-extrabold text-ink">
+            <Link href={`/owners/people/${p.id}/`} className="after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-focus">{p.name || p.email}</Link>
           </h2>
           <p className="truncate text-body-sm text-ink-muted">{f?.position || (p.name ? p.email : `ZIP ${p.waitlistZip}`)}</p>
         </div>
       </div>
-      {f?.areas.length ? <p className="flex min-w-0 items-center gap-1 text-body-sm text-ink-subtle"><MapPin className="size-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{f.areas.join(" · ")}</span></p> : null}
-      <div className="mt-auto flex items-center justify-between gap-3 border-t-2 border-dashed border-line pt-3 text-body-sm">
+      {f?.areas.length ? <p className="flex min-w-0 items-center gap-1 text-body-sm text-ink-muted"><MapPin className="size-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{f.areas.join(" · ")}</span></p> : null}
+      <div className="mt-auto flex items-center justify-between gap-3 border-t border-line pt-3 text-body-sm">
         <PersonStatusBadge status={p.status} size="sm" />
         {progress(row)}
       </div>
       {p.sample && <span className="sr-only">(fictional sample)</span>}
-      <span aria-hidden="true" className="absolute top-4 right-4 grid size-8 place-items-center rounded-full bg-surface-selected text-ink group-hover:bg-highlight"><ArrowRight className="size-4" /></span>
+      <span aria-hidden="true" className="absolute top-4 right-0 grid size-11 place-items-center border-2 border-line-strong text-ink group-hover:bg-ink group-hover:text-bg"><ArrowRight className="size-4" /></span>
     </article>
   );
 }

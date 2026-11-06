@@ -2,8 +2,8 @@
 @layer theme, base, clerk, components, utilities;
 @import "tailwindcss";
 @import "../packages/design-system/styles/between-gigs.css";
-/* The friendly look (direction B) for the product screens: its own token file, like the system's. */
-@import "../styles/look-friendly.css";
+/* The Swiss look (direction G) for the product screens: its own token file, like the system's. */
+@import "../styles/look-swiss.css";
 
 /* Tailwind scans the vendored components for the classes they use. */
 @source "../packages/design-system/src";

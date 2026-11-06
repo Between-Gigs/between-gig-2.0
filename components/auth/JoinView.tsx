@@ -1,7 +1,7 @@
 "use client";
 import { Banner, Button, Checkbox, Field, Input, Skeleton, useToast } from "@ds/components";
 import { SignUp } from "@clerk/react";
-import { ArrowRight, Clock, Mail, SearchX, UserCheck } from "lucide-react";
+import { ArrowRight, Clock, Mail, SearchX, ShieldCheck, UserCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -12,8 +12,6 @@ import { clerkEnabled } from "@/lib/auth/clerk";
 import { useSession } from "@/lib/session";
 import { basePath } from "@/lib/site";
 import { AuthShell } from "./AuthShell";
-import { type Icon3DName } from "@/lib/icons3d";
-import { Icon3D } from "@/components/ui/Icon3D";
 import { InviteJoin } from "./InviteJoin";
 import { ClerkSlot } from "./ClerkSlot";
 
@@ -103,9 +101,9 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
   if (verify) return <ClerkAccount token={matchingToken} email={email.trim().toLowerCase()} name={name.trim()} />;
 
   return (
-    <AuthShell header="Sign up"
-      lead={token ? <p className="flex items-center justify-center gap-2"><Icon3D name="shield" className="size-5" />Your page stays private until our team approves it.</p> : <p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
-      <h1 className="font-display text-display-sm text-balance text-ink">{authenticated ? "Finish your account setup" : "Create your account"}</h1>
+    <AuthShell header="Sign up" eyebrow={token ? "You're invited" : undefined}
+      lead={token ? <p className="flex items-center gap-2"><ShieldCheck aria-hidden="true" className="size-5 shrink-0 text-ink-brand" />Your page stays private until our team approves it.</p> : <p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
+      <h1 className="font-display text-heading-lg text-balance text-ink">{authenticated ? "Finish your account setup" : "Create your account"}</h1>
       <p className="mt-2 text-body-md text-ink-muted">{authenticated ? "You're logged in. Confirm your details and agree to the terms to create your profile." : token ? "Your invitation is here. Add your name to get started." : "No invite needed. Enter your details to get started."}</p>
       <form noValidate onSubmit={submit} className="mt-8 grid gap-5">
         {errors.form && <Banner tone="danger" title="We couldn't create your account">{errors.form}</Banner>}
@@ -123,13 +121,13 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
           {errors.terms && <p id="terms-error" className="text-body-sm text-danger">{errors.terms}</p>}
         </div>
         {clerkEnabled && !authenticated && <p className="text-body-sm text-ink-muted">Next, create your password (at least 8 characters). Clerk may then ask for a code to verify your email.</p>}
-        <Button type="submit" variant="primary" size="lg" fullWidth className="glow-hover" loading={busy} iconEnd={<ArrowRight />}>{authenticated ? "Finish setup" : clerkEnabled ? "Continue to password" : "Create my profile"}</Button>
+        <Button type="submit" variant="primary" size="lg" fullWidth className="glow-hover swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm" loading={busy} iconEnd={<ArrowRight />}>{authenticated ? "Finish setup" : clerkEnabled ? "Continue to password" : "Create my profile"}</Button>
         {authenticated
           ? <Button variant="ghost" disabled={busy} onClick={() => {
             setBusy(true);
             void auth.signOut().catch(() => { setBusy(false); setErrors({ form: "We couldn't sign out. Try again." }); });
           }}>Use a different account</Button>
-          : <p className="text-center text-body-sm text-ink-muted">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2">Log in</Link></p>}
+          : <p className="text-body-md text-ink">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-bold text-ink underline underline-offset-4">Log in</Link></p>}
       </form>
     </AuthShell>
   );
@@ -148,7 +146,7 @@ function ClerkAccount({ token, email, name }: { token?: string; email?: string; 
     <AuthShell header="Sign up"
       lead={<p>{email ? `Create a password for ${email}.` : "Continue your account setup."} You may need to verify your email before continuing.</p>}>
       <div className="grid gap-6">
-        <h1 className="font-display text-display-sm text-balance text-ink">{email ? "Create your password" : "Continue your signup"}</h1>
+        <h1 className="font-display text-heading-lg text-balance text-ink">{email ? "Create your password" : "Continue your signup"}</h1>
         <p className="text-body-md text-ink-muted">Use at least 8 characters. If Clerk asks for a 6-digit code afterward, that confirms your email; it does not replace your password.</p>
         <ClerkSlot label="Loading sign-up">
           <SignUp routing="hash" signInUrl={`${basePath}/login/`}
@@ -160,8 +158,6 @@ function ClerkAccount({ token, email, name }: { token?: string; email?: string; 
     </AuthShell>
   );
 }
-
-const problemIcon = { used: "check_mark_button", expired: "hourglass_done", unknown: "eyes", valid: "envelope" } as const satisfies Record<InviteLookup["state"], Icon3DName>;
 
 function InviteProblem({ lookup }: { lookup: InviteLookup }) {
   const email = lookup.invite?.email;
@@ -191,10 +187,10 @@ function InviteProblem({ lookup }: { lookup: InviteLookup }) {
   const c = copy[lookup.state];
 
   return (
-    <AuthShell header="Sign up" icon={problemIcon[lookup.state]}>
+    <AuthShell header="Sign up" steps={false}>
       <div className="grid gap-6">
         <div>
-          <h1 className="font-display text-display-sm text-balance text-ink">{c.title}</h1>
+          <h1 className="font-display text-heading-lg text-balance text-ink">{c.title}</h1>
           <p className="mt-2 text-body-md text-ink-muted">{c.body}</p>
         </div>
         <div>
@@ -202,7 +198,7 @@ function InviteProblem({ lookup }: { lookup: InviteLookup }) {
           <ol className="mt-3 grid gap-3">
             {c.steps.map((step, i) => (
               <li key={step} className="flex items-start gap-3 text-body-md text-ink-muted">
-                <span aria-hidden="true" className="grid size-6 shrink-0 place-items-center rounded-full border border-line-strong text-label-sm text-ink tabular-nums">{i + 1}</span>{step}
+                <span aria-hidden="true" className="grid size-6 shrink-0 place-items-center border-2 border-line-strong text-label-sm text-ink tabular-nums">{i + 1}</span>{step}
               </li>
             ))}
           </ol>

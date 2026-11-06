@@ -114,7 +114,7 @@ function Waitlist() {
 
   return (
     <OwnerShell>
-      <OwnerPage title="Waitlist" icon="hourglass_done" meta={counts ? total : "–"}
+      <OwnerPage title="Waitlist" kicker="The call sheet" meta={counts ? total : "–"}
         description="Everyone who got on the call sheet, and where they are with their invite. Pick people and send their personal “Create your profile” link.">
       {/* One line: search, invite status (with counts), interest and order. On phones they wrap. */}
       <div className="flex flex-wrap items-center gap-2">
@@ -124,8 +124,8 @@ function Waitlist() {
         <div className="flex w-full gap-2 sm:w-auto [&>*]:flex-1 sm:[&>*]:w-44 sm:[&>*]:flex-none">{selects}</div>
       </div>
 
-      <Panel flush title={<><span className="tabular-nums">{rows?.length ?? 0}</span> sign-ups</>}
-        aside={allNotInvited.length > 0 && n < allNotInvited.length && <button type="button" className="inline-flex min-h-10 items-center rounded-full bg-tint-mint px-4 text-label-md text-tint-ink transition-colors duration-fast hover:bg-highlight" onClick={() => setSelected(allNotInvited)}>Select all {allNotInvited.length} not invited{query.text || query.category !== "all" ? " in this view" : ""}</button>}
+      <Panel flush number="01" title={<><span className="tabular-nums">{rows?.length ?? 0}</span> sign-ups</>}
+        aside={allNotInvited.length > 0 && n < allNotInvited.length && <button type="button" className="inline-flex min-h-11 items-center border-2 border-line-strong px-4 text-label-md font-bold text-ink transition-colors duration-fast hover:bg-ink hover:text-bg" onClick={() => setSelected(allNotInvited)}>Select all {allNotInvited.length} not invited{query.text || query.category !== "all" ? " in this view" : ""}</button>}
         footer={pageCount > 1 ? <Pager page={page} pageCount={pageCount} onChange={setPage} itemLabel="page of sign-ups" /> : undefined}>
       <div data-results={rows ? "" : undefined}>
         {!rows && <RowSkeletons count={8} />}
@@ -133,17 +133,17 @@ function Waitlist() {
         <div className={cx("hidden overflow-x-auto", rows && "md:block")}>
           <table className="w-full border-collapse text-left text-body-md">
             <caption className="sr-only">Waitlist sign-ups</caption>
-            <thead className="bg-tint-sand">
-              <tr className="text-label-sm text-ink-muted">
-                <th scope="col" className="h-11 w-12 border-b border-line px-3 first:pl-5">
+            <thead>
+              <tr className="text-label-sm font-bold tracking-widest text-ink-muted uppercase">
+                <th scope="col" className="h-11 w-12 border-y-2 border-line-strong px-3 pl-4">
                   <Checkbox aria-label="Select everyone on this page who isn't invited" checked={allOnPage} disabled={!invitable.length}
                     ref={(el) => { if (el) el.indeterminate = someOnPage && !allOnPage; }} onChange={(e) => togglePage(e.target.checked)} />
                 </th>
-                <th scope="col" className="border-b border-line px-3 font-semibold">Email</th>
-                <th scope="col" className="border-b border-line px-3 font-semibold">ZIP</th>
-                <th scope="col" className="border-b border-line px-3 font-semibold">Interested in</th>
-                <th scope="col" className="border-b border-line px-3 font-semibold">Joined</th>
-                <th scope="col" className="border-b border-line px-3 font-semibold">Invite</th>
+                <th scope="col" className="border-y-2 border-line-strong px-3 font-bold">Email</th>
+                <th scope="col" className="border-y-2 border-line-strong px-3 font-bold">ZIP</th>
+                <th scope="col" className="border-y-2 border-line-strong px-3 font-bold">Interested in</th>
+                <th scope="col" className="border-y-2 border-line-strong px-3 font-bold">Joined</th>
+                <th scope="col" className="border-y-2 border-line-strong px-3 font-bold">Invite</th>
               </tr>
             </thead>
             <tbody>
@@ -162,7 +162,7 @@ function Waitlist() {
                     <td className="px-3 text-ink-muted tabular-nums">{r.signup.zip}</td>
                     <td className="px-3 text-ink-muted">{r.signup.category ? waitlistCategoryLabel(r.signup.category) : "—"}</td>
                     <td className="px-3 whitespace-nowrap text-ink-muted tabular-nums">{shortDate(r.signup.createdAt)}</td>
-                    <td className="px-3">{r.inviteStatus === "not_invited" ? <span className="text-body-sm text-ink-subtle">Not invited</span> : <span className="inline-flex items-center gap-1"><Badge tone={statusMeta[r.inviteStatus].tone} size="sm">{statusMeta[r.inviteStatus].label}</Badge>{resendButton(r)}</span>}</td>
+                    <td className="px-3">{r.inviteStatus === "not_invited" ? <span className="text-body-sm text-ink-muted">Not invited</span> : <span className="inline-flex items-center gap-1"><Badge tone={statusMeta[r.inviteStatus].tone} size="sm">{statusMeta[r.inviteStatus].label}</Badge>{resendButton(r)}</span>}</td>
                   </tr>
                 );
               })}
@@ -171,7 +171,7 @@ function Waitlist() {
         </div>
 
         {/* Phones: compact rows. */}
-        <ul aria-label="Waitlist sign-ups" className={cx("grid grid-cols-1 md:hidden", !rows && "hidden")}>
+        <ul aria-label="Waitlist sign-ups" className={cx("grid grid-cols-1 border-t-2 border-line-strong md:hidden", !rows && "hidden")}>
           {visible.length === 0 && <li className="p-6 text-center text-body-md text-ink-muted">No one matches. Try fewer filters.</li>}
           {visible.map((r) => {
             const on = selected.includes(r.signup.id);
@@ -180,7 +180,7 @@ function Waitlist() {
                 {/* The label makes the tap area 44px around the box. */}
                 {r.inviteStatus === "not_invited"
                   ? <label className="-m-3 grid size-11 shrink-0 cursor-pointer place-items-center"><Checkbox aria-label={`Select ${r.signup.email}`} checked={on} onChange={(e) => toggle(r.signup.id, e.target.checked)} /></label>
-                  : <span className="grid size-5 shrink-0 place-items-center text-ink-subtle"><Mail className="size-4" aria-hidden="true" /><span className="sr-only">Already invited</span></span>}
+                  : <span className="grid size-5 shrink-0 place-items-center text-ink-muted"><Mail className="size-4" aria-hidden="true" /><span className="sr-only">Already invited</span></span>}
                 <div className="grid min-w-0 flex-1">
                   {r.personId
                     ? <Link href={`/owners/people/${r.personId}/`} className="truncate text-label-md text-ink hover:text-ink-brand">{r.signup.email}</Link>
@@ -199,8 +199,8 @@ function Waitlist() {
       {/* The bulk action bar: pinned to the bottom of the view while anyone is selected. */}
       <div aria-live="polite" className="sticky bottom-4 z-sticky -mt-6 empty:hidden">
         {n > 0 && (
-          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-surface-raised p-2 pl-5 shadow-lg ring-2 ring-ink">
-            <p className="text-label-md text-ink"><span className="tabular-nums">{n}</span> selected</p>
+          <div className="flex flex-wrap items-center gap-2 border-4 border-line-strong bg-bg p-2 pl-5">
+            <p className="font-display text-heading-sm font-extrabold text-ink"><span className="tabular-nums">{n}</span> selected</p>
             <Button size="sm" variant="ghost" iconStart={<X />} onClick={() => setSelected([])}>Clear</Button>
             <div className="ml-auto flex gap-2">
               <Button size="sm" variant="secondary" iconStart={<Eye />} onClick={() => setPreview(true)}>Preview email</Button>
@@ -213,15 +213,15 @@ function Waitlist() {
       <Modal open={preview} onClose={() => setPreview(false)} size="lg" title="The invite email"
         description={`What ${n === 1 ? "they get" : `each of the ${n} gets`}, with their own “Create your profile” link. Shown for ${emails[0] ?? "the first person"}.`}
         footer={<><Button variant="ghost" onClick={() => setPreview(false)}>Close</Button><Button variant="primary" iconStart={<Send />} onClick={() => { setPreview(false); setConfirm(true); }}>Invite {people(n)}</Button></>}>
-        <iframe title="Invite email preview" srcDoc={email.html} className="block h-120 w-full rounded-lg border border-line bg-surface" />
+        <iframe title="Invite email preview" srcDoc={email.html} className="block h-120 w-full border border-line bg-surface" />
       </Modal>
 
       <Modal open={confirm} onClose={() => setConfirm(false)} size="sm" title={`Invite ${people(n)}?`}
         description={<>We queue {invites(n)}, one to each address, with a personal link that&apos;s valid for 30 days.</>}
         footer={<><Button variant="ghost" onClick={() => setConfirm(false)}>Cancel</Button><Button variant="primary" loading={busy} iconStart={<Send />} onClick={invite}>{progress ? `Sent ${progress[0]} of ${progress[1]}` : `Send ${invites(n)}`}</Button></>}>
         <div className="grid gap-3">
-          <div className="grid gap-1 rounded-lg border border-line bg-surface-sunken p-3">
-            <p className="text-label-sm text-ink-subtle">Subject</p>
+          <div className="grid gap-1 border-t-4 border-line-strong bg-surface-sunken p-3">
+            <p className="text-label-sm font-bold tracking-widest text-ink-muted uppercase">Subject</p>
             <p className="text-label-md text-ink">{email.subject}</p>
             <p className="text-body-sm text-ink-muted">To {emails.slice(0, 2).join(", ")}{emails.length > 2 ? ` and ${emails.length - 2} more` : ""}</p>
           </div>

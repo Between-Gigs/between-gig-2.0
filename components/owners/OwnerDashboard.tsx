@@ -1,7 +1,6 @@
 "use client";
 import { Button, EmptyState, SegmentedControl, Skeleton, cx } from "@ds/components";
-import { ArrowRight, Inbox, Mail } from "lucide-react";
-import { Icon3D } from "@/components/ui/Icon3D";
+import { ArrowRight, Inbox, Mail, Plus } from "lucide-react";
 import * as React from "react";
 import { data, type DashboardSummary, type PersonStatus, type PersonSummary, type Session, type WaitlistRow } from "@/lib/data";
 import { waitlistCategoryLabel } from "@/lib/data/taxonomy";
@@ -10,7 +9,7 @@ import { ButtonLink } from "@/components/ui/ButtonLink";
 import { ActivityList, ago } from "./activity";
 import { shortDate } from "./format";
 import { FunnelCompact } from "./Funnel";
-import { AgoPill, Meter, OwnerAvatar, OwnerPage, Panel, PanelLink, Row, RowSkeletons, StatTab, useFitList } from "./kit";
+import { eyebrow, forestButton, Meter, OwnerAvatar, OwnerPage, Panel, PanelLink, Row, RowSkeletons, StatTab, useFitList } from "./kit";
 import { OwnerGate } from "./OwnerGate";
 import { OwnerShell } from "./OwnerShell";
 import { isHeld } from "./hold";
@@ -20,7 +19,9 @@ import { markArea } from "@/lib/split-area";
 markArea("bg-split:dashboard");
 
 const greeting = () => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
-const today = () => new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+/** "Wednesday · 4 November": the small line over the greeting. */
+const today = () => { const d = new Date(); return `${d.toLocaleDateString("en-US", { weekday: "long" })} · ${d.getDate()} ${d.toLocaleDateString("en-US", { month: "long" })}`; };
+const daysSince = (iso?: string) => (iso ? Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)) : 0);
 /** "Patti" from "Patti Smith"; the sample owner ("Owner (sample)") gets no name rather than "Owner". */
 const firstName = (s: Session) => { const n = s.name.replace(/\s*\(.*\)$/, "").trim().split(" ")[0]; return n && n !== "Owner" ? n : ""; };
 
@@ -101,81 +102,95 @@ function Dashboard({ session }: { session: Session }) {
 
   if (!d) return <OwnerShell fit><DashboardSkeleton /></OwnerShell>;
 
+  const oldest = daysSince(d.reviewQueue[0]?.person.submittedAt);
+  const photos = new Map(people.map((r) => [r.person.id, r.fields?.photo || undefined]));
+
   return (
     <OwnerShell fit>
-      <OwnerPage fit title={`${greeting()}${name ? `, ${name}` : ""}`} icon="waving_hand"
-        description={<><span className="max-sm:hidden">{today()} · </span>{d.counts.submitted ? `${d.counts.submitted} ${d.counts.submitted === 1 ? "Gigster is" : "Gigsters are"} waiting for your review.` : "Nothing is waiting for review. Enjoy the quiet."}</>}
+      <OwnerPage fit hero kicker={today()} title={`${greeting()}${name ? `, ${name}` : ""}.`}
+        description={d.counts.submitted ? `${d.counts.submitted} ${d.counts.submitted === 1 ? "Gigster is" : "Gigsters are"} waiting for your review.` : "Nothing is waiting for review. Enjoy the quiet."}
         actions={
           <>
-            <ButtonLink href="/owners/waitlist/?status=not_invited" variant="secondary" iconStart={<Mail />}>Invite people</ButtonLink>
-            {d.reviewQueue.length > 0 && <Button variant="primary" iconEnd={<ArrowRight />} onClick={() => { pick("submitted"); setDrawer({ rows: d.reviewQueue, index: 0, from: "submitted" }); }}>Start reviewing</Button>}
+            {d.reviewQueue.length > 0 && <Button variant="strong" size="lg" className={forestButton} iconEnd={<ArrowRight />} onClick={() => { pick("submitted"); setDrawer({ rows: d.reviewQueue, index: 0, from: "submitted" }); }}>Start reviewing</Button>}
+            <ButtonLink href="/owners/waitlist/?status=not_invited" variant="secondary" size="lg" className="border-2" iconEnd={<Plus />}>Invite people</ButtonLink>
           </>
         }>
-        <div role="tablist" aria-label="At a glance" className="grid shrink-0 grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-          <StatTab controls="dash-list" label="Waiting for review" value={d.counts.submitted} hint="oldest first" tone="peach" icon={<Icon3D name="eyes" className="size-9 sm:size-12" />} attention={d.counts.submitted > 0} selected={cohort === "all" && view === "submitted"} onSelect={() => pick("submitted")} />
-          <StatTab controls="dash-list" label="Making edits" value={d.counts.changes_requested} hint="sent back with notes" tone="butter" icon={<Icon3D name="memo" className="size-9 sm:size-12" />} selected={cohort === "all" && view === "changes_requested"} onSelect={() => pick("changes_requested")} />
-          <StatTab controls="dash-list" label="Live profiles" value={d.counts.approved} hint="clients can find them" tone="mint" icon={<Icon3D name="party_popper" className="size-9 sm:size-12" />} selected={cohort === "all" && view === "approved"} onSelect={() => pick("approved")} />
-          <StatTab controls="dash-list" label="Ready to invite" value={d.waitlist.not_invited} hint={`of ${d.waitlist.total}`} suffix={`of ${d.waitlist.total}`} meter={d.waitlist.total ? d.waitlist.not_invited / d.waitlist.total : 0} tone="sage" icon={<Icon3D name="envelope" className="size-9 sm:size-12" />} selected={cohort === "all" && view === "not_invited"} onSelect={() => pick("not_invited")} />
+        <div role="tablist" aria-label="At a glance" className="grid shrink-0 grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 xl:grid-cols-10">
+          <div className="col-span-2 sm:col-span-1 xl:col-span-3"><StatTab controls="dash-list" label="Waiting for review" value={d.counts.submitted} hint={d.counts.submitted ? `Oldest waiting ${oldest} ${oldest === 1 ? "day" : "days"}` : "oldest first"} attention={d.counts.submitted > 0} selected={cohort === "all" && view === "submitted"} onSelect={() => pick("submitted")} /></div>
+          <div className="xl:col-span-2"><StatTab controls="dash-list" label="Making edits" value={d.counts.changes_requested} hint="sent back with notes" selected={cohort === "all" && view === "changes_requested"} onSelect={() => pick("changes_requested")} /></div>
+          <div className="xl:col-span-2"><StatTab controls="dash-list" label="Live profiles" value={d.counts.approved} hint="clients can find them" selected={cohort === "all" && view === "approved"} onSelect={() => pick("approved")} /></div>
+          <div className="col-span-2 sm:col-span-1 xl:col-span-3"><StatTab controls="dash-list" label="Ready to invite" value={d.waitlist.not_invited} hint={`${d.waitlist.not_invited} of ${d.waitlist.total} on the waitlist`} suffix={`/${d.waitlist.total}`} selected={cohort === "all" && view === "not_invited"} onSelect={() => pick("not_invited")} /></div>
         </div>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-12">
-          <Panel className="min-h-0 lg:col-span-7" title={cohort === "invited" ? `${v.title} · Invited people` : v.title} flush bodyClassName="flex min-h-0 flex-col"
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-x-6 gap-y-12 lg:grid-cols-10">
+          <Panel className="min-h-0 lg:col-span-7" number="01" title={cohort === "invited" ? `${v.title} · Invited people` : v.title} flush bodyClassName="flex min-h-0 flex-col"
             count={<><span aria-hidden="true">{count}</span><span className="sr-only">{count} {count === 1 ? "person" : "people"}</span></>}
-            footer={
-              <div className="flex flex-wrap items-center justify-between gap-2">
+            aside={
+              <>
+                {listHidden > 0 && <span className="text-body-sm text-ink-muted tabular-nums">+{listHidden} more</span>}
                 <PanelLink href={v.more.href}>{cohort === "invited" ? "Browse everyone at this status" : v.more.label}</PanelLink>
-                {listHidden > 0 && <span className="text-body-sm text-ink-subtle tabular-nums">+{listHidden} more</span>}
-              </div>
+              </>
             }>
-            <div ref={listRef} id="dash-list" role="tabpanel" aria-label={v.title} className="min-h-0 flex-1 lg:overflow-hidden">
+            <div ref={listRef} id="dash-list" role="tabpanel" aria-label={v.title} className="@container min-h-0 flex-1 lg:overflow-hidden">
               {count === 0 ? (
                 <EmptyState className="py-10" icon={<Inbox />} title="Nothing here" headingLevel={3}>{v.empty}</EmptyState>
               ) : view === "not_invited" ? (
-                <ul>
+                <ul className="border-t-2 border-line-strong">
                   {waitlist.map((w, i) => (
-                    <li key={w.signup.id} data-fit="" className={cx("relative mx-2 flex min-h-16 min-w-0 items-center gap-4 px-3 py-3 sm:mx-3 before:absolute before:inset-x-3 before:top-0 before:border-t-2 before:border-dashed before:border-line first:before:hidden", i >= PHONE_ROWS && !expanded && "max-lg:hidden")}>
-                      <span className="grid size-12 shrink-0 place-items-center rounded-md bg-tint-sage"><Icon3D name="envelope" className="size-7" /></span>
+                    <li key={w.signup.id} data-fit="" className={cx("flex min-h-18 min-w-0 items-center gap-4 border-b border-line py-3", i >= PHONE_ROWS && !expanded && "max-lg:hidden")}>
+                      <span className="grid size-12 shrink-0 place-items-center bg-surface-sunken text-ink"><Mail aria-hidden="true" className="size-5" strokeWidth={1.75} /></span>
                       <span className="grid min-w-0 flex-1">
-                        <span className="truncate text-label-md text-ink">{w.signup.email}</span>
+                        <span className="truncate text-label-md font-bold text-ink">{w.signup.email}</span>
                         <span className="truncate text-body-sm text-ink-muted tabular-nums">ZIP {w.signup.zip}{w.signup.category ? ` · ${waitlistCategoryLabel(w.signup.category)}` : ""}</span>
                       </span>
-                      <span className="hidden shrink-0 text-body-sm text-ink-subtle tabular-nums sm:block">Joined {shortDate(w.signup.createdAt)}</span>
+                      <span className="hidden shrink-0 text-body-sm text-ink-muted tabular-nums sm:block">Joined {shortDate(w.signup.createdAt)}</span>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <ul>
-                  {rows.map((r, i) => {
-                    const p = r.person;
-                    return (
-                      <Row key={p.id} onOpen={() => setDrawer({ rows, index: i, from: view, invitedOnly: cohort === "invited" })} title={p.name || p.email}
-                        className={cx(i >= PHONE_ROWS && !expanded && "max-lg:hidden")}
-                        leading={<OwnerAvatar id={p.id} name={p.name} src={r.fields?.photo || undefined} className="size-12 rounded-md" textClass="text-heading-sm" />}
-                        badge={view === "building" ? <PersonStatusBadge status={p.status} size="sm" /> : undefined}
-                        subtitle={r.fields?.position ? [r.fields.position, r.fields.areas.join(" · ")].filter(Boolean).join(" · ") : p.email}
-                        meta={<>{r.fields && <Meter value={r.completeness * 100} label="Profile complete" />}<AgoPill className="min-w-28">{ago((view === "submitted" ? p.submittedAt : p.updatedAt) ?? p.updatedAt)}</AgoPill></>} />
-                    );
-                  })}
-                </ul>
+                <>
+                  <div aria-hidden="true" className={cx("hidden items-center gap-4 border-b-2 border-line-strong pb-2 @lg:flex", eyebrow)}>
+                    <span className="w-16 shrink-0" />
+                    <span className="flex-1">Gigster</span>
+                    <span className="flex shrink-0 gap-6"><span className="w-24">Complete</span><span className="w-28">{view === "submitted" ? "Waiting" : "Updated"}</span></span>
+                    <span className="w-11 shrink-0 @md:w-30" />
+                  </div>
+                  <ul className="@max-lg:border-t-2 @max-lg:border-line-strong">
+                    {rows.map((r, i) => {
+                      const p = r.person;
+                      const when = ago((view === "submitted" ? p.submittedAt : p.updatedAt) ?? p.updatedAt);
+                      return (
+                        <Row key={p.id} onOpen={() => setDrawer({ rows, index: i, from: view, invitedOnly: cohort === "invited" })} title={p.name || p.email}
+                          className={cx(i >= PHONE_ROWS && !expanded && "max-lg:hidden")}
+                          leading={<OwnerAvatar id={p.id} name={p.name} src={r.fields?.photo || undefined} className="size-12 @md:size-16" textClass="text-heading-sm" />}
+                          badge={view === "building" ? <PersonStatusBadge status={p.status} size="sm" /> : undefined}
+                          subtitle={r.fields?.position ? [r.fields.position, r.fields.areas.join(" · ")].filter(Boolean).join(" · ") : p.email}
+                          action={view === "submitted" ? "Review" : "Open"} strong={view === "submitted" && i === 0}
+                          meta={<>{r.fields ? <Meter value={r.completeness * 100} label="Profile complete" /> : <span className="w-24" />}
+                            <span className="grid w-28"><span className="text-label-md font-bold text-ink">{when.replace(/ ago$/, "")}</span><span className="text-caption text-ink-muted">{view === "submitted" ? "since submit" : "last update"}</span></span></>} />
+                      );
+                    })}
+                  </ul>
+                </>
               )}
               {count > PHONE_ROWS && !expanded && (
-                <div className="mx-5 border-t-2 border-dashed border-line py-2 lg:hidden">
+                <div className="border-b border-line py-2 lg:hidden">
                   <Button variant="ghost" size="sm" onClick={() => setExpanded(true)}>Show all {count}</Button>
                 </div>
               )}
             </div>
           </Panel>
 
-          {/* One card for the right column: what just happened, or how the invites are going. */}
-          <Panel className="min-h-0 lg:col-span-5" flush bodyClassName="flex min-h-0 flex-col"
-            title={side === "activity" ? "Recent activity" : "From invite to live"}
-            aside={<SegmentedControl label="Show" size="sm" value={side} onChange={(x) => setSide(x as "activity" | "funnel")}
-              options={[{ value: "activity", label: "Activity" }, { value: "funnel", label: "Funnel" }]} />}>
+          {/* One section for the right column: what just happened, or how the invites are going. */}
+          <Panel className="min-h-0 lg:col-span-3" number="02" flush bodyClassName="flex min-h-0 flex-col"
+            title={side === "activity" ? "Recent activity" : "From invite to live"}>
+            <SegmentedControl label="Show" size="sm" value={side} onChange={(x) => setSide(x as "activity" | "funnel")} className="mb-2 self-start"
+              options={[{ value: "activity", label: "Activity" }, { value: "funnel", label: "Funnel" }]} />
             <div ref={sideRef} className="min-h-0 flex-1 lg:overflow-hidden">
               {side === "activity"
-                ? <ActivityList events={d.activity.slice(0, 12)} onOpen={openPerson} />
+                ? <ActivityList events={d.activity.slice(0, 12)} onOpen={openPerson} photoFor={(id) => photos.get(id)} />
                 : <>
-                    <p className="px-5 pt-3 text-body-sm text-ink-subtle tabular-nums">Out of {d.funnel.invited} invited. Select a step to list who&apos;s there.</p>
+                    <p className="pt-2 pb-1 text-body-sm text-ink-muted tabular-nums">Out of {d.funnel.invited} invited. Select a step to list who&apos;s there.</p>
                     <FunnelCompact bare d={d} selected={cohort === "invited" ? view : undefined} onSelect={(x) => pick(x, "invited")} />
                   </>}
             </div>
@@ -193,14 +208,14 @@ function Dashboard({ session }: { session: Session }) {
 function DashboardSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading dashboard" className="flex min-h-0 flex-1 flex-col">
-      <div aria-hidden="true" className="grid min-h-11 gap-2"><Skeleton className="h-9 w-72" /><Skeleton className="h-4 w-80" /></div>
-      <div aria-hidden="true" className="mt-6 flex min-h-0 flex-1 flex-col gap-6">
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-          {(["bg-tint-peach", "bg-tint-butter", "bg-tint-mint", "bg-tint-sage"] as const).map((t) => <div key={t} className={cx("grid min-h-32 content-between rounded-lg p-5 sm:min-h-36", t)}><Skeleton className="h-4 w-32" /><Skeleton className="h-10 w-14" /></div>)}
+      <div aria-hidden="true" className="grid gap-3"><Skeleton className="h-3 w-48" /><Skeleton className="h-20 w-full max-w-xl" /><Skeleton className="h-4 w-80" /></div>
+      <div aria-hidden="true" className="mt-8 flex min-h-0 flex-1 flex-col gap-10">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-8 xl:grid-cols-10">
+          {["xl:col-span-3 bg-tint-mint", "xl:col-span-2 border-t-4 border-line-strong", "xl:col-span-2 border-t-4 border-line-strong", "xl:col-span-3 border-t-4 border-line-strong"].map((t, i) => <div key={i} className={cx("grid min-h-36 content-between p-4", t)}><Skeleton className="h-16 w-20" /><Skeleton className="h-4 w-32" /></div>)}
         </div>
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-12">
-          <div className="overflow-hidden rounded-xl bg-surface shadow-sm ring-1 ring-line/70 lg:col-span-7"><div className="h-16" /><RowSkeletons count={5} /></div>
-          <div className="overflow-hidden rounded-xl bg-surface shadow-sm ring-1 ring-line/70 lg:col-span-5"><div className="h-16" /><RowSkeletons count={5} /></div>
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-10">
+          <div className="overflow-hidden border-t-4 border-line-strong lg:col-span-7"><div className="h-16" /><RowSkeletons count={5} /></div>
+          <div className="overflow-hidden border-t-4 border-line-strong lg:col-span-3"><div className="h-16" /><RowSkeletons count={5} /></div>
         </div>
       </div>
     </div>

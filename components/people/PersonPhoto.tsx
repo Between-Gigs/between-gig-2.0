@@ -13,7 +13,8 @@ import { Icon3D } from "@/components/ui/Icon3D";
  * the search card and the profile.
  *
  * `fallback="brand"` turns the no-photo state into a placeholder portrait: their craft as a 3D icon in a spotlight on
- * the dotted forest stage, initials faint behind it, and a "No photo yet" badge, instead of a plain silhouette.
+ * the dotted forest stage, initials faint behind it, and a square "No photo yet" tag, instead of a plain silhouette.
+ * Square in every direction G crop: callers hard-crop it into their grid cell.
  */
 export function PersonPhoto({ id, name, src, className, morph = false, alt, textClass = "text-display-sm", fallback = "plain", department, skills }: {
   id: string; name: string; src?: string; className?: string; morph?: boolean; alt?: string; textClass?: string;
@@ -36,7 +37,7 @@ export function PersonPhoto({ id, name, src, className, morph = false, alt, text
         <span aria-hidden="true" className="absolute inset-0 grid place-items-center font-display text-display-xl tracking-tight text-ink-brand/15 @3xs:text-stat">{initials(name || "?")}</span>
         <span aria-hidden="true" className="absolute bottom-1/6 left-1/2 h-1/12 w-1/2 -translate-x-1/2 rounded-full bg-surface-sunken/70 blur-md" />
         <Icon3D name={craft} className="absolute bottom-1/5 left-1/2 aspect-square size-auto w-2/5 -translate-x-1/2 drop-shadow-xl" />
-        <span aria-hidden="true" className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-surface/80 p-1.5 text-label-sm text-ink backdrop-blur-sm @3xs:px-2 @3xs:py-1">
+        <span aria-hidden="true" className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 bg-surface/80 p-1.5 text-label-sm text-ink backdrop-blur-sm @3xs:px-2 @3xs:py-1">
           {createElement(departmentIcon(department, skills), { className: "size-3.5 text-ink-brand", strokeWidth: 1.75 })}
           <span className="hidden @3xs:inline">No photo yet</span>
         </span>

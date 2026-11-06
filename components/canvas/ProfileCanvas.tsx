@@ -1,7 +1,7 @@
 "use client";
-import { Badge, Banner, Button, Field, Input, RadioGroup, SegmentedControl, Skeleton, Slider, Textarea, cx, useToast } from "@ds/components";
+import { Badge, Banner, Button, Field, Input, RadioGroup, Skeleton, Slider, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
-import { ArrowRight, Check, Copy, Eye, Link2, MapPin, MessageSquareWarning, PartyPopper, PenLine, Pencil, Plus, Share2, WandSparkles } from "lucide-react";
+import { ArrowDown, ArrowRight, Check, Copy, Link2, MapPin, MessageSquareWarning, PartyPopper, Pencil, Plus, Share2, WandSparkles } from "lucide-react";
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
@@ -17,8 +17,6 @@ import { ProfileView, type PartKind, type ProfilePart } from "@/components/profi
 import { useLiveEditWarning } from "@/components/profile/LiveEditWarning";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
-import { Icon3D } from "@/components/ui/Icon3D";
-import type { Icon3DName } from "@/lib/icons3d";
 import { markArea } from "@/lib/split-area";
 
 markArea("bg-split:dashboard");
@@ -44,11 +42,13 @@ const LABEL: Record<SpotId, string> = {
   skills: "On-set skills", where: "Where you work", availability: "This month", rate: "Starting rate", about: "About me",
   credits: "Notable credits", imdb: "IMDb link", languages: "Languages", details: "Work details",
 };
-/** The 3D object for each part, on its empty tile, the open editor and the Next banner. */
-const ICON: Record<SpotId, Icon3DName> = {
-  photo: "camera", name: "memo", position: "clapper_board", years: "hourglass_done", services: "sparkles", skills: "hammer_and_wrench",
-  where: "round_pushpin", availability: "spiral_calendar", rate: "money_bag", about: "memo", credits: "film_frames", imdb: "ticket",
-  languages: "speech_balloon", details: "briefcase",
+/** The parts listed beside the page, in order: their place in this list is the number they carry ("02 Your department"). */
+const PARTS: SpotId[] = ORDER.filter((id) => REQUIRED.includes(id) || id === "rate" || id === "languages");
+const partNo = (id: SpotId) => { const i = PARTS.indexOf(id); return i < 0 ? null : String(i + 1).padStart(2, "0"); };
+/** The verb on the Next block's button: what the one tap does. */
+const VERB: Partial<Record<SpotId, string>> = {
+  name: "Type", photo: "Add", position: "Choose", years: "Set", services: "Choose", skills: "Choose", where: "Choose",
+  availability: "Set", about: "Write", credits: "Add",
 };
 /** Which spot shows each field's submit error. */
 const FIELD_SPOT: Partial<Record<keyof ProfileFields, SpotId>> = {
@@ -337,20 +337,25 @@ function Canvas({ personId }: { personId: string }) {
   const nothingToSend = data.kind === "live" && (person.status === "submitted" || person.status === "approved");
   const first = d.name.split(" ")[0] || "there";
   const ctx: Ctx = { d, editing, next, fresh, errors, noted, open, close, advance, portrait, rise };
+  // The progress line: one segment per required part, in the order the page leads them; the next one is marked.
+  const segs = ORDER.filter((id) => REQUIRED.includes(id)).map((id) => (sent || isFilled(id, d) ? "done" : id === next ? "next" : "todo") as Seg);
 
   return (
     <Page bare>
       {live.dialog}
-      <EditorBar done={done} total={REQUIRED.length} ready={ready} missing={Object.keys(fieldErrors).length} save={save} view={view} editing={!!editing} sent={sent} submitting={submitting} resubmit={resubmit} canSend={!nothingToSend}
+      <EditorBar segs={segs} done={done} total={REQUIRED.length} ready={ready} missing={Object.keys(fieldErrors).length} save={save} view={view} editing={!!editing} sent={sent} submitting={submitting} resubmit={resubmit} canSend={!nothingToSend}
         onRetry={() => { dirty.current = true; void flush(); }} onView={switchView} onSubmit={submit} />
 
-      <div ref={stage} className="vt-page relative mx-auto max-w-7xl px-4 pt-10 pb-40 sm:px-6 sm:pb-24">
+      <div ref={stage} className="vt-page relative mx-auto max-w-7xl px-4 pt-6 pb-40 sm:px-6 sm:pb-24">
         {party > 0 && <Confetti key={party} />}
         {view === "client" ? (
           <div className="grid gap-8">
             {sent
               ? <ReadyCard first={first} slug={person.slug} d={d} personId={personId} />
-              : <Banner tone="info" title="Preview">This is exactly what clients will see. Switch back to Edit to change anything.</Banner>}
+              : <div className="grid gap-1 border-b border-line pb-4 sm:grid-cols-12 sm:gap-x-6">
+                  <p className="text-eyebrow text-ink uppercase sm:col-span-3">Preview</p>
+                  <p className="text-body-md text-ink-muted sm:col-span-9">This is exactly what clients will see. Switch back to Edit to change anything.</p>
+                </div>}
             <ProfileView person={person} fields={d} mode="own" draft={!sent} />
           </div>
         ) : (
@@ -364,20 +369,21 @@ function Canvas({ personId }: { personId: string }) {
               </Banner>
             )}
             {done <= 1 && (
-              <div className="mb-8 lg:hidden">
-                <h2 className="font-display text-heading-lg text-ink">Welcome, {first}. This is your page.</h2>
+              <div className="mb-6 lg:hidden">
+                <h2 className="font-display text-heading-lg text-balance text-ink">Welcome, {first}. This is your page.</h2>
                 <p className="mt-1 text-body-md text-ink-muted">Tap any part to fill it in where it sits. It saves as you go.</p>
               </div>
             )}
             {next && !editing && (
-              <section aria-labelledby="next-h" className="mb-8 flex flex-wrap items-center gap-4 rounded-xl bg-tint-butter p-5 text-tint-ink sm:px-6">
-                <Icon3D name="sparkles" className="size-10" />
-                <div className="grid min-w-0 flex-1 gap-0.5">
-                  <p className="text-eyebrow text-tint-ink uppercase">Next</p>
-                  <h2 id="next-h" className="font-display text-heading-md text-tint-ink">{LABEL[next]}</h2>
-                  <p className="text-body-sm text-tint-ink">It&apos;s highlighted on your page. Tap it to fill it in where it sits; it saves as you go.</p>
-                </div>
-                <Button variant="primary" className="max-lg:hidden" iconEnd={<ArrowRight />} onClick={() => open(next)}>Next: {LABEL[next]}</Button>
+              // The one mint block on the screen: the part to fill next. Always near-black type on mint, in both themes.
+              <section aria-labelledby="next-h" className="mb-12 grid grid-cols-12 items-center gap-x-6 gap-y-2 bg-tint-mint px-5 py-5 text-forest-950 sm:px-6">
+                <p className="col-span-12 text-eyebrow uppercase lg:col-span-2">Next step</p>
+                <h2 id="next-h" className="col-span-12 font-display text-heading-lg text-balance lg:col-span-5">Next: {LABEL[next]}</h2>
+                <p className="col-span-12 text-body-sm lg:col-span-3">It&apos;s highlighted on your page. Tap it to fill it in where it sits; it saves as you go.</p>
+                <button type="button" aria-label={`Next: ${LABEL[next]}, ${(VERB[next] ?? "Add").toLowerCase()}`} onClick={() => open(next)}
+                  className="col-span-2 inline-flex min-h-13 items-center justify-between gap-3 bg-forest-950 px-5 font-display text-label-md font-bold text-ink-on-brand transition-colors duration-fast hover:bg-forest-900 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-forest-950 max-lg:hidden">
+                  {VERB[next] ?? "Add"}<ArrowDown className="size-5" aria-hidden="true" />
+                </button>
               </section>
             )}
             <div className={cx(rise && "canvas-rise")}>
@@ -391,7 +397,7 @@ function Canvas({ personId }: { personId: string }) {
               </Anchored>
             )}
             {editing && !wide && (
-              <div data-editor="" className="fixed inset-x-0 bottom-0 z-overlay max-h-3/4 overflow-y-auto rounded-t-xl border-t border-line bg-surface-raised shadow-lg">
+              <div data-editor="" className="fixed inset-x-0 bottom-0 z-overlay max-h-3/4 overflow-y-auto border-t-4 border-line-strong bg-surface-raised">
                 <EditorPanel id={editing} sheet body={editorFor(editing, d, set, personId, (go) => live.guard("photo", go))} />
               </div>
             )}
@@ -410,91 +416,124 @@ function Dock({ done, total, next, ready, resubmit, canSend, submitting, onNext,
   done: number; total: number; next: SpotId | null; ready: boolean; resubmit: boolean; canSend: boolean; submitting: boolean; onNext: () => void; onSubmit: () => void;
 }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-sticky border-t border-line bg-bg/95 px-4 py-3 shadow-lg backdrop-blur-md lg:hidden">
-      <div className="mx-auto flex max-w-xl items-center gap-3">
-        <span role="img" aria-label={`${done} of ${total} required parts filled`} style={{ "--p": Math.round((done / total) * 100) } as React.CSSProperties}
-          className="progress-ring grid size-10 shrink-0 place-items-center rounded-full">
-          <span className="grid size-8 place-items-center rounded-full bg-bg text-caption text-ink tabular-nums">{done}/{total}</span>
+    <div className="fixed inset-x-0 bottom-0 z-sticky border-t-4 border-line-strong bg-bg px-4 py-3 lg:hidden">
+      <div className="mx-auto flex max-w-xl items-center gap-4">
+        <span role="img" aria-label={`${done} of ${total} required parts filled`} className="shrink-0 font-display text-heading-lg text-ink tabular-nums">
+          {done}<span className="text-heading-sm text-ink-muted">/{total}</span>
         </span>
         {ready || !next
-          ? canSend && <Button variant="primary" fullWidth className="glow-hover" loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}>{resubmit ? "Send again" : "Send for review"}</Button>
-          : <Button variant="primary" fullWidth iconEnd={<ArrowRight />} onClick={onNext}>Next: {LABEL[next]}</Button>}
+          ? canSend && <Button variant="primary" size="lg" fullWidth loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}>{resubmit ? "Send again" : "Send for review"}</Button>
+          : <Button variant="primary" size="lg" fullWidth iconEnd={<ArrowRight />} onClick={onNext}>Next: {LABEL[next]}</Button>}
       </div>
     </div>
   );
 }
 
-/** The slim bar above the page: progress, saving, Edit or Preview, and Send. */
-function EditorBar({ done, total, ready, missing, save, view, editing, sent, submitting, resubmit, canSend, onRetry, onView, onSubmit }: {
-  done: number; total: number; ready: boolean; missing: number; save: SaveState; view: "edit" | "client"; editing: boolean; sent: boolean; submitting: boolean; resubmit: boolean; canSend: boolean;
+type Seg = "done" | "next" | "todo";
+
+/** Edit or Preview: two square halves, the chosen one filled. A radio group, like the system's SegmentedControl, at full touch size. */
+function ViewToggle({ value, onChange }: { value: "edit" | "client"; onChange: (v: string) => void }) {
+  const opts = [{ value: "edit", label: "Edit" }, { value: "client", label: "Preview" }];
+  const refs = React.useRef<Array<HTMLButtonElement | null>>([]);
+  const move = (from: number, step: number) => {
+    const to = (from + step + opts.length) % opts.length;
+    onChange(opts[to].value);
+    refs.current[to]?.focus();
+  };
+  return (
+    <div role="radiogroup" aria-label="View" className="grid grid-cols-2 border-3 border-line-strong">
+      {opts.map((o, i) => {
+        const on = o.value === value;
+        return (
+          <button key={o.value} ref={(el) => { refs.current[i] = el; }} type="button" role="radio" aria-checked={on} tabIndex={on ? 0 : -1}
+            onClick={() => onChange(o.value)}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); move(i, 1); }
+              if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); move(i, -1); }
+            }}
+            className={cx("inline-flex min-h-12 items-center justify-center px-4 font-display text-label-md font-bold transition-colors duration-fast focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus",
+              on ? "bg-ink text-bg" : "text-ink hover:bg-surface-hover")}>
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** The bar above the page: a big count of parts done, the ten-part line, saving, Edit or Preview, and Send. */
+function EditorBar({ segs, done, total, ready, missing, save, view, editing, sent, submitting, resubmit, canSend, onRetry, onView, onSubmit }: {
+  segs: Seg[]; done: number; total: number; ready: boolean; missing: number; save: SaveState; view: "edit" | "client"; editing: boolean; sent: boolean; submitting: boolean; resubmit: boolean; canSend: boolean;
   onRetry: () => void; onView: (v: string) => void; onSubmit: () => void;
 }) {
   const pct = Math.round((done / total) * 100);
-  const line = sent ? "Sent for review" : missing ? `${missing} ${missing === 1 ? "thing" : "things"} to finish` : ready ? "Ready to send" : `${done} of ${total} done`;
+  const line = sent ? "Sent for review" : missing ? `${missing} ${missing === 1 ? "thing" : "things"} to finish` : ready ? "Ready to send" : "Your page · edit on page";
+  const primary = ready && !editing;
   return (
-    <div data-stage="" className="z-sticky border-b border-line bg-bg/90 backdrop-blur-md sm:sticky sm:top-16 embedded:sm:top-0">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
-        <div className="grid min-w-0 flex-1 gap-1.5 sm:max-w-80">
-          <div className="flex items-baseline justify-between gap-3">
-            <b className={cx("text-label-md", missing && !sent ? "text-danger" : "text-ink")}>{line}</b>
-            <SaveIndicator state={save} onRetry={onRetry} />
+    <div data-stage="" className="z-sticky bg-bg sm:sticky sm:top-16 embedded:sm:top-0">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="grid grid-cols-12 items-end gap-x-6 gap-y-4 border-b-4 border-line-strong pt-5 pb-4 lg:pt-7 lg:pb-5">
+          <p className="col-span-12 flex items-end gap-3 sm:col-span-4 lg:col-span-3">
+            <span className="font-display text-display-sm text-ink tabular-nums lg:text-stat">{sent ? total : done}<span className="text-heading-lg text-ink-muted lg:text-display-sm">/{total}</span></span>
+            <span className="pb-1 font-display text-label-md font-bold text-ink">parts<br />done</span>
+          </p>
+          <div className="col-span-12 sm:col-span-8 lg:col-span-5">
+            <span role="progressbar" aria-label="Profile progress" aria-valuenow={sent ? 100 : pct} aria-valuemin={0} aria-valuemax={100} className="grid grid-cols-10 gap-1">
+              {segs.map((s, i) => <span key={i} className={cx("h-3.5 transition-colors duration-slow", s === "done" ? "bg-ink" : s === "next" ? "bg-tint-mint" : "border-2 border-line bg-surface-sunken")} />)}
+            </span>
+            <div className="mt-2.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <b className={cx("font-display text-label-sm", missing && !sent ? "text-danger" : "text-ink-muted")}>{line}</b>
+              <SaveIndicator state={save} onRetry={onRetry} />
+            </div>
           </div>
-          <span role="progressbar" aria-label="Profile progress" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} className="h-1.5 overflow-hidden rounded-full bg-surface-sunken">
-            <span className="block h-full rounded-full bg-mint-500 transition-all duration-slow" style={{ width: `${sent ? 100 : pct}%` }} />
-          </span>
-        </div>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <SegmentedControl label="View" size="sm" value={view} onChange={onView}
-            options={[{ value: "edit", label: "Edit", icon: <PenLine /> }, { value: "client", label: "Preview", icon: <Eye /> }]} />
-          {!sent && canSend && <Button size="sm" variant={ready && !editing ? "primary" : "secondary"} className={cx("max-lg:hidden", ready && "glow-hover")} loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}>
-            {resubmit ? "Send again" : "Send for review"}
-          </Button>}
+          <div className={cx("col-span-12 lg:col-span-2", !sent && canSend ? "sm:col-span-6" : "sm:col-span-12")}><ViewToggle value={view} onChange={onView} /></div>
+          {!sent && canSend && (
+            <div className="col-span-2 max-lg:hidden">
+              <Button size="lg" variant={primary ? "primary" : "secondary"} fullWidth loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}
+                className={cx("min-h-13 justify-between font-display font-bold", !primary && "border-3", ready && "glow-hover")}>
+                {resubmit ? "Send again" : "Send for review"}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-/** The column beside the page while editing: the open part's controls, or a progress card with every part to tap. */
+/** The column beside the page while editing: the open part's controls, or the numbered list of every part to tap. */
 function Rail({ first, panel }: { first: string; panel: React.ReactNode }) {
   const { d, next, editing, open } = useCanvas();
   const done = REQUIRED.filter((id) => isFilled(id, d)).length;
   if (panel) return <>{panel}</>;
-  const parts = ORDER.filter((id) => REQUIRED.includes(id) || id === "rate" || id === "languages");
   return (
-    <section aria-labelledby="rail-h" className="rounded-xl border border-line bg-surface p-6 shadow-md max-lg:hidden">
-      <div className="flex items-center gap-4">
-        <span role="img" aria-label={`${done} of ${REQUIRED.length} required parts filled`} style={{ "--p": Math.round((done / REQUIRED.length) * 100) } as React.CSSProperties}
-          className="progress-ring grid size-16 shrink-0 place-items-center rounded-full">
-          <span className="grid size-13 place-items-center rounded-full bg-surface font-display text-label-md text-ink tabular-nums">{done}/{REQUIRED.length}</span>
-        </span>
-        <div className="grid min-w-0 gap-0.5">
-          <h2 id="rail-h" className="font-display text-heading-md text-ink">{done <= 1 ? `Welcome, ${first}. This is your page.` : next ? "Keep going" : "Ready when you are"}</h2>
-          <p className="text-body-sm text-ink-muted">{next
-            ? done <= 1 ? "It's what clients will see. Tap any part to fill it in where it sits; it saves as you go." : "Tap any part to fill it in where it sits; it saves as you go."
-            : "Everything clients need is in. Preview it, then send it to the Between Gigs team."}</p>
-        </div>
+    <section aria-labelledby="rail-h" className="border-t-4 border-line-strong pt-4 max-lg:hidden">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id="rail-h" className="font-display text-heading-sm text-ink">{done <= 1 ? `Welcome, ${first}.` : next ? "Keep going" : "Ready when you are"}</h2>
+        <span role="img" aria-label={`${done} of ${REQUIRED.length} required parts filled`} className="shrink-0 font-display text-label-md font-bold text-ink tabular-nums">{done}/{REQUIRED.length}</span>
       </div>
-      <ul className="mt-5 grid gap-1">
-        {parts.map((id) => {
+      <ul className="mt-3">
+        {PARTS.map((id) => {
           const filled = isFilled(id, d);
           const isNext = id === next;
           return (
-            <li key={id}>
+            <li key={id} className="border-t border-line">
               <button type="button" onClick={() => open(id)} aria-current={editing === id ? "step" : undefined}
-                className={cx("flex min-h-11 w-full items-center gap-3 rounded-full px-3 text-left text-body-md transition-colors duration-fast",
-                  isNext ? "bg-tint-butter font-semibold text-tint-ink" : "text-ink hover:bg-surface-hover")}>
-                <span aria-hidden="true" className={cx("grid size-6 shrink-0 place-items-center rounded-full",
-                  filled ? "bg-action text-on-action" : isNext ? "border-4 border-ink bg-surface" : "border-2 border-line-strong")}>
-                  {filled && <Check className="size-3.5" strokeWidth={3} />}
-                </span>
-                <span className="min-w-0 flex-1">{LABEL[id]}<span className="sr-only">{filled ? " (done)" : " (to do)"}</span></span>
-                {isNext ? <span className="text-label-sm">Next</span> : !REQUIRED.includes(id) && <span className="text-label-sm text-ink-muted">Optional</span>}
+                className={cx("flex min-h-11 w-full items-center gap-3 px-2 text-left font-display text-label-md transition-colors duration-fast focus-visible:outline-3 focus-visible:-outline-offset-3 focus-visible:outline-focus",
+                  isNext ? "bg-ink text-bg" : editing === id ? "bg-surface-sunken text-ink" : "text-ink hover:bg-surface-hover")}>
+                <span aria-hidden="true" className={cx("w-6 shrink-0 text-label-sm tabular-nums", isNext ? "text-bg" : "text-ink-muted")}>{partNo(id)}</span>
+                <span className={cx("min-w-0 flex-1", filled && !isNext && "text-ink-muted line-through")}>{LABEL[id]}<span className="sr-only">{filled ? " (done)" : " (to do)"}</span></span>
+                {isNext ? <span className="text-label-sm">Next</span>
+                  : filled ? <span aria-hidden="true" className="inline-flex items-center gap-1 text-label-sm text-ink-muted"><Check className="size-3.5" strokeWidth={3} />Done</span>
+                  : !REQUIRED.includes(id) && <span className="text-label-sm text-ink-muted">Optional</span>}
               </button>
             </li>
           );
         })}
       </ul>
+      <p className="mt-6 border-t border-line pt-4 text-body-sm text-ink-muted">{next
+        ? done <= 1 ? "This is your page. It's what clients will see. Tap any part to fill it in where it sits; it saves as you go." : "Tap any part to fill it in where it sits; it saves as you go."
+        : "Everything clients need is in. Preview it, then send it to the Between Gigs team."}</p>
     </section>
   );
 }
@@ -512,7 +551,7 @@ function Anchored({ id, children }: { id: SpotId; children: React.ReactNode }) {
     if (!spot) return;
     const place = () => {
       const r = spot.getBoundingClientRect();
-      const width = Math.min(480, window.innerWidth - 32);
+      const width = Math.min(640, window.innerWidth - 32);
       const left = Math.max(16, Math.min(r.left + window.scrollX, window.innerWidth - width - 16));
       const arrow = Math.max(24, Math.min(r.left + window.scrollX + Math.min(r.width, 64) / 2 - left, width - 24));
       setPos({ top: r.bottom + window.scrollY + 14, left, width, arrow });
@@ -528,8 +567,8 @@ function Anchored({ id, children }: { id: SpotId; children: React.ReactNode }) {
   }, [pos?.top, id]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!pos) return null;
   return createPortal(
-    <div ref={box} data-anchored="" className="absolute z-overlay scroll-mb-6" style={{ top: pos.top, left: pos.left, width: pos.width }}>
-      <span aria-hidden="true" className="absolute -top-2 size-4 rotate-45 rounded-xs border-t-2 border-l-2 border-ink bg-surface" style={{ left: pos.arrow - 8 }} />
+    <div ref={box} data-anchored="" className="absolute z-overlay scroll-mt-60 scroll-mb-6" style={{ top: pos.top, left: pos.left, width: pos.width }}>
+      <span aria-hidden="true" className="absolute -top-2 size-4 rotate-45 border-t-3 border-l-3 border-line-strong bg-surface" style={{ left: pos.arrow - 8 }} />
       {children}
     </div>,
     // Inside <main>, so it stays in the page's main landmark; main isn't positioned, so document coordinates hold.
@@ -537,12 +576,13 @@ function Anchored({ id, children }: { id: SpotId; children: React.ReactNode }) {
   );
 }
 
-/** The controls for the open part: in the column beside the page on wide screens, a sheet from the bottom on phones. */
+/** The controls for the open part: a square box under the part on wide screens, a sheet from the bottom on phones. */
 function EditorPanel({ id, body, sheet = false }: { id: SpotId; body: React.ReactNode; sheet?: boolean }) {
   const { d, errors, noted, close, advance } = useCanvas();
   const after = firstEmpty(d, id);
   const err = errors[id];
   const note = noted[id];
+  const no = partNo(id);
   const ref = React.useRef<HTMLDivElement>(null);
   // Focus the first control as the part opens, so typing starts right away.
   React.useEffect(() => {
@@ -552,16 +592,24 @@ function EditorPanel({ id, body, sheet = false }: { id: SpotId; body: React.Reac
   return (
     <div ref={ref} data-editor="" role="group" aria-label={`Editing: ${LABEL[id]}`} onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); close(); } }}
       style={sheet ? undefined : { maxHeight: "calc(100dvh - 10rem)" }}
-      className={cx("grid gap-5", sheet ? "p-5 pb-6" : "overflow-y-auto rounded-xl border-2 border-ink bg-surface p-6 shadow-lg")}>
-      <div className="flex items-center justify-between gap-3">
-        <p className="flex items-center gap-3 font-display text-heading-md text-ink"><Icon3D name={ICON[id]} className="size-9" />{LABEL[id]}</p>
-        <Button size="sm" variant="ghost" onClick={close}>Done</Button>
+      className={cx("grid gap-5", sheet ? "px-5 pt-5" : "overflow-y-auto border-3 border-line-strong bg-surface px-6 pt-6")}>
+      <div className="flex items-baseline justify-between gap-3 border-b-2 border-line-strong pb-3.5">
+        <p className="flex min-w-0 items-baseline gap-3 font-display text-heading-md text-ink">
+          {no && <span className="text-label-sm text-ink-muted tabular-nums">{no}</span>}{LABEL[id]}
+        </p>
+        <span className="shrink-0 font-display text-label-sm text-ink-muted">Editing</span>
       </div>
-      {note && <p className="flex gap-2 rounded-md bg-warning-soft p-3 text-body-sm text-ink"><MessageSquareWarning className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" /><span><b>Team note:</b> {note}</span></p>}
+      {note && <p className="flex gap-2 border-l-4 border-warning bg-warning-soft p-3 text-body-sm text-ink"><MessageSquareWarning className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" /><span><b>Team note:</b> {note}</span></p>}
       {body}
       {err && <ul className="grid gap-1 text-body-sm text-danger">{err.map((m) => <li key={m}>{m}</li>)}</ul>}
-      <div className="flex items-center justify-end gap-3 border-t border-line pt-4">
-        <Button variant="primary" iconEnd={<ArrowRight />} onClick={() => advance(id)}>{after ? `Next: ${LABEL[after]}` : "Done"}</Button>
+      <div className={cx("sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t border-line py-4", sheet ? "-mx-5 bg-surface-raised px-5" : "-mx-6 bg-surface px-6")}>
+        <p className="text-body-sm text-ink-muted max-sm:hidden">It saves as you go.</p>
+        <div className="ml-auto flex gap-3">
+          <Button size="lg" variant="secondary" className="border-2 font-display font-bold" onClick={close}>Close</Button>
+          <Button size="lg" variant="primary" className="font-display font-bold" iconEnd={<ArrowRight />} aria-label={after ? `Next: ${LABEL[after]}, save and continue` : undefined} onClick={() => advance(id)}>
+            {after ? "Save and continue" : "Done"}
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -606,8 +654,8 @@ function editorFor(id: SpotId, d: ProfileFields, set: <K extends keyof ProfileFi
 }
 
 /**
- * One part of the page. Filled: the content as clients see it, with an Edit tag on hover. Empty: a soft placeholder
- * that says what goes there (the next one highlighted). Open: outlined while its controls are in the panel.
+ * One part of the page. Filled: the content as clients see it, with an Edit tag on hover. Empty: a square hairline box
+ * that says what goes there, with "+ Add" (the next one marked). Open: outlined while its controls are in the panel.
  */
 function Spot({ id, kind, hint, children }: { id: SpotId; kind: PartKind; hint: string; children: React.ReactNode }) {
   const { d, editing, next, fresh, errors, noted, open, portrait } = useCanvas();
@@ -617,38 +665,51 @@ function Spot({ id, kind, hint, children }: { id: SpotId; kind: PartKind; hint: 
   const note = noted[id];
   const active = editing === id;
   const glow = id === next && !editing;
-  const ring = active ? "ring-2 ring-ink-brand" : err ? "ring-2 ring-danger" : note ? "ring-2 ring-warning" : glow ? "ring-2 ring-ink-brand" : "";
+  // Outlines, not rings: the Swiss look has no shadows.
+  const ring = active ? "outline-3 outline-offset-2 outline-line-strong" : err ? "outline-2 outline-offset-2 outline-danger" : note ? "outline-2 outline-offset-2 outline-warning" : "";
   const optional = !REQUIRED.includes(id);
   const label = `${filled ? "Edit" : "Add"} ${LABEL[id].toLowerCase()}${optional ? " (optional)" : ""}`;
-  const plus = <span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-full bg-action text-on-action"><Plus className="size-4" strokeWidth={2.5} /></span>;
+  const focus = "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
   if (!filled) {
     return (
       <div data-spot={id} style={order} className={cx("relative", kind === "block" && "h-full")}>
         <button type="button" data-spot-edit="" onClick={() => open(id)} aria-label={label} aria-pressed={active}
-          className={cx("group text-left transition duration-base", ring, glow && "spot-next",
-            kind === "photo" ? "block w-full rounded-2xl"
-              : kind === "block" ? "flex h-full min-h-20 w-full items-center gap-4 rounded-lg border-2 border-dashed border-line-strong bg-surface/60 p-4 hover:border-ink hover:bg-surface"
-              : cx("inline-flex min-h-11 max-w-full items-center gap-2.5 rounded-full border-2 border-dashed border-line-strong bg-surface/70 py-1.5 pr-4 pl-2 hover:border-ink hover:bg-surface", kind === "title" && "justify-center"))}>
+          className={cx("group text-left transition duration-base", focus, ring, glow && "spot-next",
+            kind === "photo" ? "block w-full"
+              : kind === "block" ? "flex h-full min-h-20 w-full flex-wrap items-center gap-x-5 gap-y-3 border-2 border-line bg-surface p-5 hover:border-line-strong"
+              : cx("inline-flex min-h-11 max-w-full items-center gap-2.5 border-2 border-line bg-surface py-1 pr-4 pl-1 hover:border-line-strong", kind === "title" && "justify-center"))}>
           {kind === "photo" ? (
-            <span className="grid aspect-square place-content-center justify-items-center gap-1 rounded-2xl border-2 border-dashed border-line-strong bg-surface/70 p-3 text-center group-hover:border-ink group-hover:bg-surface">
-              <Icon3D name="camera" className="mb-1 size-12" />
-              <span className="text-label-md text-ink">{hint}</span>
-              <span className="text-body-sm text-ink-muted">A friendly face helps</span>
+            <span className="relative grid aspect-square content-end overflow-hidden bg-surface-sunken">
+              <svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full text-line">
+                <path d="M0 0L100 100M100 0L0 100" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+              </svg>
+              <span className="absolute top-3 left-3 bg-bg px-2 py-1 font-display text-label-sm font-bold text-ink">Photo</span>
+              <span className="relative flex items-center justify-between gap-3 border-3 border-line-strong bg-bg p-3 group-hover:bg-surface-hover">
+                <span className="grid min-w-0 gap-0.5">
+                  <span className="font-display text-label-md font-bold text-ink">{hint}</span>
+                  <span className="text-body-sm text-ink-muted">A friendly face helps</span>
+                </span>
+                <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center bg-ink text-bg"><Plus className="size-5" strokeWidth={2.5} /></span>
+              </span>
             </span>
           ) : kind === "block" ? <>
-            <Icon3D name={ICON[id]} className="size-9" />
-            <span className="grid min-w-0 flex-1 gap-0.5">
-              <span className="flex flex-wrap items-center gap-2 text-label-md text-ink">{LABEL[id]}{optional && <span className="rounded-full bg-tint-sand px-2 py-0.5 text-label-sm text-tint-ink">Optional</span>}</span>
+            <span className="grid min-w-0 flex-1 gap-1">
+              <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-display text-label-md font-bold text-ink">
+                {LABEL[id]}
+                {optional && <span className="text-eyebrow text-ink-muted uppercase">Optional</span>}
+              </span>
               {hint !== LABEL[id] && <span className="text-body-sm text-ink-muted group-hover:text-ink">{hint}</span>}
             </span>
-            <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-tint-mint text-tint-ink transition-transform duration-fast group-hover:scale-110"><Plus className="size-5" strokeWidth={2.5} /></span>
+            <span aria-hidden="true" className="inline-flex min-h-11 shrink-0 items-center gap-2 border-2 border-line-strong px-4 font-display text-label-md font-bold text-ink transition-colors duration-fast group-hover:bg-ink group-hover:text-bg">
+              <Plus className="size-4" strokeWidth={2.5} />Add
+            </span>
           </> : <>
-            {plus}
-            <span className="truncate text-label-md text-ink">{id === "position" ? LABEL.position : hint}</span>
+            <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center bg-ink text-bg"><Plus className="size-4" strokeWidth={2.5} /></span>
+            <span className="truncate font-display text-label-md font-bold text-ink">{id === "position" ? LABEL.position : hint}</span>
           </>}
         </button>
-        {note && <Badge tone="warning" size="sm" className="absolute -top-3 right-3 shadow-sm">Team note</Badge>}
+        {note && <Badge tone="warning" size="sm" className="absolute -top-3 right-3">Team note</Badge>}
       </div>
     );
   }
@@ -656,8 +717,8 @@ function Spot({ id, kind, hint, children }: { id: SpotId; kind: PartKind; hint: 
     <div data-spot={id} style={order} className={cx("group relative", kind === "line" && "w-fit max-w-full")}>
       <div className={cx("transition duration-base", id === "photo" && portrait ? "portrait-reveal" : fresh === id && "spot-filled")}>{children}</div>
       <button type="button" data-spot-edit="" onClick={() => open(id)} aria-label={label} aria-pressed={active}
-        className={cx("absolute -inset-2 transition duration-fast hover:bg-ink-brand/5 hover:ring-2 hover:ring-ink-brand/40 focus-visible:ring-2 focus-visible:ring-focus", kind === "photo" ? "rounded-2xl" : "rounded-lg", ring)}>
-        <span className={cx("absolute inline-flex items-center gap-1 rounded-full bg-action px-2.5 py-1 text-label-sm whitespace-nowrap text-on-action shadow-sm transition-opacity duration-fast",
+        className={cx("absolute -inset-2 transition duration-fast hover:bg-ink-brand/5 hover:outline-2 hover:outline-line-strong", focus, ring)}>
+        <span className={cx("absolute inline-flex items-center gap-1 bg-ink px-2.5 py-1 font-display text-label-sm font-bold whitespace-nowrap text-bg transition-opacity duration-fast",
           active || note ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
           kind === "line" ? "top-1/2 left-full ml-3 -translate-y-1/2 max-sm:top-0 max-sm:right-2 max-sm:left-auto max-sm:-translate-y-1/2" : kind === "photo" ? "-bottom-2 left-1/2 -translate-x-1/2" : "top-3 right-3")}>
           <Pencil className="size-3" aria-hidden="true" />{note ? "Team note" : active ? "Editing" : "Edit"}
@@ -680,7 +741,7 @@ function PhotoEditor({ d, personId, onChange, confirm }: { d: ProfileFields; per
           <div className="flex flex-wrap gap-2">
             {SAMPLE_PORTRAITS.map((src, i) => (
               <button key={src} type="button" aria-pressed={d.photo === src} aria-label={`Use sample portrait ${i + 1}`} onClick={() => onChange(src)}
-                className={cx("size-14 overflow-hidden rounded-lg border-2 transition-colors duration-fast", d.photo === src ? "border-ink-brand" : "border-transparent hover:border-line-strong")}>
+                className={cx("size-14 overflow-hidden border-3 transition-colors duration-fast", focus3, d.photo === src ? "border-ink-brand" : "border-transparent hover:border-line-strong")}>
                 <img src={asset(src)} alt="" className="size-full object-cover" />
               </button>
             ))}
@@ -691,15 +752,22 @@ function PhotoEditor({ d, personId, onChange, confirm }: { d: ProfileFields; per
   );
 }
 
-/** One-tap answers under a text field: they fill it, and stay editable. */
+const focus3 = "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
+
+/** One-tap answers under a text field: square tiles in a grid, the picked one filled. They fill it, and stay editable. */
 function Quick({ options, onPick, current }: { options: string[]; onPick: (v: string) => void; current: string }) {
   return (
-    <div role="group" aria-label="Quick picks" className="flex flex-wrap gap-2">
-      {options.map((o) => (
-        <button key={o} type="button" aria-pressed={current === o} onClick={() => onPick(o)}
-          className={cx("inline-flex min-h-9 items-center rounded-full border px-3 text-label-md transition-colors duration-fast",
-            current === o ? "border-ink-brand bg-surface-selected text-ink-brand" : "border-line-strong text-ink-muted hover:border-ink hover:text-ink")}>{o}</button>
-      ))}
+    <div role="group" aria-label="Quick picks" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {options.map((o) => {
+        const on = current === o;
+        return (
+          <button key={o} type="button" aria-pressed={on} onClick={() => onPick(o)}
+            className={cx("flex min-h-13 items-center justify-between gap-2 border-2 px-4 py-2 text-left font-display text-label-md font-bold transition-colors duration-fast", focus3,
+              on ? "border-ink-brand bg-ink-brand text-bg" : "border-line-strong text-ink hover:bg-surface-hover")}>
+            {o}{on && <Check className="size-4 shrink-0" strokeWidth={3} aria-hidden="true" />}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -738,10 +806,10 @@ function AboutEditor({ d, onChange }: { d: ProfileFields; onChange: (v: string) 
   return (
     <div className="grid gap-3">
       {!d.about.trim() && (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-ink-brand bg-surface-selected p-3">
+        <div className="flex flex-wrap items-center gap-3 border-2 border-line bg-surface-sunken p-4">
           <WandSparkles className="size-5 shrink-0 text-ink-brand" aria-hidden="true" />
           <p className="min-w-0 flex-1 text-body-sm text-ink">Not sure where to start? We'll write a first draft from your answers so far. Then make it sound like you.</p>
-          <Button size="sm" variant="secondary" onClick={() => { onChange(starterAbout(d)); setDrafted(true); }}>Start me off</Button>
+          <Button variant="secondary" className="min-h-11 border-2 font-display font-bold" onClick={() => { onChange(starterAbout(d)); setDrafted(true); }}>Start me off</Button>
         </div>
       )}
       <Field label="About me" hint={drafted ? "A first draft from your answers. Change anything; it's yours." : "Line breaks show on your profile."}>
@@ -761,23 +829,23 @@ function ReadyCard({ first, slug, d, personId }: { first: string; slug: string; 
     try { await navigator.clipboard.writeText(url); toast({ message: "Link copied", tone: "success" }); } catch { toast({ message: "Couldn't copy. Select the link and copy it.", tone: "danger" }); }
   };
   return (
-    <Reveal effect="scale-in" className="grid gap-6 overflow-hidden rounded-lg border border-line bg-surface p-5 shadow-lg sm:p-8 lg:grid-cols-12 lg:items-center">
-      <div className="grid gap-4 lg:col-span-7">
-        <span className="grid size-12 place-items-center rounded-full bg-action text-on-action"><PartyPopper className="size-6" aria-hidden="true" /></span>
-        <h2 tabIndex={-1} className="font-display text-display-sm text-balance text-ink outline-none">Your page is ready, {first}.</h2>
+    <Reveal effect="scale-in" className="grid gap-x-6 gap-y-8 border-b border-line pt-2 pb-10 lg:grid-cols-12 lg:items-start">
+      <div className="grid gap-5 lg:col-span-7">
+        <p className="flex items-center gap-2 text-eyebrow text-ink uppercase"><PartyPopper className="size-4" aria-hidden="true" />Sent for review</p>
+        <h2 tabIndex={-1} className="font-display text-display-sm text-balance text-ink outline-none lg:text-display-md">Your page is ready, {first}.</h2>
         <p className="max-w-prose text-body-lg text-ink-muted">It's with the Between Gigs team now. Once they approve it, this is where clients will find you. Changes you make from here save as a draft until you send them again.</p>
-        <div className="flex min-w-0 items-center gap-2 rounded-lg border border-line bg-surface-sunken p-2 pl-3">
+        <div className="flex min-w-0 items-center gap-2 border-2 border-line-strong p-2 pl-3">
           <Link2 className="size-4 shrink-0 text-ink-subtle" aria-hidden="true" />
           <span className="min-w-0 flex-1 truncate font-mono text-data-sm text-ink" title={url}>{url.replace(/^https?:\/\//, "")}</span>
-          <Button size="sm" variant="primary" iconStart={<Copy />} onClick={copy}>Copy link</Button>
+          <Button variant="primary" className="min-h-11 font-display font-bold" iconStart={<Copy />} onClick={copy}>Copy link</Button>
         </div>
         <div className="flex flex-wrap gap-2">
-          {canShare && <Button variant="secondary" iconStart={<Share2 />} onClick={() => { void navigator.share({ title: `${d.name} · Between Gigs`, url }).catch(() => {}); }}>Share</Button>}
-          <ButtonLink href="/profile/" variant="ghost" iconEnd={<ArrowRight />}>Go to My profile</ButtonLink>
+          {canShare && <Button variant="secondary" size="lg" className="border-2" iconStart={<Share2 />} onClick={() => { void navigator.share({ title: `${d.name} · Between Gigs`, url }).catch(() => {}); }}>Share</Button>}
+          <ButtonLink href="/profile/" variant="ghost" size="lg" className="underline underline-offset-4" iconEnd={<ArrowRight />}>Go to My profile</ButtonLink>
         </div>
       </div>
       <div className="lg:col-span-5">
-        <p className="mb-3 text-label-md text-ink-muted">How you'll appear in search</p>
+        <p className="mb-3 text-eyebrow text-ink-muted uppercase">How you'll appear in search</p>
         <ProfilePreviewCard fields={d} personId={personId} badge="Ready" />
       </div>
     </Reveal>

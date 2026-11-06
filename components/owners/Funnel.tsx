@@ -39,7 +39,7 @@ export function Funnel({ d }: { d: DashboardSummary }) {
     <Panel title="From invite to live" aside={<span className="tabular-nums">Out of {f.invited} invited</span>} flush>
       <ol className="grid">
         {stages.map((s, i) => (
-          <li key={s.label} className="grid grid-cols-1 gap-x-6 gap-y-2 border-t border-line px-5 py-4 first:border-t-0 md:grid-cols-12 md:items-center">
+          <li key={s.label} className="grid grid-cols-1 gap-x-6 gap-y-2 border-b border-line py-4 md:grid-cols-12 md:items-center">
             <div className="grid min-w-0 gap-0.5 md:col-span-4">
               <Link href={s.href} className="inline-flex min-h-6 w-fit items-center text-label-md text-ink hover:text-ink-brand">{s.label}</Link>
               <p className="flex flex-wrap gap-x-4 text-body-sm text-ink-subtle">
@@ -49,8 +49,8 @@ export function Funnel({ d }: { d: DashboardSummary }) {
               </p>
             </div>
             <div className="flex items-center gap-4 md:col-span-8">
-              <div aria-hidden="true" className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-surface-sunken">
-                <div className="h-full rounded-full bg-action" style={{ width: `${Math.max((s.value / scale) * 100, s.value ? 1.5 : 0)}%` }} />
+              <div aria-hidden="true" className="h-2 min-w-0 flex-1 overflow-hidden bg-line">
+                <div className="h-full bg-ink" style={{ width: `${Math.max((s.value / scale) * 100, s.value ? 1.5 : 0)}%` }} />
               </div>
               <span className="w-10 shrink-0 text-right font-display text-heading-md text-ink tabular-nums">{s.value}</span>
               <span className="w-24 shrink-0 text-right text-body-sm text-ink-subtle tabular-nums">
@@ -82,21 +82,21 @@ export function FunnelCompact({ d, onSelect, selected, bare = false }: { d: Dash
   const scale = f.invited || 1;
   // Every percentage is a share of the invited, so the column only ever falls from 100% to the share now live.
   const rows = (
-    <ol className="grid py-1.5">
+    <ol className="grid border-t-2 border-line-strong">
       {stages.map((s, i) => {
         // "Opened" has no list of its own (it shares the invited list), so only the other stages show as chosen.
         const on = selected === s.view && i !== 1;
         return (
           <li key={s.label} data-fit="">
             <button type="button" onClick={() => onSelect(s.view)} aria-pressed={on}
-              className={cx("grid min-h-11 w-full grid-cols-12 items-center gap-3 px-5 py-1 text-left transition-colors duration-fast",
-                on ? "bg-surface-selected" : "hover:bg-surface-hover")}>
-              <span className={cx("col-span-5 truncate text-body-sm", on ? "text-ink" : "text-ink-muted")}>{s.label}</span>
-              <span aria-hidden="true" className="col-span-4 h-1.5 overflow-hidden rounded-full bg-surface-sunken">
-                <span className="block h-full rounded-full bg-action" style={{ width: `${Math.max((s.value / scale) * 100, s.value ? 2 : 0)}%` }} />
+              className={cx("grid min-h-11 w-full grid-cols-12 items-center gap-3 border-b border-line px-1 py-1 text-left transition-colors duration-fast",
+                on ? "bg-ink text-bg" : "hover:bg-surface-hover")}>
+              <span className={cx("col-span-5 truncate text-body-sm", on ? "text-bg" : "text-ink-muted")}>{s.label}</span>
+              <span aria-hidden="true" className={cx("col-span-4 h-1.5 overflow-hidden", on ? "bg-ink-muted" : "bg-line")}>
+                <span className={cx("block h-full", on ? "bg-bg" : "bg-ink")} style={{ width: `${Math.max((s.value / scale) * 100, s.value ? 2 : 0)}%` }} />
               </span>
-              <span className="col-span-1 text-right text-label-md text-ink tabular-nums">{s.value}</span>
-              <span className="col-span-2 text-right text-caption text-ink-subtle tabular-nums">{pct(s.value, f.invited)}%</span>
+              <span className={cx("col-span-1 text-right text-label-md tabular-nums", on ? "text-bg" : "text-ink")}>{s.value}</span>
+              <span className={cx("col-span-2 text-right text-caption tabular-nums", on ? "text-bg" : "text-ink-muted")}>{pct(s.value, f.invited)}%</span>
             </button>
           </li>
         );

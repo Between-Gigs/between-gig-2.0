@@ -1,38 +1,39 @@
 "use client";
 import { Skeleton, cx } from "@ds/components";
-import { ArrowRight, ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 import { initials } from "@ds/components/Avatar";
 import Link from "next/link";
 import * as React from "react";
 import { useInOwnerFrame } from "./OwnerShell";
 import { markArea } from "@/lib/split-area";
-import { Icon3D } from "@/components/ui/Icon3D";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
-import type { Icon3DName } from "@/lib/icons3d";
 
 markArea("bg-split:dashboard");
 
 /*
  * The owner pages' kit. Every owner page is built from these few pieces so they all look and behave the same:
- * one page header, one card (Panel), one list row, one number card, one set of filter chips.
- * Direction B (warm & friendly): white cards with a soft shadow on the cream page (rounded-xl), pastel number
- * tiles with a 3D icon, pill buttons and pills for counts and "days ago", dashed dividers between rows.
+ * one page header, one section (Panel), one list row, one number, one set of filter chips.
+ * Direction G (Swiss grid): no cards. Sections open on a thick 4px rule with a small number and a heading;
+ * rows are split by hairlines; numbers are huge and set under a rule; photos are square. Mint is used once per
+ * screen, as a solid block (the number that needs doing today). Line icons only.
  * Nothing animates in: content swaps in place, and skeletons have the final shape so nothing shifts.
  */
 
-/** The pastel tints, in the order avatars and tiles take them. */
-const tints = ["bg-tint-sky", "bg-tint-butter", "bg-tint-peach", "bg-tint-mint", "bg-tint-sage", "bg-tint-sand"] as const;
+/** Kept for callers that still name a tone: in this direction every tone is the same quiet grey. */
 export type Tint = "mint" | "peach" | "butter" | "sky" | "sage" | "sand";
-export const tintBg: Record<Tint, string> = { mint: "bg-tint-mint", peach: "bg-tint-peach", butter: "bg-tint-butter", sky: "bg-tint-sky", sage: "bg-tint-sage", sand: "bg-tint-sand" };
-/** A stable tint per person, so someone keeps their colour from list to list. */
-const tintFor = (id: string) => tints[[...id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % tints.length];
+export const tintBg: Record<Tint, string> = { mint: "bg-surface-sunken", peach: "bg-surface-sunken", butter: "bg-surface-sunken", sky: "bg-surface-sunken", sage: "bg-surface-sunken", sand: "bg-surface-sunken" };
+
+/** The one forest button (mint in the dark): the main action of a view. Use with Button/ButtonLink variant="strong". */
+export const forestButton = "dark:bg-action dark:text-on-action dark:hover:bg-action-hover";
+/** Small uppercase tracked label: section eyebrows, column heads, the date above the greeting. */
+export const eyebrow = "text-label-sm font-bold tracking-widest text-ink-muted uppercase";
 
 /**
- * The page header: the page's name (a 3D icon and its count beside it), a friendly line under it, actions on
- * the right.
+ * The page header: a small eyebrow, the page's name (huge, flush left) with its count beside it in grey, a
+ * friendly line under it, and the actions stacked on the right.
  */
-function PageBar({ title, description, meta, icon, actions, sticky = false }: { title: React.ReactNode; description?: React.ReactNode; meta?: React.ReactNode; icon?: Icon3DName; actions?: React.ReactNode; sticky?: boolean }) {
-  // Pinned on scrolling pages: once the page moves, it gains a solid surface and a shadow, keeping its
+function PageBar({ title, description, meta, kicker, hero = false, actions, sticky = false }: { title: React.ReactNode; description?: React.ReactNode; meta?: React.ReactNode; kicker?: React.ReactNode; hero?: boolean; actions?: React.ReactNode; sticky?: boolean }) {
+  // Pinned on scrolling pages: once the page moves, it gains a solid surface and a rule, keeping its
   // actions in reach. Its height never changes, so nothing below it jumps.
   const [mark, past] = useScrolledPast<HTMLSpanElement>();
   // In the owner frame the page scrolls under the header; on a public page (emails for visitors) the window
@@ -41,53 +42,60 @@ function PageBar({ title, description, meta, icon, actions, sticky = false }: { 
   return (
     <>
     {sticky && <span ref={mark} aria-hidden="true" className="block h-0" />}
-    <header className={cx("flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-3",
+    <header className={cx("grid shrink-0 grid-cols-12 items-end gap-x-6 gap-y-4",
       sticky && (framed ? "top-0" : "top-16"),
-      sticky && "sticky z-sticky -mx-4 px-4 py-2 transition-[background-color,box-shadow] duration-fast sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10",
-      sticky && past && "bg-bg shadow-sm")}>
-      <div className="grid min-w-0 gap-1">
-        <div className="flex min-w-0 items-center gap-3">
-          <h1 className="truncate font-display text-display-sm text-ink">{title}</h1>
-          {icon && <Icon3D name={icon} className="size-9 max-sm:size-8" />}
-          {meta !== undefined && <span className="inline-flex h-7 min-w-8 shrink-0 items-center justify-center rounded-full bg-tint-peach px-2.5 text-label-md text-tint-ink tabular-nums">{meta}</span>}
+      sticky && "sticky z-sticky -mx-4 border-b border-transparent px-4 py-2 transition-colors duration-fast sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10",
+      sticky && past && "border-line-strong bg-bg")}>
+      <div className={cx("col-span-12 grid min-w-0 gap-2", !!actions && (hero ? "lg:col-span-9" : "lg:col-span-8"))}>
+        {kicker && <p className={eyebrow}>{kicker}</p>}
+        <div className="flex min-w-0 items-baseline gap-4">
+          <h1 className={cx("min-w-0 font-display text-ink", hero ? "text-display-sm text-balance sm:text-display-md xl:text-display-lg" : "truncate text-display-sm lg:text-display-md")}>{title}</h1>
+          {meta !== undefined && <span className="shrink-0 font-display text-heading-lg text-ink-muted tabular-nums">{meta}</span>}
         </div>
-        {description && <p className="text-body-md text-ink-muted">{description}</p>}
+        {description && <p className="max-w-2xl text-body-md text-ink-muted">{description}</p>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && <div className={cx("col-span-12 flex flex-wrap gap-2 lg:flex-col lg:items-stretch lg:[&>*]:h-12 lg:[&>*]:justify-between", hero ? "lg:col-span-3" : "lg:col-span-4")}>{actions}</div>}
     </header>
     </>
   );
 }
 
-export function OwnerPage({ title, description, meta, icon, actions, breadcrumbs, fit = false, children }: {
-  title: React.ReactNode; description?: React.ReactNode; meta?: React.ReactNode; /** A 3D icon beside the title. */ icon?: Icon3DName; actions?: React.ReactNode;
+export function OwnerPage({ title, description, meta, kicker, hero, actions, breadcrumbs, fit = false, children }: {
+  title: React.ReactNode; description?: React.ReactNode; meta?: React.ReactNode;
+  /** The small uppercase line above the title (the date on the dashboard). */ kicker?: React.ReactNode;
+  /** The dashboard's greeting: the title as a huge display line. */ hero?: boolean;
+  /** Kept for older callers; this direction uses no icon beside the title. */ icon?: string; actions?: React.ReactNode;
   breadcrumbs?: React.ReactNode; /** Fill the screen height (with OwnerShell fit): children share what's left. */ fit?: boolean; children: React.ReactNode;
 }) {
   if (fit) {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
-        <PageBar title={title} description={description} meta={meta} icon={icon} actions={actions} />
-        <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col gap-6">{children}</div>
+        <PageBar title={title} description={description} meta={meta} kicker={kicker} hero={hero} actions={actions} />
+        <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col gap-10">{children}</div>
       </div>
     );
   }
   return (
     <>
       {breadcrumbs && <div className="mb-3">{breadcrumbs}</div>}
-      <PageBar sticky title={title} description={description} meta={meta} icon={icon} actions={actions} />
-      <div className="mt-6 grid min-w-0 grid-cols-1 gap-6">{children}</div>
+      <PageBar sticky title={title} description={description} meta={meta} kicker={kicker} hero={hero} actions={actions} />
+      <div className="mt-8 grid min-w-0 grid-cols-1 gap-12">{children}</div>
     </>
   );
 }
 
-/** A soft pill for a count beside a card's title. */
+/** A count beside a section's heading: plain grey figures. */
 export function CountPill({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <span className={cx("inline-flex h-7 min-w-8 shrink-0 items-center justify-center rounded-full bg-tint-peach px-2.5 text-label-md text-tint-ink tabular-nums", className)}>{children}</span>;
+  return <span className={cx("shrink-0 font-display text-heading-md text-ink-muted tabular-nums", className)}>{children}</span>;
 }
 
-/** The one card: white, rounded, a soft shadow. A header (title, optional count pill, note or link on the right), a body, an optional footer. */
-export function Panel({ title, id, count, aside, footer, flush = false, landmark = true, collapsible, className, bodyClassName, children }: {
-  title?: React.ReactNode; id?: string; /** A count shown as a pill beside the title. */ count?: React.ReactNode; aside?: React.ReactNode; footer?: React.ReactNode; flush?: boolean;
+/**
+ * The one section: a thick rule, then a small number and the heading ("01 Waiting for review"), a count in
+ * grey, and a note or link on the right. A body, and an optional footer under a hairline.
+ */
+export function Panel({ title, id, number, count, aside, footer, flush = false, landmark = true, collapsible, className, bodyClassName, children }: {
+  title?: React.ReactNode; id?: string; /** The section's number in the page ("01"). */ number?: string;
+  /** A count shown beside the title. */ count?: React.ReactNode; aside?: React.ReactNode; footer?: React.ReactNode; flush?: boolean;
   /** false when the panel holds content with its own landmarks (a profile's aside), which can't nest in a region. */
   landmark?: boolean;
   /**
@@ -112,83 +120,89 @@ export function Panel({ title, id, count, aside, footer, flush = false, landmark
       return !o;
     });
   };
+  const num = number && <span aria-hidden="true" className="mr-3 align-middle text-label-md font-extrabold tracking-normal tabular-nums">{number}</span>;
   return (
-    <Tag aria-labelledby={title && landmark ? hid : undefined} className={cx("flex min-w-0 flex-col overflow-hidden rounded-xl bg-surface shadow-sm ring-1 ring-line/70", className)}>
+    <Tag aria-labelledby={title && landmark ? hid : undefined} className={cx("flex min-w-0 flex-col", !!title && "border-t-4 border-line-strong", className)}>
       {title && (
-        <header className={cx("flex min-h-16 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 pt-4 sm:px-6", open ? "pb-2" : "pb-4")}>
-          <div className="flex min-w-0 items-center gap-3">
+        <header className="flex min-h-16 flex-wrap items-center justify-between gap-x-4 gap-y-1 pt-3 pb-2">
+          <div className="flex min-w-0 items-baseline gap-3">
             {collapsible ? (
               <h2 id={hid} className="font-display text-heading-lg text-ink">
                 <button type="button" onClick={toggle} aria-expanded={open} aria-controls={body}
-                  className="group -ml-2 inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 hover:bg-surface-hover">
-                  <ChevronRight aria-hidden="true" className={cx("size-5 text-ink-subtle transition-transform duration-fast", open && "rotate-90")} />
-                  {title}
+                  className="group -ml-1 inline-flex min-h-11 items-center gap-1 px-1 text-left hover:bg-surface-hover">
+                  {num}{title}
+                  <ChevronDown aria-hidden="true" className={cx("size-6 shrink-0 text-ink-muted transition-transform duration-fast", !open && "-rotate-90")} />
                 </button>
               </h2>
-            ) : <h2 id={hid} className="font-display text-heading-lg text-ink">{title}</h2>}
+            ) : <h2 id={hid} className="font-display text-heading-lg text-ink">{num}{title}</h2>}
             {count !== undefined && <CountPill>{count}</CountPill>}
           </div>
           {aside && open && <div className="flex min-w-0 flex-wrap items-center gap-3 text-body-sm text-ink-muted">{aside}</div>}
         </header>
       )}
-      <div id={body} hidden={!open} className={cx("min-w-0 flex-1", !flush && "px-5 pt-2 pb-5 sm:px-6 sm:pb-6", bodyClassName)}>{children}</div>
-      {footer && open && <footer className="mx-5 border-t-2 border-dashed border-line py-3 sm:mx-6">{footer}</footer>}
+      <div id={body} hidden={!open} className={cx("min-w-0 flex-1", !flush && "pt-2 pb-2", bodyClassName)}>{children}</div>
+      {footer && open && <footer className="border-t border-line py-3">{footer}</footer>}
     </Tag>
   );
 }
 
-/** A "see more" link for panel headers and footers: bold and underlined, with an arrow. */
+/** A "see more" link for section headers and footers: bold and underlined, with an arrow. */
 export function PanelLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} className="group inline-flex min-h-11 items-center gap-1.5 rounded-sm text-label-md text-ink underline decoration-2 underline-offset-4 transition-colors duration-fast hover:text-ink-brand">
+    <Link href={href} className="group inline-flex min-h-11 items-center gap-1.5 text-label-md font-bold text-ink underline decoration-2 underline-offset-4 transition-colors duration-fast hover:text-ink-brand">
       {children}<ArrowRight className="size-4 transition-transform duration-fast group-hover:translate-x-0.5" aria-hidden="true" />
     </Link>
   );
 }
 
-/** "15 days ago" and the like: a soft peach pill. */
-export function AgoPill({ children, tone = "peach", className }: { children: React.ReactNode; tone?: Tint; className?: string }) {
-  return <span className={cx("inline-flex h-8 items-center justify-center rounded-full px-3", tintBg[tone], "text-label-md whitespace-nowrap text-tint-ink tabular-nums", className)}>{children}</span>;
+/** "15 days ago" and the like: plain figures, no pill. */
+export function AgoPill({ children, className }: { children: React.ReactNode; /** Ignored: kept for callers. */ tone?: Tint; className?: string }) {
+  return <span className={cx("inline-flex items-center text-label-md whitespace-nowrap text-ink tabular-nums", className)}>{children}</span>;
 }
 
-/** A person's photo, or their initials on their own pastel tile. */
+/** A person's photo, square, or their initials on a grey square. */
 export function OwnerAvatar({ id, name, src, className, textClass = "text-label-md" }: { id: string; name: string; src?: string; className?: string; textClass?: string }) {
   if (src || !name) return <PersonPhoto id={id} name={name || "?"} src={src} alt="" className={className} textClass={textClass} />;
   return (
-    <span aria-hidden="true" className={cx("grid place-items-center font-display font-extrabold text-tint-ink select-none", tintFor(id), textClass, className)}>
+    <span aria-hidden="true" className={cx("grid place-items-center bg-surface-sunken font-display font-extrabold text-ink select-none", textClass, className)}>
       {initials(name)}
     </span>
   );
 }
 
-/** A headline number. The whole card is a link; `attention` marks the one number that needs doing today. */
-export function StatCard({ href, label, value, hint, icon, attention = false, tone = "sand" }: {
-  href: string; label: string; value: number | null; hint: string; icon: React.ReactNode; attention?: boolean; tone?: Tint;
+/** A headline number. The whole block is a link; `attention` makes it the screen's one mint block. */
+export function StatCard({ href, label, value, hint, icon, attention = false }: {
+  href: string; label: string; value: number | null; hint: string; icon?: React.ReactNode; attention?: boolean; tone?: Tint;
 }) {
   return (
-    <Link href={href} data-tilt=""
-      className={cx("lift group relative flex h-full min-w-0 flex-col gap-3 rounded-lg p-5 text-tint-ink", tintBg[tone], attention && "ring-2 ring-ink")}>
+    <Link href={href}
+      className={cx("group relative flex h-full min-w-0 flex-col gap-3 transition-colors duration-fast",
+        attention ? "bg-tint-mint p-5 text-forest-950" : "border-t-4 border-line-strong pt-3 text-ink hover:text-ink-brand")}>
       <span className="flex items-start justify-between gap-2">
-        <span className="min-w-0 truncate text-label-md">{label}</span>
-        <span className="shrink-0 [&_svg]:size-5">{icon}</span>
+        <span className="font-display text-stat tabular-nums">{value ?? "—"}</span>
+        {icon && <span aria-hidden="true" className="shrink-0 [&_svg]:size-5">{icon}</span>}
       </span>
-      <span className="mt-auto grid gap-1">
-        <span className="font-display text-display-md tabular-nums">{value ?? "—"}</span>
-        <span className="truncate text-body-sm text-ink-muted max-sm:hidden">{hint}</span>
+      <span className="grid gap-1">
+        <span className="truncate text-label-md font-bold">{label}</span>
+        <span className={cx("truncate text-body-sm max-sm:hidden", attention ? "text-forest-900" : "text-ink-muted")}>{hint}</span>
       </span>
     </Link>
   );
 }
 
-/** The list row every owner list uses: leading avatar, title and subtitle, right-hand meta, a round arrow. */
-export function Row({ href, onOpen, leading, title, subtitle, meta, badge, className }: {
+/**
+ * The list row every owner list uses: a square photo, name and subtitle, right-hand meta, and an action box
+ * ("Review →", or just the arrow). Rows are split by hairlines; the whole row is the link (or button).
+ */
+export function Row({ href, onOpen, leading, title, subtitle, meta, badge, action, strong = false, className }: {
   /** A link to a page, or (with onOpen) a button that opens the person in place. */
-  href?: string; onOpen?: () => void; leading: React.ReactNode; title: React.ReactNode; subtitle?: React.ReactNode; meta?: React.ReactNode; badge?: React.ReactNode; className?: string;
+  href?: string; onOpen?: () => void; leading: React.ReactNode; title: React.ReactNode; subtitle?: React.ReactNode; meta?: React.ReactNode; badge?: React.ReactNode;
+  /** A word for the action box ("Review"); without it the box is just an arrow. */ action?: string;
+  /** Fill the action box (the oldest in the queue). */ strong?: boolean; className?: string;
 }) {
-  const target = "min-w-0 truncate text-left text-heading-sm text-ink after:absolute after:inset-0 after:rounded-lg";
+  const target = "min-w-0 truncate text-left font-display text-heading-sm font-extrabold text-ink after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-focus";
   return (
-    <li data-fit="" className={cx("group @container relative mx-2 flex min-h-18 min-w-0 items-center gap-4 rounded-lg px-3 py-3 transition-colors duration-fast hover:bg-surface-hover sm:mx-3",
-      "before:absolute before:inset-x-3 before:top-0 before:border-t-2 before:border-dashed before:border-line first:before:hidden", className)}>
+    <li data-fit="" className={cx("group @container relative flex min-h-20 min-w-0 items-center gap-4 border-b border-line py-3 transition-colors duration-fast hover:bg-surface-hover", className)}>
       <span className="shrink-0">{leading}</span>
       <span className="grid min-w-0 flex-1 gap-0.5">
         <span className="flex min-w-0 items-center gap-2">
@@ -198,30 +212,33 @@ export function Row({ href, onOpen, leading, title, subtitle, meta, badge, class
         {subtitle && <span className="truncate text-body-sm text-ink-muted">{subtitle}</span>}
       </span>
       {/* By the row's own width, not the screen's: in a narrow panel the name keeps the room. */}
-      {meta && <span className="hidden shrink-0 items-center gap-4 text-body-sm whitespace-nowrap text-ink-subtle tabular-nums @md:flex">{meta}</span>}
-      <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-surface-selected text-ink transition-colors duration-fast group-hover:bg-highlight max-xs:size-8">
+      {meta && <span className="hidden shrink-0 items-center gap-6 text-body-sm whitespace-nowrap text-ink-muted tabular-nums @lg:flex">{meta}</span>}
+      <span aria-hidden="true" className={cx("inline-flex h-11 shrink-0 items-center justify-center gap-3 border-2 text-label-md font-bold transition-colors duration-fast",
+        action ? "w-11 @md:w-auto @md:min-w-30 @md:px-4" : "w-11",
+        strong ? "border-surface-brand bg-surface-brand text-ink-on-brand dark:border-action dark:bg-action dark:text-on-action" : "border-line-strong text-ink group-hover:bg-ink group-hover:text-bg")}>
+        {action && <span className="hidden @md:inline">{action}</span>}
         <ArrowRight className="size-4 transition-transform duration-fast group-hover:translate-x-0.5" />
       </span>
     </li>
   );
 }
 
-/** How far along a profile is: a slim mint bar and the percentage. */
+/** How far along a profile is: the percentage, big, over a thin bar. */
 export function Meter({ value, label }: { value: number; label: string }) {
   const v = Math.max(0, Math.min(100, Math.round(value)));
   return (
-    <span className="inline-flex items-center gap-2" title={label}>
-      <span aria-hidden="true" className="h-2 w-18 overflow-hidden rounded-full bg-surface-sunken">
-        <span className="block h-full rounded-full bg-mint-500" style={{ width: `${v}%` }} />
+    <span className="inline-grid w-24 gap-1.5" title={label}>
+      <span className="font-display text-heading-md text-ink tabular-nums"><span className="sr-only">{label}: </span>{v}%</span>
+      <span aria-hidden="true" className="block h-1.5 bg-line">
+        <span className="block h-full bg-ink" style={{ width: `${v}%` }} />
       </span>
-      <span className="w-10 text-right text-label-md text-ink tabular-nums"><span className="sr-only">{label}: </span>{v}%</span>
     </span>
   );
 }
 
 export interface ChipOption { value: string; label: string; count?: number | null }
 
-/** Filter chips: "All" plus one per status, each with its count. Scrolls sideways on phones. */
+/** Filter chips: "All" plus one per status, each with its count. Square, outlined; the chosen one is solid. Scrolls sideways on phones. */
 export function FilterChips({ label, options, value, onChange }: { label: string; options: ChipOption[]; value: string; onChange: (v: string) => void }) {
   return (
     <div role="group" aria-label={label} className="-mx-4 no-scrollbar flex gap-2 overflow-x-auto px-4 pb-0.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
@@ -229,10 +246,10 @@ export function FilterChips({ label, options, value, onChange }: { label: string
         const on = o.value === value;
         return (
           <button key={o.value} type="button" aria-pressed={on} onClick={() => onChange(on && o.value !== "all" ? "all" : o.value)}
-            className={cx("inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-label-md whitespace-nowrap transition-colors duration-fast",
-              on ? "border-ink bg-surface-selected text-ink" : "border-line bg-surface text-ink-muted hover:border-line-strong hover:text-ink")}>
+            className={cx("inline-flex h-11 shrink-0 items-center gap-2 border-2 px-4 text-label-md font-bold whitespace-nowrap transition-colors duration-fast",
+              on ? "border-ink bg-ink text-bg" : "border-line text-ink hover:border-line-strong")}>
             {o.label}
-            {o.count !== undefined && <span className={cx("tabular-nums", on ? "text-ink" : "text-ink-subtle")}>{o.count ?? "–"}</span>}
+            {o.count !== undefined && <span className={cx("tabular-nums", on ? "text-bg" : "text-ink-muted")}>{o.count ?? "–"}</span>}
           </button>
         );
       })}
@@ -245,8 +262,8 @@ export function RowSkeletons({ count = 4 }: { count?: number }) {
   return (
     <ul aria-hidden="true">
       {Array.from({ length: count }, (_, i) => (
-        <li key={i} className="mx-2 flex min-h-18 items-center gap-4 px-3 py-3 sm:mx-3">
-          <Skeleton shape="block" className="size-12 rounded-md" />
+        <li key={i} className="flex min-h-20 items-center gap-4 border-b border-line py-3">
+          <Skeleton shape="block" className="size-16" />
           <span className="grid flex-1 gap-1.5"><Skeleton className="h-4 w-40" /><Skeleton className="h-3.5 w-56" /></span>
         </li>
       ))}
@@ -257,44 +274,32 @@ export function RowSkeletons({ count = 4 }: { count?: number }) {
 /** A greyed version of a page header, the same height as the real one. */
 export function HeaderSkeleton() {
   return (
-    <div aria-hidden="true" className="flex min-h-11 items-center"><Skeleton className="h-9 w-64" /></div>
+    <div aria-hidden="true" className="grid min-h-16 content-end gap-2"><Skeleton className="h-3 w-32" /><Skeleton className="h-12 w-72" /></div>
   );
 }
 
 /**
  * A headline number that is also a tab: selecting it swaps the list below it in place (no new page).
- * A pastel tile: what it counts and a 3D icon on top, the big number at the foot. `attention` marks the one
- * that needs doing today; `meter` (0 to 1) adds a bar under the number.
+ * A giant number under a 4px rule, what it counts and a line of context under it. `attention` makes it the
+ * screen's one mint block (the number that needs doing today); the selected tab gets a thick bar at its foot.
  */
-export function StatTab({ label, value, hint, icon, selected, attention = false, onSelect, controls, tone = "sand", suffix, meter }: {
-  label: string; value: number | null; hint: string; icon: React.ReactNode; selected: boolean; attention?: boolean; onSelect: () => void; controls: string;
-  tone?: Tint; /** Small text after the number ("of 500"). */ suffix?: string; meter?: number;
+export function StatTab({ label, value, hint, selected, attention = false, onSelect, controls, suffix }: {
+  label: string; value: number | null; hint: string; /** Kept for callers; numbers carry no icon here. */ icon?: React.ReactNode; selected: boolean; attention?: boolean; onSelect: () => void; controls: string;
+  tone?: Tint; /** Small text after the number ("/500"). */ suffix?: string; /** Kept for callers. */ meter?: number;
 }) {
   return (
-    <button type="button" role="tab" aria-selected={selected} aria-controls={controls} onClick={onSelect} data-tilt=""
+    <button type="button" role="tab" aria-selected={selected} aria-controls={controls} onClick={onSelect}
       aria-label={`${label}: ${value ?? "none"}, ${hint}${attention ? ", needs attention" : ""}`}
-      className={cx("lift group relative flex h-full min-h-32 min-w-0 flex-col gap-3 rounded-lg p-4 text-left text-tint-ink transition-shadow duration-fast sm:min-h-36 sm:p-5",
-        tintBg[tone], selected ? "ring-2 ring-ink" : "hover:shadow-md")}>
-      <span className="flex items-start justify-between gap-2">
-        <span className="grid min-w-0 gap-0.5">
-          <span className="flex min-w-0 items-center gap-2 text-label-md">
-            <span className="min-w-0 text-balance">{label}</span>
-            {attention && <span className="size-2.5 shrink-0 rounded-full bg-ink ring-4 ring-surface/70" aria-hidden="true" />}
-          </span>
-          {!suffix && <span className="truncate text-body-sm text-ink-muted max-sm:hidden">{hint}</span>}
-        </span>
-        <span className="-mt-1 -mr-1 shrink-0">{icon}</span>
+      className={cx("group relative flex h-full w-full min-w-0 flex-col justify-between gap-3 text-left transition-colors duration-fast",
+        "after:absolute after:inset-x-0 after:-bottom-3 after:h-1 after:bg-ink after:opacity-0 after:transition-opacity after:duration-fast aria-selected:after:opacity-100",
+        attention ? "bg-tint-mint px-4 pt-3 pb-4 text-forest-950 sm:px-5 sm:pt-4 sm:pb-5" : "border-t-4 border-line-strong pt-3 text-ink hover:bg-surface-hover")}>
+      <span className="flex items-baseline gap-1 font-display text-display-sm tabular-nums sm:text-display-md xl:text-stat">
+        {value ?? "—"}
+        {suffix && <span className={cx("text-heading-lg", attention ? "text-forest-900" : "text-ink-muted")}>{suffix}</span>}
       </span>
-      <span className="mt-auto grid gap-2">
-        <span className="flex items-baseline gap-1.5">
-          <span className="font-display text-display-md tabular-nums">{value ?? "—"}</span>
-          {suffix && <span className="text-heading-sm">{suffix}</span>}
-        </span>
-        {meter !== undefined && (
-          <span aria-hidden="true" className="h-2 overflow-hidden rounded-full bg-surface/75">
-            <span className="block h-full rounded-full bg-ink" style={{ width: `${Math.max(0, Math.min(1, meter)) * 100}%` }} />
-          </span>
-        )}
+      <span className="grid gap-0.5">
+        <span className="text-label-md font-bold text-balance">{label}</span>
+        <span className={cx("truncate text-body-sm max-sm:hidden", attention ? "text-forest-900" : "text-ink-muted")}>{hint}</span>
       </span>
     </button>
   );

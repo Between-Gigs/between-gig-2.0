@@ -10,7 +10,7 @@ import { PersonStatusBadge } from "@/components/people/PersonStatusBadge";
 import { ProfilePreviewCard } from "@/components/profile/ProfilePreviewCard";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { shortDate } from "./format";
-import { Meter } from "./kit";
+import { eyebrow, Meter } from "./kit";
 import { HOLD_MS, holdDecision, type Hold } from "./hold";
 import { missingFields, SuggestEdits } from "./ReviewPanel";
 import { markArea } from "@/lib/split-area";
@@ -110,9 +110,9 @@ export function PersonDrawer({ rows, index, onIndex, onClose, onChanged }: {
             {rows.length > 1 && <QueueSteps rows={rows} index={index} onIndex={onIndex} reviewing={reviewing} />}
 
             {/* Who: portrait, contact, where they are and how complete. */}
-            <section aria-label="About them" className="flex items-center gap-5 rounded-lg border border-line bg-surface-raised p-4">
+            <section aria-label="About them" className="flex items-center gap-5 border-t-4 border-line-strong pt-4">
               <PersonPhoto id={p.id} name={p.name || "?"} src={f?.photo || undefined} alt="" fallback="brand" department={f?.position} skills={f?.skills}
-                className="size-24 shrink-0 rounded-md" />
+                className="size-24 shrink-0" />
               <div className="grid min-w-0 flex-1 gap-1.5">
                 <a href={`mailto:${p.email}`} className="inline-flex min-h-11 w-fit max-w-full items-center truncate text-body-md text-ink hover:text-ink-brand sm:min-h-6">{p.email}</a>
                 <p className="flex flex-wrap gap-x-3 gap-y-1 text-body-sm text-ink-muted tabular-nums">
@@ -125,7 +125,7 @@ export function PersonDrawer({ rows, index, onIndex, onClose, onChanged }: {
             {/* What to check: one card, a line per item, so it reads as a checklist rather than an alert. */}
             {reviewing && (
               <section aria-labelledby="pd-check" className="grid gap-3">
-                <h3 id="pd-check" className="text-label-md text-ink">Before you approve</h3>
+                <h3 id="pd-check" className={cx("border-t-4 border-line-strong pt-3", eyebrow)}>Before you approve</h3>
                 <ul className="grid gap-2">
                   {missing.map((m) => (
                     <li key={m.label} className="flex items-start gap-3 rounded-md bg-warning-soft p-3 text-body-sm text-ink">
@@ -133,7 +133,7 @@ export function PersonDrawer({ rows, index, onIndex, onClose, onChanged }: {
                       <span><b className="font-semibold">{m.label} is missing.</b> Suggest edits and the note is written for you.</span>
                     </li>
                   ))}
-                  <li className="flex items-start gap-3 rounded-md bg-surface-sunken p-3 text-body-sm text-ink-muted">
+                  <li className="flex items-start gap-3 bg-surface-sunken p-3 text-body-sm text-ink-muted">
                     <CircleCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />
                     <span>{missing.length ? "Everything else is filled in." : "Every required answer is filled in."} Check their card below reads well for clients.</span>
                   </li>
@@ -142,7 +142,7 @@ export function PersonDrawer({ rows, index, onIndex, onClose, onChanged }: {
             )}
             {p.status === "changes_requested" && (
               <section aria-labelledby="pd-notes" className="grid gap-3">
-                <h3 id="pd-notes" className="text-label-md text-ink">Waiting on their edits</h3>
+                <h3 id="pd-notes" className={cx("border-t-4 border-line-strong pt-3", eyebrow)}>Waiting on their edits</h3>
                 <ul className="grid gap-2">
                   {(p.reviewNotes ?? []).map((n) => (
                     <li key={n.note} className="flex items-start gap-3 rounded-md bg-warning-soft p-3 text-body-sm text-ink">
@@ -155,29 +155,29 @@ export function PersonDrawer({ rows, index, onIndex, onClose, onChanged }: {
 
             {f ? (
               <>
-                <ul aria-label="Their answers" className="grid grid-cols-1 gap-3 xs:grid-cols-2">
+                <ul aria-label="Their answers" className="grid grid-cols-1 gap-x-6 border-t-4 border-line-strong xs:grid-cols-2">
                   {([
                     [Wallet, "Rate", f.rate ? `$${f.rate}/${basisShort[f.basis]}` : "On request"],
                     [CalendarDays, "This month", monthStatusLabel[f.monthStatus]],
                     [MapPin, "Areas", f.areas.join(" · ") || "—"],
                     [Sparkles, "Services", f.services.join(", ") || "—"],
                   ] as const).map(([Icon, k, v]) => (
-                    <li key={k} className="flex min-w-0 gap-3 rounded-md border border-line p-3">
-                      <span className="grid size-8 shrink-0 place-items-center rounded-md bg-surface-sunken text-ink-brand"><Icon className="size-4" aria-hidden="true" /></span>
-                      <span className="grid min-w-0 gap-0.5"><span className="text-label-sm text-ink-subtle">{k}</span><span className="text-body-sm text-ink">{v}</span></span>
+                    <li key={k} className="flex min-w-0 gap-3 border-b border-line py-3">
+                      <span className="grid size-8 shrink-0 place-items-center text-ink"><Icon className="size-5" strokeWidth={1.75} aria-hidden="true" /></span>
+                      <span className="grid min-w-0 gap-0.5"><span className={eyebrow}>{k}</span><span className="text-body-md font-semibold text-ink">{v}</span></span>
                     </li>
                   ))}
                 </ul>
                 {/* Their card on a stage, the way it sits in client search. */}
                 <section aria-labelledby="pd-card" className="grid gap-3">
-                  <h3 id="pd-card" className="text-label-md text-ink">How clients see their card</h3>
-                  <div className="grid place-items-center rounded-lg bg-surface-sunken p-5 sm:p-8">
+                  <h3 id="pd-card" className={cx("border-t-4 border-line-strong pt-3", eyebrow)}>How clients see their card</h3>
+                  <div className="grid place-items-center bg-surface-sunken p-5 sm:p-8">
                     <ProfilePreviewCard fields={f} personId={p.id} badge={null} className="w-full max-w-xs" />
                   </div>
                 </section>
               </>
             ) : (
-              <p className="rounded-md border border-dashed border-line-dashed p-4 text-body-sm text-ink-muted">
+              <p className="border-t-4 border-line-strong pt-4 text-body-md text-ink-muted">
                 {p.status === "invited" ? "Invited, hasn't created an account yet." : "Has an account, hasn't started the questionnaire."}
               </p>
             )}
@@ -204,8 +204,8 @@ function QueueSteps({ rows, index, onIndex, reviewing }: { rows: PersonSummary[]
   return (
     <nav aria-label="Position in this list" className="grid gap-2.5">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-label-md text-ink tabular-nums">{reviewing ? "Reviewing" : "Viewing"} {index + 1} of {total}</p>
-        <p className="text-body-sm text-ink-subtle tabular-nums">{total - index - 1 === 0 ? "Last one" : `${total - index - 1} to go`}</p>
+        <p className="font-display text-heading-sm font-extrabold text-ink tabular-nums">{reviewing ? "Reviewing" : "Viewing"} {index + 1} of {total}</p>
+        <p className="text-body-sm text-ink-muted tabular-nums">{total - index - 1 === 0 ? "Last one" : `${total - index - 1} to go`}</p>
       </div>
       <ol className="flex gap-1">
         {rows.map((r, i) => {
@@ -215,10 +215,10 @@ function QueueSteps({ rows, index, onIndex, reviewing }: { rows: PersonSummary[]
               <button type="button" onClick={() => onIndex(i)} aria-current={i === index ? "step" : undefined} title={label}
                 aria-label={`${i + 1}. ${label}${i === index ? " (here)" : ""}`}
                 className="group grid w-full gap-1.5 py-1 text-left">
-                <span aria-hidden="true" className={cx("h-1.5 rounded-full transition-colors duration-fast",
-                  i < index ? "bg-ink-brand/40" : i === index ? "bg-action" : "bg-surface-sunken group-hover:bg-line-strong")} />
+                <span aria-hidden="true" className={cx("h-1 transition-colors duration-fast",
+                  i < index ? "bg-ink-muted" : i === index ? "bg-ink" : "bg-line group-hover:bg-line-strong")} />
                 {total <= 6 && (
-                  <span aria-hidden="true" className={cx("truncate text-caption", i === index ? "font-semibold text-ink" : "text-ink-subtle group-hover:text-ink-muted")}>{first(label)}</span>
+                  <span aria-hidden="true" className={cx("truncate text-caption", i === index ? "font-bold text-ink" : "text-ink-muted group-hover:text-ink")}>{first(label)}</span>
                 )}
               </button>
             </li>
