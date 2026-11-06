@@ -33,9 +33,9 @@ export function PersonPhoto({ id, name, src, className, morph = false, alt, text
     return (
       <span {...a11y} data-theme="dark" style={style}
         className={cx("@container relative isolate block overflow-hidden bg-surface-brand phosphor-dots select-none", className)}>
-        <span aria-hidden="true" className="absolute -top-1/4 left-1/2 aspect-square w-4/5 -translate-x-1/2 rounded-full bg-mint-500/25 blur-3xl" />
+        <span aria-hidden="true" className="absolute -top-1/4 left-1/2 aspect-square w-4/5 -translate-x-1/2 keep-round rounded-full bg-mint-500/25 blur-3xl" />
         <span aria-hidden="true" className="absolute inset-0 grid place-items-center font-display text-display-xl tracking-tight text-ink-brand/15 @3xs:text-stat">{initials(name || "?")}</span>
-        <span aria-hidden="true" className="absolute bottom-1/6 left-1/2 h-1/12 w-1/2 -translate-x-1/2 rounded-full bg-surface-sunken/70 blur-md" />
+        <span aria-hidden="true" className="absolute bottom-1/6 left-1/2 h-1/12 w-1/2 -translate-x-1/2 keep-round rounded-full bg-surface-sunken/70 blur-md" />
         <Icon3D name={craft} className="absolute bottom-1/5 left-1/2 aspect-square size-auto w-2/5 -translate-x-1/2 drop-shadow-xl" />
         <span aria-hidden="true" className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 bg-surface/80 p-1.5 text-label-sm text-ink backdrop-blur-sm @3xs:px-2 @3xs:py-1">
           {createElement(departmentIcon(department, skills), { className: "size-3.5 text-ink-brand", strokeWidth: 1.75 })}

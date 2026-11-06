@@ -92,6 +92,11 @@
   --text-heading-sm--font-weight: 700;
 }
 :root[data-look=swiss] *, :root[data-look=swiss] *::before, :root[data-look=swiss] *::after { box-shadow: none; }
+/* Square corners everywhere on these screens, including the shared design-system pieces that round themselves
+   (badges, chips, tags, step numbers, avatars, the theme toggle, menus, dialogs, toasts). Kept round: radio buttons
+   (people read a circle as "pick one"), loading spinners, and soft light effects (the glow and the photo spotlight,
+   marked .keep-round). */
+:root[data-look=swiss] :is(*, *::before, *::after):not(.keep-round, .glow-horizon, input[type=radio], .animate-spin) { border-radius: 0 !important; }
 
 /* White and black, light theme (explicit light, or the system's light with no saved choice). */
 :root[data-look=swiss][data-theme=light] {
