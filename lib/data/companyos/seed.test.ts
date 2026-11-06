@@ -61,12 +61,13 @@ describe("toCompanyOsSeed", () => {
     }
   });
 
-  it("gives every profile past draft a photo (Company OS's submit and approval need one), reusing the six pictures", () => {
+  it("gives every profile past draft a photo (Company OS's submit and approval need one), reusing the sample pictures", () => {
     const withPhoto = new Set(seed.files.map((f) => f.owner_id));
     const past = of("profile").filter((p) => p.data.status !== "draft");
     expect(past.length).toBeGreaterThan(6);
     for (const p of past) expect(withPhoto.has(p.id!), String(p.data.public_handle)).toBe(true);
-    expect(new Set(seed.files.map((f) => f.path)).size).toBeLessThanOrEqual(6);
+    const pictures = new Set(state.drafts.map((d) => d.fields.photo).filter((src) => src.startsWith("img/people/")));
+    expect(new Set(seed.files.map((f) => f.source)).size).toBeLessThanOrEqual(pictures.size);
     expect(seed.files.filter((f) => f.owner_id === seed.files[0]!.owner_id)).toHaveLength(1);
   });
 

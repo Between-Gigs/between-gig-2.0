@@ -50,7 +50,7 @@ export function toCompanyOsSeed(state: SeedState, waitlist: WaitlistSignup[]): C
       },
     });
   }
-  // The six pictures: their own people use them, and every other profile past draft borrows one, since Company OS
+  // The sample pictures: their own people use them, and every other profile past draft borrows one, since Company OS
   // needs a photo to submit or approve (each profile gets its own file record; the images are shared on disk).
   const pictures = state.drafts.map((d) => d.fields.photo).filter((src) => src.startsWith("img/people/"));
   let borrowed = 0;
