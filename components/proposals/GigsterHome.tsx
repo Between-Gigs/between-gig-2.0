@@ -8,7 +8,7 @@ import { monthStatusLabel } from "@/lib/data/taxonomy";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { PersonStatusBadge } from "@/components/people/PersonStatusBadge";
 import { ButtonLink } from "@/components/ui/ButtonLink";
-import { Horizon } from "@/components/funnel/parts";
+import { BrandBlock, Section, eyebrow, mintBlock, onMint } from "./kit";
 import { ProposalNote, type Note } from "./ProposalNote";
 
 /** The reasoning beside each section, shown with "Show design notes". */
@@ -32,7 +32,7 @@ export function GigsterHome({ personId }: { personId: string }) {
     void data.people.get(personId).then((x) => { setS(x); if (x?.fields) setAvailability(x.fields.monthStatus); });
   }, [personId]);
 
-  if (!s) return <div aria-busy="true" aria-label="Loading" className="grid gap-4"><Skeleton shape="block" className="h-40" /><Skeleton shape="block" className="h-64" /></div>;
+  if (!s) return <div aria-busy="true" aria-label="Loading" className="grid gap-6"><Skeleton shape="block" className="h-40" /><Skeleton shape="block" className="h-64" /></div>;
   const { person: p, fields: f, completeness } = s;
   const first = p.name.split(" ")[0] || "there";
 
@@ -46,65 +46,77 @@ export function GigsterHome({ personId }: { personId: string }) {
   }[p.status];
 
   return (
-    <div className="grid gap-10">
-      <section aria-labelledby="g-hello" className="grid gap-6 lg:grid-cols-12">
-        <div className="flex items-center gap-4 lg:col-span-7">
-          <PersonPhoto id={p.id} name={p.name} src={f?.photo || undefined} alt="" className="size-16 shrink-0 rounded-2xl" textClass="text-heading-lg" />
-          <div className="grid gap-1">
-            <p className="text-eyebrow text-ink-brand uppercase">Your call sheet</p>
-            <h2 id="g-hello" className="font-display text-display-sm text-ink">Welcome back, {first}.</h2>
+    <div className="grid gap-14 lg:gap-16">
+      <div>
+        <section aria-labelledby="g-hello" className="grid grid-cols-12 gap-x-6 gap-y-6">
+          <div className="col-span-4 sm:col-span-3 lg:row-span-3">
+            <PersonPhoto id={p.id} name={p.name} src={f?.photo || undefined} alt="" className="aspect-square w-full lg:aspect-auto lg:h-full" textClass="text-display-sm" />
+          </div>
+          <div className="col-span-8 flex min-w-0 flex-col justify-end gap-3 sm:col-span-9 lg:col-start-4 lg:flex-row lg:items-center lg:justify-start">
+            <p className={eyebrow}>Your call sheet</p>
             <PersonStatusBadge status={p.status} audience="gigster" className="w-fit" />
           </div>
-        </div>
-        <div data-theme="dark" className="relative isolate overflow-hidden rounded-2xl bg-surface-brand phosphor-dots p-5 pb-24 lg:col-span-5 lg:pb-5">
-          <Horizon />
-          <div className="relative z-raised grid gap-2">
-            <p className="text-label-sm text-ink-brand">Next step</p>
-            <h3 className="font-display text-heading-lg text-ink">{next.title}</h3>
-            <p className="text-body-sm text-ink-muted">{next.body}</p>
-            <div className="mt-1"><ButtonLink href={next.href} variant="primary" size="sm" iconEnd={<ArrowRight />}>{next.cta}</ButtonLink></div>
+          <h2 id="g-hello" className="col-span-12 lg:col-span-9 lg:col-start-4 font-display text-display-sm break-words text-ink sm:text-display-md md:text-display-lg xl:text-display-xl">Welcome back, {first}.</h2>
+          {/* The screen's one mint block: the next step. */}
+          <div className={cx(mintBlock, "col-span-12 grid gap-4 p-5 sm:grid-cols-12 sm:items-end sm:gap-x-6 sm:p-6 lg:col-span-9 lg:col-start-4")}>
+            <div className="grid gap-1.5 sm:col-span-7">
+              <p className="text-label-sm font-bold tracking-widest uppercase">Next step</p>
+              <h3 className="font-display text-heading-lg">{next.title}</h3>
+              <p className="text-body-md">{next.body}</p>
+            </div>
+            <div className="sm:col-span-5"><ButtonLink href={next.href} variant="primary" size="lg" fullWidth className={onMint} iconEnd={<ArrowRight />}>{next.cta}</ButtonLink></div>
           </div>
-        </div>
-      </section>
-      <ProposalNote n={1} />
-
-      <section aria-labelledby="g-availability" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 lg:grid-cols-12 lg:items-center">
-        <div className="lg:col-span-5">
-          <h2 id="g-availability" className="flex items-center gap-2 font-display text-heading-lg text-ink"><CalendarCheck className="size-5 text-ink-brand" aria-hidden="true" />This month</h2>
-          <p className="mt-1 text-body-sm text-ink-muted">Production comes first. When the call comes, pause here in one tap.</p>
-        </div>
-        <div className="grid gap-2 lg:col-span-7 lg:justify-items-end">
-          <SegmentedControl label="Availability this month" value={availability} onChange={(v) => setAvailability(v as MonthStatus)}
-            options={(Object.keys(monthStatusLabel) as MonthStatus[]).map((k) => ({ value: k, label: { available: "Available", limited: "Limited", away: "Away" }[k] }))} />
-          <p aria-live="polite" className="text-body-sm text-ink-muted">{monthStatusLabel[availability]} · preview only, not saved</p>
-        </div>
-      </section>
-      <ProposalNote n={2} />
-
-      <div className="grid gap-6 lg:grid-cols-12">
-        <section aria-labelledby="g-requests" className="rounded-2xl border border-line bg-surface p-5 lg:col-span-7">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 id="g-requests" className="font-display text-heading-lg text-ink">Requests</h2>
-            <Badge tone="info" size="sm">Coming with booking</Badge>
-          </div>
-          <EmptyState className="py-8" icon={<Inbox />} title="No requests yet" headingLevel={3}>
-            Client requests arrive here once booking opens.
-          </EmptyState>
         </section>
-        <section aria-labelledby="g-profile" className="grid content-start gap-4 rounded-2xl border border-line bg-surface p-5 lg:col-span-5">
-          <h2 id="g-profile" className="font-display text-heading-lg text-ink">Your profile</h2>
-          <Progress value={Math.round(completeness * 100)} label="Complete" size="md" />
-          <ul className="grid gap-2 text-body-sm">
-            <li><Link href="/profile/" className="inline-flex min-h-11 items-center gap-2 text-ink hover:text-ink-brand sm:min-h-8"><Eye className="size-4 text-ink-brand" aria-hidden="true" />See it as clients will</Link></li>
-            <li><Link href="/profile/canvas/" className="inline-flex min-h-11 items-center gap-2 text-ink hover:text-ink-brand sm:min-h-8"><PencilLine className="size-4 text-ink-brand" aria-hidden="true" />Edit your profile</Link></li>
-            {p.status === "approved" && <li><Link href={`/p/${p.slug}/`} className="inline-flex min-h-11 items-center gap-2 text-ink hover:text-ink-brand sm:min-h-8"><Link2 className="size-4 text-ink-brand" aria-hidden="true" />Your public page to share</Link></li>}
-          </ul>
-          {p.status === "approved" && <Banner tone="success" title="You're live">Clients across Los Angeles can find you.</Banner>}
-        </section>
+        <ProposalNote n={1} />
       </div>
-      <ProposalNote n={3} />
 
-      <p className={cx("flex items-center gap-2 text-caption text-ink-subtle")}><CircleCheck className="size-3.5" aria-hidden="true" />Showing {p.name}{p.sample ? " (fictional sample)" : ""}.</p>
+      <div>
+        <Section id="g-availability" n="01" title={<span className="inline-flex items-center gap-2"><CalendarCheck className="size-6 shrink-0" strokeWidth={1.75} aria-hidden="true" />This month</span>}>
+          <BrandBlock>
+            <div className="grid gap-4 p-5 pb-24 sm:p-6 sm:pb-24 lg:grid-cols-9 lg:items-center lg:gap-x-6 lg:pb-6">
+              <p className="text-body-lg text-ink lg:col-span-4">Production comes first. When the call comes, pause here in one tap.</p>
+              <div className="grid gap-2 lg:col-span-5 lg:justify-items-end">
+                <SegmentedControl label="Availability this month" value={availability} onChange={(v) => setAvailability(v as MonthStatus)}
+                  options={(Object.keys(monthStatusLabel) as MonthStatus[]).map((k) => ({ value: k, label: { available: "Available", limited: "Limited", away: "Away" }[k] }))} />
+                <p aria-live="polite" className="text-body-sm text-ink-muted">{monthStatusLabel[availability]} · preview only, not saved</p>
+              </div>
+            </div>
+          </BrandBlock>
+        </Section>
+        <ProposalNote n={2} />
+      </div>
+
+      <div>
+        <div className="grid grid-cols-12 gap-x-6 gap-y-14">
+          <section aria-labelledby="g-requests" className="col-span-12 border-t-4 border-line-strong pt-3 lg:col-span-7">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 id="g-requests" className="font-display text-heading-lg text-ink"><span aria-hidden="true" className="mr-3 align-middle text-label-sm font-extrabold tabular-nums">02</span>Requests</h2>
+              <Badge tone="info" size="sm">Coming with booking</Badge>
+            </div>
+            <EmptyState className="mt-4 py-10" icon={<Inbox />} title="No requests yet" headingLevel={3}>
+              Client requests arrive here once booking opens.
+            </EmptyState>
+          </section>
+          <section aria-labelledby="g-profile" className="col-span-12 grid content-start gap-4 border-t-4 border-line-strong pt-3 lg:col-span-5">
+            <h2 id="g-profile" className="font-display text-heading-lg text-ink"><span aria-hidden="true" className="mr-3 align-middle text-label-sm font-extrabold tabular-nums">03</span>Your profile</h2>
+            <div className="flex items-end gap-4">
+              <span className="font-display text-stat text-ink tabular-nums">{Math.round(completeness * 100)}%</span>
+              <Progress value={Math.round(completeness * 100)} label="Complete" size="md" className="mb-3 flex-1" />
+            </div>
+            <ul className="grid border-t border-line text-body-md">
+              <li className="border-b border-line"><Link href="/profile/" className={rowLink}><Eye className="size-5 shrink-0" strokeWidth={1.75} aria-hidden="true" />See it as clients will<ArrowRight className="ml-auto size-4" aria-hidden="true" /></Link></li>
+              <li className="border-b border-line"><Link href="/profile/canvas/" className={rowLink}><PencilLine className="size-5 shrink-0" strokeWidth={1.75} aria-hidden="true" />Edit your profile<ArrowRight className="ml-auto size-4" aria-hidden="true" /></Link></li>
+              {p.status === "approved" && <li className="border-b border-line"><Link href={`/p/${p.slug}/`} className={rowLink}><Link2 className="size-5 shrink-0" strokeWidth={1.75} aria-hidden="true" />Your public page to share<ArrowRight className="ml-auto size-4" aria-hidden="true" /></Link></li>}
+            </ul>
+            {p.status === "approved" && <Banner tone="success" title="You're live">Clients across Los Angeles can find you.</Banner>}
+          </section>
+        </div>
+        <ProposalNote n={3} />
+      </div>
+
+      <p className="flex items-center gap-2 text-caption text-ink-subtle"><CircleCheck className="size-3.5" aria-hidden="true" />Showing {p.name}{p.sample ? " (fictional sample)" : ""}.</p>
     </div>
   );
 }
+
+const rowLink = "group flex min-h-12 items-center gap-3 font-bold text-ink transition-colors duration-fast hover:text-ink-brand";

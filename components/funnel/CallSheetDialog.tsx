@@ -84,7 +84,7 @@ export function CallSheetDialog({ open, onClose, category: initialCategory, plac
         {step === "signup" && (
           <form noValidate onSubmit={join} className="grid gap-4">
             <Honeypot />
-            {category && <p className="rounded-md bg-surface-selected px-3 py-2 text-body-sm text-ink">Interested in offering: <b>{waitlistCategoryLabel(category)}</b></p>}
+            {category && <p className="border-l-4 border-line-strong bg-surface-sunken px-3 py-2 text-body-sm text-ink">Interested in offering: <b>{waitlistCategoryLabel(category)}</b></p>}
             <Field label="Email" error={errors.email}>
               <Input type="email" autoComplete="email" maxLength={254} placeholder="you@example.com" value={email} start={<Mail />} autoFocus
                 onChange={(e) => { setEmail(e.target.value); setErrors((x) => ({ ...x, email: undefined })); }} />
@@ -115,19 +115,20 @@ export function CallSheetDialog({ open, onClose, category: initialCategory, plac
           </form>
         )}
         {step === "done" && (
-          <div className="grid justify-items-center gap-5 py-2 text-center">
+          <div className="grid gap-5 py-2">
             {/* The Storyboard's cover as a keepsake, with the check that says it worked. */}
-            <Reveal effect="pop" className="relative w-52">
+            <Reveal effect="pop" className="relative w-full">
               <img src={asset("art/storyboard/thumbs/front-cover.jpg")} alt="" width={800} height={533} decoding="async"
-                className="aspect-3/2 h-auto w-full rotate-2 rounded-xl border-4 border-surface object-cover shadow-lg" />
-              <span className="absolute -bottom-3 -left-3 grid size-12 place-items-center rounded-full bg-action text-on-action shadow-md"><Check className="size-6" aria-hidden="true" /></span>
+                className="aspect-2/1 h-auto w-full object-cover" />
+              <span className="absolute bottom-0 left-0 grid size-12 place-items-center bg-action text-on-action"><Check className="size-6" aria-hidden="true" /></span>
             </Reveal>
-            <div className="grid w-full gap-1 rounded-xl bg-surface-selected px-4 py-3 text-left">
-              <span className="text-label-sm text-ink-brand">While you wait</span>
-              <span className="text-body-sm text-ink">Flip through the Storyboard to see the kinds of work clients could bring to you.</span>
+            {/* The dialog's one mint block. */}
+            <div className="grid w-full gap-1 border-t-4 border-forest-950 bg-tint-mint px-4 py-3 text-left text-forest-950">
+              <span className="text-eyebrow uppercase">While you wait</span>
+              <span className="text-body-sm">Flip through the Storyboard to see the kinds of work clients could bring to you.</span>
             </div>
             {data.kind === "sample" && <p className="text-body-sm text-ink-subtle">Sample mode: emails are in the <Link href="/emails/" className="inline-flex items-center gap-1 text-link underline underline-offset-2"><Inbox className="size-3.5" aria-hidden="true" />sample outbox</Link>.</p>}
-            <div className="flex flex-wrap justify-center gap-3">
+            <div className="flex flex-wrap gap-3">
               <ButtonLink href="/storyboard/" variant="primary" iconEnd={<ArrowRight />}>Open the Storyboard</ButtonLink>
               <Button onClick={onClose}>Done</Button>
             </div>

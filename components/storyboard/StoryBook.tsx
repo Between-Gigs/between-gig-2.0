@@ -11,9 +11,9 @@ import "./book.css";
 export interface StoryBookHandle { goTo: (index: number) => void; prefetch: (index: number) => void }
 
 /**
- * The Storyboard hero, as approved: one centered column. Peter's handwritten "Your next chapter starts
- * here.", the sketchbook (drag a page, tap a half, or use the arrows / arrow keys), the caption, the page
- * count, the hint, then the two ways in.
+ * The Storyboard hero. The approved column is unchanged: Peter's handwritten "Your next chapter starts
+ * here." and the sketchbook (drag a page, tap a half, or use the arrows / arrow keys). Under it, on the Swiss
+ * grid: the page count and hint, the caption, then the two ways in.
  */
 export const StoryBook = React.forwardRef<StoryBookHandle, { onPlan: (kind: "buyer" | "talent") => void; onScrollOn: () => void }>(
   function StoryBook({ onPlan, onScrollOn }, ref) {
@@ -51,57 +51,74 @@ export const StoryBook = React.forwardRef<StoryBookHandle, { onPlan: (kind: "buy
     React.useImperativeHandle(ref, () => ({ goTo: (i: number) => engine.current?.goTo(i), prefetch: (i: number) => engine.current?.prefetch(i) }), []);
 
     const page = scenePages[state.index];
+    const prev = () => engine.current?.step("prev");
+    const next = () => engine.current?.step("next");
     return (
-      <section aria-labelledby="sb-h" className="relative mx-auto grid w-full max-w-5xl justify-items-center gap-5 px-4 pt-10 pb-6 sm:px-6 sm:pt-14">
-        <h1 id="sb-h" className="m-0">
-          <Lettering name="next-chapter" className="sb-script" />
-        </h1>
+      <section aria-labelledby="sb-h" className="relative">
+        {/* The book's own column, exactly as approved: its width sets the sketchbook's geometry. */}
+        <div className="relative mx-auto grid w-full max-w-5xl justify-items-center gap-5 px-4 pt-10 sm:px-6 sm:pt-14">
+          <h1 id="sb-h" className="m-0">
+            <Lettering name="next-chapter" className="sb-script" />
+          </h1>
 
-        <div ref={stage} className="sb-stage" role="group" aria-roledescription="book" aria-label="The Storyboard: a sketchbook of what Between Gigs talent can do">
-          {/* Beside the book from sm up; on a phone they move below it, off the artwork. */}
-          <span className="hidden sm:contents">
-            <TurnButton dir="prev" disabled={!state.canPrev} onClick={() => engine.current?.step("prev")} className="absolute top-1/2 -left-2 z-raised -translate-y-1/2" />
-          </span>
-          <div ref={frame} className="sb-3d">
-            <div className="sb-tilt">
-              <div aria-hidden="true" className="sb-cast ambient" />
-              <div aria-hidden="true" className="sb-cast contact" />
-              <div aria-hidden="true" className="sb-cast hair" />
-              <div ref={book} className="sb-book" />
+          <div ref={stage} className="sb-stage" role="group" aria-roledescription="book" aria-label="The Storyboard: a sketchbook of what Between Gigs talent can do">
+            {/* Beside the book from sm up; on a phone they move below it, off the artwork. */}
+            <span className="hidden sm:contents">
+              <TurnButton dir="prev" disabled={!state.canPrev} onClick={prev} className="absolute top-1/2 -left-2 z-raised -translate-y-1/2" />
+            </span>
+            <div ref={frame} className="sb-3d">
+              <div className="sb-tilt">
+                <div aria-hidden="true" className="sb-cast ambient" />
+                <div aria-hidden="true" className="sb-cast contact" />
+                <div aria-hidden="true" className="sb-cast hair" />
+                {/* keep-round: the sketchbook's soft cover corners are part of the artwork. */}
+                <div ref={book} className="sb-book keep-round" />
+              </div>
             </div>
+            <span className="hidden sm:contents">
+              <TurnButton dir="next" disabled={!state.canNext} onClick={next} className="absolute top-1/2 -right-2 z-raised -translate-y-1/2" />
+            </span>
           </div>
-          <span className="hidden sm:contents">
-            <TurnButton dir="next" disabled={!state.canNext} onClick={() => engine.current?.step("next")} className="absolute top-1/2 -right-2 z-raised -translate-y-1/2" />
-          </span>
         </div>
 
         {/* Live caption for the current page; the visual one cross-fades with the turn. */}
         <p className="sr-only" aria-live="polite">Page {state.index + 1} of {scenePages.length}: {page.title}. {page.story}</p>
-        <div ref={captions} aria-hidden="true" className="sb-captions max-w-3xl px-4" />
 
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <span className="contents sm:hidden"><TurnButton dir="prev" disabled={!state.canPrev} onClick={() => engine.current?.step("prev")} /></span>
-          <span className="text-label-sm text-ink-subtle tabular-nums">{state.index + 1} / {scenePages.length}</span>
-          <span className="contents sm:hidden"><TurnButton dir="next" disabled={!state.canNext} onClick={() => engine.current?.step("next")} /></span>
+        {/* The chrome under the book: page count, caption, the two ways in, on the 12-column grid. */}
+        <div className="mx-auto max-w-7xl px-4 pt-8 pb-6 sm:px-6 sm:pt-10">
+          <div className="grid grid-cols-12 gap-x-6 gap-y-6 border-t-4 border-line-strong pt-4">
+            <div className="col-span-12 grid content-start gap-3 md:col-span-3">
+              <div className="flex items-center justify-between gap-4">
+                <p aria-hidden="true" className="flex items-baseline gap-2 font-display text-display-sm text-ink tabular-nums">
+                  {String(state.index + 1).padStart(2, "0")}<span className="text-heading-md text-ink-muted">/ {scenePages.length}</span>
+                </p>
+                <div className="flex gap-2 sm:hidden">
+                  <TurnButton dir="prev" disabled={!state.canPrev} onClick={prev} />
+                  <TurnButton dir="next" disabled={!state.canNext} onClick={next} />
+                </div>
+              </div>
+              <p className={cx("text-body-sm text-ink-muted transition-opacity duration-slow", hinted && "opacity-0")}>Drag the page or use the arrows to turn</p>
+            </div>
+            <div ref={captions} aria-hidden="true" className="sb-captions col-span-12 md:col-span-5 lg:col-span-6" />
+            <div className="col-span-12 grid content-start gap-3 md:col-span-4 lg:col-span-3">
+              <Button variant="primary" size="lg" className="glow-hover w-full justify-between" iconEnd={<ArrowRight />} onClick={() => onPlan("buyer")}>Find talent for a project</Button>
+              <Button variant="secondary" size="lg" className="w-full justify-between" onClick={() => onPlan("talent")}>Offer your skills</Button>
+            </div>
+          </div>
+          <div className="mt-6 flex justify-center">
+            <IconButton label="Scroll to how it works" variant="ghost" icon={<ChevronDown />} onClick={onScrollOn} className="text-ink-muted hover:text-ink" />
+          </div>
         </div>
-        <p className={cx("text-body-sm text-ink-subtle transition-opacity duration-slow", hinted && "opacity-0")}>Drag the page or use the arrows to turn</p>
-
-        <div className="flex flex-wrap justify-center gap-3">
-          <Button variant="primary" size="lg" className="glow-hover" iconEnd={<ArrowRight />} onClick={() => onPlan("buyer")}>Find talent for a project</Button>
-          <Button variant="secondary" size="lg" onClick={() => onPlan("talent")}>Offer your skills</Button>
-        </div>
-
-        <IconButton label="Scroll to how it works" variant="ghost" icon={<ChevronDown />} onClick={onScrollOn} className="mt-2 opacity-60 hover:opacity-100" />
       </section>
     );
   },
 );
 
-/** Page-turn arrow on a solid surface, so it reads over the artwork and beside it in both themes. */
+/** Square page-turn arrow on a solid surface with an ink rule, so it reads beside the book in both themes. */
 function TurnButton({ dir, disabled, onClick, className }: { dir: "prev" | "next"; disabled: boolean; onClick: () => void; className?: string }) {
   return (
     <IconButton label={dir === "prev" ? "Previous page" : "Next page"} variant="ghost" icon={dir === "prev" ? <ChevronLeft /> : <ChevronRight />}
       disabled={disabled} onClick={onClick}
-      className={cx("rounded-full border border-line bg-surface/90 shadow-md backdrop-blur-sm hover:bg-surface disabled:opacity-60", className)} />
+      className={cx("size-11 border-2 border-line-strong bg-surface text-ink hover:bg-surface-sunken disabled:opacity-40", className)} />
   );
 }
