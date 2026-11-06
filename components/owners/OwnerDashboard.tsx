@@ -122,7 +122,7 @@ function Dashboard({ session }: { session: Session }) {
           <div className="col-span-2 sm:col-span-1 xl:col-span-3"><StatTab controls="dash-list" label="Ready to invite" value={d.waitlist.not_invited} hint={`${d.waitlist.not_invited} of ${d.waitlist.total} on the waitlist`} suffix={`/${d.waitlist.total}`} selected={cohort === "all" && view === "not_invited"} onSelect={() => pick("not_invited")} /></div>
         </div>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-x-6 gap-y-12 lg:grid-cols-10">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-x-6 gap-y-8 lg:grid-cols-10">
           <Panel className="min-h-0 lg:col-span-7" number="01" title={cohort === "invited" ? `${v.title} · Invited people` : v.title} flush bodyClassName="flex min-h-0 flex-col"
             count={<><span aria-hidden="true">{count}</span><span className="sr-only">{count} {count === 1 ? "person" : "people"}</span></>}
             aside={
@@ -190,7 +190,7 @@ function Dashboard({ session }: { session: Session }) {
               {side === "activity"
                 ? <ActivityList events={d.activity.slice(0, 12)} onOpen={openPerson} photoFor={(id) => photos.get(id)} />
                 : <>
-                    <p className="pt-2 pb-1 text-body-sm text-ink-muted tabular-nums">Out of {d.funnel.invited} invited. Select a step to list who&apos;s there.</p>
+                    <p className="pt-2 pb-1 text-body-sm text-ink-muted tabular-nums">Out of {d.funnel.invited} invited. Pick a step to list it.</p>
                     <FunnelCompact bare d={d} selected={cohort === "invited" ? view : undefined} onSelect={(x) => pick(x, "invited")} />
                   </>}
             </div>

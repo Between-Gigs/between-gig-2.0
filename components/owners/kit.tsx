@@ -49,7 +49,7 @@ function PageBar({ title, description, meta, kicker, hero = false, actions, stic
       <div className={cx("col-span-12 grid min-w-0 gap-2", !!actions && (hero ? "lg:col-span-9" : "lg:col-span-8"))}>
         {kicker && <p className={eyebrow}>{kicker}</p>}
         <div className="flex min-w-0 items-baseline gap-4">
-          <h1 className={cx("min-w-0 font-display text-ink", hero ? "text-display-sm text-balance sm:text-display-md xl:text-display-lg" : "truncate text-display-sm lg:text-display-md")}>{title}</h1>
+          <h1 className={cx("min-w-0 font-display text-ink", hero ? "text-display-sm text-balance sm:text-display-md" : "truncate text-display-sm lg:text-display-md")}>{title}</h1>
           {meta !== undefined && <span className="shrink-0 font-display text-heading-lg text-ink-muted tabular-nums">{meta}</span>}
         </div>
         {description && <p className="max-w-2xl text-body-md text-ink-muted">{description}</p>}
@@ -290,10 +290,10 @@ export function StatTab({ label, value, hint, selected, attention = false, onSel
   return (
     <button type="button" role="tab" aria-selected={selected} aria-controls={controls} onClick={onSelect}
       aria-label={`${label}: ${value ?? "none"}, ${hint}${attention ? ", needs attention" : ""}`}
-      className={cx("group relative flex h-full w-full min-w-0 flex-col justify-between gap-3 text-left transition-colors duration-fast",
+      className={cx("group relative flex h-full w-full min-w-0 flex-col justify-between gap-1 text-left transition-colors duration-fast",
         "after:absolute after:inset-x-0 after:-bottom-3 after:h-1 after:bg-ink after:opacity-0 after:transition-opacity after:duration-fast aria-selected:after:opacity-100",
-        attention ? "bg-tint-mint px-4 pt-3 pb-4 text-forest-950 sm:px-5 sm:pt-4 sm:pb-5" : "border-t-4 border-line-strong pt-3 text-ink hover:bg-surface-hover")}>
-      <span className="flex items-baseline gap-1 font-display text-display-sm tabular-nums sm:text-display-md xl:text-stat">
+        attention ? "bg-tint-mint px-4 pt-3 pb-3 text-forest-950 sm:px-5 sm:pt-3 sm:pb-4" : "border-t-4 border-line-strong pt-3 text-ink hover:bg-surface-hover")}>
+      <span className="flex items-baseline gap-1 font-display text-display-sm tabular-nums sm:text-display-md">
         {value ?? "—"}
         {suffix && <span className={cx("text-heading-lg", attention ? "text-forest-900" : "text-ink-muted")}>{suffix}</span>}
       </span>
