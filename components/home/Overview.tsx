@@ -174,13 +174,13 @@ export function Overview() {
         {data.demo && (
           <Section n="02" id="roles-h" title="Try every role" body="Step into the sample as anyone. No sign-in needed: it uses the fictional sample accounts, kept in this browser."
             aside={<div className="flex flex-wrap items-center gap-2 pt-2">{viewSwitch}<Button size="sm" variant="ghost" iconStart={<RotateCcw />} onClick={reset}>Reset sample data</Button></div>}>
-            <h3 className="text-eyebrow text-ink-muted uppercase">The team and the start</h3>
+            <h3 className="text-eyebrow text-ink-muted uppercase">Team and start</h3>
             <ul className={cx("mt-4", listClass(view, 3))}>
               <li><GuideCard view={view} thumb="owner" tag="Owner" title="Open as owner" body="Dashboard, review queue, people, waitlist." onClick={startOwner} /></li>
               <li><GuideCard view={view} thumb="invite" tag="Invited" title="Open the invite" body="Create the account, then fill in the profile." onClick={startInvite} /></li>
               <li><GuideCard view={view} thumb="home" tag="Visitor" title="Sign out" body="See the site as the public does." onClick={asVisitor} /></li>
             </ul>
-            <h3 className="mt-12 text-eyebrow text-ink-muted uppercase">Gigsters, from first step to live</h3>
+            <h3 className="mt-12 text-eyebrow text-ink-muted uppercase">Gigsters, start to live</h3>
             <ul className={cx("mt-4", listClass(view, 3))}>
               {gigsters.map((g, i) => (
                 <li key={g.id}><GuideCard view={view} thumb={g.thumb} tag="Gigster" step={`${i + 1} · ${g.stage}`} title={`Sign in as ${g.name}`} body={g.state} onClick={() => asGigster(g.id, g.go)} /></li>

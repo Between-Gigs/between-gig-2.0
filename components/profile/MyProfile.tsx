@@ -143,7 +143,7 @@ function Live({ person }: { person: Person }) {
     <div data-theme="dark" className="relative isolate grid gap-8 overflow-hidden rounded-none bg-surface-brand phosphor-dots p-6 text-ink sm:p-10">
       <span aria-hidden="true" className="glow-horizon -z-10 opacity-50" />
       <div className="grid gap-3">
-          <p className="text-eyebrow text-ink-brand uppercase">Approved · live on Between Gigs</p>
+          <p className="text-eyebrow text-ink-brand uppercase">Live on Between Gigs</p>
           <h3 className="font-display text-display-sm text-ink sm:text-display-md">You&apos;re live, {first}</h3>
           <p className="max-w-prose text-body-lg text-ink">The Between Gigs team approved your profile{person.approvedAt && ` on ${when(person.approvedAt)}`}, and clients can find it now. Keep this month's availability current from Edit profile.</p>
       </div>

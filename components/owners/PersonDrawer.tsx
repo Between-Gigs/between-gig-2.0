@@ -170,7 +170,7 @@ export function PersonDrawer({ rows, index, onIndex, onClose, onChanged }: {
                 </ul>
                 {/* Their card on a stage, the way it sits in client search. */}
                 <section aria-labelledby="pd-card" className="grid gap-3">
-                  <h3 id="pd-card" className={cx("border-t-4 border-line-strong pt-3", eyebrow)}>How clients see their card</h3>
+                  <h3 id="pd-card" className={cx("border-t-4 border-line-strong pt-3", eyebrow)}>Their card in search</h3>
                   <div className="grid place-items-center bg-surface-sunken p-5 sm:p-8">
                     <ProfilePreviewCard fields={f} personId={p.id} badge={null} className="w-full max-w-xs" />
                   </div>

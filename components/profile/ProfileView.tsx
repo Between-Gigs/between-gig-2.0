@@ -146,9 +146,9 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
       <div className="col-span-12 mt-6 flex min-w-0 flex-col lg:col-span-8 lg:mt-0">
         <p className="flex flex-wrap gap-x-5 gap-y-1 text-eyebrow uppercase max-lg:hidden">
           <span className="text-ink">Gigster</span>{craft && <span className="text-ink-muted">{craft}</span>}
-          {editing && <span className="text-ink-brand">Your page · only you can see it</span>}
+          {editing && <span className="text-ink-brand">Your page · private</span>}
         </p>
-        {editing && <p className="text-eyebrow text-ink-brand uppercase lg:hidden">Your page · only you can see it</p>}
+        {editing && <p className="text-eyebrow text-ink-brand uppercase lg:hidden">Your page · private</p>}
         <div className="mt-2 lg:mt-5">
           {P("name", !!f.name.trim(), (
             <Name className="font-display text-display-md break-words text-ink sm:text-display-lg xl:text-display-xl">

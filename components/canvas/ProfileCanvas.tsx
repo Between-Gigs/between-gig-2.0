@@ -509,7 +509,7 @@ function Rail({ first, panel }: { first: string; panel: React.ReactNode }) {
   return (
     <section aria-labelledby="rail-h" className="border-t-4 border-line-strong pt-4 max-lg:hidden">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id="rail-h" className="font-display text-heading-sm text-ink">{done <= 1 ? `Welcome, ${first}.` : next ? "Keep going" : "Ready when you are"}</h2>
+        <h2 id="rail-h" className="font-display text-heading-sm text-ink">{done <= 1 ? `Welcome, ${first}. This is your page.` : next ? "Keep going" : "Ready when you are"}</h2>
         <span role="img" aria-label={`${done} of ${REQUIRED.length} required parts filled`} className="shrink-0 font-display text-label-md font-bold text-ink tabular-nums">{done}/{REQUIRED.length}</span>
       </div>
       <ul className="mt-3">
