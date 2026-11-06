@@ -52,7 +52,7 @@ export function Storyboard() {
           <div className="col-span-12 grid content-start gap-8 lg:col-span-8">
             <p className="max-w-3xl text-body-lg text-pretty text-ink sm:text-editorial-lg">Between Gigs gives everyday people and businesses access to the remarkable range of entertainment professionals between productions. A family can hire a scenic carpenter to reinvent a room. A bakery can bring in a food stylist and editor. A school can build a fundraiser with a producer and sound crew. Production designers, grips, writers, actors, builders, assistants and animal handlers can be booked for one afternoon or an entire season. You describe the outcome; we help cast one person or the right crew.</p>
             {/* The page's one mint block. */}
-            <p className="bg-tint-mint p-5 font-display text-heading-lg text-balance text-forest-950 sm:p-6">Your next useful skill may be the one nobody has thought to cast yet.</p>
+            <p className="bg-tint-mint p-5 font-display text-heading-lg leading-snug text-balance text-forest-950 sm:p-6">Your next useful skill may be the one nobody has thought to cast yet.</p>
           </div>
         </div>
       </section>

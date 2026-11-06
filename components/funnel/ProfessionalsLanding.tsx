@@ -243,7 +243,7 @@ export function ProfessionalsLanding() {
         <section id="waitlist" aria-labelledby="final-h" data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
           <Horizon />
           <div className="relative z-raised grid grid-cols-12 gap-x-6 gap-y-6 px-5 pt-6 pb-32 sm:px-8 lg:px-10 lg:pt-8 lg:pb-20">
-            <p className="col-span-12 border-t-4 border-ink pt-3 text-eyebrow text-ink-brand uppercase">Bring your craft beyond the set</p>
+            <p className="col-span-12 border-t-4 border-ink pt-3 text-label-md text-ink-brand">Bring your craft beyond the set</p>
             <h2 id="final-h" className="col-span-12 font-display text-display-sm text-ink sm:text-display-md lg:col-span-10 lg:text-display-lg">Join the Los Angeles professionals shaping Between Gigs.</h2>
             <div className="col-span-12">
               <CallSheetButton onClick={() => join("footer")} />

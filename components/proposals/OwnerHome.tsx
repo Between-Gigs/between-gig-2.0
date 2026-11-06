@@ -7,7 +7,7 @@ import { data, type DashboardSummary } from "@/lib/data";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { ActivityList, ago } from "@/components/owners/activity";
-import { BrandBlock, eyebrow, mintBlock } from "./kit";
+import { BrandBlock, mintBlock } from "./kit";
 import { ProposalNote, type Note } from "./ProposalNote";
 
 /** The reasoning beside each section, shown with "Show design notes". */
@@ -43,7 +43,7 @@ export function OwnerHome() {
       <div>
         <section aria-labelledby="o-today" className="grid grid-cols-12 gap-x-6 gap-y-6">
           <div className="col-span-12 min-w-0 self-end lg:col-span-8">
-            <p className={eyebrow}>Today on the call sheet</p>
+            <p className="text-label-md text-ink-muted">Today on the call sheet</p>
             <h2 id="o-today" className="mt-4 font-display text-display-sm text-ink sm:text-display-md md:text-display-lg">
               {queue.length ? <>{queue.length} {queue.length === 1 ? "Gigster is" : "Gigsters are"} <span className="text-ink-brand">waiting on you.</span></> : <>Nobody is waiting. <span className="text-ink-brand">Enjoy your day.</span></>}
             </h2>
