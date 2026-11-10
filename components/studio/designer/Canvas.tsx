@@ -165,15 +165,18 @@ export function Canvas() {
   };
 
   const tag = (el: PageElement, b: Box, strong: boolean) => {
-    const below = b.top < 26;
+    // No room above (the Body, a hero at the top): tuck the tag inside the box's top edge, as Webflow does, rather
+    // than under the element, where it covered content and, for the Body, fell off the bottom of the canvas.
+    const inside = b.top < 24;
     return (
       <div className={cx("pointer-events-none absolute z-raised", strong ? "border-2 border-info" : "border border-info")} style={{ top: b.top, left: b.left, width: b.width, height: b.height }}>
-        <div className={cx("absolute left-0 flex items-center", below ? "top-full mt-0.5" : "bottom-full mb-0.5", strong && "pointer-events-auto")}>
+        <div className={cx("absolute flex items-center", inside ? (strong ? "-top-0.5 -left-0.5" : "-top-px -left-px") : (strong ? "bottom-full -left-0.5" : "bottom-full -left-px"), strong && "pointer-events-auto")}>
           <span draggable={strong && el.type !== "body" && el.type !== "item"}
             onDragStart={(e) => { const item: DragItem = { kind: "move", id: el.id }; e.dataTransfer.setData(DRAG_MIME, JSON.stringify(item)); e.dataTransfer.setData("text/plain", elementName(el)); e.dataTransfer.effectAllowed = "move"; d.setDrag(item); }}
             onDragEnd={() => { d.setDrag(null); setDrop(null); }}
             title={strong ? "Drag to move" : undefined}
-            className={cx("inline-flex h-5 items-center gap-1 rounded-xs px-1.5 text-caption whitespace-nowrap", strong ? "cursor-grab bg-info text-bg" : "bg-info/80 text-bg")}>
+            // Square where it meets the outline, so tag and box read as one piece.
+            className={cx("inline-flex h-5 items-center gap-1 px-1.5 text-caption whitespace-nowrap", inside ? "rounded-br-xs" : "rounded-t-xs", strong ? "cursor-grab bg-info text-bg" : "bg-info/80 text-bg")}>
             {strong && el.type !== "body" && el.type !== "item" && <GripVertical className="size-3" aria-hidden="true" />}
             {elementName(el)}{el.cls ? <span className="opacity-80"> · .{el.cls}</span> : null}
           </span>
@@ -230,8 +233,9 @@ export function Canvas() {
           <React.Fragment key={el.id}>
             {i > 0 && <ChevronRight className="size-3 shrink-0 text-ink-subtle" aria-hidden="true" />}
             <button type="button" onClick={() => d.select(el.id)} onMouseEnter={() => d.setHover(el.id)} onMouseLeave={() => d.setHover(null)}
-              className={cx("inline-flex h-6 shrink-0 items-center rounded-xs px-1.5 text-caption whitespace-nowrap", el.id === d.selectedId ? "bg-info/15 text-ink" : "text-ink-muted hover:bg-surface-hover hover:text-ink")}>
-              {elementName(el)}{el.cls ? ` .${el.cls}` : ""}
+              className={cx("inline-flex h-6 shrink-0 items-center gap-1 rounded-xs px-1.5 text-caption whitespace-nowrap", el.id === d.selectedId ? "bg-info/15 text-info" : "text-ink-muted hover:bg-surface-hover hover:text-ink")}>
+              {/* The element first, its class quieter after it, as in the Navigator. */}
+              {elementName(el)}{el.cls && <span className={el.id === d.selectedId ? "text-info/70" : "text-ink-subtle"}>.{el.cls}</span>}
             </button>
           </React.Fragment>
         )) : <span className="truncate px-1.5 text-caption text-ink-subtle">{coarse ? "Tap anything to select it. Double-tap text to edit it." : "Click anything on the canvas to select it. Double-click text to edit it."}</span>}
@@ -242,6 +246,10 @@ export function Canvas() {
 
 const TIP_KEY = "studio-tip-dismissed";
 
+function Kbd({ children }: { children: React.ReactNode }) {
+  return <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded-xs border border-line-strong bg-surface px-1 font-mono text-data-sm text-ink">{children}</kbd>;
+}
+
 /** Three steps for someone who has never used a site builder. Shown until dismissed, once per browser. */
 function FirstRunTip() {
   const [show, setShow] = React.useState(false);
@@ -250,16 +258,22 @@ function FirstRunTip() {
   const close = () => { setShow(false); try { localStorage.setItem(TIP_KEY, "1"); } catch { /* ignore */ } };
   return (
     <section aria-labelledby="tip-h" className="absolute bottom-12 left-4 z-dropdown hidden w-80 rounded-lg border border-line bg-surface-raised p-4 shadow-lg md:block">
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex items-center justify-between gap-2">
         <h2 id="tip-h" className="text-label-md text-ink">New to Studio? Three steps</h2>
-        <button type="button" onClick={close} aria-label="Dismiss the tips" className="-mt-1 -mr-1 inline-flex size-8 items-center justify-center rounded-md text-ink-muted hover:bg-surface-hover"><X className="size-4" /></button>
+        <button type="button" onClick={close} aria-label="Dismiss the tips" className="-mr-2 inline-flex size-8 items-center justify-center rounded-md text-ink-muted hover:bg-surface-hover"><X className="size-4" /></button>
       </div>
-      <ol className="mt-2 grid gap-1.5 text-body-sm text-ink-muted">
-        <li><b className="font-semibold text-ink">1. Add</b>: press A (or +) and drag an element onto the page.</li>
-        <li><b className="font-semibold text-ink">2. Select</b>: click anything; double-click text to edit it.</li>
-        <li><b className="font-semibold text-ink">3. Style</b>: change it on the right. Everything can be undone.</li>
+      {/* Numbered markers in a column of their own, so the three lines start on one edge. */}
+      <ol className="mt-3 grid gap-2.5">
+        {([["Add", <>Press <Kbd>A</Kbd> and drag an element onto the page.</>], ["Select", "Click anything. Double-click text to edit it."], ["Style", "Change it on the right. Everything can be undone."]] as const).map(([h, body], i) => (
+          <li key={h} className="flex gap-2.5">
+            <span aria-hidden="true" className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-info/15 text-caption font-semibold text-info tabular-nums">{i + 1}</span>
+            <p className="text-body-sm text-ink-muted"><b className="font-semibold text-ink">{h}.</b> {body}</p>
+          </li>
+        ))}
       </ol>
-      <button type="button" onClick={close} className="mt-3 inline-flex min-h-8 items-center text-label-sm text-link underline underline-offset-2">Got it</button>
+      <div className="mt-4 flex justify-end">
+        <button type="button" onClick={close} className="inline-flex h-8 items-center rounded-md bg-info px-3 text-label-sm text-bg transition-opacity duration-fast hover:opacity-90">Got it</button>
+      </div>
     </section>
   );
 }

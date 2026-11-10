@@ -16,6 +16,7 @@ import { basePath } from "@/lib/site";
 import { api, apiStateLabel, appPages, collectionFor, lanes, newTables, previewAs, previewLabel, type AppPage } from "@/lib/studio/app-pages";
 import type { Breakpoint } from "@/lib/studio/types";
 import { SourceCode } from "../code/SourceCode";
+import { PanelHead } from "../ui";
 
 export type AppTab = "design" | "data" | "code" | "api";
 export const appTabs: { id: AppTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -35,8 +36,9 @@ export function AppPagesPanel({ current, onOpen }: { current: string; onOpen: (i
   const match = (p: AppPage) => !q || `${p.title} ${p.path}`.toLowerCase().includes(q.toLowerCase());
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      <PanelHead title="Live site" count={appPages.length} />
       <div className="grid gap-2.5 border-b border-line p-3">
-        <p className="text-body-sm text-ink-muted">The real Between Gigs pages, each with the design, data, code and API behind it.</p>
+        <p className="text-caption text-ink-muted">The real Between Gigs pages, each with the design, data, code and API behind it.</p>
         <Input type="search" size="sm" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a page" aria-label="Find a page" start={<Search />} />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-3">

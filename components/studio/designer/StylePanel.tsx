@@ -44,15 +44,33 @@ function Value({ ctl, prop, placeholder, className, label }: { ctl: Ctl; prop: s
         const m = /^(-?\d*\.?\d+)(.*)$/.exec(draft);
         if (m && (e.key === "ArrowUp" || e.key === "ArrowDown")) { e.preventDefault(); const step = e.shiftKey ? 10 : 1; const n = `${Number(m[1]) + (e.key === "ArrowUp" ? step : -step)}${m[2] || (unitless.has(prop) ? "" : "px")}`; setDraft(n); ctl.set(prop, n); }
       }}
-      className={cx("min-w-0 rounded-sm border bg-surface text-ink tabular-nums outline-none placeholder:text-ink-subtle focus-visible:border-focus", className ?? "h-8 w-full border-line px-2 text-body-sm")} />
+      // A className replaces the look entirely (the spacing box draws its own), so no two utilities fight over a property.
+      className={cx("min-w-0 rounded-sm border tabular-nums outline-none placeholder:text-ink-subtle focus-visible:border-focus", className ?? "h-8 w-full border-line bg-surface px-2 text-body-sm text-ink")} />
   );
 }
 
 function Row({ ctl, prop, label, placeholder }: { ctl: Ctl; prop: string; label: string; placeholder?: string }) {
   return (
-    <div className="grid grid-cols-5 items-center gap-2">
-      <Label ctl={ctl} prop={prop} className="col-span-2">{label}</Label>
-      <div className="col-span-3"><Value ctl={ctl} prop={prop} label={label} placeholder={placeholder} /></div>
+    <div className="flex items-center gap-2">
+      <Label ctl={ctl} prop={prop} className="w-18 shrink-0">{label}</Label>
+      <div className="grid min-w-0 flex-1"><Value ctl={ctl} prop={prop} label={label} placeholder={placeholder} /></div>
+    </div>
+  );
+}
+
+/**
+ * Short numeric values two to a row (width and height, size and line height), each with its label on the left like
+ * every other row in the panel, so the eye runs down one label edge instead of switching between above and beside.
+ */
+function Pairs({ ctl, items, placeholder }: { ctl: Ctl; items: [prop: string, label: string, full: string][]; placeholder?: string }) {
+  return (
+    <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+      {items.map(([p, l, full]) => (
+        <div key={p} className="flex min-w-0 items-center gap-1.5" title={full}>
+          <Label ctl={ctl} prop={p} className="w-12 shrink-0">{l}</Label>
+          <div className="grid min-w-0 flex-1"><Value ctl={ctl} prop={p} label={full} placeholder={placeholder} /></div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -61,9 +79,9 @@ function Row({ ctl, prop, label, placeholder }: { ctl: Ctl; prop: string; label:
 function Choice({ ctl, prop, label, options }: { ctl: Ctl; prop: string; label: string; options: { value: string; label: string; icon?: React.ReactNode }[] }) {
   const v = ctl.get(prop);
   return (
-    <div className="grid grid-cols-5 items-center gap-2">
-      <Label ctl={ctl} prop={prop} className="col-span-2">{label}</Label>
-      <div role="radiogroup" aria-label={label} className="col-span-3 flex rounded-sm border border-line bg-surface-sunken p-0.5">
+    <div className="flex items-center gap-2">
+      <Label ctl={ctl} prop={prop} className="w-18 shrink-0">{label}</Label>
+      <div role="radiogroup" aria-label={label} className="flex min-w-0 flex-1 rounded-sm border border-line bg-surface-sunken p-0.5">
         {options.map((o) => (
           <button key={o.value} type="button" role="radio" aria-checked={v === o.value} title={o.label} aria-label={o.label} onClick={() => ctl.set(prop, v === o.value ? "" : o.value)}
             className={cx("inline-flex h-7 min-w-0 flex-1 items-center justify-center rounded-xs text-caption [&_svg]:size-3.5", v === o.value ? "bg-surface text-ink shadow-xs" : "text-ink-muted hover:text-ink")}>
@@ -80,9 +98,9 @@ function ColorRow({ ctl, prop, label }: { ctl: Ctl; prop: string; label: string 
   const token = v.startsWith("token:") ? tokenColors.find((t) => t.id === v.slice(6)) : undefined;
   const [hex, setHex] = React.useState("");
   return (
-    <div className="grid grid-cols-5 items-center gap-2">
-      <Label ctl={ctl} prop={prop} className="col-span-2">{label}</Label>
-      <div className="col-span-3">
+    <div className="flex items-center gap-2">
+      <Label ctl={ctl} prop={prop} className="w-18 shrink-0">{label}</Label>
+      <div className="grid min-w-0 flex-1">
         <Popover label={label} width="sm" trigger={
           <button type="button" className="flex h-8 w-full items-center gap-2 rounded-sm border border-line bg-surface px-2 text-left text-body-sm text-ink">
             <span aria-hidden="true" className="size-4 shrink-0 rounded-xs border border-line" style={{ background: v ? (v.startsWith("token:") ? `var(--${v.slice(6)})` : v) : "transparent" }} />
@@ -114,39 +132,60 @@ function Group({ title, children, open: initial = true }: { title: string; child
   return (
     <section className="border-b border-line">
       <h3>
-        <button id={id} type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="flex h-10 w-full items-center gap-1.5 px-3 text-label-sm text-ink hover:bg-surface-hover">
-          {open ? <ChevronDown className="size-3.5 text-ink-subtle" aria-hidden="true" /> : <ChevronRight className="size-3.5 text-ink-subtle" aria-hidden="true" />}{title}
+        {/* Title on the label edge, the disclosure chevron out at the right, as in Webflow's style panel. */}
+        <button id={id} type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="flex h-10 w-full items-center justify-between gap-1.5 px-3 text-label-sm text-ink hover:bg-surface-hover">
+          {title}
+          {open ? <ChevronDown className="size-3.5 text-ink-subtle" aria-hidden="true" /> : <ChevronRight className="size-3.5 text-ink-subtle" aria-hidden="true" />}
         </button>
       </h3>
-      {open && <div role="group" aria-labelledby={id} className="grid gap-2 px-3 pb-3">{children}</div>}
+      {open && <div role="group" aria-labelledby={id} className="grid gap-2.5 px-3 pb-4">{children}</div>}
     </section>
   );
 }
 
 /** Margin outside, padding inside, like a site builder's box model. */
 function SpacingBox({ ctl }: { ctl: Ctl }) {
-  const cell = (prop: string, label: string) => (
-    <div className="grid shrink-0 justify-items-center gap-0.5">
-      <Value ctl={ctl} prop={prop} label={label} placeholder="0" className={cx("h-8 w-12 px-0.5 text-center text-caption", ctl.source(prop) === "here" ? "border-info text-info" : ctl.source(prop) === "inherited" ? "border-warning" : "border-line")} />
-    </div>
-  );
+  // Webflow's box model: the numbers sit straight on the rings, with no field outline until you point at or type in
+  // one, so the two nested boxes read as margin and padding rather than as ten little inputs. Set values turn blue,
+  // inherited ones amber, as the labels elsewhere do.
+  const cell = (prop: string, label: string) => {
+    const s = ctl.source(prop);
+    return (
+      <Value ctl={ctl} prop={prop} label={label} placeholder="0"
+        className={cx("h-6 w-11 border-transparent bg-transparent px-0.5 text-center text-caption hover:border-line-strong hover:bg-surface focus-visible:bg-surface",
+          s === "here" ? "font-semibold text-info" : s === "inherited" ? "text-warning" : "text-ink-muted")} />
+    );
+  };
   return (
-    <div className="grid gap-1 rounded-md border border-dashed border-line-strong p-2">
-      <span className="text-caption text-ink-subtle">Margin</span>
-      <div className="justify-self-center">{cell("marginTop", "Margin top")}</div>
-      <div className="flex items-center gap-1">
-        <div className="shrink-0">{cell("marginLeft", "Margin left")}</div>
-        <div className="grid min-w-0 flex-1 gap-1 rounded-sm border border-line bg-surface-sunken p-2">
-          <span className="text-caption text-ink-subtle">Padding</span>
-          <div className="justify-self-center">{cell("paddingTop", "Padding top")}</div>
-          <div className="flex items-center justify-between gap-1">{cell("paddingLeft", "Padding left")}<span className="h-6 flex-1 rounded-xs bg-surface" aria-hidden="true" />{cell("paddingRight", "Padding right")}</div>
+    // Each ring: a label row with the top value centred, a middle row of left · inside · right, then the bottom value.
+    <div className="grid rounded-md border border-dashed border-line-strong bg-surface-sunken/40 px-1 pt-1 pb-1.5">
+      <Edge label="Margin">{cell("marginTop", "Margin top")}</Edge>
+      <div className="flex items-center">
+        <Side>{cell("marginLeft", "Margin left")}</Side>
+        <div className="grid min-w-0 flex-1 rounded-sm border border-line bg-surface px-0.5 pt-0.5 pb-1">
+          <Edge label="Padding">{cell("paddingTop", "Padding top")}</Edge>
+          <div className="flex items-center">
+            <Side>{cell("paddingLeft", "Padding left")}</Side>
+            {/* The element itself. */}
+            <span aria-hidden="true" className="h-7 min-w-0 flex-1 rounded-xs border border-dashed border-line-strong bg-surface-sunken" />
+            <Side>{cell("paddingRight", "Padding right")}</Side>
+          </div>
           <div className="justify-self-center">{cell("paddingBottom", "Padding bottom")}</div>
         </div>
-        <div className="shrink-0">{cell("marginRight", "Margin right")}</div>
+        <Side>{cell("marginRight", "Margin right")}</Side>
       </div>
       <div className="justify-self-center">{cell("marginBottom", "Margin bottom")}</div>
     </div>
   );
+}
+
+/** A ring's name on the left and its top value centred, balanced by an invisible copy of the name on the right. */
+function Edge({ label, children }: { label: string; children: React.ReactNode }) {
+  return <span className="flex items-center justify-between px-1 text-caption text-ink-subtle"><span>{label}</span>{children}<span aria-hidden="true" className="invisible">{label}</span></span>;
+}
+
+function Side({ children }: { children: React.ReactNode }) {
+  return <div className="flex w-11 shrink-0 justify-center">{children}</div>;
 }
 
 function Selector({ el }: { el: PageElement }) {
@@ -186,10 +225,11 @@ function Selector({ el }: { el: PageElement }) {
           {!names.includes(name) && <li><button type="button" onClick={() => apply(name)} className="flex h-8 w-full items-center rounded-xs px-2 text-body-sm text-ink hover:bg-surface-hover">Create .{name}</button></li>}
         </ul>
       )}
-      <p className="text-body-sm text-ink-subtle">
-        {el.cls ? `Styling .${el.cls}: ${uses[el.cls] ?? 1} element${(uses[el.cls] ?? 1) === 1 ? "" : "s"} share it.` : "No class: styles apply to this element only. Add a class to reuse them."}
-        {" "}{d.bp === "base" ? "Desktop styles cascade to tablet and phone." : `${breakpoints.find((b) => b.id === d.bp)?.label} overrides Desktop.`}
-      </p>
+      {/* Two short facts on two lines: what the class reaches, then how the breakpoint behaves. */}
+      <div className="grid gap-0.5 text-caption text-ink-subtle">
+        <p>{el.cls ? ((uses[el.cls] ?? 1) === 1 ? `Only this element uses .${el.cls}.` : `Changes reach all ${uses[el.cls]} elements with .${el.cls}.`) : "No class: styles apply to this element only."}</p>
+        <p>{d.bp === "base" ? "Desktop styles carry down to tablet and phone." : `${breakpoints.find((b) => b.id === d.bp)?.label} changes override Desktop.`}</p>
+      </div>
     </div>
   );
 }
@@ -233,30 +273,22 @@ export function StylePanel() {
       </Group>
       <Group title="Spacing"><SpacingBox ctl={ctl} /></Group>
       <Group title="Size">
-        <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-          {([["width", "Width"], ["height", "Height"], ["minHeight", "Min H"], ["maxWidth", "Max W"]] as const).map(([p, l]) => (
-            <label key={p} className="grid gap-1"><Label ctl={ctl} prop={p}>{l}</Label><Value ctl={ctl} prop={p} label={l} /></label>
-          ))}
-        </div>
+        <Pairs ctl={ctl} items={[["width", "Width", "Width"], ["height", "Height", "Height"], ["minHeight", "Min H", "Minimum height"], ["maxWidth", "Max W", "Maximum width"]]} />
         {el.type === "image" && <Choice ctl={ctl} prop="objectFit" label="Fit" options={[{ value: "cover", label: "Fill" }, { value: "contain", label: "Fit" }]} />}
         {el.type === "image" && <Row ctl={ctl} prop="aspectRatio" label="Ratio" placeholder="Auto (e.g. 4 / 3)" />}
       </Group>
       {textual && (
         <Group title="Typography">
-          <div className="grid grid-cols-5 items-center gap-2">
-            <Label ctl={ctl} prop="fontFamily" className="col-span-2">Font</Label>
-            <Select size="sm" className="col-span-3" value={ctl.get("fontFamily")} placeholder="Inherit" aria-label="Font" onValueChange={(v) => ctl.set("fontFamily", v)} options={[{ value: "", label: "Inherit" }, ...fonts.map((f) => ({ value: f.id, label: f.label }))]} />
+          <div className="flex items-center gap-2">
+            <Label ctl={ctl} prop="fontFamily" className="w-18 shrink-0">Font</Label>
+            <Select size="sm" className="min-w-0 flex-1" value={ctl.get("fontFamily")} placeholder="Inherit" aria-label="Font" onValueChange={(v) => ctl.set("fontFamily", v)} options={[{ value: "", label: "Inherit" }, ...fonts.map((f) => ({ value: f.id, label: f.label }))]} />
           </div>
-          <div className="grid grid-cols-5 items-center gap-2">
-            <Label ctl={ctl} prop="fontWeight" className="col-span-2">Weight</Label>
-            <Select size="sm" className="col-span-3" value={ctl.get("fontWeight")} placeholder="Inherit" aria-label="Weight" onValueChange={(v) => ctl.set("fontWeight", v)}
+          <div className="flex items-center gap-2">
+            <Label ctl={ctl} prop="fontWeight" className="w-18 shrink-0">Weight</Label>
+            <Select size="sm" className="min-w-0 flex-1" value={ctl.get("fontWeight")} placeholder="Inherit" aria-label="Weight" onValueChange={(v) => ctl.set("fontWeight", v)}
               options={[{ value: "", label: "Inherit" }, { value: "400", label: "400 Regular" }, { value: "500", label: "500 Medium" }, { value: "600", label: "600 Semibold" }, { value: "700", label: "700 Bold" }, { value: "800", label: "800 Extra bold" }]} />
           </div>
-          <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-            {([["fontSize", "Size"], ["lineHeight", "Height"], ["letterSpacing", "Spacing"]] as const).map(([p, l]) => (
-              <label key={p} className="grid gap-1"><Label ctl={ctl} prop={p}>{l}</Label><Value ctl={ctl} prop={p} label={`Font ${l.toLowerCase()}`} placeholder="Inherit" /></label>
-            ))}
-          </div>
+          <Pairs ctl={ctl} placeholder="Inherit" items={[["fontSize", "Size", "Font size"], ["lineHeight", "Height", "Line height"], ["letterSpacing", "Spacing", "Letter spacing"]]} />
           <ColorRow ctl={ctl} prop="color" label="Colour" />
           <Choice ctl={ctl} prop="textAlign" label="Align" options={[{ value: "left", label: "Left", icon: <AlignLeft /> }, { value: "center", label: "Centre", icon: <AlignCenter /> }, { value: "right", label: "Right", icon: <AlignRight /> }]} />
           <Choice ctl={ctl} prop="textTransform" label="Case" options={[{ value: "none", label: "Aa" }, { value: "uppercase", label: "AA" }, { value: "lowercase", label: "aa" }]} />
@@ -264,9 +296,9 @@ export function StylePanel() {
       )}
       <Group title="Backgrounds">
         <ColorRow ctl={ctl} prop="backgroundColor" label="Colour" />
-        <div className="grid grid-cols-5 items-center gap-2">
-          <Label ctl={ctl} prop="backgroundImage" className="col-span-2">Image</Label>
-          <div className="col-span-3">
+        <div className="flex items-center gap-2">
+          <Label ctl={ctl} prop="backgroundImage" className="w-18 shrink-0">Image</Label>
+          <div className="grid min-w-0 flex-1">
             <Popover label="Background image" width="md" trigger={<button type="button" className="flex h-8 w-full items-center rounded-sm border border-line bg-surface px-2 text-left text-body-sm text-ink"><span className="truncate">{ctl.get("backgroundImage") ? ctl.get("backgroundImage").split("/").pop() : "None"}</span></button>}>
               <ImagePicker base={ui.base} value={ctl.get("backgroundImage") || null} onChange={(v) => { ctl.set("backgroundImage", typeof v === "string" ? v : ""); if (v) { ctl.set("backgroundSize", "cover"); ctl.set("backgroundPosition", "center"); } }} />
             </Popover>
@@ -280,9 +312,9 @@ export function StylePanel() {
       </Group>
       <Group title="Effects" open={false}>
         <Row ctl={ctl} prop="opacity" label="Opacity" placeholder="1" />
-        <div className="grid grid-cols-5 items-center gap-2">
-          <Label ctl={ctl} prop="boxShadow" className="col-span-2">Shadow</Label>
-          <Select size="sm" className="col-span-3" value={ctl.get("boxShadow").replace("token:", "")} aria-label="Shadow" onValueChange={(v) => ctl.set("boxShadow", v ? `token:${v}` : "")} options={shadows.map((s) => ({ value: s.id, label: s.label }))} />
+        <div className="flex items-center gap-2">
+          <Label ctl={ctl} prop="boxShadow" className="w-18 shrink-0">Shadow</Label>
+          <Select size="sm" className="min-w-0 flex-1" value={ctl.get("boxShadow").replace("token:", "")} aria-label="Shadow" onValueChange={(v) => ctl.set("boxShadow", v ? `token:${v}` : "")} options={shadows.map((s) => ({ value: s.id, label: s.label }))} />
         </div>
       </Group>
     </div>

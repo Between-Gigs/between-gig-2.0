@@ -7,7 +7,7 @@ import type { Base } from "@/lib/studio/types";
 import { baseImages } from "./cells";
 import { useUi, type Panel } from "./context";
 import { NewCollectionDialog } from "./dialogs";
-import { Thumb, collectionIcons, viewIcons } from "./ui";
+import { PanelHead, Thumb, collectionIcons, viewIcons } from "./ui";
 
 export const panels: { id: Panel; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "data", label: "Collections", icon: Database },
@@ -38,14 +38,7 @@ export function PanelBody({ panel }: { panel: Panel }) {
   return panel === "data" ? <Collections /> : panel === "assets" ? <Assets /> : <SettingsPanel />;
 }
 
-function Head({ title, action }: { title: string; action?: React.ReactNode }) {
-  return (
-    <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-line pr-2 pl-4">
-      <h2 className="text-label-md text-ink">{title}</h2>
-      {action}
-    </div>
-  );
-}
+const Head = PanelHead;
 
 /** Collections and their views as a tree, like a site builder's navigator. */
 function Collections() {
@@ -58,7 +51,7 @@ function Collections() {
   const toBeDeleted = ui.base.collections.find((c) => c.id === deleting);
   return (
     <>
-      <Head title="Collections" action={<IconButton size="sm" variant="ghost" label="New collection" icon={<Plus />} onClick={() => setAdding(true)} />} />
+      <Head title="Collections" count={ui.base.collections.length} action={<IconButton size="sm" variant="ghost" label="New collection" title="New collection" icon={<Plus />} onClick={() => setAdding(true)} />} />
       <ul className="grid gap-0.5 overflow-y-auto p-2">
         {ui.base.collections.map((c) => {
           const Icon = collectionIcons[c.icon];
@@ -113,8 +106,12 @@ function Collections() {
           );
         })}
       </ul>
-      <div className="mt-auto border-t border-line p-3">
-        <Button size="sm" variant="secondary" fullWidth iconStart={<Plus />} onClick={() => setAdding(true)}>New collection</Button>
+      {/* The last row of the list, not a second button bar: it reads as "one more collection here". */}
+      <div className="px-2 pb-3">
+        <button type="button" onClick={() => setAdding(true)}
+          className="flex h-9 w-full items-center gap-2 rounded-md border border-dashed border-line-strong px-3 text-label-sm text-ink-muted transition-colors duration-fast hover:border-info hover:text-info">
+          <Plus className="size-4" aria-hidden="true" />New collection
+        </button>
       </div>
       <NewCollectionDialog open={adding} onClose={() => setAdding(false)} />
       <ConfirmDialog open={!!toBeDeleted} onCancel={() => setDeleting(null)} tone="danger" confirmLabel="Delete collection"
@@ -165,18 +162,18 @@ function Assets() {
   };
   return (
     <>
-      <Head title={`Assets · ${images.length}`} action={<IconButton size="sm" variant="ghost" label="Upload images" icon={<Upload />} onClick={() => file.current?.click()} />} />
+      {/* One way to upload, in the header like New page and New collection; the note says what's coming. */}
+      <Head title="Assets" count={images.length} action={<IconButton size="sm" variant="ghost" label="Upload images" title="Upload images" icon={<Upload />} onClick={() => file.current?.click()} />} />
       <input ref={file} type="file" accept="image/*" multiple className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(e) => { void upload(e.target.files); e.target.value = ""; }} />
-      <div className="grid gap-3 px-3 pt-3">
-        <Button size="sm" variant="secondary" iconStart={<Upload />} onClick={() => file.current?.click()}>Upload images</Button>
-        <p className="rounded-md bg-surface-sunken p-2.5 text-body-sm text-ink-muted">Generated images arrive here once the studio connects an image generator (Figma credits). Until then, upload or reuse what's here.</p>
+      <div className="px-3 pt-3">
+        <p className="rounded-md bg-surface-sunken px-3 py-2.5 text-caption text-ink-muted">Generated images arrive here once Studio connects an image generator. Until then, upload your own or reuse these.</p>
       </div>
       {/* The list scrolls on its own; focusable so keyboard users can scroll it too. */}
       <div role="region" aria-label="Asset library" tabIndex={0} className="overflow-y-auto outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus">
-      <ul className="grid grid-cols-2 gap-2 p-3">
+      <ul className="grid grid-cols-3 gap-x-2 gap-y-3 p-3">
         {images.map((src) => (
-          <li key={src} className="group relative grid gap-1">
-            <Thumb src={src} className="aspect-square w-full rounded-md" />
+          <li key={src} className="group relative grid content-start gap-1">
+            <Thumb src={src} className="aspect-square w-full rounded-sm" />
             <span className="truncate text-caption text-ink-subtle" title={src.startsWith("data:") ? "Uploaded" : src}>{uploaded.has(src) ? "Uploaded" : usedIn(src).join(", ") || "Not used yet"}</span>
             {uploaded.has(src) && (
               <IconButton size="sm" variant="secondary" label="Remove this upload" icon={<Trash2 />} className="absolute top-1 right-1 opacity-0 shadow-sm group-hover:opacity-100 group-focus-within:opacity-100"
