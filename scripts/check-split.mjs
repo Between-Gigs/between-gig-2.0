@@ -12,7 +12,7 @@ import { LIVE_PAGES } from "./server-build.mjs";
 /** The public site: anyone may open these. */
 export const SITE_ROUTES = [
   "/", "/professionals", "/storyboard", "/privacy", "/terms", "/licensing-insurance", "/provider-standards",
-  "/p/[slug]", "/join", "/login", "/preview-access",
+  "/p", "/p/[slug]", "/join", "/login", "/preview-access",
 ];
 /** The dashboards: signed-in Gigsters (profile) and owners. */
 export const DASHBOARD_ROUTES = [

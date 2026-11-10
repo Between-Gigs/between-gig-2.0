@@ -5,6 +5,7 @@ import Link from "next/link";
 import * as React from "react";
 import { data, type MonthStatus, type PersonSummary } from "@/lib/data";
 import { monthStatusLabel } from "@/lib/data/taxonomy";
+import { partsDone } from "@/lib/profile/validate";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { PersonStatusBadge } from "@/components/people/PersonStatusBadge";
 import { ButtonLink } from "@/components/ui/ButtonLink";
@@ -33,13 +34,15 @@ export function GigsterHome({ personId }: { personId: string }) {
   }, [personId]);
 
   if (!s) return <div aria-busy="true" aria-label="Loading" className="grid gap-6"><Skeleton shape="block" className="h-40" /><Skeleton shape="block" className="h-64" /></div>;
-  const { person: p, fields: f, completeness } = s;
+  const { person: p, fields: f } = s;
+  // Counted in parts, the same way the editor counts them ("2 of 10 parts done").
+  const parts = partsDone(f, p.name);
   const first = p.name.split(" ")[0] || "there";
 
   const next = {
     invited: { title: "Create your account", body: "Use the link in your invite email.", href: "/login/", cta: "Sign in" },
     registered: { title: "Start your profile", body: "Fill it in right where clients will see it. It saves as you go.", href: "/profile/canvas/", cta: "Start your profile" },
-    draft: { title: "Finish your profile", body: `You're ${Math.round(completeness * 100)}% of the way there. Submit it when it feels like you.`, href: "/profile/canvas/", cta: "Continue your profile" },
+    draft: { title: "Finish your profile", body: `${parts.done} of ${parts.total} parts done. Submit it when it feels like you.`, href: "/profile/canvas/", cta: "Continue your profile" },
     submitted: { title: "We're reviewing your profile", body: "Nothing to do right now. We'll email you when it's approved or if we suggest a change.", href: "/profile/", cta: "See my profile" },
     changes_requested: { title: "Make the suggested edits", body: `${p.reviewNotes?.length ?? 0} short ${p.reviewNotes?.length === 1 ? "note" : "notes"} from the Between Gigs team.`, href: "/profile/canvas/", cta: "Make the changes" },
     approved: { title: "Keep your availability fresh", body: `Confirm you're free in ${f?.month ?? "this month"} so clients know when to ask.`, href: "/profile/canvas/", cta: "Update availability" },
@@ -100,8 +103,8 @@ export function GigsterHome({ personId }: { personId: string }) {
           <section aria-labelledby="g-profile" className="col-span-12 grid content-start gap-4 border-t-4 border-line-strong pt-3 lg:col-span-5">
             <h2 id="g-profile" className="font-display text-heading-lg text-ink"><span aria-hidden="true" className="mr-3 align-middle text-label-sm font-extrabold tabular-nums">03</span>Your profile</h2>
             <div className="flex items-end gap-4">
-              <span className="font-display text-stat text-ink tabular-nums">{Math.round(completeness * 100)}%</span>
-              <Progress value={Math.round(completeness * 100)} label="Complete" size="md" className="mb-3 flex-1" />
+              <span className="font-display text-stat text-ink tabular-nums">{parts.done}<span className="text-heading-lg text-ink-muted">/{parts.total}</span></span>
+              <Progress value={parts.done} max={parts.total} label={`${parts.done} of ${parts.total} parts done`} valueText="" size="md" className="mb-3 flex-1" />
             </div>
             <ul className="grid border-t border-line text-body-md">
               <li className="border-b border-line"><Link href="/profile/" className={rowLink}><Eye className="size-5 shrink-0" strokeWidth={1.75} aria-hidden="true" />See it as clients will<ArrowRight className="ml-auto size-4" aria-hidden="true" /></Link></li>

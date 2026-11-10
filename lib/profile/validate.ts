@@ -78,3 +78,36 @@ export const fieldLabel: Partial<Record<keyof ProfileFields, string>> = {
 export function pinnedCredits(d: Pick<ProfileFields, "credits" | "creditPins">): string[] {
   return d.credits.filter((c, i) => c.trim() && d.creditPins?.[i] !== false);
 }
+
+/** The parts of a profile page, as the editor (/profile/canvas/) names them. */
+export type ProfilePartId = "photo" | "name" | "position" | "years" | "services" | "skills" | "where" | "availability" | "rate" | "about" | "credits" | "imdb" | "languages" | "details";
+/** The ten parts a profile needs before it can be sent, in the order the editor leads them. */
+export const REQUIRED_PARTS: ProfilePartId[] = ["name", "position", "years", "services", "skills", "where", "availability", "about", "credits", "photo"];
+
+/** Whether a part of the page has its answer. The editor's spots, My profile and the Gigster home all count with this. */
+export function isPartFilled(id: ProfilePartId, d: ProfileFields): boolean {
+  switch (id) {
+    case "photo": return !!d.photo;
+    case "name": return !!d.name.trim();
+    case "position": return !!d.position.trim();
+    case "years": return d.years !== "";
+    case "services": return d.services.length > 0 || !!d.other.trim();
+    case "skills": return d.skills.length > 0;
+    case "where": return /^\d{5}$/.test(d.zip) && (d.market === "other" ? !!d.otherCity.trim() : d.areas.length > 0);
+    case "availability": return !!d.dates.trim();
+    case "rate": return !!d.rate;
+    case "about": return !!d.about.trim();
+    case "credits": return d.credits.some((c) => c.trim());
+    case "imdb": return !!d.imdb.trim();
+    case "languages": return !!d.languages.trim();
+    case "details": return !!(d.tools.trim() || d.transport.trim());
+  }
+}
+
+/** "2 of 10 parts done": required parts filled. The editor fills a blank name from the account, so `name` stands in for it. */
+export function partsDone(d: ProfileFields | null, name = ""): { done: number; total: number } {
+  const total = REQUIRED_PARTS.length;
+  if (!d) return { done: name.trim() ? 1 : 0, total };
+  const f = d.name.trim() ? d : { ...d, name };
+  return { done: REQUIRED_PARTS.filter((id) => isPartFilled(id, f)).length, total };
+}

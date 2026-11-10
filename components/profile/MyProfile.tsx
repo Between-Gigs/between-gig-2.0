@@ -1,13 +1,13 @@
 "use client";
-import { Button, Skeleton, useToast } from "@ds/components";
+import { Badge, Button, Skeleton, useToast } from "@ds/components";
 import { ArrowRight, Copy, Eye, FilePen, Hourglass, MessageSquareWarning, PencilLine, Share2, Sparkles } from "lucide-react";
 import * as React from "react";
 import { data, type Person, type PersonSummary, type Profile } from "@/lib/data";
 import { blankFields } from "@/lib/data/fields";
 import { useRequireRole } from "@/lib/guard";
 import { absoluteUrl } from "@/lib/site";
-import { sectionLabel } from "@/lib/profile/validate";
-import { PersonStatusBadge } from "@/components/people/PersonStatusBadge";
+import { partsDone, sectionLabel } from "@/lib/profile/validate";
+import { PersonStatusBadge, personStatusMeta } from "@/components/people/PersonStatusBadge";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { ProfilePreviewCard } from "./ProfilePreviewCard";
@@ -52,7 +52,10 @@ export function MyProfile() {
         <div className="lg:col-span-9">
           <p className="flex flex-wrap items-center gap-x-5 gap-y-2 text-eyebrow text-ink uppercase">
             <span>My profile</span>
-            {state !== "new" && <PersonStatusBadge status={person.status} audience="gigster" />}
+            {/* Changes requested: a neutral tag, not yellow; the notes in the mint block below are the one highlight. */}
+            {state === "changes_requested"
+              ? <Badge tone="neutral" icon={<MessageSquareWarning aria-hidden="true" />}>{personStatusMeta.changes_requested.gigsterLabel}</Badge>
+              : state !== "new" && <PersonStatusBadge status={person.status} audience="gigster" />}
           </p>
           <h1 className="mt-4 font-display text-display-md text-ink sm:text-display-lg xl:text-display-xl">Hi, {first}</h1>
           <p className="mt-5 max-w-xl font-display text-heading-md font-medium leading-snug text-ink">Here&apos;s where your profile stands.</p>
@@ -63,7 +66,7 @@ export function MyProfile() {
         <section aria-labelledby="stand-h" className="border-t-4 border-line-strong pt-4 lg:col-span-8">
           <SectionLabel n="01" id="stand-h">{state === "approved" ? "Your page" : "Next step"}</SectionLabel>
           <div className="mt-6">
-            {state === "approved" && fields ? <Live person={person} /> : <Status person={person} state={state} completeness={s.completeness} first={first} />}
+            {state === "approved" && fields ? <Live person={person} /> : <Status person={person} state={state} parts={partsDone(fields, person.name)} first={first} />}
           </div>
         </section>
         <section aria-labelledby="card-h" className="border-t-4 border-line-strong pt-4 lg:col-span-4">
@@ -90,13 +93,13 @@ function SectionLabel({ n, id, children }: { n: string; id: string; children: Re
 const onMint = "justify-between! bg-forest-950! text-white! hover:bg-forest-800!";
 
 /** One card, one next step: not started, draft, with the team, or changes requested. */
-function Status({ person, state, completeness, first }: { person: Person; state: string; completeness: number; first: string }) {
+function Status({ person, state, parts, first }: { person: Person; state: string; parts: { done: number; total: number }; first: string }) {
   const notes = person.reviewNotes ?? [];
   const c = {
     new: { title: "Let's build your profile", body: "Fill it in right on the page clients will see. It takes about 10 minutes and saves as you go.", cta: "Start your profile" },
     registered: { title: "Let's build your profile", body: "Fill it in right on the page clients will see. It takes about 10 minutes and saves as you go.", cta: "Start your profile" },
     invited: { title: "Let's build your profile", body: "Fill it in right on the page clients will see. It takes about 10 minutes and saves as you go.", cta: "Start your profile" },
-    draft: { title: "Draft · not submitted yet", body: `Only you can see it. You're ${Math.round(completeness * 100)}% of the way there; send it to the Between Gigs team when it's ready.`, cta: "Continue your profile" },
+    draft: { title: "Draft · not submitted yet", body: `Only you can see it. ${parts.done} of ${parts.total} parts done; send it to the Between Gigs team when it's ready.`, cta: "Continue your profile" },
     submitted: { title: "Submitted for review", body: `Thanks, ${first}. Our team is reviewing your profile${person.submittedAt ? ` (sent ${when(person.submittedAt)})` : ""}. We'll email you when it's approved or if we suggest a change.`, cta: null },
     changes_requested: { title: "Changes requested", body: "The Between Gigs team asked for a few changes. Update them, then send it again.", cta: "Make the changes" },
   }[state] ?? { title: "Your profile", body: "", cta: "Edit profile" };

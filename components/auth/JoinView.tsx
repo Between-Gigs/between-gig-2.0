@@ -5,7 +5,7 @@ import { ArrowRight, Clock, Mail, SearchX, ShieldCheck, UserCheck } from "lucide
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
-import { data, type InviteLookup } from "@/lib/data";
+import { data, type InviteLookup, type Session } from "@/lib/data";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { useAuthActions } from "@/lib/auth/context";
 import { clerkEnabled } from "@/lib/auth/clerk";
@@ -14,6 +14,7 @@ import { basePath } from "@/lib/site";
 import { AuthShell } from "./AuthShell";
 import { InviteJoin } from "./InviteJoin";
 import { ClerkSlot } from "./ClerkSlot";
+import { displayName, GateSkeleton, homeFor, SignedInPanel, useLeave, useSignedInGate } from "./SignedIn";
 
 /** Open signup, with an optional invite to prefill the email and retain its attribution. Live, invite-only: InviteJoin. */
 export function JoinView() {
@@ -37,6 +38,8 @@ function SampleJoin() {
 
 function JoinForToken({ token }: { token: string }) {
   const [lookup, setLookup] = React.useState<InviteLookup | null>(null);
+  // Someone already signed in sees who they are instead of the form (and, for someone else's invite, says so).
+  const gate = useSignedInGate();
 
   React.useEffect(() => {
     if (!token) { setLookup({ state: "unknown" }); return; } // eslint-disable-line react-hooks/set-state-in-effect
@@ -46,13 +49,26 @@ function JoinForToken({ token }: { token: string }) {
     return () => { active = false; };
   }, [token]);
 
-  if (!token) return <JoinForm key="open" />;
+  if (gate === undefined) return <AuthShell header="Sign up" steps={false}><GateSkeleton /></AuthShell>;
+  if (!token) return gate ? <AuthShell header="Sign up" steps={false}><SignedInPanel session={gate} /></AuthShell> : <JoinForm key="open" />;
   if (!lookup) {
     return (
       <AuthShell header="Sign up">
         <div className="grid gap-4" aria-busy="true" aria-label="Checking your invite"><Skeleton className="h-8 w-2/3" /><Skeleton /><Skeleton shape="block" className="h-40" /></div>
       </AuthShell>
     );
+  }
+  if (gate) {
+    const inviteEmail = lookup.invite?.email ?? "";
+    const theirs = !!inviteEmail && inviteEmail.toLowerCase() === gate.email.toLowerCase();
+    if (lookup.state === "valid" || (lookup.state === "used" && theirs)) {
+      return (
+        <AuthShell header="Sign up" steps={false} eyebrow={theirs ? undefined : "You're invited"}>
+          <SignedInPanel session={gate} title={lookup.state === "used" ? "You've already joined" : undefined} inviteFor={theirs ? undefined : inviteEmail || undefined} />
+        </AuthShell>
+      );
+    }
+    return <InviteProblem lookup={lookup} session={gate} />;
   }
   if (lookup.state === "valid" && lookup.invite) return <JoinForm key={token} token={token} initialEmail={lookup.invite.email} />;
   return <InviteProblem lookup={lookup} />;
@@ -159,28 +175,31 @@ function ClerkAccount({ token, email, name }: { token?: string; email?: string; 
   );
 }
 
-function InviteProblem({ lookup }: { lookup: InviteLookup }) {
+function InviteProblem({ lookup, session }: { lookup: InviteLookup; session?: Session }) {
   const email = lookup.invite?.email;
+  const leave = useLeave();
+  // Signed in as someone else: Log in / Create an account log them out first, so the link does what it says.
+  const away = (href: string) => session ? { onClick: (e: React.MouseEvent) => { e.preventDefault(); void leave(session, href); } } : {};
   const copy: Record<InviteLookup["state"], { icon: React.ReactNode; title: string; body: string; steps: string[]; primary?: React.ReactNode; secondary?: React.ReactNode }> = {
     used: {
       icon: <UserCheck />, title: "You've already joined",
       body: `This invite has been used to create an account${email ? ` for ${email}` : ""}.`,
       steps: ["Log in with the same email.", "Use your existing sign-in method.", "You'll pick up your profile where you left off."],
-      primary: <ButtonLink href={`/login/?email=${encodeURIComponent(email ?? "")}`} variant="primary" iconEnd={<ArrowRight />}>Log in</ButtonLink>,
+      primary: <ButtonLink href={`/login/?email=${encodeURIComponent(email ?? "")}`} {...away(`/login/?email=${encodeURIComponent(email ?? "")}`)} variant="primary" iconEnd={<ArrowRight />}>Log in</ButtonLink>,
     },
     expired: {
       icon: <Clock />, title: "This invite has expired",
       body: "Invites last 30 days, and this one has run out.",
       steps: ["You can create an account without an invite.", "Already created your account? Log in instead."],
-      primary: <ButtonLink href="/join/" variant="primary" iconEnd={<ArrowRight />}>Create an account</ButtonLink>,
-      secondary: <ButtonLink href="/login/" iconEnd={<ArrowRight />}>Log in</ButtonLink>,
+      primary: <ButtonLink href="/join/" {...away("/join/")} variant="primary" iconEnd={<ArrowRight />}>Create an account</ButtonLink>,
+      secondary: <ButtonLink href="/login/" {...away("/login/")} iconEnd={<ArrowRight />}>Log in</ButtonLink>,
     },
     unknown: {
       icon: <SearchX />, title: "We can't find that invite",
       body: "The link may be incomplete or mistyped. You can still sign up.",
       steps: ["Create an account without an invite.", "Already joined? Log in with your existing account."],
-      primary: <ButtonLink href="/join/" variant="primary" iconEnd={<ArrowRight />}>Create an account</ButtonLink>,
-      secondary: <ButtonLink href="/login/" iconEnd={<ArrowRight />}>Log in</ButtonLink>,
+      primary: <ButtonLink href="/join/" {...away("/join/")} variant="primary" iconEnd={<ArrowRight />}>Create an account</ButtonLink>,
+      secondary: <ButtonLink href="/login/" {...away("/login/")} iconEnd={<ArrowRight />}>Log in</ButtonLink>,
     },
     valid: { icon: <Mail />, title: "", body: "", steps: [] },
   };
@@ -193,6 +212,9 @@ function InviteProblem({ lookup }: { lookup: InviteLookup }) {
           <h1 className="font-display text-heading-lg text-balance text-ink">{c.title}</h1>
           <p className="mt-2 text-body-md text-ink-muted">{c.body}</p>
         </div>
+        {session && <Banner tone="info" title={`You're signed in as ${displayName(session)}`}>
+          Logging in or creating an account here logs you out first. <Link className="inline-flex min-h-6 items-center text-link underline underline-offset-2" href={homeFor(session)}>{session.role === "owner" ? "Go to the dashboard" : "Go to my profile"}</Link>
+        </Banner>}
         <div>
           <h2 className="text-label-md text-ink">What to do next</h2>
           <ol className="mt-3 grid gap-3">
@@ -203,7 +225,7 @@ function InviteProblem({ lookup }: { lookup: InviteLookup }) {
             ))}
           </ol>
         </div>
-        <div className="flex flex-wrap gap-2 border-t border-line pt-6">{c.primary}{c.secondary}{lookup.state === "used" && <ButtonLink href="/join/">Create another account</ButtonLink>}</div>
+        <div className="flex flex-wrap gap-2 border-t border-line pt-6">{c.primary}{c.secondary}{lookup.state === "used" && <ButtonLink href="/join/" {...away("/join/")}>Create another account</ButtonLink>}</div>
         <p className="text-body-sm text-ink-muted">Questions? Write to <a className="text-link underline underline-offset-2" href="mailto:hello@between-gigs.com">hello@between-gigs.com</a>.</p>
       </div>
     </AuthShell>

@@ -44,8 +44,8 @@ describe("the route lists", () => {
     const internal = INTERNAL.filter((d: string) => d.startsWith("app/")).map((d: string) => `/${d.slice(4)}`);
     const unclassified = pages.filter((p: string) => !LIVE_PAGES.includes(p) && !internal.some((i: string) => p === i || p.startsWith(`${i}/`)));
     expect(unclassified).toEqual([]);
-    expect(LIVE_PAGES).toHaveLength(19);
-    expect(LIVE_ROUTES).toHaveLength(19);
+    expect(LIVE_PAGES).toHaveLength(20);
+    expect(LIVE_ROUTES).toHaveLength(20);
     // The preview's door (owner, 2026-11-02): the panel itself is the sample export at /preview/, not a live page.
     expect(LIVE_PAGES).toContain("/preview-access");
     expect(LIVE_ROUTES).toContain("/preview-access/");

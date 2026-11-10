@@ -6,8 +6,9 @@
  * and <LookSync> set the attribute.
  */
 // Anchored, with the deploy's base path optional (the first-paint script tests location.pathname, which includes it;
-// <LookSync> tests usePathname(), which doesn't). The home page is the bare root.
+// <LookSync> tests usePathname(), which doesn't). Every page is Swiss except the internal tools (studio, workspace,
+// the journal), so a 404 or any new page gets it too.
 const BASE = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-export const SWISS_PATHS = `^(${BASE})?/((login|join|profile|p|owners|emails|preview|preview-access|privacy|terms|provider-standards|licensing-insurance|professionals|crew-call|proposals|storyboard)(/|$)|$)`;
+export const SWISS_PATHS = `^(?!(${BASE})?/(studio|workspace|_journal)(/|$))`;
 
 export const isSwiss = (pathname: string) => new RegExp(SWISS_PATHS).test(pathname);

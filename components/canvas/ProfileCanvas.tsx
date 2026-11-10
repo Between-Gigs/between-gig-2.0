@@ -1,14 +1,14 @@
 "use client";
-import { Badge, Banner, Button, Field, Input, RadioGroup, Skeleton, Slider, Textarea, cx, useToast } from "@ds/components";
+import { Badge, Button, Field, Input, RadioGroup, Skeleton, Slider, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
-import { ArrowDown, ArrowRight, Check, Copy, Link2, MapPin, MessageSquareWarning, PartyPopper, Pencil, Plus, Share2, WandSparkles } from "lucide-react";
+import { ArrowDown, ArrowRight, Check, ChevronUp, Copy, Link2, MapPin, MessageSquareWarning, PartyPopper, Pencil, Plus, Share2, WandSparkles, X } from "lucide-react";
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
 import { basisLabel, laServiceAreas, monthStatusLabel, offSetServices, onSetSkills } from "@/lib/data/taxonomy";
 import { useRequireRole } from "@/lib/guard";
 import { absoluteUrl, asset } from "@/lib/site";
-import { ABOUT_MAX, pinnedCredits, sectionLabel, validateAll, type FieldErrors } from "@/lib/profile/validate";
+import { ABOUT_MAX, REQUIRED_PARTS, isPartFilled, pinnedCredits, sectionLabel, validateAll, type FieldErrors } from "@/lib/profile/validate";
 import { Credits, SaveIndicator, type SaveState } from "@/components/builder/ProfileBuilder";
 import { ChipPicker } from "@/components/profile/ChipPicker";
 import { PhotoPicker } from "@/components/profile/PhotoPicker";
@@ -36,7 +36,7 @@ const thisMonth = () => new Date().toLocaleString("en-US", { month: "long", year
 /** The order the page leads them through. Required spots first; optional ones only when tapped or reached by Next. */
 // Quick wins first; the photo comes last, once the page around it has taken shape.
 const ORDER: SpotId[] = ["name", "position", "years", "services", "skills", "where", "availability", "rate", "about", "credits", "photo", "imdb", "languages", "details"];
-const REQUIRED: SpotId[] = ["name", "position", "years", "services", "skills", "where", "availability", "about", "credits", "photo"];
+const REQUIRED: SpotId[] = REQUIRED_PARTS;
 const LABEL: Record<SpotId, string> = {
   photo: "Your photo", name: "Your name", position: "Your department", years: "Years in the business", services: "Services you offer",
   skills: "On-set skills", where: "Where you work", availability: "This month", rate: "Starting rate", about: "About me",
@@ -58,24 +58,7 @@ const FIELD_SPOT: Partial<Record<keyof ProfileFields, SpotId>> = {
 /** The team's review notes are per questionnaire section; this is where each lands on the page. */
 const SECTION_SPOT: Record<ProfileSection, SpotId> = { about: "position", skills: "services", where: "where", story: "about" };
 
-function isFilled(id: SpotId, d: ProfileFields): boolean {
-  switch (id) {
-    case "photo": return !!d.photo;
-    case "name": return !!d.name.trim();
-    case "position": return !!d.position.trim();
-    case "years": return d.years !== "";
-    case "services": return d.services.length > 0 || !!d.other.trim();
-    case "skills": return d.skills.length > 0;
-    case "where": return /^\d{5}$/.test(d.zip) && (d.market === "other" ? !!d.otherCity.trim() : d.areas.length > 0);
-    case "availability": return !!d.dates.trim();
-    case "rate": return !!d.rate;
-    case "about": return !!d.about.trim();
-    case "credits": return d.credits.some((c) => c.trim());
-    case "imdb": return !!d.imdb.trim();
-    case "languages": return !!d.languages.trim();
-    case "details": return !!(d.tools.trim() || d.transport.trim());
-  }
-}
+const isFilled = isPartFilled;
 
 /** The first required part still empty, in the order the page leads them, other than `except`. */
 const firstEmpty = (d: ProfileFields, except?: SpotId): SpotId | null => ORDER.find((id) => id !== except && REQUIRED.includes(id) && !isFilled(id, d)) ?? null;
@@ -263,14 +246,17 @@ function Canvas({ personId }: { personId: string }) {
   const nextOf = (from?: SpotId): SpotId | null => firstEmpty(d, from);
   const next = nextOf();
 
-  // Bring the part into view: centred beside the panel on wide screens, near the top above the sheet on phones.
-  const reveal = (id: SpotId) => requestAnimationFrame(() => {
-    const el = document.querySelector<HTMLElement>(`[data-spot="${id}"]`);
-    if (!el) return;
-    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
-    if (wide) el.scrollIntoView({ block: "center", behavior });
-    else window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 140, behavior });
-  });
+  // Bring the part into view. Wide screens: the anchored panel scrolls only as far as it needs to show the part and its
+  // controls (see Anchored). Phones: near the top, above the sheet.
+  const reveal = (id: SpotId) => {
+    if (wide) return;
+    requestAnimationFrame(() => {
+      const el = document.querySelector<HTMLElement>(`[data-spot="${id}"]`);
+      if (!el) return;
+      const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 140, behavior });
+    });
+  };
   const open = (id: SpotId) => {
     if (view !== "edit") setView("edit");
     setEditing(id);
@@ -356,26 +342,41 @@ function Canvas({ personId }: { personId: string }) {
                   <p className="text-eyebrow text-ink uppercase sm:col-span-3">Preview</p>
                   <p className="text-body-md text-ink-muted sm:col-span-9">This is exactly what clients will see. Switch back to Edit to change anything.</p>
                 </div>}
-            <ProfileView person={person} fields={d} mode="own" draft={!sent} />
+            {/* Exactly the public page for the same answers: no edit spots, empty optional parts left out. */}
+            <ProfileView person={person} fields={d} mode="own" />
           </div>
         ) : (
           <CanvasCtx.Provider value={ctx}>
-            {notes.length > 0 && (
-              <Banner tone="warning" className="mb-8" title="Changes requested">
-                The Between Gigs team left {notes.length === 1 ? "a note" : `${notes.length} notes`}. Each one is pinned to the part it's about.
-                <ul className="mt-2 flex flex-wrap gap-2">
-                  {notes.map((n) => <li key={n.note}><Button size="sm" variant="secondary" iconStart={<MessageSquareWarning />} onClick={() => open(SECTION_SPOT[n.section])}>{sectionLabel[n.section]}</Button></li>)}
-                </ul>
-              </Banner>
-            )}
             {done <= 1 && (
               <div className="mb-6 lg:hidden">
                 <h2 className="font-display text-heading-lg text-balance text-ink">Welcome, {first}. This is your page.</h2>
                 <p className="mt-1 text-body-md text-ink-muted">Tap any part to fill it in where it sits. It saves as you go.</p>
               </div>
             )}
-            {next && !editing && (
+            {notes.length > 0 ? (
+              // Changes requested: the team's notes are the next step, in the one mint block. Each opens the part it's about.
+              <section aria-labelledby="next-h" className="mb-12 grid grid-cols-12 items-start gap-x-6 gap-y-3 bg-tint-mint px-5 py-5 text-forest-950 sm:px-6">
+                <p className="col-span-12 text-eyebrow uppercase lg:col-span-2 lg:pt-2">Next step</p>
+                <div className="col-span-12 grid gap-1 lg:col-span-4">
+                  <h2 id="next-h" className="font-display text-heading-lg text-balance">{notes.length === 1 ? "1 note" : `${notes.length} notes`} from the team</h2>
+                  <p className="text-body-sm">Each one is pinned to the part it&apos;s about. Make the change, then send it again.</p>
+                </div>
+                <ul className="col-span-12 grid gap-2 lg:col-span-6">
+                  {notes.map((n) => (
+                    <li key={n.note}>
+                      <button type="button" onClick={() => open(SECTION_SPOT[n.section])}
+                        className="flex min-h-13 w-full items-center gap-3 border-2 border-forest-950 px-4 py-2.5 text-left transition-colors duration-fast hover:bg-forest-950 hover:text-ink-on-brand focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-forest-950">
+                        <MessageSquareWarning className="size-5 shrink-0" aria-hidden="true" />
+                        <span className="grid min-w-0 flex-1 gap-0.5"><b className="font-display text-label-md">{sectionLabel[n.section]}</b><span className="text-body-sm">{n.note}</span></span>
+                        <ArrowRight className="size-5 shrink-0" aria-hidden="true" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : next && (
               // The one mint block on the screen: the part to fill next. Always near-black type on mint, in both themes.
+              // It stays while a part is open, so the page under it doesn't move.
               <section aria-labelledby="next-h" className="mb-12 grid grid-cols-12 items-center gap-x-6 gap-y-2 bg-tint-mint px-5 py-5 text-forest-950 sm:px-6">
                 <p className="col-span-12 text-eyebrow uppercase lg:col-span-2">Next step</p>
                 <h2 id="next-h" className="col-span-12 font-display text-heading-lg text-balance lg:col-span-5">Next: {LABEL[next]}</h2>
@@ -397,7 +398,7 @@ function Canvas({ personId }: { personId: string }) {
               </Anchored>
             )}
             {editing && !wide && (
-              <div data-editor="" className="fixed inset-x-0 bottom-0 z-overlay max-h-3/4 overflow-y-auto border-t-4 border-line-strong bg-surface-raised">
+              <div data-editor="" data-dock="" className="fixed inset-x-0 bottom-0 z-overlay max-h-3/4 overflow-y-auto border-t-4 border-line-strong bg-surface-raised">
                 <EditorPanel id={editing} sheet body={editorFor(editing, d, set, personId, (go) => live.guard("photo", go))} />
               </div>
             )}
@@ -405,25 +406,76 @@ function Canvas({ personId }: { personId: string }) {
         )}
       </div>
       {!sent && !editing && view === "edit" && (
-        <Dock done={done} total={REQUIRED.length} next={next} ready={ready} resubmit={resubmit} canSend={!nothingToSend} submitting={submitting} onNext={() => next && open(next)} onSubmit={submit} />
+        <Dock done={done} total={REQUIRED.length} next={next} ready={ready} resubmit={resubmit} canSend={!nothingToSend} submitting={submitting} onNext={() => next && open(next)} onSubmit={submit}
+          left={ORDER.filter((id) => REQUIRED.includes(id) && !isFilled(id, d))} notes={notes.map((n) => ({ id: SECTION_SPOT[n.section], label: sectionLabel[n.section] }))} onOpen={open} />
       )}
     </Page>
   );
 }
 
-/** Phones: the progress and the one next step stay in reach at the bottom of the screen. */
-function Dock({ done, total, next, ready, resubmit, canSend, submitting, onNext, onSubmit }: {
-  done: number; total: number; next: SpotId | null; ready: boolean; resubmit: boolean; canSend: boolean; submitting: boolean; onNext: () => void; onSubmit: () => void;
+/**
+ * Phones: what's left and the one next step stay in reach at the bottom of the screen. "3 left" opens a sheet over the
+ * bar listing the required parts still empty (and any team notes), each one tap from its part. Once every required
+ * part is in, Send for review is the bar's primary.
+ */
+function Dock({ done, total, next, ready, resubmit, canSend, submitting, left, notes, onNext, onSubmit, onOpen }: {
+  done: number; total: number; next: SpotId | null; ready: boolean; resubmit: boolean; canSend: boolean; submitting: boolean;
+  left: SpotId[]; notes: { id: SpotId; label: string }[]; onNext: () => void; onSubmit: () => void; onOpen: (id: SpotId) => void;
 }) {
+  const [sheet, setSheet] = React.useState(false);
+  const toggle = React.useRef<HTMLButtonElement>(null);
+  const list = React.useRef<HTMLDivElement>(null);
+  const hide = (back = true) => { setSheet(false); if (back) requestAnimationFrame(() => toggle.current?.focus()); };
+  React.useEffect(() => { if (sheet) list.current?.querySelector<HTMLElement>("button")?.focus(); }, [sheet]);
+  const items = [...notes.map((n) => ({ id: n.id, label: n.label, note: true })), ...left.filter((id) => !notes.some((n) => n.id === id)).map((id) => ({ id, label: LABEL[id], note: false }))];
+  const pick = (id: SpotId) => { hide(false); onOpen(id); };
+  const showList = items.length > 0;
   return (
-    <div className="fixed inset-x-0 bottom-0 z-sticky border-t-4 border-line-strong bg-bg px-4 py-3 lg:hidden">
-      <div className="mx-auto flex max-w-xl items-center gap-4">
-        <span role="img" aria-label={`${done} of ${total} required parts filled`} className="shrink-0 font-display text-heading-lg text-ink tabular-nums">
-          {done}<span className="text-heading-sm text-ink-muted">/{total}</span>
-        </span>
-        {ready || !next
-          ? canSend && <Button variant="primary" size="lg" fullWidth loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}>{resubmit ? "Send again" : "Send for review"}</Button>
-          : <Button variant="primary" size="lg" fullWidth iconEnd={<ArrowRight />} onClick={onNext}>Next: {LABEL[next]}</Button>}
+    <div data-dock="" className="fixed inset-x-0 bottom-0 z-sticky lg:hidden" onKeyDown={(e) => { if (e.key === "Escape" && sheet) { e.stopPropagation(); hide(); } }}>
+      {sheet && (
+        <div ref={list} id="dock-left" role="group" aria-labelledby="dock-left-h" className="max-h-3/4 overflow-y-auto border-t-4 border-line-strong bg-surface-raised px-4 pt-4 pb-3">
+          <div className="mx-auto max-w-xl">
+            <div className="flex items-center justify-between gap-3 border-b-2 border-line-strong pb-3">
+              <h2 id="dock-left-h" className="font-display text-heading-md text-ink">What&apos;s left</h2>
+              <button type="button" aria-label="Close what's left" onClick={() => hide()}
+                className={cx("grid size-11 place-items-center text-ink hover:bg-surface-hover", focus3)}><X className="size-5" aria-hidden="true" /></button>
+            </div>
+            <ul>
+              {items.map((it) => (
+                <li key={`${it.note ? "note" : "part"}-${it.id}`} className="border-b border-line">
+                  <button type="button" onClick={() => pick(it.id)}
+                    className={cx("flex min-h-12 w-full items-center gap-3 px-1 text-left font-display text-label-md text-ink hover:bg-surface-hover", focus3)}>
+                    <span aria-hidden="true" className="w-6 shrink-0 text-label-sm text-ink-muted tabular-nums">{it.note ? <MessageSquareWarning className="size-4" /> : partNo(it.id)}</span>
+                    <span className="min-w-0 flex-1">{it.label}{it.note && <span className="text-ink-muted"> · team note</span>}</span>
+                    {it.id === next && !it.note && <span className="text-label-sm text-ink-muted">Next</span>}
+                    <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+      <div className="border-t-4 border-line-strong bg-bg px-4 py-3">
+        <div className="mx-auto flex max-w-xl items-center gap-3">
+          {showList ? (
+            <button ref={toggle} type="button" aria-expanded={sheet} aria-controls="dock-left" onClick={() => (sheet ? hide() : setSheet(true))}
+              aria-label={`What's left: ${left.length === 0 ? "no parts" : left.length === 1 ? "1 part" : `${left.length} parts`}${notes.length ? `, ${notes.length === 1 ? "1 team note" : `${notes.length} team notes`}` : ""}`}
+              className={cx("inline-flex min-h-12 shrink-0 items-center gap-1.5 border-3 border-line-strong px-3 font-display text-label-md font-bold text-ink tabular-nums hover:bg-surface-hover", focus3)}>
+              {left.length ? `${left.length} left` : `${notes.length} ${notes.length === 1 ? "note" : "notes"}`}
+              <ChevronUp className={cx("size-4 transition-transform duration-fast", sheet && "rotate-180")} aria-hidden="true" />
+            </button>
+          ) : (
+            <span role="img" aria-label={`${done} of ${total} required parts filled`} className="shrink-0 font-display text-heading-lg text-ink tabular-nums">
+              {done}<span className="text-heading-sm text-ink-muted">/{total}</span>
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            {ready || !next
+              ? canSend && <Button variant="primary" size="lg" fullWidth loading={submitting} iconEnd={<ArrowRight />} onClick={onSubmit}>{resubmit ? "Send again" : "Send for review"}</Button>
+              : <Button variant="primary" size="lg" fullWidth iconEnd={<ArrowRight />} onClick={onNext}>Next: {LABEL[next]}</Button>}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -562,12 +614,25 @@ function Anchored({ id, children }: { id: SpotId; children: React.ReactNode }) {
     window.addEventListener("resize", place);
     return () => { ro.disconnect(); window.removeEventListener("resize", place); };
   }, [id]);
+  // Keep the page steady: scroll only as much as it takes to show the part and its panel together (like
+  // scrollIntoView block "nearest" over both), never to the top. When both can't fit, the part's top goes just under the bar.
   React.useEffect(() => {
-    if (pos) box.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    const spot = document.querySelector<HTMLElement>(`[data-spot="${id}"]`);
+    if (!pos || !spot || !box.current) return;
+    const top = (document.querySelector("[data-stage]")?.getBoundingClientRect().bottom ?? 0) + 16;
+    const bottom = window.innerHeight - 16;
+    const s = spot.getBoundingClientRect().top - 8;
+    const e = box.current.getBoundingClientRect().bottom;
+    let by = 0;
+    if (s < top) by = s - top;
+    else if (e > bottom) by = Math.min(e - bottom, s - top);
+    if (Math.abs(by) < 2) return;
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    window.scrollBy({ top: by, behavior });
   }, [pos?.top, id]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!pos) return null;
   return createPortal(
-    <div ref={box} data-anchored="" className="absolute z-overlay scroll-mt-60 scroll-mb-6" style={{ top: pos.top, left: pos.left, width: pos.width }}>
+    <div ref={box} data-anchored="" className="absolute z-overlay" style={{ top: pos.top, left: pos.left, width: pos.width }}>
       <span aria-hidden="true" className="absolute -top-2 size-4 rotate-45 border-t-3 border-l-3 border-line-strong bg-surface" style={{ left: pos.arrow - 8 }} />
       {children}
     </div>,
@@ -599,7 +664,7 @@ function EditorPanel({ id, body, sheet = false }: { id: SpotId; body: React.Reac
         </p>
         <span className="shrink-0 font-display text-label-sm text-ink-muted">Editing</span>
       </div>
-      {note && <p className="flex gap-2 border-l-4 border-warning bg-warning-soft p-3 text-body-sm text-ink"><MessageSquareWarning className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" /><span><b>Team note:</b> {note}</span></p>}
+      {note && <p className="flex gap-2 border-l-4 border-line-strong bg-surface-sunken p-3 text-body-sm text-ink"><MessageSquareWarning className="mt-0.5 size-4 shrink-0 text-ink" aria-hidden="true" /><span><b>Team note:</b> {note}</span></p>}
       {body}
       {err && <ul className="grid gap-1 text-body-sm text-danger">{err.map((m) => <li key={m}>{m}</li>)}</ul>}
       <div className={cx("sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t border-line py-4", sheet ? "-mx-5 bg-surface-raised px-5" : "-mx-6 bg-surface px-6")}>
@@ -666,7 +731,7 @@ function Spot({ id, kind, hint, children }: { id: SpotId; kind: PartKind; hint: 
   const active = editing === id;
   const glow = id === next && !editing;
   // Outlines, not rings: the Swiss look has no shadows.
-  const ring = active ? "outline-3 outline-offset-2 outline-line-strong" : err ? "outline-2 outline-offset-2 outline-danger" : note ? "outline-2 outline-offset-2 outline-warning" : "";
+  const ring = active ? "outline-3 outline-offset-2 outline-line-strong" : err ? "outline-2 outline-offset-2 outline-danger" : note ? "outline-2 outline-offset-2 outline-dashed outline-line-strong" : "";
   const optional = !REQUIRED.includes(id);
   const label = `${filled ? "Edit" : "Add"} ${LABEL[id].toLowerCase()}${optional ? " (optional)" : ""}`;
   const focus = "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
@@ -709,7 +774,7 @@ function Spot({ id, kind, hint, children }: { id: SpotId; kind: PartKind; hint: 
             <span className="truncate font-display text-label-md font-bold text-ink">{id === "position" ? LABEL.position : hint}</span>
           </>}
         </button>
-        {note && <Badge tone="warning" size="sm" className="absolute -top-3 right-3">Team note</Badge>}
+        {note && <Badge tone="neutral" size="sm" className="absolute -top-3 right-3 bg-ink text-bg">Team note</Badge>}
       </div>
     );
   }

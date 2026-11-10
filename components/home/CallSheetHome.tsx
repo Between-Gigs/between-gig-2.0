@@ -1,11 +1,11 @@
 "use client";
 import { Logo, ThemeToggle, cx } from "@ds/components";
-import { buttonSizes, buttonVariants } from "@ds/components/Button";
 import { Reveal } from "@ds/motion";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import * as React from "react";
+import { CallSheetDialog } from "@/components/funnel/CallSheetDialog";
+import { CallSheetButton } from "@/components/funnel/parts";
 import { startCurtain, type CurtainController, type CurtainParams } from "@/lib/curtain";
 import { startGravityField } from "@/lib/gravity-field";
 
@@ -19,21 +19,23 @@ const links = [
 /**
  * Milestone 5a: today's home page, the "call sheet", rebuilt from the design system's ComingSoon template.
  * Same words as the live page: "Extraordinary talent. Everyday solutions." / "Coming soon." /
- * "Los Angeles Call Sheet" / "Get on the call sheet ↗" → /professionals. Follows the Day/Night toggle.
+ * "Los Angeles Call Sheet" / "Get on the call sheet ↗", which opens the same sign-up dialog as /professionals (same form,
+ * pipeline and fields; placement "home"), with "Why join? For professionals →" beside it. Follows the Day/Night toggle.
  * The dot field is a gravity well: the pointer is a mass that bends the grid toward it (lib/gravity-field.ts).
  * Still on touch and under reduced motion.
  * Direction G (Swiss grid): the headline huge and flush left on the 12-column grid, the call sheet as the screen's
- * one solid mint block, and the dot field / curtain hard-cropped into a square brand block beside it.
+ * one solid mint block, and the dot field / curtain hard-cropped into a square forest brand block beside it (forest in
+ * both themes: the block is pinned to the dark theme, as the brand panels on /professionals are).
  */
 export function CallSheetHome({ curtain }: {
   /**
    * Draw the stage curtain (lib/curtain.ts) instead of the gravity well. The tuning page passes its live settings,
-   * gets the controller, and can keep the button from leaving the page (it replays the opening instead).
+   * gets the controller; the button parts it as decoration while the dialog opens (and closes it again while tuning).
    */
   curtain?: { params: () => CurtainParams; onReady?: (c: CurtainController) => void; stayOnPage?: boolean };
 } = {}) {
   const field = React.useRef<HTMLDivElement>(null);
-  const router = useRouter();
+  const [dialog, setDialog] = React.useState(false);
   const ctl = React.useRef<CurtainController | null>(null);
   const curtainOn = !!curtain;
   const curtainRef = React.useRef(curtain);
@@ -46,12 +48,12 @@ export function CallSheetHome({ curtain }: {
     ctl.current = c; curtainRef.current?.onReady?.(c);
     return () => { c.stop(); ctl.current = null; };
   }, [curtainOn]);
-  // With the curtain, the button parts it first, then moves on (or, while tuning, closes it again).
-  const go = (e: React.MouseEvent) => {
+  // The button opens the sign-up straight away. With the curtain, it also parts as decoration (never a gate before
+  // the form); while tuning it then closes again so the opening can be replayed.
+  const join = () => {
+    setDialog(true);
     const c = ctl.current;
-    if (!c || e.metaKey || e.ctrlKey || e.shiftKey) return;
-    e.preventDefault();
-    c.open(() => { if (curtainRef.current?.stayOnPage) window.setTimeout(() => c.reset(), 700); else router.push("/professionals/"); });
+    if (c) c.open(() => { if (curtainRef.current?.stayOnPage) window.setTimeout(() => c.reset(), 700); });
   };
   return (
     <div className="flex min-h-dvh flex-col bg-bg text-ink">
@@ -76,19 +78,19 @@ export function CallSheetHome({ curtain }: {
             <Reveal effect="fade-up" delay={160} className="mt-8 lg:mt-auto lg:pt-10">
               <section aria-labelledby="call-sheet-h" className="grid gap-5 bg-tint-mint p-5 text-forest-950 sm:grid-cols-7 sm:items-end sm:gap-x-6 sm:p-6">
                 <h2 id="call-sheet-h" className="font-display text-heading-lg sm:col-span-3">Los Angeles Call Sheet</h2>
-                <Link href="/professionals/" onClick={go}
-                  className={cx("group inline-flex h-14 w-full shrink-0 items-center justify-between gap-6 px-5 font-sans text-heading-sm whitespace-nowrap transition-colors duration-fast sm:col-span-4 [&_svg]:size-5",
-                    buttonVariants.primary, buttonSizes.lg, onMint)}>
-                  Get on the call sheet
-                  <ArrowUpRight aria-hidden="true" className="transition-transform duration-base group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                </Link>
+                <div className="grid gap-3 sm:col-span-4">
+                  <CallSheetButton onClick={join} className={cx("h-14! w-full justify-between! gap-6 px-5! text-heading-sm [&_svg]:size-5!", onMint)} />
+                  <Link href="/professionals/" className="inline-flex min-h-11 w-fit items-center gap-2 text-label-md font-bold text-forest-950 underline decoration-2 underline-offset-4">
+                    Why join? For professionals<ArrowRight aria-hidden="true" className="size-4" />
+                  </Link>
+                </div>
               </section>
             </Reveal>
           </div>
 
           {/* The brand block: the dot field (gravity well) or the stage curtain, hard-cropped square into the grid. */}
           <div className="col-span-12 lg:col-span-5">
-            <div ref={field} className="depth-field relative isolate aspect-square w-full overflow-hidden text-ink max-lg:max-h-96 max-lg:aspect-auto max-lg:h-72 sm:max-lg:h-96">
+            <div ref={field} data-theme="dark" className="depth-field relative isolate aspect-square w-full overflow-hidden text-ink max-lg:max-h-96 max-lg:aspect-auto max-lg:h-72 sm:max-lg:h-96">
               {!curtainOn && <span aria-hidden="true" className="glow-horizon" />}
             </div>
           </div>
@@ -104,6 +106,7 @@ export function CallSheetHome({ curtain }: {
           </nav>
         </footer>
       </div>
+      <CallSheetDialog open={dialog} category="" placement="home" onClose={() => setDialog(false)} />
     </div>
   );
 }

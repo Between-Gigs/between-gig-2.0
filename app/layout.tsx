@@ -18,6 +18,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // Lets fixed bottom bars (the owners' phone tabs, the editor bar) pad for the iPhone home indicator.
+  viewportFit: "cover",
 };
 
 /*

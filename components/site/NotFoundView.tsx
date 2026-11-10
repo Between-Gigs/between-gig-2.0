@@ -1,10 +1,9 @@
 "use client";
-import { EmptyState } from "@ds/components";
-import { ArrowLeft, Compass } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import dynamic from "next/dynamic";
 import * as React from "react";
 import { basePath } from "@/lib/site";
-import { PublicProfile } from "@/components/profile/PublicProfile";
+import { MissingPage, OwnPageLink, PublicProfile } from "@/components/profile/PublicProfile";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { Page } from "./Page";
 
@@ -32,13 +31,13 @@ export function NotFoundView() {
   return (
     <Page>
       {resolved && (
-        <>
-          <h1 className="sr-only">Page not found</h1>
-          <EmptyState className="mx-auto max-w-xl py-20" icon={<Compass />} title="This page isn't on the call sheet" headingLevel={2}
-            action={<ButtonLink href="/" iconStart={<ArrowLeft />}>Back to Between Gigs</ButtonLink>}>
-            The link may be mistyped, or the page may have moved.
-          </EmptyState>
-        </>
+        <MissingPage eyebrow="404 · Page not found" title="This page isn't on the call sheet" home={false}
+          line="The link may be mistyped, or the page may have moved."
+          actions={<>
+            <ButtonLink href="/" variant="primary" size="lg" iconEnd={<ArrowRight />}>Back to Between Gigs</ButtonLink>
+            <ButtonLink href="/p/" size="lg" iconEnd={<ArrowRight />}>Browse Gigsters</ButtonLink>
+            <OwnPageLink />
+          </>} />
       )}
     </Page>
   );

@@ -1,6 +1,6 @@
 "use client";
 import { Banner, Button, Checkbox, Field, IconButton, Kbd, Modal, Popover, Tag, Textarea, Tooltip, cx, useToast } from "@ds/components";
-import { ArrowRight, ChevronLeft, ChevronRight, CircleCheck, CircleDashed, Keyboard, ListChecks, MessageSquareWarning } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, CircleDashed, Keyboard, ListChecks, MessageSquareWarning } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
@@ -195,15 +195,23 @@ function prefill(fields: ProfileFields): Record<NoteKey, string> {
   return out;
 }
 
+const startOpen = (notes: Record<NoteKey, string>) => { const has = NOTE_KEYS.filter((k) => notes[k]); return has.length ? has : NOTE_KEYS.slice(0, 1); };
+
+/** A collapsed row's preview: the note's first few words. */
+const firstWords = (note: string, n = 8) => { const w = note.split(/\s+/); return w.length > n ? `${w.slice(0, n).join(" ")}…` : note; };
+
 export function SuggestEdits({ open, person, fields, onClose, onSent }: { open: boolean; person: Person; fields: ProfileFields; onClose: () => void; onSent: (hold: Hold) => void }) {
   const toast = useToast();
   const [notes, setNotes] = React.useState<Record<NoteKey, string>>(() => prefill(fields));
+  const [opened, setOpened] = React.useState<NoteKey[]>(() => startOpen(prefill(fields)));
+  const [focusKey, setFocusKey] = React.useState<NoteKey>();
   const [error, setError] = React.useState<string>();
   const [busy, setBusy] = React.useState(false);
   const first = person.name.split(" ")[0] || "them";
 
   // Each time it opens, start again from the missing answers.
-  React.useEffect(() => { if (open) { setNotes(prefill(fields)); setError(undefined); } }, [open, fields]); // eslint-disable-line react-hooks/set-state-in-effect
+  // Sections that already have a note start open (else the first, so there's somewhere to type); the rest are one row each.
+  React.useEffect(() => { if (open) { const p = prefill(fields); setNotes(p); setOpened(startOpen(p)); setFocusKey(undefined); setError(undefined); } }, [open, fields]); // eslint-disable-line react-hooks/set-state-in-effect
 
   const toggle = (key: NoteKey, reason: string) => {
     setError(undefined);
@@ -218,7 +226,8 @@ export function SuggestEdits({ open, person, fields, onClose, onSent }: { open: 
     // The photo is part of "About you" in the questionnaire, so its note travels with that section.
     const about = [notes.photo.trim() && `Photo: ${notes.photo.trim()}`, notes.about.trim()].filter(Boolean).join(" ");
     const list = SECTIONS.map((section) => ({ section, note: section === "about" ? about : notes[section] })).filter((n) => n.note.trim());
-    if (!list.length) { setError("Add a note to at least one section."); return; }
+    // Nothing to send: open every section so there's somewhere to type straight away.
+    if (!list.length) { setError("Add a note to at least one section."); setOpened(NOTE_KEYS); return; }
     setBusy(true);
     try {
       onSent(await holdDecision(person.id, () => data.owners.requestChanges(person.id, list), { onError: () => toast({ message: `Couldn't send your notes to ${first}. Try again.`, tone: "danger" }) }));
@@ -230,21 +239,41 @@ export function SuggestEdits({ open, person, fields, onClose, onSent }: { open: 
     <Modal open={open} onClose={onClose} size="lg" title={`Suggest edits to ${person.name}`}
       description={`One short note per section; anything missing is already noted. Leave a section empty if it's fine. We email ${first} your notes and they show on their profile and in the questionnaire.`}
       footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" loading={busy} iconEnd={<ArrowRight />} onClick={send}>Send to {first}</Button></>}>
-      <div className="grid gap-5">
+      <div className="grid gap-4">
         {error && <Banner tone="danger" title="Nothing to send yet">{error}</Banner>}
-        {NOTE_KEYS.map((key) => (
-          <div key={key} className="grid gap-2">
-            <Field label={noteLabel[key]} optional>
-              <Textarea rows={2} maxLength={300} showCount value={notes[key]} placeholder={placeholders[key]}
-                onChange={(e) => { setNotes((n) => ({ ...n, [key]: e.target.value })); setError(undefined); }} />
-            </Field>
-            <div role="group" aria-label={`Quick notes for ${noteLabel[key]}`} className="flex flex-wrap gap-1.5">
-              {reasons[key].map((r) => (
-                <Tag key={r} selected={notes[key].includes(r)} onSelect={() => toggle(key, r)}>{r}</Tag>
-              ))}
-            </div>
-          </div>
-        ))}
+        <ul className="border-t-4 border-line-strong">
+          {NOTE_KEYS.map((key) => {
+            const on = opened.includes(key);
+            const note = notes[key].trim();
+            return (
+              <li key={key} className="border-b border-line">
+                <button type="button" aria-expanded={on} aria-controls={`suggest-${key}-row`}
+                  onClick={() => { setFocusKey(on ? undefined : key); setOpened((o) => (on ? o.filter((k) => k !== key) : [...o, key])); }}
+                  className="flex min-h-11 w-full items-center gap-3 py-2 text-left text-ink transition-colors duration-fast hover:bg-surface-hover">
+                  <span className="w-28 shrink-0 text-label-md font-bold">{noteLabel[key]}</span>
+                  <span className={cx("min-w-0 flex-1 truncate text-body-sm", note ? "text-ink-muted" : "font-semibold text-ink-brand")}>
+                    {on ? null : note ? firstWords(note) : "+ Add a note"}
+                  </span>
+                  <ChevronDown aria-hidden="true" className={cx("size-4 shrink-0 text-ink-muted transition-transform duration-fast", on && "rotate-180")} />
+                </button>
+                {on && (
+                  <div id={`suggest-${key}-row`} className="grid gap-2 pb-4">
+                    <Field label={<span className="sr-only">{noteLabel[key]}</span>}>
+                      <Textarea id={`suggest-${key}`} rows={2} maxLength={300} showCount value={notes[key]} placeholder={placeholders[key]}
+                        autoFocus={focusKey === key}
+                        onChange={(e) => { setNotes((n) => ({ ...n, [key]: e.target.value })); setError(undefined); }} />
+                    </Field>
+                    <div role="group" aria-label={`Quick notes for ${noteLabel[key]}`} className="flex flex-wrap gap-1.5">
+                      {reasons[key].map((r) => (
+                        <Tag key={r} selected={notes[key].includes(r)} onSelect={() => toggle(key, r)}>{r}</Tag>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </Modal>
   );

@@ -9,18 +9,22 @@ import { CursorFx, CursorStyleSheet } from "@/components/fx/CursorFx";
 
 /** Client-side roots: Clerk (when a publishable key is set), and the toast queue. */
 export function Providers({ children }: { children: React.ReactNode }) {
+  // Toasts sit bottom-right. On narrower screens, while a bottom bar is showing (anything marked data-dock, like the
+  // editor's Next bar), they rise above it so they never cover its buttons. The wrapper has no box of its own.
   const app = (
-    <ToastProvider>
-      <a href="#main" className="sr-only z-toast rounded-md bg-surface-raised px-4 py-2 text-label-md text-ink shadow-md focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
-        Skip to content
-      </a>
-      {children}
-      <SampleHook />
-      <HorizonComets />
-      <TiltCards />
-      <CursorFx />
-      <CursorStyleSheet />
-    </ToastProvider>
+    <div className="contents max-lg:has-data-dock:[&>[aria-live]]:bottom-28">
+      <ToastProvider>
+        <a href="#main" className="sr-only z-toast rounded-md bg-surface-raised px-4 py-2 text-label-md text-ink shadow-md focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
+          Skip to content
+        </a>
+        {children}
+        <SampleHook />
+        <HorizonComets />
+        <TiltCards />
+        <CursorFx />
+        <CursorStyleSheet />
+      </ToastProvider>
+    </div>
   );
   return clerkEnabled ? <ClerkLayer>{app}</ClerkLayer> : app;
 }

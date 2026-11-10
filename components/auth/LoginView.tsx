@@ -14,6 +14,7 @@ import { useSession } from "@/lib/session";
 import { basePath } from "@/lib/site";
 import { AuthShell } from "./AuthShell";
 import { ClerkSlot } from "./ClerkSlot";
+import { GateSkeleton, SignedInPanel, useSignedInGate } from "./SignedIn";
 
 const RESEND_SECONDS = 30;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -33,7 +34,15 @@ const verifyError: Record<Exclude<SignInResult, { ok: true }>["error"], string> 
 
 /** /login: Clerk handles the configured methods; offline sample mode uses a clearly labeled demo code. */
 export function LoginView() {
-  return clerkEnabled ? <ClerkLogin /> : <SampleLogin />;
+  return clerkEnabled ? <ClerkLogin /> : <SampleGate />;
+}
+
+/** Sample mode: someone already signed in sees who they are (and Log out) instead of the form. */
+function SampleGate() {
+  const gate = useSignedInGate();
+  if (gate === undefined) return <AuthShell header="Log in"><GateSkeleton /></AuthShell>;
+  if (gate) return <AuthShell header="Log in"><SignedInPanel session={gate} /></AuthShell>;
+  return <SampleLogin />;
 }
 
 /** Where to go once signed in: a safe ?next=, else the role's home. */
@@ -55,6 +64,9 @@ function ClerkLogin() {
   const { session, loading } = useSession();
   const { isLoaded, isSignedIn } = useUser();
   const auth = useAuthActions();
+  // A session Clerk didn't open (the sample's, in a Clerk build) gets the same signed-in screen as sample mode.
+  const gate = useSignedInGate();
+  const otherSession = !isSignedIn && gate && gate.via !== "clerk" ? gate : null;
 
   React.useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
@@ -62,6 +74,7 @@ function ClerkLogin() {
     else if (!loading && session?.via === "clerk") router.replace(destination(params.get("next"), session.role));
   }, [isLoaded, isSignedIn, auth.onboarding, session, loading, params, router]);
 
+  if (otherSession) return <AuthShell header="Log in"><SignedInPanel session={otherSession} /></AuthShell>;
   return (
     <AuthShell header="Log in">
       <div className="grid gap-6">

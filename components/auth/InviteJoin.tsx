@@ -11,6 +11,7 @@ import { useSession } from "@/lib/session";
 import { basePath } from "@/lib/site";
 import { AuthShell } from "./AuthShell";
 import { ClerkSlot } from "./ClerkSlot";
+import { SignedInPanel, useSignedInGate } from "./SignedIn";
 
 /**
  * /join live: invite-only (Company OS decision N-05). The invitation email's link carries Clerk's ticket
@@ -22,7 +23,10 @@ export function InviteJoin() {
   const [resume, setResume] = React.useState(false);
   // Clerk owns its hash routes (a verification step after a reload): mount its sign-up so it can carry on.
   React.useEffect(() => { setResume(clerkEnabled && window.location.hash.startsWith("#/")); }, []); // eslint-disable-line react-hooks/set-state-in-effect
+  // Already signed in: who they are and Log out, instead of a sign-up they don't need.
+  const gate = useSignedInGate();
   if (resume) return <TicketSignUp />;
+  if (gate) return <AuthShell header="Sign up" steps={false}><SignedInPanel session={gate} /></AuthShell>;
   if (!ticket || !clerkEnabled) return <InviteOnly />;
   return <Details />;
 }

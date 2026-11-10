@@ -24,14 +24,14 @@ export const INTERNAL = [
  */
 export const LIVE_PAGES = [
   "/", "/join", "/licensing-insurance", "/login", "/owners", "/owners/people", "/owners/people/[id]", "/owners/review",
-  "/owners/waitlist", "/p/[slug]", "/preview-access", "/privacy", "/professionals", "/profile", "/profile/canvas", "/profile/edit",
+  "/owners/waitlist", "/p", "/p/[slug]", "/preview-access", "/privacy", "/professionals", "/profile", "/profile/canvas", "/profile/edit",
   "/provider-standards", "/storyboard", "/terms",
 ];
 
 /** The same, as URLs to request, with a made-up sample id for the dynamic ones. */
 export const LIVE_ROUTES = [
   "/", "/professionals/", "/storyboard/", "/privacy/", "/terms/", "/licensing-insurance/", "/provider-standards/",
-  "/join/", "/login/", "/profile/canvas/", "/profile/edit/", "/profile/", "/p/maya/",
+  "/join/", "/login/", "/profile/canvas/", "/profile/edit/", "/profile/", "/p/", "/p/maya/",
   "/owners/", "/owners/review/", "/owners/people/", "/owners/people/maya/", "/owners/waitlist/", "/preview-access/",
 ];
 

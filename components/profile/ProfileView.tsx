@@ -9,6 +9,7 @@ import { locationLabel } from "@/lib/profile/location";
 import { absoluteUrl, asset } from "@/lib/site";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { pinnedCredits } from "@/lib/profile/validate";
+import { craftHref } from "@/lib/profile/browse";
 
 export type ProfileMode = "public" | "own" | "owner";
 
@@ -73,6 +74,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
   const craft = f.position || services[0] || "";
   const ids = React.useId();
 
+  // Away from the editor and draft placeholders, a section with nothing in it is left out, as on the public page.
   /** A part of the page: wrapped by the editor, else shown when filled (or as a quiet placeholder in a draft preview). */
   const P = (id: ProfilePart, filled: boolean, content: React.ReactNode, hint: string, kind: PartKind = "line") =>
     part ? <React.Fragment key={id}>{part(id, { content, hint, kind })}</React.Fragment>
@@ -224,8 +226,8 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
       {mode === "public" && !editing && (
         <nav aria-label="Breadcrumb" className="mb-6 lg:mb-10">
           <ol className="flex flex-wrap items-center gap-2 font-display text-label-md text-ink-muted">
-            <li>Gigsters</li>
-            {craft && <><li aria-hidden="true">/</li><li>{craft}</li></>}
+            <li><Link href="/p/" className="underline-offset-4 hover:text-ink hover:underline">Gigsters</Link></li>
+            {craft && <><li aria-hidden="true">/</li><li><Link href={craftHref(f.position, f.skills)} className="underline-offset-4 hover:text-ink hover:underline">{craft}</Link></li></>}
             <li aria-hidden="true">/</li>
             <li aria-current="page" className="text-ink">{f.name}</li>
           </ol>
@@ -237,11 +239,11 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
 
       <div className="mt-14 grid grid-cols-12 items-start gap-x-6 gap-y-14 lg:mt-20">
         <div className="col-span-12 grid min-w-0 gap-14 lg:col-span-9 lg:gap-16">
-          <Section n={num()} title="About">
+          {(show || !!f.about.trim()) && <Section n={num()} title="About">
             {P("about", !!f.about.trim(), <p className="max-w-2xl font-display text-editorial-md font-medium whitespace-pre-line text-ink lg:text-editorial-lg">{f.about}</p>, "A few lines in your own words: your experience, the help you offer and what it's like to work with you.", "block")}
-          </Section>
+          </Section>}
 
-          <Section n={num()} title="Services">
+          {(show || helps.length > 0 || services.length > 0) && <Section n={num()} title="Services">
             {P("services", services.length > 0 || !!f.other.trim(), (
               <div className="grid gap-4">
                 <ol className="grid sm:grid-cols-2 sm:gap-x-6">
@@ -255,7 +257,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
                 {editing && f.other.trim() && <p className="text-body-sm text-ink-muted">Something else, in private review: {f.other}</p>}
               </div>
             ), "The services you'd offer clients between gigs", "block")}
-          </Section>
+          </Section>}
 
           {portfolio.length > 0 && (
             <Section n={num()} title="Work" meta={`${portfolio.length} photos`}>
@@ -275,7 +277,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
             </Section>
           )}
 
-          <Section n={num()} title="On set">
+          {(show || f.skills.length > 0 || credits.length > 0 || (mode === "owner" && !!f.imdb)) && <Section n={num()} title="On set">
             <div className="grid gap-6 sm:grid-cols-2">
               <div>{P("skills", f.skills.length > 0, (
                 <div>
@@ -293,11 +295,11 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
                   </ol>
                 </div>
               ), "Your notable credits, best first", "block")}</div>
-              {mode !== "public" && <div className="sm:col-span-2">{P("imdb", !!f.imdb, (
+              {(mode === "owner" || editing || draft) && <div className="sm:col-span-2">{P("imdb", !!f.imdb, (
                 <p className="text-body-sm text-ink-muted"><a className="inline-flex min-h-11 items-center text-link underline underline-offset-2" href={f.imdb} target="_blank" rel="noreferrer">IMDb page<span className="sr-only"> (opens in a new tab)</span></a> · only the Between Gigs team sees this</p>
               ), "Your IMDb link (optional, only the team sees it)", "block")}</div>}
             </div>
-          </Section>
+          </Section>}
 
           <Section n={num()} title="Details">
             <dl className="text-body-md">

@@ -92,6 +92,8 @@
   --text-heading-sm--font-weight: 700;
 }
 :root[data-look=swiss] *, :root[data-look=swiss] *::before, :root[data-look=swiss] *::after { box-shadow: none; }
+/* Info notes (sample mode, the outbox) are neutral grey, not blue: the palette is black, white, forest and mint. */
+
 /* Square corners everywhere on these screens, including the shared design-system pieces that round themselves
    (badges, chips, tags, step numbers, avatars, the theme toggle, menus, dialogs, toasts). Kept round: radio buttons
    (people read a circle as "pick one"), loading spinners, and soft light effects (the glow and the photo spotlight,
@@ -104,6 +106,7 @@
     --surface-selected: #e7ede9; --line: #d4d4d0; --line-strong: #0a0a0a; --line-dashed: #a8a8a3;
     --ink: #0a0a0a; --ink-muted: #5c5c5c; --ink-subtle: #5c5c5c; --ink-brand: #0f3d29;
     --action: #0f3d29; --action-hover: #1b5a3e; --on-action: #ffffff; --neutral-soft: #f1f1ee;
+    --info: #0a0a0a; --info-soft: #f1f1ee;
   }
 @media (prefers-color-scheme: light) {
   :root[data-look=swiss]:not([data-theme=dark]) {
@@ -111,6 +114,7 @@
     --surface-selected: #e7ede9; --line: #d4d4d0; --line-strong: #0a0a0a; --line-dashed: #a8a8a3;
     --ink: #0a0a0a; --ink-muted: #5c5c5c; --ink-subtle: #5c5c5c; --ink-brand: #0f3d29;
     --action: #0f3d29; --action-hover: #1b5a3e; --on-action: #ffffff; --neutral-soft: #f1f1ee;
+    --info: #0a0a0a; --info-soft: #f1f1ee;
   }
 }
 /* Near-black and off-white, dark theme (explicit dark, or the system's dark with no saved choice). */
@@ -119,6 +123,7 @@
     --surface-selected: #16251d; --line: #2e312e; --line-strong: #f3f3ef; --line-dashed: #4a4e4a;
     --ink: #f3f3ef; --ink-muted: #a3a7a1; --ink-subtle: #a3a7a1; --ink-brand: #5fe8ad;
     --action: #1fdc8c; --action-hover: #3deba0; --on-action: #0a0a0a; --neutral-soft: #161816;
+    --info: #f3f3ef; --info-soft: #161816;
     --tint-mint: #1fdc8c; --tint-peach: #161816; --tint-butter: #161816; --tint-sky: #161816; --tint-sage: #16251d; --tint-sand: #161816; --tint-ink: #f3f3ef;
   }
 @media (prefers-color-scheme: dark) {
@@ -127,6 +132,7 @@
     --surface-selected: #16251d; --line: #2e312e; --line-strong: #f3f3ef; --line-dashed: #4a4e4a;
     --ink: #f3f3ef; --ink-muted: #a3a7a1; --ink-subtle: #a3a7a1; --ink-brand: #5fe8ad;
     --action: #1fdc8c; --action-hover: #3deba0; --on-action: #0a0a0a; --neutral-soft: #161816;
+    --info: #f3f3ef; --info-soft: #161816;
     --tint-mint: #1fdc8c; --tint-peach: #161816; --tint-butter: #161816; --tint-sky: #161816; --tint-sage: #16251d; --tint-sand: #161816; --tint-ink: #f3f3ef;
   }
 }
