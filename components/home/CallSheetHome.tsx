@@ -6,6 +6,9 @@ import Link from "next/link";
 import * as React from "react";
 import { CallSheetDialog } from "@/components/funnel/CallSheetDialog";
 import { CallSheetButton } from "@/components/funnel/parts";
+import { VersionSwitcher } from "@/components/site/VersionSwitcher";
+import { data } from "@/lib/data";
+import { showsPreviewNote } from "@/lib/preview-note";
 import { curtainDefaults, startCurtain, type CurtainController, type CurtainParams } from "@/lib/curtain";
 import { startGravityField } from "@/lib/gravity-field";
 
@@ -109,6 +112,7 @@ export function CallSheetHome({ curtain = HOME_CURTAIN }: {
             ))}
             <a href="mailto:hello@between-gigs.com" className={footLink}>hello@between-gigs.com</a>
           </nav>
+          {showsPreviewNote(data.kind) && <div className="col-span-12 flex md:justify-end"><VersionSwitcher /></div>}
         </footer>
       </div>
       <CallSheetDialog open={dialog} category="" placement="home" onClose={() => setDialog(false)} />

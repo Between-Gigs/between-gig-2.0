@@ -1,0 +1,42 @@
+[
+  {
+    "n": 5,
+    "name": "Swiss grid",
+    "date": "6 Nov 2026",
+    "current": true,
+    "summary": "Direction G on every screen Gigsters, clients, visitors and owners see: a strict 12-column grid, oversized Inter Tight headlines, thick black rules, square corners and one mint block per screen.",
+    "highlights": ["Square corners and no shadows", "Forest primary in light, mint in dark", "Gigster browse at /p/", "Design QA and corner-case fixes (10 Nov)", "Square profile photo"]
+  },
+  {
+    "n": 4,
+    "name": "Warm & friendly",
+    "date": "4 Nov 2026",
+    "commit": "d704d7f076c38bcefb632cf1d9fba5b3229e4b62",
+    "summary": "Direction B on the product screens: warm neutrals, soft rounded cards and the forest-green dark theme with quiet green tints.",
+    "highlights": ["Warm light theme", "Forest-green dark theme", "Preview guide in direction B"]
+  },
+  {
+    "n": 3,
+    "name": "Airbnb-style",
+    "date": "4 Nov 2026",
+    "commit": "1970e45574925e2109e08dec1a8c98b2570bd47b",
+    "summary": "The Airbnb-style pass: generous radii, a host-profile layout, a centred sign-in card, 3D icons and the Letter invite email.",
+    "highlights": ["Host-profile layout", "Centred sign-in card", "3D icons", "Letter invite email"]
+  },
+  {
+    "n": 2,
+    "name": "Onboarding 2.0",
+    "date": "3 Nov 2026",
+    "commit": "9fd1ef65e5d3313b16a048a843b9ee4314e0b46a",
+    "summary": "Before the restyles: editing on your own profile page, the Studio page designer, the workspace and the first build on live data.",
+    "highlights": ["Edit on your profile", "Studio and the workspace", "Live data and preview access"]
+  },
+  {
+    "n": 1,
+    "name": "Client demo",
+    "date": "22 Oct 2026",
+    "commit": "3f473540c4b7e5b017b93b60ee2e2624e95dec05",
+    "summary": "The first client walkthrough: invite email to sign-up to profile, the client-approved public profile and the Crew Call call sheet (V15).",
+    "highlights": ["Invite to profile walkthrough", "Client-approved public profile", "Crew Call V15"]
+  }
+]

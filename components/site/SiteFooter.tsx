@@ -2,6 +2,7 @@ import { Logo } from "@ds/components/Logo";
 import Link from "next/link";
 import { data } from "@/lib/data";
 import { showsPreviewNote } from "@/lib/preview-note";
+import { VersionSwitcher } from "./VersionSwitcher";
 
 const linkClass = "inline-flex min-h-11 items-center text-body-sm text-ink hover:underline hover:underline-offset-4 sm:min-h-9";
 
@@ -40,6 +41,7 @@ export function SiteFooter() {
           <span>© 2026 Between Gigs · Extraordinary Talent. Everyday Solutions.</span>
           <span>BETWEEN GIGS™ is a trademark of Between Gigs.</span>
           {showsPreviewNote(data.kind) && <span>Preview build: people in the sample data are fictional. <Link href="/preview/" className="underline underline-offset-2 hover:text-ink">Preview guide</Link></span>}
+          {showsPreviewNote(data.kind) && <VersionSwitcher className="sm:ml-auto" />}
         </div>
         </div>
       </div>

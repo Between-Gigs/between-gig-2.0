@@ -131,6 +131,7 @@ export const routes = [
   { name: "privacy", path: "/privacy/", ready: "h1" },
   { name: "terms", path: "/terms/", ready: "h1" },
   { name: "provider-standards", path: "/provider-standards/", ready: "h1" },
+  { name: "versions", path: "/versions/", ready: "h1" },
   { name: "licensing-insurance", path: "/licensing-insurance/", ready: "h1" },
   // Milestone 4: the owners' tools.
   { name: "owner-dashboard", path: "/owners/", setup: as("owner"), ready: "h1" },

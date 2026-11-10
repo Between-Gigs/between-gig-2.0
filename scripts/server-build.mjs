@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
  */
 export const INTERNAL = [
   "app/workspace", "app/studio", "app/preview", "app/emails", "app/crew-call", "app/proposals",
-  "public/artifacts", "public/studio-source", "public/thumbs", "public/workspace",
+  "app/versions", "public/artifacts", "public/studio-source", "public/thumbs", "public/workspace", "public/versions",
 ];
 
 /**

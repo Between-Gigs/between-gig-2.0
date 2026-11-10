@@ -18,7 +18,8 @@ function fakeRepo() {
   const root = temp();
   const file = (rel: string, text = "x") => { mkdirSync(path.dirname(path.join(root, rel)), { recursive: true }); writeFileSync(path.join(root, rel), text); };
   for (const f of ["app/page.tsx", "app/workspace/page.tsx", "app/studio/site/page.tsx", "app/preview/page.tsx", "app/emails/page.tsx",
-    "app/crew-call/page.tsx", "app/proposals/home/page.tsx", "public/artifacts/ship-list/index.html", "public/thumbs/home.jpg",
+    "app/crew-call/page.tsx", "app/proposals/home/page.tsx", "app/versions/page.tsx", "public/artifacts/ship-list/index.html", "public/thumbs/home.jpg",
+    "public/versions/v1.jpg",
     "public/workspace/covers/a.jpg", "public/img/logo.svg", "lib/x.ts"]) file(f);
   file(".gitignore", "node_modules/\n.next/\nout/\npublic/studio-source/\n");
   file("node_modules/next/package.json", "{}");
@@ -34,8 +35,8 @@ function fakeRepo() {
 describe("the route lists", () => {
   it("INTERNAL is the ship list's internal tools and the pages waiting on the client", () => {
     expect([...INTERNAL].sort()).toEqual([
-      "app/crew-call", "app/emails", "app/preview", "app/proposals", "app/studio", "app/workspace",
-      "public/artifacts", "public/studio-source", "public/thumbs", "public/workspace",
+      "app/crew-call", "app/emails", "app/preview", "app/proposals", "app/studio", "app/versions", "app/workspace",
+      "public/artifacts", "public/studio-source", "public/thumbs", "public/versions", "public/workspace",
     ]);
   });
 

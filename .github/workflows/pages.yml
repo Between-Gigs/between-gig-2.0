@@ -17,7 +17,60 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The older versions listed in lib/versions.json, each built from its own commit at <base>/v/<n>/. A version's
+  # export is cached by its commit, so it's built once and reused on every later deploy.
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      versions: ${{ steps.list.outputs.versions }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: lib/versions.json
+          sparse-checkout-cone-mode: false
+      - id: list
+        run: echo "versions=$(jq -c '[.[] | select(.current != true) | {n, commit}]' lib/versions.json)" >> "$GITHUB_OUTPUT"
+  version:
+    needs: plan
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        v: ${{ fromJson(needs.plan.outputs.versions) }}
+    steps:
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: snapshot
+          key: version-export-${{ matrix.v.commit }}-v1
+      - if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.v.commit }}
+          persist-credentials: false
+          path: src
+      - if: steps.cache.outputs.cache-hit != 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: src/package.json
+      - if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: src
+        run: pnpm install --frozen-lockfile && pnpm build && mv out ../snapshot
+        env:
+          NEXT_PUBLIC_BASE_PATH: /between-gig-2.0/v/${{ matrix.v.n }}
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_Z2xhZC1tb25rZXktNjkwOC5jbGVyay5hY2NvdW50cy5kZXYk' }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: version-${{ matrix.v.n }}
+          path: snapshot
+          retention-days: 1
   build:
+    needs: version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,6 +89,15 @@ jobs:
           # Clerk sign-in. The publishable key is public by design (it only names the Clerk app); a repo
           # variable of the same name overrides it. The secret key never goes here: Pages has no server.
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_Z2xhZC1tb25rZXktNjkwOC5jbGVyay5hY2NvdW50cy5kZXYk' }}
+          NEXT_PUBLIC_VERSIONS: "1"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: version-*
+          path: versions
+      - name: Older versions into out/v/<n>/
+        run: |
+          cp lib/versions.json out/versions.json
+          for d in versions/version-*; do node scripts/versions/snapshot.mjs "$d" "${d##*-}" /between-gig-2.0 out; done
       - run: touch out/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
