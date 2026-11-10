@@ -138,15 +138,14 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
   ].filter(Boolean);
 
   const identity = (
-    // Phones: the portrait in 9 columns with the craft up its side, the name under it. Tablets: the portrait in 5 columns
-    // beside the name, the availability and facts across the full width under both. Desktop: the portrait in 4 columns
-    // spanning both rows, the availability and facts bottom-aligned with it.
+    // Phones: the square portrait in 9 columns with the craft up its side, the name under it. Tablets and desktop: the
+    // square portrait (5 columns, 4 on desktop) beside the name, the availability and facts across the full width under both.
     <section aria-label={`About ${first}`} className="grid grid-cols-12 gap-x-3 sm:gap-x-6">
-      <div className="relative col-span-9 md:col-span-5 lg:col-span-4 lg:row-span-2">
+      <div className="relative col-span-9 md:col-span-5 lg:col-span-4">
         {P("photo", !!f.photo || !show, (
           <PersonPhoto id={person.id} morph={!editing} name={f.name} src={f.photo || undefined} fallback="brand" department={f.position} skills={f.skills}
             alt={f.photo ? `Portrait of ${f.name}${sample ? " (fictional)" : ""}` : undefined}
-            className="aspect-4/5 w-full object-cover lg:aspect-2/3" textClass="text-display-md" />
+            className="aspect-square w-full object-cover" textClass="text-display-md" />
         ), "Add photo", "photo")}
       </div>
       {/* Phones: the craft runs up the side of the portrait, with the reviewed mark at its foot. */}
@@ -179,7 +178,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
         {reviewed && <p className="mt-3 flex items-center gap-2.5 font-display text-label-md text-ink-brand md:mt-5 md:text-ink">{tick}Reviewed by Between Gigs</p>}
       </div>
 
-      <div className="col-span-12 mt-5 min-w-0 md:mt-10 lg:col-span-8 lg:col-start-5 lg:mt-0 lg:self-end lg:pt-8">
+      <div className="col-span-12 mt-5 min-w-0 md:mt-10">
         <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
           <div>{P("availability", !!f.dates.trim() || !show, (
             <div className="h-full min-w-0 bg-surface-brand p-5 text-ink-on-brand">
@@ -444,7 +443,7 @@ function Row({ term, wide = false, children }: { term: string; wide?: boolean; c
 
 /** Where a part of a draft will go, in the preview. */
 function Placeholder({ children, kind }: { children: React.ReactNode; kind: PartKind }) {
-  if (kind === "photo") return <span className="grid aspect-4/5 w-full place-items-center border-2 border-dashed border-line-strong bg-surface-sunken text-body-md text-ink-subtle">{children}</span>;
+  if (kind === "photo") return <span className="grid aspect-square w-full place-items-center border-2 border-dashed border-line-strong bg-surface-sunken text-body-md text-ink-subtle">{children}</span>;
   return kind === "block"
     ? <p className="border-2 border-dashed border-line p-5 text-body-md text-ink-subtle">{children}</p>
     : <span className="text-body-md text-ink-subtle">{children}</span>;
