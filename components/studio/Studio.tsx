@@ -5,9 +5,9 @@
  * panels, the canvas in the middle with breakpoints, and a Style / Settings panel on the right. The CMS works like
  * Airtable: collections with Table, Gallery, Kanban, List and Calendar views.
  */
-import { Badge, Button, Drawer, IconButton, Logo, Menu, Modal, SegmentedControl, Skeleton, cx, useTheme } from "@ds/components";
+import { Badge, Button, Drawer, IconButton, Logo, Menu, Modal, SegmentedControl, Skeleton, cx, useTheme, useToast } from "@ds/components";
 import {
-  AppWindow, Check, ChevronDown, CloudCheck, Code2, Database, Eye, EyeOff, FileText, Globe, Images, Layers, Menu as MenuIcon, Monitor, Moon, PanelRight, Plus,
+  AppWindow, Check, ChevronDown, CloudAlert, CloudCheck, Code2, Database, Eye, EyeOff, FileText, Globe, Images, Layers, Menu as MenuIcon, Monitor, Moon, PanelRight, Plus,
   Redo2, Rocket, Settings, Share2, Smartphone, Sun, Tablet, Undo2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -63,7 +63,14 @@ const tools: { id: Tool; label: string; key: string; icon: React.ComponentType<{
 const bpIcons: Record<Breakpoint, React.ComponentType<{ className?: string }>> = { base: Monitor, tablet: Tablet, phone: Smartphone };
 
 function Shell() {
-  const { base, actions, canUndo, canRedo, lastChange } = useStudio();
+  const { base, actions, canUndo, canRedo, lastChange, saveFailed } = useStudio();
+  const toast = useToast();
+  // Say it once, out loud, the moment saving stops working; the top bar keeps saying it after that.
+  const warned = React.useRef(false);
+  React.useEffect(() => {
+    if (saveFailed && !warned.current) toast({ message: "Changes aren't being saved: this browser's storage is full. Export a copy in Settings, or remove some uploaded images.", tone: "danger" });
+    warned.current = saveFailed;
+  }, [saveFailed, toast]);
   const router = useRouter();
   // CMS state.
   const [collectionId, setCollectionId] = React.useState("gigsters");
@@ -135,14 +142,18 @@ function Shell() {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) actions.redo(); else actions.undo(); return; }
       if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); actions.redo(); return; }
-      if (mod || e.altKey || t.closest("[role=dialog], dialog")) return;
+      // Escape leaves Preview, the way out people try first.
+      if (e.key === "Escape" && preview) { e.preventDefault(); setPreview(false); return; }
+      // Single-key tool shortcuts never fire when something else already used the key: a CMS cell that starts
+      // editing on a typed letter (without this, typing "a" in a cell threw you out to the Designer's Add panel).
+      if (mod || e.altKey || e.defaultPrevented || t.closest("[role=dialog], dialog, [role=grid]")) return;
       const hit = tools.find((x) => x.key.toLowerCase() === e.key.toLowerCase());
       if (hit) { e.preventDefault(); openTool(hit.id); }
-      if (e.key.toLowerCase() === "s" && !t.closest("[role=grid]")) { e.preventDefault(); setTool((x) => (x === "settings" ? null : "settings")); }
+      if (e.key.toLowerCase() === "s") { e.preventDefault(); setTool((x) => (x === "settings" ? null : "settings")); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [actions, openTool]);
+  }, [actions, openTool, preview]);
 
   const lookup = React.useMemo(() => (base ? makeLookup(base) : () => ""), [base]);
   const appPage = appPages.find((x) => x.id === appId) ?? appPages[0];
@@ -327,12 +338,20 @@ function Shell() {
                 Three groups, split by hairlines: history, view, then sharing. */}
             <div className="flex min-w-max flex-1 items-center justify-end gap-0.5 sm:gap-1">
               {/* Always say it's saved: the icon on every screen, the words where there's room. */}
-              <span className="hidden h-8 items-center gap-1.5 px-1.5 text-caption text-ink-subtle sm:flex" role="status" aria-live="polite"
-                title={lastChange ? `${lastChange} · saved in this browser` : "Saved in this browser"}>
-                <CloudCheck className="size-4 text-success" aria-hidden="true" />
-                <span className="hidden 2xl:inline">{lastChange ? `${lastChange} · saved` : "Saved in this browser"}</span>
-                <span className="sr-only 2xl:hidden">{lastChange ? `${lastChange}, saved` : "Saved in this browser"}</span>
-              </span>
+              {saveFailed ? (
+                // Not saved is news: always in words, on every screen, and one click from the export that keeps the work.
+                <button type="button" role="status" aria-live="assertive" onClick={() => setTool("settings")} title="This browser's storage is full. Export a copy in Settings, or remove uploaded images."
+                  className="flex h-8 items-center gap-1.5 rounded-md bg-warning/15 px-2 text-label-sm text-warning hover:bg-warning/25">
+                  <CloudAlert className="size-4" aria-hidden="true" />Not saved
+                </button>
+              ) : (
+                <span className="hidden h-8 items-center gap-1.5 px-1.5 text-caption text-ink-subtle sm:flex" role="status" aria-live="polite"
+                  title={lastChange ? `${lastChange} · saved in this browser` : "Saved in this browser"}>
+                  <CloudCheck className="size-4 text-success" aria-hidden="true" />
+                  <span className="hidden 2xl:inline">{lastChange ? `${lastChange} · saved` : "Saved in this browser"}</span>
+                  <span className="sr-only 2xl:hidden">{lastChange ? `${lastChange}, saved` : "Saved in this browser"}</span>
+                </span>
+              )}
               <span className="hidden items-center gap-0.5 sm:inline-flex">
                 <IconButton size="sm" variant="ghost" label="Undo" icon={<Undo2 />} onClick={actions.undo} disabled={!canUndo} title={canUndo ? "Undo (Ctrl+Z)" : "Nothing to undo yet"} />
                 <IconButton size="sm" variant="ghost" label="Redo" icon={<Redo2 />} onClick={actions.redo} disabled={!canRedo} title={canRedo ? "Redo (Ctrl+Shift+Z)" : "Nothing to redo"} />

@@ -204,7 +204,11 @@ function SettingsPanel() {
   const importBase = async (f: File) => {
     try {
       const b = JSON.parse(await f.text()) as Base;
-      if (b.version !== 1 || !Array.isArray(b.collections) || !b.collections.length) throw new Error("shape");
+      // Check the parts Studio reads straight away, so a hand-edited or truncated file is refused with a message
+      // instead of opening a collection with no views (or a page with no body) and crashing the editor.
+      const okCollection = (c: Base["collections"][number]) => !!c && typeof c.id === "string" && Array.isArray(c.fields) && c.fields.length > 0 && Array.isArray(c.records) && Array.isArray(c.views) && c.views.length > 0;
+      const okPages = b.pages === undefined || (Array.isArray(b.pages) && b.pages.length > 0 && b.pages.every((p) => p && typeof p.id === "string" && typeof p.slug === "string" && p.root?.type === "body"));
+      if (b.version !== 1 || !Array.isArray(b.collections) || !b.collections.length || !b.collections.every(okCollection) || !okPages) throw new Error("shape");
       actions.replace(b);
       ui.open(b.collections[0].id);
       toast({ message: `Imported ${b.name}`, tone: "success" });

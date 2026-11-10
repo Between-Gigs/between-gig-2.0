@@ -1,5 +1,5 @@
 "use client";
-import { ConfirmDialog, IconButton, Input, Menu, cx } from "@ds/components";
+import { ConfirmDialog, IconButton, Input, Menu, cx, useToast } from "@ds/components";
 import {
   AppWindow, Box, ChevronDown, Ellipsis, ChevronRight, Columns2, Copy, Database, FileText, Heading, Home, Image as ImageIcon, Link, Minus, MousePointerClick,
   Pencil, Pilcrow, Plus, RectangleHorizontal, Search, Square, SquareDashed, Trash2, Type,
@@ -175,6 +175,7 @@ export function PagesPanel() {
   const [seo, setSeo] = React.useState<string | null>(null);
   const victim = ui.base.pages.find((p) => p.id === deleting);
   const seoPage = ui.base.pages.find((p) => p.id === seo);
+  const toast = useToast();
   const newPage = () => { const id = actions.addPage(`Page ${ui.base.pages.length + 1}`); d.setPageId(id); setRenaming(id); };
   return (
     <>
@@ -201,7 +202,18 @@ export function PagesPanel() {
                   { label: "Rename", icon: <Pencil />, onSelect: () => setRenaming(p.id) },
                   { label: "Search and sharing…", icon: <Search />, onSelect: () => setSeo(p.id) },
                   { label: "Duplicate", icon: <Copy />, onSelect: () => d.setPageId(actions.duplicatePage(p.id)) },
-                  ...(p.slug === "" ? [] : [{ label: "Make home page", icon: <Home />, onSelect: () => actions.change("Changed the home page", (b) => { for (const x of b.pages) if (x.slug === "") x.slug = x.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "page"; const t = b.pages.find((x) => x.id === p.id); if (t) t.slug = ""; }) }]),
+                  ...(p.slug === "" ? [] : [{ label: "Make home page", icon: <Home />, onSelect: () => actions.change("Changed the home page", (b) => {
+                    const t = b.pages.find((x) => x.id === p.id);
+                    if (!t) return;
+                    // The old home page takes an address from its name, numbered when another page already has it.
+                    t.slug = "";
+                    for (const x of b.pages) if (x.slug === "" && x.id !== t.id) {
+                      const stem = x.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "page";
+                      let s = stem;
+                      for (let n = 2; b.pages.some((y) => y.slug === s && y.id !== x.id); n++) s = `${stem}-${n}`;
+                      x.slug = s;
+                    }
+                  }) }]),
                   "separator",
                   { label: "Delete page", icon: <Trash2 />, danger: true, disabled: ui.base.pages.length < 2, onSelect: () => setDeleting(p.id) },
                 ]} />
@@ -220,7 +232,21 @@ export function PagesPanel() {
         <h3 className="text-label-sm text-ink">{d.page.name} settings</h3>
         <label className="grid gap-1.5"><span className="text-caption text-ink-muted">Address</span>
           <Input size="sm" className="max-md:h-11" key={d.page.id + d.page.slug} defaultValue={d.page.slug} disabled={d.page.slug === ""} placeholder="home" aria-describedby="slug-hint"
-            onBlur={(e) => { const s = e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-|-$/g, ""); if (s && s !== d.page.slug && !ui.base.pages.some((x) => x.slug === s)) actions.updatePage(d.page.id, { slug: s }); }}
+            // Shows what was actually saved: a cleaned-up address replaces what was typed, and a refused one (empty, or
+            // another page's) goes back to the current address with a note saying why, rather than sitting there unsaved.
+            onBlur={(e) => {
+              const input = e.target;
+              const s = input.value.toLowerCase().trim().replace(/[^a-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+              const other = ui.base.pages.find((x) => x.slug === s && x.id !== d.page.id);
+              if (!s || other) {
+                input.value = d.page.slug;
+                if (input.value !== s) toast({ message: other ? `/${s} is already the address of ${other.name}.` : "An address needs at least one letter or number.", tone: "danger" });
+                return;
+              }
+              input.value = s;
+              if (s !== d.page.slug) actions.updatePage(d.page.id, { slug: s });
+            }}
+            onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
             start={<span className="text-body-sm text-ink-subtle">/</span>} />
           <span id="slug-hint" className="text-caption text-ink-subtle">{d.page.slug === "" ? "This is the home page." : "Letters, numbers and dashes."}</span>
         </label>

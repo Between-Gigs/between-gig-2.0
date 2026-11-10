@@ -64,9 +64,16 @@ export function RenderElement({ el, opts, ctx }: { el: PageElement; opts: Render
   const editable = editing ? {
     contentEditable: true, suppressContentEditableWarning: true,
     onBlur: (e: React.FocusEvent<HTMLElement>) => opts.onTextCommit?.(el.id, e.currentTarget.innerText),
-    onKeyDown: (e: React.KeyboardEvent<HTMLElement>) => { if (e.key === "Escape" || (e.key === "Enter" && !e.shiftKey && el.type !== "paragraph")) { e.preventDefault(); e.currentTarget.blur(); } },
+    // Enter keeps the edit; Escape throws it away, as everywhere else in Studio.
+    onKeyDown: (e: React.KeyboardEvent<HTMLElement>) => {
+      if (e.key === "Escape") { e.preventDefault(); e.currentTarget.innerText = text; e.currentTarget.blur(); }
+      else if (e.key === "Enter" && !e.shiftKey && el.type !== "paragraph") { e.preventDefault(); e.currentTarget.blur(); }
+    },
     ref: (n: HTMLElement | null) => { if (n && document.activeElement !== n) { n.focus(); const r = document.createRange(); r.selectNodeContents(n); r.collapse(false); const s = getSelection(); s?.removeAllRanges(); s?.addRange(r); } },
   } : {};
+  // Text emptied on the canvas or in Settings would leave a 0px element nobody can click; on the canvas it keeps
+  // its line with a faint prompt instead. Visitors (preview, export) still see nothing.
+  const shown = canvas && !editing && !text.trim() ? <span style={{ opacity: 0.4 }}>Double-click to add text</span> : text;
   const link = (href?: string) => (canvas ? "#" : opts.href ? opts.href(href ?? "#") : href ?? "#");
   const empty = canvas && el.type !== "collection" && el.type !== "item" && !(el.children?.length);
 
@@ -86,17 +93,17 @@ export function RenderElement({ el, opts, ctx }: { el: PageElement; opts: Render
       return <div role="listitem" {...data} style={{ ...style, ...(empty ? placeholder : {}) }}>{kids()}</div>;
     case "heading": {
       const Tag = `h${Math.min(6, Math.max(1, el.level ?? 2))}` as "h2";
-      return <Tag {...data} {...editable} style={style}>{text}</Tag>;
+      return <Tag {...data} {...editable} style={style}>{shown}</Tag>;
     }
     case "paragraph":
-      return <p {...data} {...editable} style={{ whiteSpace: "pre-line", ...style }}>{text}</p>;
+      return <p {...data} {...editable} style={{ whiteSpace: "pre-line", ...style }}>{shown}</p>;
     case "text":
-      return <div {...data} {...editable} style={style}>{text}</div>;
+      return <div {...data} {...editable} style={style}>{shown}</div>;
     case "link": case "button": {
       const href = field?.type === "url" ? String(bound ?? "#") : el.href;
       return (
         <a {...data} {...editable} href={link(href)} target={!canvas && el.newTab ? "_blank" : undefined} rel={el.newTab ? "noreferrer" : undefined}
-          onClick={canvas ? (e) => e.preventDefault() : undefined} style={style}>{field?.type === "url" ? el.text : text}</a>
+          onClick={canvas ? (e) => e.preventDefault() : undefined} style={style}>{field?.type === "url" ? el.text : shown}</a>
       );
     }
     case "image": {

@@ -199,7 +199,9 @@ function Selector({ el }: { el: PageElement }) {
     return n;
   }, [ui.base]);
   const names = Object.keys(ui.base.classes).sort();
-  const name = q.trim().toLowerCase().replace(/[^a-z0-9-_]+/g, "-");
+  // A valid CSS class: no leading digit or hyphen ("2col" would break the exported CSS and custom CSS), no doubled
+  // or trailing hyphens. What's left is what the "Create" row shows, so people see the name they'll get.
+  const name = q.trim().toLowerCase().replace(/[^a-z0-9-_]+/g, "-").replace(/-+/g, "-").replace(/^[^a-z_]+/, "").replace(/-$/, "");
   const matches = name ? names.filter((c) => c.includes(name) && c !== el.cls).slice(0, 6) : [];
   const apply = (c: string) => { actions.setClass(d.page.id, el.id, c); setQ(""); };
   return (
@@ -225,6 +227,7 @@ function Selector({ el }: { el: PageElement }) {
           {!names.includes(name) && <li><button type="button" onClick={() => apply(name)} className="flex h-8 w-full items-center rounded-xs px-2 text-body-sm text-ink hover:bg-surface-hover">Create .{name}</button></li>}
         </ul>
       )}
+      {q.trim() && !name && <p className="text-caption text-warning">A class name starts with a letter, like hero or card-2.</p>}
       {/* Two short facts on two lines: what the class reaches, then how the breakpoint behaves. */}
       <div className="grid gap-0.5 text-caption text-ink-subtle">
         <p>{el.cls ? ((uses[el.cls] ?? 1) === 1 ? `Only this element uses .${el.cls}.` : `Changes reach all ${uses[el.cls]} elements with .${el.cls}.`) : "No class: styles apply to this element only."}</p>
