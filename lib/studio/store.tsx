@@ -71,6 +71,8 @@ interface StudioState {
   canRedo: boolean;
   /** The last change, for the status line ("Saved · Renamed a field"). */
   lastChange: string;
+  /** The last save didn't fit in this browser's storage: changes live only in this tab until there's room. */
+  saveFailed: boolean;
   actions: StudioActions;
 }
 
@@ -111,10 +113,14 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => { const b = load(); current.current = b; setBase(b); }, []); // eslint-disable-line react-hooks/set-state-in-effect
 
-  // Save shortly after changes settle, so typing in a cell doesn't write on every key.
+  // Save shortly after changes settle, so typing in a cell doesn't write on every key. When the browser refuses
+  // (storage full, usually from uploaded images, or blocked), say so: the top bar must never claim "Saved" then.
+  const [saveFailed, setSaveFailed] = React.useState(false);
   React.useEffect(() => {
     if (!base) return;
-    const t = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(base)); } catch { /* storage full: keep working in memory */ } }, 300);
+    const t = setTimeout(() => {
+      try { localStorage.setItem(KEY, JSON.stringify(base)); setSaveFailed(false); } catch { setSaveFailed(true); }
+    }, 300);
     return () => clearTimeout(t);
   }, [base]);
 
@@ -225,8 +231,13 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
         const c = coll(b, cid);
         if (c.views.length > 1) c.views = c.views.filter((v) => v.id !== vid);
       }),
-      addPage: (name) => {
+      addPage: (wanted) => {
         const id = uid("page");
+        // Never two pages with one name: "Page 3" again after a delete becomes "Page 4".
+        let name = wanted;
+        const taken = (n: string) => current.current?.pages.some((p) => p.name.toLowerCase() === n.toLowerCase());
+        const m = /^(.*?)(\d+)$/.exec(wanted);
+        for (let n = m ? Number(m[2]) : 2; taken(name); n++) name = m ? `${m[1]}${n}` : `${wanted} ${n}`;
         change(`Added the page ${name}`, (b) => {
           const root = newElement("body");
           root.cls = b.classes.page ? "page" : undefined;
@@ -292,7 +303,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const value: StudioState = { base, canUndo: history.undo > 0, canRedo: history.redo > 0, lastChange, actions };
+  const value: StudioState = { base, canUndo: history.undo > 0, canRedo: history.redo > 0, lastChange, saveFailed, actions };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

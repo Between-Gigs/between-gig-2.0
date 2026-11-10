@@ -167,8 +167,9 @@ export function Toolbar({ onNew }: { onNew: () => void }) {
     <div className="flex items-start gap-2 border-b border-line px-3 py-2 sm:px-4">
       {/* The controls wrap to a second line when space runs out, so none hides off the edge; New item stays in view. */}
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-      <Input type="search" value={ui.search} onChange={(e) => ui.setSearch(e.target.value)} placeholder={`Search ${c.name.toLowerCase()}`} aria-label={`Search ${c.name}`} start={<Search />}
-        className="w-40 shrink-0 2xl:w-60" end={ui.search ? <button type="button" aria-label="Clear search" onClick={() => ui.setSearch("")} className="inline-flex size-6 items-center justify-center rounded-xs hover:bg-surface-hover"><X /></button> : undefined} />
+      {/* Small, like the buttons beside it, so the whole tool row shares one height. */}
+      <Input type="search" size="sm" value={ui.search} onChange={(e) => ui.setSearch(e.target.value)} placeholder={`Search ${c.name.toLowerCase()}`} aria-label={`Search ${c.name}`} start={<Search />}
+        className="w-48 shrink-0 2xl:w-60" end={ui.search ? <button type="button" aria-label="Clear search" onClick={() => ui.setSearch("")} className="inline-flex size-6 items-center justify-center rounded-xs hover:bg-surface-hover"><X /></button> : undefined} />
       <Popover label="Filter" title="Filter" width="md" trigger={<Button size="sm" variant="ghost" iconStart={<ListFilter />} className="shrink-0">Filter<Count n={v.filters.length} /></Button>}>
         <FilterPanel view={v} />
       </Popover>

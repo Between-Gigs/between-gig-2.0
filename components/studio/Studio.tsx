@@ -5,10 +5,10 @@
  * panels, the canvas in the middle with breakpoints, and a Style / Settings panel on the right. The CMS works like
  * Airtable: collections with Table, Gallery, Kanban, List and Calendar views.
  */
-import { Badge, Button, Drawer, IconButton, Logo, Menu, Modal, SegmentedControl, Skeleton, ThemeToggle, cx } from "@ds/components";
+import { Badge, Button, Drawer, IconButton, Logo, Menu, Modal, SegmentedControl, Skeleton, cx, useTheme, useToast } from "@ds/components";
 import {
-  AppWindow, Check, ChevronDown, CloudCheck, Code2, Database, Eye, EyeOff, FileText, Globe, Images, Layers, Menu as MenuIcon, Monitor, PanelRight, Plus,
-  Redo2, Rocket, Settings, Share2, Smartphone, Tablet, Undo2,
+  AppWindow, Check, ChevronDown, CloudAlert, CloudCheck, Code2, Database, Eye, EyeOff, FileText, Globe, Images, Layers, Menu as MenuIcon, Monitor, Moon, PanelRight, Plus,
+  Redo2, Rocket, Settings, Share2, Smartphone, Sun, Tablet, Undo2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -32,7 +32,7 @@ import { InspectorBody } from "./Inspector";
 import { AppDetails, AppInspector, AppPagesPanel, appPageMenu, appTabs, laneDot, type AppTab } from "./inspect/AppInspector";
 import { PanelBody } from "./Navigator";
 import { Toolbar, ViewTabs } from "./Toolbar";
-import { collectionIcons } from "./ui";
+import { PanelHead, collectionIcons } from "./ui";
 import { CalendarView } from "./views/CalendarView";
 import { GalleryView, KanbanView, ListView } from "./views/CardViews";
 import { GridView } from "./views/GridView";
@@ -63,7 +63,14 @@ const tools: { id: Tool; label: string; key: string; icon: React.ComponentType<{
 const bpIcons: Record<Breakpoint, React.ComponentType<{ className?: string }>> = { base: Monitor, tablet: Tablet, phone: Smartphone };
 
 function Shell() {
-  const { base, actions, canUndo, canRedo, lastChange } = useStudio();
+  const { base, actions, canUndo, canRedo, lastChange, saveFailed } = useStudio();
+  const toast = useToast();
+  // Say it once, out loud, the moment saving stops working; the top bar keeps saying it after that.
+  const warned = React.useRef(false);
+  React.useEffect(() => {
+    if (saveFailed && !warned.current) toast({ message: "Changes aren't being saved: this browser's storage is full. Export a copy in Settings, or remove some uploaded images.", tone: "danger" });
+    warned.current = saveFailed;
+  }, [saveFailed, toast]);
   const router = useRouter();
   // CMS state.
   const [collectionId, setCollectionId] = React.useState("gigsters");
@@ -96,6 +103,7 @@ function Shell() {
   const [sharing, setSharing] = React.useState(false);
   const [publishing, setPublishing] = React.useState(false);
   const [restored, setRestored] = React.useState(false);
+  const wide = useWide();
 
   // Remember where the editor was, per browser.
   React.useEffect(() => {
@@ -134,14 +142,18 @@ function Shell() {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) actions.redo(); else actions.undo(); return; }
       if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); actions.redo(); return; }
-      if (mod || e.altKey || t.closest("[role=dialog], dialog")) return;
+      // Escape leaves Preview, the way out people try first.
+      if (e.key === "Escape" && preview) { e.preventDefault(); setPreview(false); return; }
+      // Single-key tool shortcuts never fire when something else already used the key: a CMS cell that starts
+      // editing on a typed letter (without this, typing "a" in a cell threw you out to the Designer's Add panel).
+      if (mod || e.altKey || e.defaultPrevented || t.closest("[role=dialog], dialog, [role=grid]")) return;
       const hit = tools.find((x) => x.key.toLowerCase() === e.key.toLowerCase());
       if (hit) { e.preventDefault(); openTool(hit.id); }
-      if (e.key.toLowerCase() === "s" && !t.closest("[role=grid]")) { e.preventDefault(); setTool((x) => (x === "settings" ? null : "settings")); }
+      if (e.key.toLowerCase() === "s") { e.preventDefault(); setTool((x) => (x === "settings" ? null : "settings")); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [actions, openTool]);
+  }, [actions, openTool, preview]);
 
   const lookup = React.useMemo(() => (base ? makeLookup(base) : () => ""), [base]);
   const appPage = appPages.find((x) => x.id === appId) ?? appPages[0];
@@ -221,18 +233,21 @@ function Shell() {
   );
   const openApp = (id: string) => { setAppId(id); setArea("site"); setNavOpen(false); };
   const codePages = (
-    <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
-      <p className="px-2 pt-2 pb-1 text-body-sm text-ink-muted">The code for each page you design: generated HTML and CSS, plus your own custom CSS.</p>
-      <ul className="grid gap-0.5">
-        {base.pages.map((p) => (
-          <li key={p.id}>
-            <button type="button" onClick={() => { setPageId(p.id); setNavOpen(false); }} aria-current={p.id === page.id ? "page" : undefined}
-              className={cx("flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-label-md", p.id === page.id ? "bg-info/15 text-info" : "text-ink hover:bg-surface-hover")}>
-              <FileText className="size-4 shrink-0 text-ink-subtle" aria-hidden="true" /><span className="truncate">{p.name}</span><span className="ml-auto truncate font-mono text-data-sm text-ink-subtle">/{p.slug}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <PanelHead title="Code" count={base.pages.length} />
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+        <p className="px-1 pt-1 pb-2 text-caption text-ink-muted">The code for each page you design: generated HTML and CSS, plus your own custom CSS.</p>
+        <ul className="grid gap-0.5">
+          {base.pages.map((p) => (
+            <li key={p.id}>
+              <button type="button" onClick={() => { setPageId(p.id); setNavOpen(false); }} aria-current={p.id === page.id ? "page" : undefined}
+                className={cx("flex h-11 w-full items-center gap-2 rounded-md px-2.5 text-left text-label-md", p.id === page.id ? "bg-info/12 text-info" : "text-ink hover:bg-surface-hover")}>
+                <FileText className={cx("size-4 shrink-0", p.id === page.id ? "text-info" : "text-ink-subtle")} aria-hidden="true" /><span className="truncate">{p.name}</span><span className="ml-auto truncate font-mono text-data-sm text-ink-subtle">/{p.slug}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
   const panel = tool === "add" ? <AddPanel /> : tool === "navigator" ? <NavigatorPanel /> : tool === "pages" ? <PagesPanel />
@@ -314,27 +329,42 @@ function Shell() {
                     </button>
                   );
                 })}
-                <span className="px-2 text-caption text-ink-subtle tabular-nums">{breakpoints.find((b) => b.id === bp)?.width ? `${breakpoints.find((b) => b.id === bp)?.width}px` : "Desktop"}</span>
+                {/* A fixed width, so switching between "Desktop" and "768px" never nudges the group sideways. */}
+                <span className="w-16 text-center text-caption text-ink-subtle tabular-nums">{breakpoints.find((b) => b.id === bp)?.width ? `${breakpoints.find((b) => b.id === bp)?.width}px` : "Desktop"}</span>
               </div>
             )}
 
-            {/* min-w-max: the controls never squeeze under each other; the page name on the left truncates instead. */}
+            {/* min-w-max: the controls never squeeze under each other; the page name on the left truncates instead.
+                Three groups, split by hairlines: history, view, then sharing. */}
             <div className="flex min-w-max flex-1 items-center justify-end gap-0.5 sm:gap-1">
               {/* Always say it's saved: the icon on every screen, the words where there's room. */}
-              <span className="mr-1 hidden items-center gap-1.5 text-caption text-ink-subtle sm:flex" role="status" aria-live="polite"
-                title={lastChange ? `${lastChange} · saved in this browser` : "Saved in this browser"}>
-                <CloudCheck className="size-4 text-success" aria-hidden="true" />
-                <span className="hidden 2xl:inline">{lastChange ? `${lastChange} · saved` : "Saved in this browser"}</span>
-                <span className="sr-only 2xl:hidden">{lastChange ? `${lastChange}, saved` : "Saved in this browser"}</span>
-              </span>
-              <span className="hidden items-center gap-0.5 sm:inline-flex sm:gap-1">
+              {saveFailed ? (
+                // Not saved is news: always in words, on every screen, and one click from the export that keeps the work.
+                <button type="button" role="status" aria-live="assertive" onClick={() => setTool("settings")} title="This browser's storage is full. Export a copy in Settings, or remove uploaded images."
+                  className="flex h-8 items-center gap-1.5 rounded-md bg-warning/15 px-2 text-label-sm text-warning hover:bg-warning/25">
+                  <CloudAlert className="size-4" aria-hidden="true" />Not saved
+                </button>
+              ) : (
+                <span className="hidden h-8 items-center gap-1.5 px-1.5 text-caption text-ink-subtle sm:flex" role="status" aria-live="polite"
+                  title={lastChange ? `${lastChange} · saved in this browser` : "Saved in this browser"}>
+                  <CloudCheck className="size-4 text-success" aria-hidden="true" />
+                  <span className="hidden 2xl:inline">{lastChange ? `${lastChange} · saved` : "Saved in this browser"}</span>
+                  <span className="sr-only 2xl:hidden">{lastChange ? `${lastChange}, saved` : "Saved in this browser"}</span>
+                </span>
+              )}
+              <span className="hidden items-center gap-0.5 sm:inline-flex">
                 <IconButton size="sm" variant="ghost" label="Undo" icon={<Undo2 />} onClick={actions.undo} disabled={!canUndo} title={canUndo ? "Undo (Ctrl+Z)" : "Nothing to undo yet"} />
                 <IconButton size="sm" variant="ghost" label="Redo" icon={<Redo2 />} onClick={actions.redo} disabled={!canRedo} title={canRedo ? "Redo (Ctrl+Shift+Z)" : "Nothing to redo"} />
               </span>
-              <span className="hidden lg:inline-flex"><ThemeToggle size="sm" showLabel={false} className="pr-0.5!" /></span>
-              {area === "design" && <IconButton size="sm" variant="ghost" label={preview ? "Exit preview" : "Preview"} icon={preview ? <EyeOff /> : <Eye />} pressed={preview} onClick={() => { setPreview(!preview); setEditingId(null); }} />}
-              {area !== "code" && <IconButton size="sm" variant="ghost" label={rightShown ? "Hide the right panel" : "Show the right panel"} icon={<PanelRight />} pressed={rightShown}
-                onClick={() => { if (window.matchMedia("(min-width: 80rem)").matches) setRightShown((s) => !s); else setInspectorOpen(true); }} />}
+              <Divider className="hidden sm:block" />
+              <span className="inline-flex items-center gap-0.5">
+                <span className="hidden lg:inline-flex"><ThemeButton /></span>
+                {area === "design" && <IconButton size="sm" variant="ghost" label={preview ? "Exit preview" : "Preview"} title={preview ? "Exit preview" : "Preview the page"} icon={preview ? <EyeOff /> : <Eye />} pressed={preview} onClick={() => { setPreview(!preview); setEditingId(null); }} />}
+                {/* Below 1280px the panel is a drawer that's closed until asked for, so the button only looks pressed where the panel is really on screen. */}
+                {area !== "code" && <IconButton size="sm" variant="ghost" label={rightShown && wide ? "Hide the right panel" : "Show the right panel"} title={rightShown && wide ? "Hide the right panel" : "Show the right panel"} icon={<PanelRight />} pressed={wide ? rightShown : inspectorOpen}
+                  onClick={() => { if (window.matchMedia("(min-width: 80rem)").matches) setRightShown((s) => !s); else setInspectorOpen(true); }} />}
+              </span>
+              <Divider className="hidden xl:block" />
               <span className="hidden xl:inline-flex"><Button size="sm" variant="ghost" iconStart={<Share2 />} onClick={() => setSharing(true)}>Share</Button></span>
               {/* Webflow's blue Publish, in the same blue as the canvas selection. */}
               <button type="button" onClick={() => setPublishing(true)} aria-label="Publish"
@@ -347,19 +377,26 @@ function Shell() {
           <div className="flex min-h-0 flex-1">
             {/* The left tool bar, as in Webflow. */}
             {!preview && (
-              <nav aria-label="Tools" className="hidden w-12 shrink-0 flex-col items-center gap-1 border-r border-line bg-surface py-2 md:flex">
+              // pt-1 centres the first icon on the 44px panel header beside it, so the two read as one row.
+              <nav aria-label="Tools" className="hidden w-12 shrink-0 flex-col items-center gap-1 border-r border-line bg-surface pt-1 pb-2 md:flex">
                 {tools.map((t) => {
                   const TIcon = t.icon;
                   const on = tool === t.id || (t.id === "cms" && area === "cms" && tool === null);
                   return (
-                    <button key={t.id} type="button" aria-label={`${t.label} (${t.key})`} title={`${t.label} (${t.key})`} aria-pressed={on} onClick={() => openTool(t.id)}
-                      className={cx("relative inline-flex size-9 items-center justify-center rounded-md transition-colors duration-fast", on ? "bg-info/15 text-info" : "text-ink-muted hover:bg-surface-hover hover:text-ink")}>
-                      <TIcon className="size-5" />
-                    </button>
+                    <React.Fragment key={t.id}>
+                      {/* Page-building tools above the line, the workspace (data, live site, code, files) below it. */}
+                      {t.id === "cms" && <span aria-hidden="true" className="my-1 h-px w-6 shrink-0 bg-line" />}
+                      <button type="button" aria-label={`${t.label} (${t.key})`} title={`${t.label} (${t.key})`} aria-pressed={on} onClick={() => openTool(t.id)}
+                        className={cx("relative inline-flex size-9 items-center justify-center rounded-md transition-colors duration-fast", on ? "bg-info/15 text-info" : "text-ink-muted hover:bg-surface-hover hover:text-ink")}>
+                        {on && <span aria-hidden="true" className="absolute top-2 bottom-2 -left-1.5 w-0.5 rounded-full bg-info" />}
+                        <TIcon className="size-5" />
+                      </button>
+                    </React.Fragment>
                   );
                 })}
                 <button type="button" aria-label="Settings (S)" title="Settings (S)" aria-pressed={tool === "settings"} onClick={() => setTool((x) => (x === "settings" ? null : "settings"))}
-                  className={cx("mt-auto inline-flex size-9 items-center justify-center rounded-md transition-colors duration-fast", tool === "settings" ? "bg-info/15 text-info" : "text-ink-muted hover:bg-surface-hover hover:text-ink")}>
+                  className={cx("relative mt-auto inline-flex size-9 items-center justify-center rounded-md transition-colors duration-fast", tool === "settings" ? "bg-info/15 text-info" : "text-ink-muted hover:bg-surface-hover hover:text-ink")}>
+                  {tool === "settings" && <span aria-hidden="true" className="absolute top-2 bottom-2 -left-1.5 w-0.5 rounded-full bg-info" />}
                   <Settings className="size-5" />
                 </button>
               </nav>
@@ -432,8 +469,21 @@ function Shell() {
   );
 }
 
+/** A hairline between groups of top-bar controls. */
+function Divider({ className }: { className?: string }) {
+  return <span aria-hidden="true" className={cx("mx-1 h-5 w-px shrink-0 bg-line", className)} />;
+}
+
+/** Day and night as one quiet icon, sized like its neighbours (the design system's switch is too loud for a tool bar). */
+function ThemeButton() {
+  const { theme, toggle } = useTheme();
+  const night = theme === "dark";
+  return <IconButton size="sm" variant="ghost" label={night ? "Switch to day" : "Switch to night"} title={night ? "Day mode" : "Night mode"} icon={night ? <Sun /> : <Moon />} onClick={(e) => toggle(e.currentTarget)} />;
+}
+
 /** Below 1280px the right panel is a drawer, opened by selecting something or the panel button. */
-function RightDrawer({ title, open, onClose, children }: { title: string; open: boolean; onClose: () => void; children: React.ReactNode }) {
+/** True at 1280px and up, where the right panel sits beside the canvas instead of in a drawer. */
+function useWide() {
   const [wide, setWide] = React.useState(true);
   React.useEffect(() => {
     const m = window.matchMedia("(min-width: 80rem)");
@@ -441,6 +491,11 @@ function RightDrawer({ title, open, onClose, children }: { title: string; open: 
     on(); m.addEventListener("change", on);
     return () => m.removeEventListener("change", on);
   }, []);
+  return wide;
+}
+
+function RightDrawer({ title, open, onClose, children }: { title: string; open: boolean; onClose: () => void; children: React.ReactNode }) {
+  const wide = useWide();
   return (
     <Drawer side="right" open={!wide && open} onClose={onClose} title={title}>
       {!wide && open && <div className="-mx-5 -mt-2 flex min-h-0 flex-col">{children}</div>}

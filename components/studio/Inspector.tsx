@@ -189,33 +189,37 @@ function ViewPanel() {
     <div>
       <Section title="View">
         <label className="grid gap-1.5"><span className="text-label-sm text-ink-muted">Name</span>
-          <Input key={v.id + v.name} defaultValue={v.name} onBlur={(e) => { const n = e.target.value.trim(); if (n && n !== v.name) set({ name: n }); }} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
+          <Input size="sm" key={v.id + v.name} defaultValue={v.name} onBlur={(e) => { const n = e.target.value.trim(); if (n && n !== v.name) set({ name: n }); }} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
         </label>
       </Section>
       <Section title="Layout">
-        <div role="radiogroup" aria-label="Layout" className="grid grid-cols-3 gap-1.5">
-          {viewTypes.map((t) => { const Icon = viewIcons[t.type]; const on = v.type === t.type; return (
-            <button key={t.type} type="button" role="radio" aria-checked={on} title={t.hint}
-              onClick={() => set({ type: t.type as ViewType, groupBy: t.type === "kanban" ? v.groupBy ?? choices[0]?.id : v.groupBy, dateField: v.dateField ?? dates[0]?.id, coverField: v.coverField ?? images[0]?.id })}
-              className={cx("grid justify-items-center gap-1 rounded-md border px-1 py-2.5 text-label-sm", on ? "border-action bg-surface-selected text-ink" : "border-line text-ink-muted hover:bg-surface-hover")}>
-              <Icon className={cx("size-5", on ? "text-ink-brand" : "text-ink-subtle")} />{t.label}
-            </button>
-          ); })}
+        {/* All five layouts on one row (three over two left an orphan pair); the chosen one is named underneath. */}
+        <div className="grid gap-1.5">
+          <div role="radiogroup" aria-label="Layout" className="grid grid-cols-5 gap-1 rounded-md border border-line bg-surface-sunken p-1">
+            {viewTypes.map((t) => { const Icon = viewIcons[t.type]; const on = v.type === t.type; return (
+              <button key={t.type} type="button" role="radio" aria-checked={on} aria-label={t.label} title={`${t.label}: ${t.hint}`}
+                onClick={() => set({ type: t.type as ViewType, groupBy: t.type === "kanban" ? v.groupBy ?? choices[0]?.id : v.groupBy, dateField: v.dateField ?? dates[0]?.id, coverField: v.coverField ?? images[0]?.id })}
+                className={cx("inline-flex h-9 items-center justify-center rounded-sm transition-colors duration-fast", on ? "bg-surface text-ink-brand shadow-xs" : "text-ink-subtle hover:text-ink")}>
+                <Icon className="size-4.5" />
+              </button>
+            ); })}
+          </div>
+          <p className="text-caption text-ink-muted"><span className="font-semibold text-ink">{viewTypes.find((t) => t.type === v.type)?.label}</span> · {viewTypes.find((t) => t.type === v.type)?.hint}</p>
         </div>
         {(v.type === "gallery" || v.type === "kanban" || v.type === "list") && (
           <label className="grid gap-1.5"><span className="text-label-sm text-ink-muted">Card image</span>
-            <Select value={v.coverField ?? ""} aria-label="Card image" onValueChange={(id) => set({ coverField: id || undefined })}
+            <Select size="sm" value={v.coverField ?? ""} aria-label="Card image" onValueChange={(id) => set({ coverField: id || undefined })}
               options={[{ value: "", label: "No image" }, ...images.map((f) => ({ value: f.id, label: f.name }))]} />
           </label>
         )}
         {v.type === "kanban" && (
           <label className="grid gap-1.5"><span className="text-label-sm text-ink-muted">Columns from</span>
-            <Select value={v.groupBy ?? ""} placeholder="Choose a field" aria-label="Columns from" onValueChange={(id) => set({ groupBy: id })} options={choices.map((f) => ({ value: f.id, label: f.name }))} />
+            <Select size="sm" value={v.groupBy ?? ""} placeholder="Choose a field" aria-label="Columns from" onValueChange={(id) => set({ groupBy: id })} options={choices.map((f) => ({ value: f.id, label: f.name }))} />
           </label>
         )}
         {v.type === "calendar" && (
           <label className="grid gap-1.5"><span className="text-label-sm text-ink-muted">Dates from</span>
-            <Select value={v.dateField ?? ""} placeholder="Choose a field" aria-label="Dates from" onValueChange={(id) => set({ dateField: id })} options={dates.map((f) => ({ value: f.id, label: f.name }))} />
+            <Select size="sm" value={v.dateField ?? ""} placeholder="Choose a field" aria-label="Dates from" onValueChange={(id) => set({ dateField: id })} options={dates.map((f) => ({ value: f.id, label: f.name }))} />
           </label>
         )}
         {v.type === "gallery" && (

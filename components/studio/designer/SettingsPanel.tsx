@@ -153,19 +153,23 @@ export function SettingsPanel() {
       )}
 
       {el.type !== "body" && el.type !== "item" && (
-        <section className="flex flex-wrap gap-2 p-3">
+        // A titled section like the rest: moves on an even grid, Delete apart below them, in red.
+        <Section title="Arrange">
           {(() => {
             const up = stepMove(d.page.root, el.id, -1), down = stepMove(d.page.root, el.id, 1);
             return (
-              <>
-                <Button size="sm" variant="ghost" iconStart={<ArrowUp />} disabled={!up} title={up ? "Move up (Alt+↑)" : "Already first"} onClick={() => up && actions.moveElement(d.page.id, el.id, up.parentId, up.index)}>Move up</Button>
-                <Button size="sm" variant="ghost" iconStart={<ArrowDown />} disabled={!down} title={down ? "Move down (Alt+↓)" : "Already last"} onClick={() => down && actions.moveElement(d.page.id, el.id, down.parentId, down.index)}>Move down</Button>
-              </>
+              <div className="grid grid-cols-2 gap-2">
+                <Button size="sm" variant="secondary" iconStart={<ArrowUp />} disabled={!up} title={up ? "Move up (Alt+↑)" : "Already first"} onClick={() => up && actions.moveElement(d.page.id, el.id, up.parentId, up.index)}>Move up</Button>
+                <Button size="sm" variant="secondary" iconStart={<ArrowDown />} disabled={!down} title={down ? "Move down (Alt+↓)" : "Already last"} onClick={() => down && actions.moveElement(d.page.id, el.id, down.parentId, down.index)}>Move down</Button>
+                <Button size="sm" variant="secondary" iconStart={<Copy />} title="Duplicate (Ctrl+D)" className="col-span-2" onClick={() => { const id = actions.duplicateElement(d.page.id, el.id); if (id) d.select(id); }}>Duplicate</Button>
+              </div>
             );
           })()}
-          <Button size="sm" variant="ghost" iconStart={<Copy />} onClick={() => { const id = actions.duplicateElement(d.page.id, el.id); if (id) d.select(id); }}>Duplicate</Button>
-          <Button size="sm" variant="ghost" iconStart={<Trash2 />} className="text-danger" onClick={() => { const p = findParent(d.page.root, el.id)?.parent.id ?? null; actions.deleteElement(d.page.id, el.id); d.select(p); toast({ message: `Deleted ${elementName(el)}`, action: { label: "Undo", onClick: () => { actions.undo(); d.select(el.id); } } }); }}>Delete</Button>
-        </section>
+          <button type="button" title="Delete (Del)" onClick={() => { const p = findParent(d.page.root, el.id)?.parent.id ?? null; actions.deleteElement(d.page.id, el.id); d.select(p); toast({ message: `Deleted ${elementName(el)}`, action: { label: "Undo", onClick: () => { actions.undo(); d.select(el.id); } } }); }}
+            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md text-label-sm text-danger transition-colors duration-fast hover:bg-danger/10 [&_svg]:size-4">
+            <Trash2 aria-hidden="true" />Delete {elementName(el)}
+          </button>
+        </Section>
       )}
     </div>
   );

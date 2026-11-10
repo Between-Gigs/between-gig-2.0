@@ -1,5 +1,5 @@
 "use client";
-import { Button, ConfirmDialog, IconButton, Input, Menu, cx } from "@ds/components";
+import { ConfirmDialog, IconButton, Input, Menu, cx, useToast } from "@ds/components";
 import {
   AppWindow, Box, ChevronDown, Ellipsis, ChevronRight, Columns2, Copy, Database, FileText, Heading, Home, Image as ImageIcon, Link, Minus, MousePointerClick,
   Pencil, Pilcrow, Plus, RectangleHorizontal, Search, Square, SquareDashed, Trash2, Type,
@@ -12,20 +12,14 @@ import { useUi } from "../context";
 import { DRAG_MIME, useDesign, type DragItem } from "./context";
 import { readDrag } from "./Canvas";
 import { SeoDialog } from "./SeoDialog";
+import { PanelHead } from "../ui";
 
 export const elementIcons: Record<ElementType, React.ComponentType<{ className?: string }>> = {
   body: AppWindow, section: RectangleHorizontal, container: Box, div: Square, columns: Columns2, heading: Heading, paragraph: Pilcrow,
   text: Type, link: Link, button: MousePointerClick, image: ImageIcon, divider: Minus, collection: Database, item: SquareDashed,
 };
 
-function Head({ title, action }: { title: string; action?: React.ReactNode }) {
-  return (
-    <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-line pr-2 pl-4">
-      <h2 className="text-label-md text-ink">{title}</h2>
-      {action}
-    </div>
-  );
-}
+const Head = PanelHead;
 
 /** Where a click-to-add element goes: into the selected box, else after the selected element, else at the end of the page. */
 function placeFor(root: PageElement, selectedId: string | null, type: ElementType): { parentId: string; index: number } {
@@ -49,12 +43,13 @@ export function AddPanel() {
   return (
     <>
       <Head title="Add elements" />
-      <div className="grid content-start gap-4 overflow-y-auto p-3">
-        <p className="text-body-sm text-ink-muted">Drag onto the canvas, or click to add next to what&apos;s selected.</p>
+      <div className="grid content-start gap-5 overflow-y-auto px-3 pt-3 pb-4">
+        <p className="text-caption text-ink-muted">Drag onto the canvas, or click to add next to what&apos;s selected.</p>
         {addable.map((g) => (
           <section key={g.group} className="grid gap-2">
             <h3 className="text-label-sm text-ink-muted">{g.group}</h3>
-            <ul className="grid grid-cols-2 gap-1.5">
+            {/* Three across, as in Webflow: twelve elements read as a palette, not a long list of big cards. */}
+            <ul className="grid grid-cols-3 gap-1.5">
               {g.types.map((t) => {
                 const Icon = elementIcons[t];
                 return (
@@ -63,9 +58,10 @@ export function AddPanel() {
                       onDragStart={(e) => { const item: DragItem = { kind: "new", type: t }; e.dataTransfer.setData(DRAG_MIME, JSON.stringify(item)); e.dataTransfer.setData("text/plain", elementInfo[t].label); e.dataTransfer.effectAllowed = "copy"; d.setDrag(item); }}
                       onDragEnd={() => d.setDrag(null)}
                       onClick={() => { const at = placeFor(d.page.root, d.selectedId, t); d.select(actions.addElement(d.page.id, t, at.parentId, at.index)); }}
-                      className="grid h-18 w-full cursor-grab content-center justify-items-center gap-1.5 rounded-md border border-line bg-surface text-label-sm text-ink-muted transition-colors duration-fast hover:border-line-strong hover:bg-surface-hover hover:text-ink active:cursor-grabbing">
+                      className="grid min-h-16 w-full cursor-grab content-center justify-items-center gap-1.5 rounded-md border border-line bg-surface px-1 py-2 text-center text-caption leading-tight text-ink-muted transition-colors duration-fast hover:border-info hover:bg-info/5 hover:text-ink active:cursor-grabbing">
                       <Icon className="size-5" />
-                      {elementInfo[t].label}
+                      {/* Wraps rather than cuts off: "Collection List" reads in full on two lines. */}
+                      <span className="max-w-full text-balance">{elementInfo[t].label}</span>
                     </button>
                   </li>
                 );
@@ -120,7 +116,8 @@ export function NavigatorPanel() {
           }}
           onDrop={(e) => { e.preventDefault(); e.stopPropagation(); const item = readDrag(e, d.drag); const m = over; setOver(null); d.setDrag(null); if (item && m) commit(item, el, m.where); }}
           onMouseEnter={() => d.setHover(el.id)} onMouseLeave={() => d.setHover(null)}
-          className={cx("group relative flex h-8 items-center gap-1 rounded-xs pr-2 text-body-sm", on ? "bg-info/15 text-ink" : "text-ink-muted hover:bg-surface-hover hover:text-ink",
+          // 28px rows, the density of a layer tree: a whole page section fits on screen without scrolling.
+          className={cx("group relative flex h-7 items-center gap-1 rounded-xs pr-2 text-body-sm", on ? "bg-info/15 text-ink" : "text-ink-muted hover:bg-surface-hover hover:text-ink",
             mark === "inside" && "ring-2 ring-info ring-inset")}
           style={{ paddingLeft: `${4 + depth * 12}px` }}>
           {mark === "before" && <span aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-info" />}
@@ -178,31 +175,45 @@ export function PagesPanel() {
   const [seo, setSeo] = React.useState<string | null>(null);
   const victim = ui.base.pages.find((p) => p.id === deleting);
   const seoPage = ui.base.pages.find((p) => p.id === seo);
+  const toast = useToast();
+  const newPage = () => { const id = actions.addPage(`Page ${ui.base.pages.length + 1}`); d.setPageId(id); setRenaming(id); };
   return (
     <>
-      <Head title="Pages" action={<IconButton size="sm" variant="ghost" label="New page" icon={<Plus />} onClick={() => { const id = actions.addPage(`Page ${ui.base.pages.length + 1}`); d.setPageId(id); setRenaming(id); }} />} />
+      <Head title="Pages" count={ui.base.pages.length} action={<IconButton size="sm" variant="ghost" label="New page" title="New page" icon={<Plus />} onClick={newPage} />} />
       <ul className="grid content-start gap-0.5 overflow-y-auto p-2">
         {ui.base.pages.map((p) => {
           const on = p.id === d.page.id;
           return (
-            <li key={p.id} className={cx("group flex min-h-10 items-center gap-2 rounded-md pr-1 pl-2", on ? "bg-surface-selected" : "hover:bg-surface-hover")}>
-              {p.slug === "" ? <Home className="size-4 shrink-0 text-ink-subtle" aria-hidden="true" /> : <FileText className="size-4 shrink-0 text-ink-subtle" aria-hidden="true" />}
+            // The Designer's blue for "this one", as in the Navigator and on the canvas.
+            <li key={p.id} className={cx("group flex min-h-11 items-center gap-2 rounded-md pr-1 pl-2.5", on ? "bg-info/12" : "hover:bg-surface-hover")}>
+              {p.slug === "" ? <Home className={cx("size-4 shrink-0", on ? "text-info" : "text-ink-subtle")} aria-hidden="true" /> : <FileText className={cx("size-4 shrink-0", on ? "text-info" : "text-ink-subtle")} aria-hidden="true" />}
               {renaming === p.id ? (
                 <Input size="sm" autoFocus defaultValue={p.name} aria-label="Page name" className="min-w-0 flex-1"
                   onBlur={(e) => { const n = e.target.value.trim(); if (n && n !== p.name) actions.updatePage(p.id, { name: n }); setRenaming(null); }}
                   onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setRenaming(null); }} />
               ) : (
                 <button type="button" onClick={() => d.setPageId(p.id)} onDoubleClick={() => setRenaming(p.id)} aria-current={on ? "page" : undefined} className="grid min-w-0 flex-1 py-1 text-left">
-                  <span className={cx("truncate text-body-sm text-ink", on && "font-semibold")}>{p.name}</span>
-                  <span className="truncate text-caption text-ink-subtle">/{p.slug}</span>
+                  <span className={cx("truncate text-label-md", on ? "text-info" : "text-ink")}>{p.name}</span>
+                  <span className="truncate font-mono text-data-sm text-ink-subtle">/{p.slug}</span>
                 </button>
               )}
-              <Menu align="end" trigger={<button type="button" aria-label={`${p.name} options`} className="inline-flex size-8 shrink-0 items-center justify-center rounded-xs text-ink-subtle hover:text-ink"><Ellipsis className="size-4" /></button>}
+              <Menu align="end" trigger={<button type="button" aria-label={`${p.name} options`} className="inline-flex size-8 shrink-0 items-center justify-center rounded-xs text-ink-subtle opacity-60 group-hover:opacity-100 hover:text-ink focus-visible:opacity-100"><Ellipsis className="size-4" /></button>}
                 items={[
                   { label: "Rename", icon: <Pencil />, onSelect: () => setRenaming(p.id) },
                   { label: "Search and sharing…", icon: <Search />, onSelect: () => setSeo(p.id) },
                   { label: "Duplicate", icon: <Copy />, onSelect: () => d.setPageId(actions.duplicatePage(p.id)) },
-                  ...(p.slug === "" ? [] : [{ label: "Make home page", icon: <Home />, onSelect: () => actions.change("Changed the home page", (b) => { for (const x of b.pages) if (x.slug === "") x.slug = x.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "page"; const t = b.pages.find((x) => x.id === p.id); if (t) t.slug = ""; }) }]),
+                  ...(p.slug === "" ? [] : [{ label: "Make home page", icon: <Home />, onSelect: () => actions.change("Changed the home page", (b) => {
+                    const t = b.pages.find((x) => x.id === p.id);
+                    if (!t) return;
+                    // The old home page takes an address from its name, numbered when another page already has it.
+                    t.slug = "";
+                    for (const x of b.pages) if (x.slug === "" && x.id !== t.id) {
+                      const stem = x.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "page";
+                      let s = stem;
+                      for (let n = 2; b.pages.some((y) => y.slug === s && y.id !== x.id); n++) s = `${stem}-${n}`;
+                      x.slug = s;
+                    }
+                  }) }]),
                   "separator",
                   { label: "Delete page", icon: <Trash2 />, danger: true, disabled: ui.base.pages.length < 2, onSelect: () => setDeleting(p.id) },
                 ]} />
@@ -210,15 +221,45 @@ export function PagesPanel() {
           );
         })}
       </ul>
-      <div className="mt-auto grid gap-2 border-t border-line p-3">
-        <label className="grid gap-1.5"><span className="text-label-sm text-ink-muted">Address of {d.page.name}</span>
+      <div className="px-2">
+        <button type="button" onClick={newPage}
+          className="flex h-9 w-full items-center gap-2 rounded-md border border-dashed border-line-strong px-3 text-label-sm text-ink-muted transition-colors duration-fast hover:border-info hover:text-info">
+          <Plus className="size-4" aria-hidden="true" />New page
+        </button>
+      </div>
+      {/* The selected page's own settings, titled so it's clear which page they belong to. */}
+      <div className="mt-auto grid gap-3 border-t border-line p-3">
+        <h3 className="text-label-sm text-ink">{d.page.name} settings</h3>
+        <label className="grid gap-1.5"><span className="text-caption text-ink-muted">Address</span>
           <Input size="sm" className="max-md:h-11" key={d.page.id + d.page.slug} defaultValue={d.page.slug} disabled={d.page.slug === ""} placeholder="home" aria-describedby="slug-hint"
-            onBlur={(e) => { const s = e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-|-$/g, ""); if (s && s !== d.page.slug && !ui.base.pages.some((x) => x.slug === s)) actions.updatePage(d.page.id, { slug: s }); }}
+            // Shows what was actually saved: a cleaned-up address replaces what was typed, and a refused one (empty, or
+            // another page's) goes back to the current address with a note saying why, rather than sitting there unsaved.
+            onBlur={(e) => {
+              const input = e.target;
+              const s = input.value.toLowerCase().trim().replace(/[^a-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+              const other = ui.base.pages.find((x) => x.slug === s && x.id !== d.page.id);
+              if (!s || other) {
+                input.value = d.page.slug;
+                if (input.value !== s) toast({ message: other ? `/${s} is already the address of ${other.name}.` : "An address needs at least one letter or number.", tone: "danger" });
+                return;
+              }
+              input.value = s;
+              if (s !== d.page.slug) actions.updatePage(d.page.id, { slug: s });
+            }}
+            onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
             start={<span className="text-body-sm text-ink-subtle">/</span>} />
           <span id="slug-hint" className="text-caption text-ink-subtle">{d.page.slug === "" ? "This is the home page." : "Letters, numbers and dashes."}</span>
         </label>
-        <Button size="sm" variant="ghost" iconStart={<Search />} className="justify-start" onClick={() => setSeo(d.page.id)}>Search and sharing{d.page.seo?.title || d.page.seo?.description ? "" : " · not set"}</Button>
-        <Button size="sm" variant="secondary" iconStart={<Plus />} onClick={() => { const id = actions.addPage(`Page ${ui.base.pages.length + 1}`); d.setPageId(id); setRenaming(id); }}>New page</Button>
+        {/* A settings row, not a floating ghost button: label on the left, its state on the right. */}
+        <button type="button" onClick={() => setSeo(d.page.id)}
+          className="flex h-10 items-center gap-2 rounded-md border border-line px-3 text-left text-label-sm text-ink transition-colors duration-fast hover:bg-surface-hover">
+          <Search className="size-4 shrink-0 text-ink-subtle" aria-hidden="true" />
+          <span className="min-w-0 flex-1 truncate">Search and sharing</span>
+          {d.page.seo?.title || d.page.seo?.description
+            ? <span className="text-caption text-success">Set</span>
+            : <span className="text-caption text-ink-subtle">Not set</span>}
+          <ChevronRight className="size-3.5 shrink-0 text-ink-subtle" aria-hidden="true" />
+        </button>
       </div>
       {seoPage && <SeoDialog page={seoPage} open={!!seoPage} onClose={() => setSeo(null)} />}
       <ConfirmDialog open={!!victim} onCancel={() => setDeleting(null)} tone="danger" confirmLabel="Delete page" title={`Delete ${victim?.name}?`}

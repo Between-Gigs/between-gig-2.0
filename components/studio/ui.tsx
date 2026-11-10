@@ -8,6 +8,22 @@ import * as React from "react";
 import { asset } from "@/lib/site";
 import type { CollectionIcon, FieldType, ViewType } from "@/lib/studio/types";
 
+/**
+ * The header on every left panel: one height (44px, the top bar's), one inset, one type style, so switching tools
+ * never makes the panel jump. An optional count sits after the title; actions sit at the right edge.
+ */
+export function PanelHead({ title, count, action }: { title: string; count?: number; action?: React.ReactNode }) {
+  return (
+    <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-line pr-2 pl-4">
+      <h2 className="flex min-w-0 items-baseline gap-1.5 text-label-md text-ink">
+        <span className="truncate">{title}</span>
+        {count !== undefined && <span className="text-caption text-ink-subtle tabular-nums">{count}</span>}
+      </h2>
+      {action}
+    </div>
+  );
+}
+
 export const collectionIcons: Record<CollectionIcon, React.ComponentType<{ className?: string }>> = {
   users: Users, book: BookOpen, image: ImageIcon, sparkles: Sparkles, inbox: Inbox, tag: Tag, folder: Folder, calendar: CalendarDays, star: Star,
 };
