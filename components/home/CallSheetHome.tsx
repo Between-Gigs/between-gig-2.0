@@ -6,7 +6,7 @@ import Link from "next/link";
 import * as React from "react";
 import { CallSheetDialog } from "@/components/funnel/CallSheetDialog";
 import { CallSheetButton } from "@/components/funnel/parts";
-import { startCurtain, type CurtainController, type CurtainParams } from "@/lib/curtain";
+import { curtainDefaults, startCurtain, type CurtainController, type CurtainParams } from "@/lib/curtain";
 import { startGravityField } from "@/lib/gravity-field";
 
 const links = [
@@ -27,9 +27,13 @@ const links = [
  * one solid mint block, and the dot field / curtain hard-cropped into a square forest brand block beside it (forest in
  * both themes: the block is pinned to the dark theme, as the brand panels on /professionals are).
  */
-export function CallSheetHome({ curtain }: {
+/** The home page's own curtain: the tuned defaults; it parts when the sign-up opens and hangs again afterwards. */
+const HOME_CURTAIN = { params: () => curtainDefaults, stayOnPage: true };
+
+export function CallSheetHome({ curtain = HOME_CURTAIN }: {
   /**
-   * Draw the stage curtain (lib/curtain.ts) instead of the gravity well. The tuning page passes its live settings,
+   * The stage curtain (lib/curtain.ts), drawn in the brand block. The home page uses the tuned defaults; the tuning
+   * page passes its live settings,
    * gets the controller; the button parts it as decoration while the dialog opens (and closes it again while tuning).
    */
   curtain?: { params: () => CurtainParams; onReady?: (c: CurtainController) => void; stayOnPage?: boolean };
@@ -61,13 +65,13 @@ export function CallSheetHome({ curtain }: {
         <header className="grid h-16 grid-cols-12 items-center gap-x-6 border-b-4 border-line-strong lg:h-20">
           <Link href="/" aria-label="Between Gigs home" className="col-span-6 inline-flex min-h-11 w-fit items-center md:col-span-3"><Logo height={30} /></Link>
           <div className="col-span-6 flex items-center justify-end gap-3 md:col-span-3 md:col-start-10">
-            <Link href="/login/" className="inline-flex min-h-11 items-center px-2 text-label-md font-bold text-ink underline-offset-4 transition-colors duration-fast hover:underline">Sign in</Link>
             <ThemeToggle size="sm" showLabel={false} className="pr-0.5!" />
+            <Link href="/login/" className="inline-flex min-h-11 items-center font-display text-label-md font-semibold text-ink underline-offset-8 transition-colors duration-fast hover:underline">Log in</Link>
           </div>
         </header>
 
-        <main id="main" className="grid flex-1 grid-cols-12 content-start gap-x-6 gap-y-8 py-8 lg:content-center lg:py-12">
-          <div className="col-span-12 flex min-w-0 flex-col lg:col-span-7">
+        <main id="main" className="flex flex-1 flex-col gap-8 py-8 lg:grid lg:grid-cols-12 lg:content-center lg:gap-x-6 lg:py-12">
+          <div className="flex min-w-0 flex-col lg:col-span-7">
             <Reveal effect="fade-up"><p className={cx(eyebrow, "text-ink")}>Extraordinary talent. Everyday solutions.</p></Reveal>
             <Reveal effect="fade-up" delay={80}>
               <h1 className="mt-4 font-display text-display-md text-ink sm:text-display-lg xl:text-display-xl">
@@ -77,7 +81,7 @@ export function CallSheetHome({ curtain }: {
             {/* The screen's one mint block: the call sheet sign-up. */}
             <Reveal effect="fade-up" delay={160} className="mt-8 lg:mt-auto lg:pt-10">
               <section aria-labelledby="call-sheet-h" className="grid gap-5 bg-tint-mint p-5 text-forest-950 sm:grid-cols-7 sm:items-end sm:gap-x-6 sm:p-6">
-                <h2 id="call-sheet-h" className="font-display text-heading-lg sm:col-span-3">Los Angeles Call Sheet</h2>
+                <h2 id="call-sheet-h" className="font-display text-heading-lg text-balance sm:col-span-3">Los Angeles Call Sheet</h2>
                 <div className="grid gap-3 sm:col-span-4">
                   <CallSheetButton onClick={join} className={cx("h-14! w-full justify-between! gap-6 px-5! text-heading-sm [&_svg]:size-5!", onMint)} />
                   <Link href="/professionals/" className="inline-flex min-h-11 w-fit items-center gap-2 text-label-md font-bold text-forest-950 underline decoration-2 underline-offset-4">
@@ -89,15 +93,16 @@ export function CallSheetHome({ curtain }: {
           </div>
 
           {/* The brand block: the dot field (gravity well) or the stage curtain, hard-cropped square into the grid. */}
-          <div className="col-span-12 lg:col-span-5">
-            <div ref={field} data-theme="dark" className="depth-field relative isolate aspect-square w-full overflow-hidden text-ink max-lg:max-h-96 max-lg:aspect-auto max-lg:h-72 sm:max-lg:h-96">
+          {/* Below lg it fills what's left of the screen (at least 288px), so no dead band sits above the footer. */}
+          <div className="flex flex-1 flex-col lg:col-span-5">
+            <div ref={field} data-theme="dark" className="depth-field relative isolate w-full overflow-hidden text-ink max-lg:min-h-72 max-lg:flex-1 lg:aspect-square">
               {!curtainOn && <span aria-hidden="true" className="glow-horizon" />}
             </div>
           </div>
         </main>
 
-        <footer className="grid grid-cols-12 items-center gap-x-6 gap-y-2 border-t-4 border-line-strong py-4 text-body-sm">
-          <span className="col-span-12 font-bold text-ink md:col-span-4">© 2026 Between Gigs</span>
+        <footer className="grid grid-cols-12 items-start gap-x-6 gap-y-2 border-t-4 border-line-strong py-4 text-body-sm">
+          <span className="col-span-12 inline-flex min-h-11 items-center font-bold text-ink md:col-span-4">© 2026 Between Gigs</span>
           <nav aria-label="Footer" className="col-span-12 flex flex-wrap gap-x-5 md:col-span-8 md:justify-end">
             {links.map((l) => (
               <Link key={l.href} href={l.href} className={footLink}>{l.label}</Link>

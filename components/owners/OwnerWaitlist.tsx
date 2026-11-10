@@ -11,7 +11,7 @@ import { inChunks } from "@/lib/owners/batch";
 import { OwnerShell } from "./OwnerShell";
 import { OwnerGate } from "./OwnerGate";
 import { shortDate } from "./format";
-import { OwnerPage, Panel, RowSkeletons } from "./kit";
+import { EmptyNote, OwnerPage, Panel, RowSkeletons } from "./kit";
 import { markArea } from "@/lib/split-area";
 
 markArea("bg-split:dashboard");
@@ -40,6 +40,8 @@ function Waitlist() {
   const [query, setQuery] = React.useState<Required<WaitlistQuery>>({ text: "", inviteStatus: initialStatus, category: "all", sort: "joined-new" });
   const [text, setText] = React.useState("");
   const [rows, setRows] = React.useState<WaitlistRow[] | null>(null);
+  /** Every sign-up, whatever the filters: the selection is read from this, so a filter never hides who gets the email. */
+  const [allRows, setAllRows] = React.useState<WaitlistRow[]>([]);
   const [counts, setCounts] = React.useState<Record<InviteStatus, number> | null>(null);
   const [page, setPage] = React.useState(1);
   const [selected, setSelected] = React.useState<string[]>([]);
@@ -52,6 +54,7 @@ function Waitlist() {
   const refresh = React.useCallback(async (q: WaitlistQuery) => {
     const [r, all] = await Promise.all([data.owners.waitlist(q), data.owners.waitlist()]);
     setRows(r);
+    setAllRows(all);
     setCounts(Object.fromEntries(statuses.map((s) => [s, all.filter((x) => x.inviteStatus === s).length])) as Record<InviteStatus, number>);
   }, []);
   React.useEffect(() => { void refresh(query); }, [query, refresh]); // eslint-disable-line react-hooks/set-state-in-effect
@@ -100,7 +103,11 @@ function Waitlist() {
     <Button size="sm" variant="ghost" iconStart={<RotateCw />} aria-label={`Resend invite to ${r.signup.email}`} onClick={() => void resend(r.personId!, r.signup.email)}>Resend</Button>
   );
 
-  const emails = (rows ?? []).filter((r) => selected.includes(r.signup.id)).map((r) => r.signup.email);
+  // Who gets the email comes from the selection itself, not from the rows on screen, so a filter that hides
+  // some of them can't blank the confirm's "To" line. The selection stays; the bar says how many are hidden.
+  const emails = selected.map((id) => allRows.find((r) => r.signup.id === id)?.signup.email).filter((e): e is string => !!e);
+  const shown = new Set((rows ?? []).map((r) => r.signup.id));
+  const hidden = rows ? selected.filter((id) => !shown.has(id)).length : 0;
   const email = React.useMemo(() => renderEmail("invite", emails[0] ? { email: emails[0] } : {}), [emails[0]]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selects = (
@@ -129,40 +136,46 @@ function Waitlist() {
         footer={pageCount > 1 ? <Pager page={page} pageCount={pageCount} onChange={setPage} itemLabel="page of sign-ups" /> : undefined}>
       <div data-results={rows ? "" : undefined}>
         {!rows && <RowSkeletons count={8} />}
+        {rows && visible.length === 0 && (
+          <EmptyNote title="No one matches" action={(query.text || query.category !== "all" || query.inviteStatus !== "all") && (
+            <Button variant="secondary" size="lg" iconStart={<X />} className="border-2" onClick={() => { setText(""); setQuery((q) => ({ ...q, text: "", category: "all", inviteStatus: "all" })); setPage(1); }}>Clear filters</Button>
+          )}>Try fewer filters, or search for part of an email or a ZIP.</EmptyNote>
+        )}
         {/* Tablet and up: a table. Selected rows are tinted and marked, so a selection is easy to see while scrolling. */}
-        <div className={cx("hidden overflow-x-auto", rows && "md:block")}>
-          <table className="w-full border-collapse text-left text-body-md">
+        <div className={cx("hidden overflow-x-auto", rows && visible.length > 0 && "md:block")}>
+          {/* Cells don't wrap, so every row keeps one height; a narrow screen scrolls the table sideways instead. */}
+          <table className="w-full border-collapse text-left text-body-md whitespace-nowrap">
             <caption className="sr-only">Waitlist sign-ups</caption>
             <thead>
               <tr className="text-label-sm font-bold tracking-widest text-ink-muted uppercase">
-                <th scope="col" className="h-11 w-12 border-y-2 border-line-strong px-3 pl-4">
+                <th scope="col" className="h-11 w-12 border-y-2 border-line-strong px-2 pl-4">
                   <Checkbox aria-label="Select everyone on this page who isn't invited" checked={allOnPage} disabled={!invitable.length}
                     ref={(el) => { if (el) el.indeterminate = someOnPage && !allOnPage; }} onChange={(e) => togglePage(e.target.checked)} />
                 </th>
-                <th scope="col" className="border-y-2 border-line-strong px-3 font-bold">Email</th>
-                <th scope="col" className="border-y-2 border-line-strong px-3 font-bold">ZIP</th>
-                <th scope="col" className="border-y-2 border-line-strong px-3 font-bold">Interested in</th>
-                <th scope="col" className="border-y-2 border-line-strong px-3 font-bold">Joined</th>
-                <th scope="col" className="border-y-2 border-line-strong px-3 font-bold">Invite</th>
+                <th scope="col" className="border-y-2 border-line-strong px-2 font-bold">Email</th>
+                <th scope="col" className="border-y-2 border-line-strong px-2 font-bold">ZIP</th>
+                <th scope="col" className="border-y-2 border-line-strong px-2 font-bold">Interested in</th>
+                <th scope="col" className="border-y-2 border-line-strong px-2 font-bold">Joined</th>
+                <th scope="col" className="border-y-2 border-line-strong px-2 font-bold">Invite</th>
               </tr>
             </thead>
             <tbody>
-              {visible.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-body-md text-ink-muted">No one matches. Try fewer filters.</td></tr>}
+
               {visible.map((r) => {
                 const on = selected.includes(r.signup.id);
                 return (
                   <tr key={r.signup.id}
                     className={cx("border-b border-line transition-colors duration-fast last:border-b-0", on ? "bg-surface-selected" : "hover:bg-surface-hover")}>
-                    <td className={cx("h-12 border-l-4 px-3 pl-4", on ? "border-l-ink-brand" : "border-l-transparent")}>
+                    <td className={cx("h-12 border-l-4 px-2 pl-4", on ? "border-l-ink-brand" : "border-l-transparent")}>
                       {r.inviteStatus === "not_invited"
                         ? <Checkbox aria-label={`Select ${r.signup.email}`} checked={on} onChange={(e) => toggle(r.signup.id, e.target.checked)} />
                         : <span className="sr-only">Already invited</span>}
                     </td>
-                    <td className="px-3">{r.personId ? <Link href={`/owners/people/${r.personId}/`} className="text-ink hover:text-ink-brand hover:underline">{r.signup.email}</Link> : <span className="text-ink">{r.signup.email}</span>}</td>
-                    <td className="px-3 text-ink-muted tabular-nums">{r.signup.zip}</td>
-                    <td className="px-3 text-ink-muted">{r.signup.category ? waitlistCategoryLabel(r.signup.category) : "—"}</td>
-                    <td className="px-3 whitespace-nowrap text-ink-muted tabular-nums">{shortDate(r.signup.createdAt)}</td>
-                    <td className="px-3">{r.inviteStatus === "not_invited" ? <span className="text-body-sm text-ink-muted">Not invited</span> : <span className="inline-flex items-center gap-1"><Badge tone={statusMeta[r.inviteStatus].tone} size="sm">{statusMeta[r.inviteStatus].label}</Badge>{resendButton(r)}</span>}</td>
+                    <td className="px-2">{r.personId ? <Link href={`/owners/people/${r.personId}/`} className="text-ink hover:text-ink-brand hover:underline">{r.signup.email}</Link> : <span className="text-ink">{r.signup.email}</span>}</td>
+                    <td className="px-2 text-ink-muted tabular-nums">{r.signup.zip}</td>
+                    <td className="px-2 text-ink-muted">{r.signup.category ? <span className="block max-w-40 truncate lg:max-w-28 xl:max-w-none" title={waitlistCategoryLabel(r.signup.category)}>{waitlistCategoryLabel(r.signup.category)}</span> : "—"}</td>
+                    <td className="px-2 whitespace-nowrap text-ink-muted tabular-nums">{shortDate(r.signup.createdAt)}</td>
+                    <td className="px-2">{r.inviteStatus === "not_invited" ? <span className="text-body-sm text-ink-muted">Not invited</span> : <span className="inline-flex items-center gap-1"><Badge tone={statusMeta[r.inviteStatus].tone} size="sm">{statusMeta[r.inviteStatus].label}</Badge>{resendButton(r)}</span>}</td>
                   </tr>
                 );
               })}
@@ -171,8 +184,7 @@ function Waitlist() {
         </div>
 
         {/* Phones: compact rows. */}
-        <ul aria-label="Waitlist sign-ups" className={cx("grid grid-cols-1 border-t-2 border-line-strong md:hidden", !rows && "hidden")}>
-          {visible.length === 0 && <li className="p-6 text-center text-body-md text-ink-muted">No one matches. Try fewer filters.</li>}
+        <ul aria-label="Waitlist sign-ups" className={cx("grid grid-cols-1 border-t-2 border-line-strong md:hidden", (!rows || visible.length === 0) && "hidden")}>
           {visible.map((r) => {
             const on = selected.includes(r.signup.id);
             return (
@@ -201,6 +213,7 @@ function Waitlist() {
         {n > 0 && (
           <div className="flex flex-wrap items-center gap-2 border-4 border-line-strong bg-bg p-2 pl-5">
             <p className="font-display text-heading-sm font-extrabold text-ink"><span className="tabular-nums">{n}</span> selected</p>
+            {hidden > 0 && <p className="text-body-sm text-ink-muted tabular-nums">{hidden} hidden by filters</p>}
             <Button size="sm" variant="ghost" iconStart={<X />} onClick={() => setSelected([])}>Clear</Button>
             <div className="ml-auto flex gap-2">
               <Button size="sm" variant="secondary" iconStart={<Eye />} onClick={() => setPreview(true)}>Preview email</Button>
@@ -223,7 +236,8 @@ function Waitlist() {
           <div className="grid gap-1 border-t-4 border-line-strong bg-surface-sunken p-3">
             <p className="text-label-sm font-bold tracking-widest text-ink-muted uppercase">Subject</p>
             <p className="text-label-md text-ink">{email.subject}</p>
-            <p className="text-body-sm text-ink-muted">To {emails.slice(0, 2).join(", ")}{emails.length > 2 ? ` and ${emails.length - 2} more` : ""}</p>
+            <p className="text-body-sm break-words text-ink-muted">To {emails.slice(0, 2).join(", ")}{emails.length > 2 ? ` and ${emails.length - 2} more` : ""}</p>
+            {hidden > 0 && <p className="text-body-sm text-ink-muted tabular-nums">{hidden === n ? (n === 1 ? "They're" : "All of them are") : `${hidden} of them ${hidden === 1 ? "is" : "are"}`} hidden by the filters right now.</p>}
           </div>
           <button type="button" onClick={() => { setConfirm(false); setPreview(true); }} className="inline-flex min-h-6 w-fit items-center gap-1 text-label-md text-link underline underline-offset-2">
             <Eye className="size-4" aria-hidden="true" />Preview the email

@@ -105,7 +105,8 @@ export const routes = [
   { name: "public-maya", path: "/p/maya/", setup: reset, ready: "h1" },
   { name: "gigsters", path: "/p/", setup: reset, ready: "[data-results]" },
   { name: "public-monogram", path: "/p/dana-whitfield/", setup: reset, ready: "h1" },
-  { name: "public-not-yet", path: "/p/imani-carter/", setup: reset, ready: "h1" },
+  // Only the person themself sees "not public yet"; a visitor gets the same not-found as an unknown link.
+  { name: "public-not-yet", path: "/p/imani-carter/", setup: as("gigster", "imani-carter"), ready: "h1" },
   { name: "owner-gate", path: "/owners/people/", setup: reset, ready: "h1" },
   { name: "owner-people", path: "/owners/people/", setup: as("owner"), ready: "[data-results]" },
   { name: "owner-people-grid", path: "/owners/people/", setup: as("owner"), ready: "[data-results]", act: async (page) => { await page.getByRole("radio", { name: "Grid" }).click(); } },

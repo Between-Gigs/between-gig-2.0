@@ -1,6 +1,6 @@
 "use client";
 import { Banner, Button, Field, Input, Modal, SegmentedControl, Select, Textarea, cx } from "@ds/components";
-import { Inbox, LayoutGrid, List } from "lucide-react";
+import { Check, Inbox, LayoutGrid, List } from "lucide-react";
 import { Reveal } from "@ds/motion";
 import Link from "next/link";
 import * as React from "react";
@@ -45,11 +45,11 @@ export function Storyboard() {
       {/* The credits keep rolling */}
       <section id="credits" aria-labelledby="credits-h" className="mx-auto max-w-7xl scroll-mt-20 px-4 pt-8 pb-16 sm:px-6 lg:pt-12 lg:pb-24">
         <div className="grid grid-cols-12 gap-x-6 gap-y-6 border-t-4 border-line-strong pt-4">
-          <div className="col-span-12 lg:col-span-4">
+          <div className="col-span-12 lg:col-span-3">
             <span aria-hidden="true" className="text-label-sm text-ink tabular-nums">01</span>
             <h2 id="credits-h" className="mt-1 font-display text-heading-lg text-balance text-ink">The credits keep rolling</h2>
           </div>
-          <div className="col-span-12 grid content-start gap-8 lg:col-span-8">
+          <div className="col-span-12 grid content-start gap-8 lg:col-span-9">
             <p className="max-w-3xl text-body-lg text-pretty text-ink sm:text-editorial-lg">Between Gigs gives everyday people and businesses access to the remarkable range of entertainment professionals between productions. A family can hire a scenic carpenter to reinvent a room. A bakery can bring in a food stylist and editor. A school can build a fundraiser with a producer and sound crew. Production designers, grips, writers, actors, builders, assistants and animal handlers can be booked for one afternoon or an entire season. You describe the outcome; we help cast one person or the right crew.</p>
             {/* The page's one mint block. */}
             <p className="bg-tint-mint p-5 font-display text-heading-lg leading-snug text-balance text-forest-950 sm:p-6">Your next useful skill may be the one nobody has thought to cast yet.</p>
@@ -83,11 +83,11 @@ function Catalog({ onOpen, onIntent }: { onOpen: (index: number) => void; onInte
     <section id="plates" aria-labelledby="plates-h" className="pb-20 lg:pb-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="grid grid-cols-12 gap-x-6 gap-y-4 border-t-4 border-line-strong pt-4">
-          <div className="col-span-12 lg:col-span-4">
+          <div className="col-span-12 lg:col-span-3">
             <span aria-hidden="true" className="text-label-sm text-ink tabular-nums">02</span>
             <p className="mt-1 text-eyebrow text-ink-muted uppercase">Browse the commissions</p>
           </div>
-          <div className="col-span-12 lg:col-span-8">
+          <div className="col-span-12 lg:col-span-9">
             <h2 id="plates-h" className="font-display text-display-sm text-balance text-ink lg:text-display-md">Every page in the book</h2>
             <p className="mt-3 max-w-2xl text-body-lg text-ink-muted">Choose a commission to open it in the book, or narrow the possibilities below.</p>
           </div>
@@ -107,7 +107,7 @@ function Catalog({ onOpen, onIntent }: { onOpen: (index: number) => void; onInte
               <button type="button" onClick={() => onOpen(s.index)} onPointerEnter={() => onIntent(s.index)} onFocus={() => onIntent(s.index)}
                 className={cx("group flex w-full gap-4 text-left",
                   view === "gallery" ? "h-full flex-col border-t-4 border-line-strong pt-3" : "items-center border-t border-line-strong py-3")}>
-                <span className={cx("block shrink-0 overflow-hidden", view === "gallery" ? "w-full" : "w-28 sm:w-36")}>
+                <span className={cx("block shrink-0 overflow-hidden bg-surface-sunken", view === "gallery" ? "w-full" : "w-28 sm:w-36")}>
                   {/* 800px thumbnails, loaded as they near the viewport; the book itself uses the full pages. */}
                   <img src={asset(`art/storyboard/thumbs/${s.file}`)} alt="" width={800} height={533} loading="lazy" decoding="async"
                     className="aspect-3/2 h-auto w-full object-cover transition-transform duration-slow ease-standard group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100" />
@@ -143,6 +143,18 @@ function spans(fields: PlanField[]) {
 /** What the visitor picked before opening the form (a Crew Call service): shown at the top, saved with the request. */
 export interface PlannerTopic { title: string; media: React.ReactNode; note: string }
 
+/**
+ * What an empty required field says, by field id (lib/storyboard.ts plans). Fields not listed keep the general
+ * "Fill this in to continue." (scripts/qa/flow.mjs checks for it on the talent form).
+ */
+const required: Record<string, string> = {
+  name: "Enter your name.",
+  email: "Enter your email.",
+  project: "Tell us what you need.",
+  services: "Tell us what you'd like to offer.",
+  team_size: "Choose how much help you expect.",
+};
+
 /** The talent and buyer forms. Also used by /crew-call, which opens the buyer form for the service they picked. */
 export function Planner({ kind, onClose, onBrowse, initial, topic }: { kind: Kind | null; onClose: () => void; onBrowse: () => void; initial?: Record<string, string>; topic?: PlannerTopic }) {
   const [values, setValues] = React.useState<Record<string, string>>(initial ?? {});
@@ -153,7 +165,7 @@ export function Planner({ kind, onClose, onBrowse, initial, topic }: { kind: Kin
 
   const check = (f: PlanField, v = "") => {
     if (f.optional && !v.trim()) return undefined;
-    if (!v.trim()) return f.control === "select" ? "Choose one." : "Fill this in to continue.";
+    if (!v.trim()) return required[f.name] ?? (f.control === "select" ? "Choose one." : "Fill this in to continue.");
     if (f.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())) return "Enter an email address, like name@example.com.";
     return undefined;
   };
@@ -175,21 +187,23 @@ export function Planner({ kind, onClose, onBrowse, initial, topic }: { kind: Kin
     <Modal open={!!plan} onClose={onClose} size="lg" title={plan ? (state === "saved" ? plan.saved : plan.title) : ""}
       description={plan && state !== "saved" ? <><span className="mb-2 block text-eyebrow text-ink-brand uppercase">{plan.eyebrow}</span>{plan.intro}</> : undefined}>
       {plan && state === "saved" ? (
-        <div className="grid justify-items-start gap-5 border-t-4 border-line-strong pt-5">
-          {/* The book's back cover, "Glad you're here.", as a keepsake for the saved request. */}
-          <Reveal effect="pop" className="relative w-56">
+        <div className="grid justify-items-start gap-5 py-2">
+          {/* The book's back cover, "Glad you're here.", as a keepsake for the saved request, with the check that says it
+              worked (the same done state as the call-sheet dialog). */}
+          <Reveal effect="pop" className="relative w-full">
             <img src={asset("art/storyboard/thumbs/back-cover.jpg")} alt="" width={800} height={533} decoding="async"
-              className="aspect-3/2 h-auto w-full object-cover" />
+              className="aspect-2/1 h-auto w-full object-cover" />
+            <span className="absolute bottom-0 left-0 grid size-12 place-items-center bg-action text-on-action"><Check className="size-6" aria-hidden="true" /></span>
           </Reveal>
-          <p role="status" className="max-w-md text-body-lg text-ink-muted">Thank you for your interest. Between Gigs is coming soon. We've saved your submission and will email you when we're ready.</p>
-          <div className="grid w-full gap-1 bg-tint-mint p-4 text-forest-950">
+          <p role="status" className="max-w-xl text-body-lg text-pretty text-ink-muted">Thank you for your interest. Between Gigs is coming soon. We've saved your submission and will email you when we're ready.</p>
+          <div className="grid w-full gap-1 border-t-4 border-forest-950 bg-tint-mint px-4 py-3 text-forest-950">
             <span className="text-eyebrow uppercase">What happens next</span>
             <span className="text-body-md">{kind === "talent" ? "Browse the book for more ideas of what your craft could offer people and businesses." : "Browse the book for more ideas of who could help, one person or a whole crew."}</span>
           </div>
           {data.kind === "sample" && <p className="text-body-sm text-ink-subtle">Sample mode: the confirmation is in the <Link href="/emails/" className="inline-flex items-center gap-1 text-link underline underline-offset-2"><Inbox className="size-3.5" aria-hidden="true" />sample outbox</Link>.</p>}
           <div className="flex flex-wrap gap-3">
-            <Button variant="primary" onClick={onBrowse}>Browse every page in the book</Button>
-            <Button onClick={onClose}>Close</Button>
+            <Button variant="primary" size="lg" onClick={onBrowse}>Browse every page in the book</Button>
+            <Button size="lg" onClick={onClose}>Close</Button>
           </div>
         </div>
       ) : plan && (
@@ -214,8 +228,8 @@ export function Planner({ kind, onClose, onBrowse, initial, topic }: { kind: Kin
             return (
               <Field key={f.name} label={f.label} optional={f.optional} error={errors[f.name]} className={fullRow ? "sm:col-span-2" : undefined}>
                 {f.control === "textarea" ? <Textarea id={`plan-${f.name}`} rows={3} maxLength={f.max} placeholder={topic && f.name === "project" ? `Tell us about the ${topic.title.toLowerCase()} job: what, where and how big.` : f.placeholder} value={v} onChange={(e) => set(e.target.value)} />
-                  : f.control === "select" ? <Select id={`plan-${f.name}`} placeholder="Choose one" value={v || undefined} onValueChange={set} options={(f.options ?? []).map((o) => ({ value: o, label: o }))} />
-                  : <Input id={`plan-${f.name}`} type={f.type ?? "text"} autoComplete={f.autocomplete} maxLength={f.max} placeholder={f.placeholder} value={v} onChange={(e) => set(e.target.value)} />}
+                  : f.control === "select" ? <Select id={`plan-${f.name}`} size="lg" placeholder="Choose one" value={v || undefined} onValueChange={set} options={(f.options ?? []).map((o) => ({ value: o, label: o }))} />
+                  : <Input id={`plan-${f.name}`} size="lg" type={f.type ?? "text"} autoComplete={f.autocomplete} maxLength={f.max} placeholder={f.placeholder} value={v} onChange={(e) => set(e.target.value)} />}
               </Field>
             );
           })}

@@ -51,7 +51,7 @@ describe("what a Gigster, an owner and a visitor see", () => {
     await expect(h.source.profiles.getDraft(who.personId)).rejects.toThrow();
   });
 
-  liveOnly("the public page never carries the email, the ZIP or a hidden credit", async () => {
+  it("the public page never carries the email, the ZIP or a hidden credit", async () => {
     const who = await approved(h, "see-public", "Public Contract");
     await h.signOut();
     const page = await h.source.people.getPublic(who.slug);

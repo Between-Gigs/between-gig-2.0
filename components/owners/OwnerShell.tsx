@@ -123,11 +123,12 @@ export function OwnerFrame({ children, section: fixed, fit: fixedFit = false }: 
               } />
           </nav>
           <main ref={main} id="main" tabIndex={-1} className={cx("flex min-w-0 flex-1 flex-col overflow-y-auto outline-none", fit && "lg:overflow-hidden")}>
-            <div className={cx("mx-auto w-full max-w-7xl flex-1 px-4 pt-4 sm:px-6 lg:px-10", fit ? "pb-8 lg:flex lg:min-h-0 lg:flex-col lg:pb-4" : "pb-16")}>
+            {/* Big screens (3xl): the page widens to 96rem rather than floating as a 1280px island in the middle. */}
+            <div className={cx("mx-auto w-full max-w-7xl flex-1 3xl:max-w-(--breakpoint-2xl) px-4 pt-4 sm:px-6 lg:px-10", fit ? "pb-8 lg:flex lg:min-h-0 lg:flex-col lg:pb-4" : "pb-16")}>
               <TopLine section={section} />
               {children}
             </div>
-            <p className={cx("mx-auto w-full max-w-7xl shrink-0 px-4 text-caption text-ink-muted sm:px-6 lg:px-10", fit ? "pb-6 lg:pb-3" : "pb-6")}>Sample data: everyone shown here is fictional.</p>
+            <p className={cx("mx-auto w-full max-w-7xl shrink-0 3xl:max-w-(--breakpoint-2xl) px-4 text-caption text-ink-muted sm:px-6 lg:px-10", fit ? "pb-6 lg:pb-3" : "pb-6")}>Sample data: everyone shown here is fictional.</p>
           </main>
         </div>
         <TabBar counts={counts} section={section} />
@@ -150,7 +151,8 @@ function TopLine({ section }: { section?: string }) {
       <PhoneSearch />
       {session && (
         <span className="flex min-w-0 items-center gap-3">
-          <span className="grid min-w-0 text-right max-xs:hidden">
+          {/* Phones: just the photo, so "Owners · Review queue" reads in full. */}
+          <span className="grid min-w-0 text-right max-sm:hidden">
             <span className="truncate font-display text-label-md font-extrabold text-ink">{name}</span>
             <span className="truncate text-caption text-ink-muted">{session.email === SAMPLE_OWNER.email ? "Sample owner" : "Owner"}</span>
           </span>

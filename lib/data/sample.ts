@@ -5,13 +5,13 @@
  */
 import { renderEmail } from "@/emails";
 import { craftOf } from "@/lib/profile/department";
-import { completeness, validateAll } from "@/lib/profile/validate";
+import { LIVE_FIELDS, NAME_MAX, completeness, contentChanged, pinnedCredits, validateAll } from "@/lib/profile/validate";
 import { absoluteUrl } from "@/lib/site";
 import { blankFields, buildActivity, buildSeed, buildWaitlist, DEMO_TOKENS, SAMPLE_OWNER, type SeedState } from "./seed";
 import type { DataSource } from "./source";
 import type {
   EmailTemplate, Invite, InviteLookup, OutboxEmail, PeopleQuery, Person, PersonStatus, PersonSummary, Profile,
-  PrivacyRequest, ProfileDraft, Role, Session, SketchSubmission, WaitlistSignup,
+  PrivacyRequest, ProfileDraft, ProfileFields, Role, Session, SketchSubmission, WaitlistSignup,
   ActivityEvent, ActivityKind, InviteStatus, WaitlistRow, ExternalIdentity, SyncExternalResult,
 } from "./types";
 import { inviteStatuses } from "./types";
@@ -108,13 +108,38 @@ if (typeof window !== "undefined") {
   });
 }
 
-const slugify = (name: string) => name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "gigster";
+/** Live public handles are at most 60 characters (lib/server/gigs.ts getPublic); the sample's slugs keep to that too. */
+const SLUG_MAX = 60;
+const trimSlug = (s: string, max: number) => s.slice(0, max).replace(/-+$/, "");
+export const slugify = (name: string) =>
+  trimSlug(name.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""), SLUG_MAX) || "gigster";
 
 function uniqueSlug(state: State, name: string, selfId: string) {
   const base = slugify(name);
   let slug = base;
-  for (let n = 2; state.people.some((p) => p.slug === slug && p.id !== selfId); n++) slug = `${base}-${n}`;
+  // A number on the end still fits in 60 characters: the base gives way.
+  for (let n = 2; state.people.some((p) => p.slug === slug && p.id !== selfId); n++) slug = `${trimSlug(base, SLUG_MAX - String(n).length - 1)}-${n}`;
   return slug;
+}
+
+/** A name as stored: single spaces, at most 60 characters (the page lays out up to that, and it makes the link). */
+export const cleanName = (name: string) => name.trim().replace(/\s+/g, " ").slice(0, NAME_MAX).trim();
+
+/** Availability from `from` onto `to`: the part of a profile that changes without a review. */
+const withAvailability = (to: ProfileFields, from: ProfileFields): ProfileFields => ({ ...to, ...Object.fromEntries(LIVE_FIELDS.map((k) => [k, from[k]])) });
+
+/**
+ * What a visitor's page may know, as live's public_reader reads it: the profile, not the person. No email, ZIP,
+ * waitlist answers, review notes or dates of the review; no IMDb link, private "something else", home ZIP or city, and
+ * hidden credits left out.
+ */
+function publicOf(person: Person, profile: Profile): { person: Person; profile: Profile } {
+  const f = profile.fields;
+  const credits = pinnedCredits(f);
+  return {
+    person: { id: person.id, email: "", name: person.name, slug: person.slug, status: "approved", waitlistZip: "", waitlistCategory: "", invitedAt: "", updatedAt: person.updatedAt, ...(person.sample ? { sample: true } : {}) },
+    profile: clone({ personId: profile.personId, fields: { ...f, credits, creditPins: credits.map(() => true), imdb: "", other: "", zip: "", otherCity: "" }, submittedAt: "", ...(profile.extras ? { extras: profile.extras } : {}) }),
+  };
 }
 
 function summarize(state: State, person: Person): PersonSummary {
@@ -122,7 +147,8 @@ function summarize(state: State, person: Person): PersonSummary {
   const draft = state.drafts.find((d) => d.personId === person.id);
   // Owners see the submitted version while a review is pending; the draft only before first submit.
   const fields = profile?.fields ?? draft?.fields ?? null;
-  return { person: clone(person), fields: fields ? clone(fields) : null, fromDraft: !profile && !!draft, completeness: completeness(fields) };
+  const unsent = !!profile && !!draft && contentChanged(draft.fields, profile.fields);
+  return { person: clone(person), fields: fields ? clone(fields) : null, fromDraft: !profile && !!draft, completeness: completeness(fields), unsent };
 }
 
 function matches(s: PersonSummary, q: PeopleQuery) {
@@ -161,7 +187,7 @@ function rearmInvite(state: State) {
   const person = state.people.find((p) => p.id === invite.personId)!;
   if (invite.usedAt) {
     invite.usedAt = undefined;
-    Object.assign(person, { name: "", slug: "", status: "invited", registeredAt: undefined, submittedAt: undefined, approvedAt: undefined, reviewNotes: undefined });
+    Object.assign(person, { name: "", slug: "", status: "invited", registeredAt: undefined, submittedAt: undefined, approvedAt: undefined, reviewNotes: undefined, previousNotes: undefined, reviewRound: undefined });
     state.drafts = state.drafts.filter((d) => d.personId !== person.id);
     state.profiles = state.profiles.filter((p) => p.personId !== person.id);
   }
@@ -208,10 +234,11 @@ export const sampleSource: DataSource = {
     async getPublic(slug) {
       await latency();
       const state = load();
-      const person = state.people.find((p) => p.slug === slug && p.slug !== "");
-      if (!person) return { person: null, profile: null };
-      const profile = person.status === "approved" ? state.profiles.find((p) => p.personId === person.id) ?? null : null;
-      return { person: clone(person), profile: profile && clone(profile) };
+      // Like live: only an approved profile resolves, and anything else reads exactly as an unknown handle, so a
+      // visitor can't tell who is on the platform. The person themself checks their own slug (PublicProfile).
+      const person = state.people.find((p) => p.slug === slug && p.slug !== "" && p.status === "approved");
+      const profile = person && state.profiles.find((p) => p.personId === person.id);
+      return person && profile ? publicOf(person, profile) : { person: null, profile: null };
     },
     async similar(id, limit = 3) {
       await latency(0);
@@ -222,7 +249,7 @@ export const sampleSource: DataSource = {
         .filter((x): x is { person: Person; profile: Profile } => !!x.profile)
         .sort((a, b) => Number(!!b.profile.fields.photo) - Number(!!a.profile.fields.photo))
         .slice(0, limit)
-        .map(clone);
+        .map((x) => publicOf(x.person, x.profile));
     },
   },
 
@@ -262,7 +289,7 @@ export const sampleSource: DataSource = {
           waitlistZip: "", waitlistCategory: "", invitedAt: "", updatedAt: t };
         state.people.push(person);
       }
-      person.name = name.trim().replace(/\s+/g, " ");
+      person.name = cleanName(name);
       person.slug = uniqueSlug(state, person.name, person.id);
       person.status = "registered";
       person.registeredAt = t;
@@ -332,7 +359,7 @@ export const sampleSource: DataSource = {
         const invite = state.invites.find((i) => i.token === identity.inviteToken && i.personId === person.id
           && i.email.toLowerCase() === address && !i.usedAt && new Date(i.expiresAt).getTime() >= Date.now());
         const t = now();
-        person.name = identity.name?.trim().replace(/\s+/g, " ") || address.split("@")[0];
+        person.name = cleanName(identity.name ?? "") || cleanName(address.split("@")[0]);
         person.slug = uniqueSlug(state, person.name, person.id);
         person.status = "registered";
         person.registeredAt = t;
@@ -367,31 +394,26 @@ export const sampleSource: DataSource = {
       return person ? { personId, fields: blankFields(person.name), step: 0, savedAt: "" } : null;
     },
     async saveDraft(personId, fields, step) {
-      await latency(120);
+      // The write lands at once and the answer comes after the pause, so a save started as the page closes still lands.
       const state = load();
       const person = state.people.find((p) => p.id === personId);
       if (!person) throw new Error("No such person");
       const draft: ProfileDraft = { personId, fields: clone(fields), step, savedAt: now() };
       state.drafts = [...state.drafts.filter((d) => d.personId !== personId), draft];
       if (person.status === "registered") person.status = "draft";
-      // Editing an approved profile (decision N-09): availability stays live; any other change goes back to review.
-      const published = person.status === "approved" ? state.profiles.find((p) => p.personId === personId) : undefined;
-      if (published) {
-        const { month, monthStatus, dates, ...rest } = fields;
-        const { month: m0, monthStatus: s0, dates: d0, ...before } = published.fields;
-        const text = (o: object) => JSON.stringify(o, Object.keys(o).sort());
-        if (text(rest) !== text(before)) {
-          Object.assign(published, { fields: clone(fields), submittedAt: draft.savedAt });
-          Object.assign(person, { status: "submitted", submittedAt: draft.savedAt, approvedAt: undefined });
-          log(state, "submitted", { personId: person.id, name: person.name, email: person.email });
-        } else if (month !== m0 || monthStatus !== s0 || dates !== d0) {
-          Object.assign(published.fields, { month, monthStatus, dates });
-        }
-      }
+      /*
+       * A draft is only ever the Gigster's working copy. Once a version has gone to the team (submitted, changes
+       * requested or live), saving never changes what the team or the public sees, and never changes the status:
+       * - availability (month, status, dates) is copied onto that version straight away, so it stays current, live too;
+       * - every other change stays in the draft, "unsent", until submit() (the editor's "Send again").
+       */
+      const sent = state.profiles.find((p) => p.personId === personId);
+      if (sent) sent.fields = withAvailability(sent.fields, draft.fields);
       // The profile name follows the questionnaire's "Full name" until it's submitted.
-      if (fields.name.trim() && (person.status === "draft")) person.name = fields.name.trim();
+      if (fields.name.trim() && (person.status === "draft")) person.name = cleanName(fields.name);
       person.updatedAt = draft.savedAt;
       save(state);
+      await latency(120);
       return clone(draft);
     },
     async submit(personId) {
@@ -403,12 +425,20 @@ export const sampleSource: DataSource = {
       if (Object.keys(validateAll(draft.fields)).length) throw new Error("The profile has fields that need attention");
       const t = now();
       const previous = state.profiles.find((p) => p.personId === personId);
+      // Sending replaces the version the team has (and, for a live profile, takes it off the site until it's approved
+      // again, as live does). Sent again after "Suggest edits", it's a re-review: those notes go with it.
+      const was = person.status;
       const profile: Profile = { personId, fields: clone(draft.fields), submittedAt: t, extras: previous?.extras };
       state.profiles = [...state.profiles.filter((p) => p.personId !== personId), profile];
-      person.name = draft.fields.name.trim();
+      person.name = cleanName(draft.fields.name);
       if (!person.slug) person.slug = uniqueSlug(state, person.name, person.id);
+      if (was === "changes_requested") person.previousNotes = person.reviewNotes?.length ? clone(person.reviewNotes) : undefined;
+      else if (was !== "submitted") person.previousNotes = undefined;
+      // A new round, except "Send again" while still in review, which only replaces what the team is looking at.
+      if (was !== "submitted") person.reviewRound = (person.reviewRound ?? (person.submittedAt ? 1 : 0)) + 1;
       person.status = "submitted";
       person.submittedAt = t;
+      person.approvedAt = undefined;
       person.updatedAt = t;
       person.reviewNotes = undefined;
       log(state, "submitted", { personId: person.id, name: person.name, email: person.email });
@@ -549,6 +579,11 @@ export const sampleSource: DataSource = {
       if (!person || person.status !== "submitted") throw new Error("Only submitted profiles can be approved");
       const t = now();
       Object.assign(person, { status: "approved", approvedAt: t, updatedAt: t, reviewNotes: undefined });
+      // The approved version goes live as the team saw it, with the Gigster's latest availability. A newer draft (edited
+      // while in review) is kept, and stays unsent: it isn't what the team approved.
+      const profile = state.profiles.find((p) => p.personId === personId);
+      const draft = state.drafts.find((d) => d.personId === personId);
+      if (profile && draft) profile.fields = withAvailability(profile.fields, draft.fields);
       log(state, "approved", { personId, name: person.name, email: person.email }, ownerName(state));
       queue(state, "approved", person.email, {
         firstName: person.name.split(" ")[0] ?? "", profileUrl: absoluteUrl(`/p/${person.slug}/`), editUrl: absoluteUrl("/profile/canvas/"),

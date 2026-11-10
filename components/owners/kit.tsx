@@ -121,6 +121,7 @@ export function Panel({ title, id, number, count, aside, footer, flush = false, 
     });
   };
   const num = number && <span aria-hidden="true" className="mr-3 align-middle text-label-md font-extrabold tracking-normal tabular-nums">{number}</span>;
+  const countEl = count !== undefined && <CountPill className="ml-3">{count}</CountPill>;
   return (
     <Tag aria-labelledby={title && landmark ? hid : undefined} className={cx("flex min-w-0 flex-col", !!title && "border-t-4 border-line-strong", className)}>
       {title && (
@@ -128,14 +129,15 @@ export function Panel({ title, id, number, count, aside, footer, flush = false, 
           <div className="flex min-w-0 items-baseline gap-3">
             {collapsible ? (
               <h2 id={hid} className="font-display text-heading-lg text-ink">
+                {/* The count sits with the title, the chevron last: "Waiting for review 4 ⌄". */}
                 <button type="button" onClick={toggle} aria-expanded={open} aria-controls={body}
-                  className="group -ml-1 inline-flex min-h-11 items-center gap-1 px-1 text-left hover:bg-surface-hover">
+                  className="group -ml-1 min-h-11 px-1 text-left hover:bg-surface-hover">
+                  {/* Inline, not flex: a heading that wraps keeps its count and chevron after its last word. */}
                   {num}{title}
-                  <ChevronDown aria-hidden="true" className={cx("size-6 shrink-0 text-ink-muted transition-transform duration-fast", !open && "-rotate-90")} />
+                  <span className="whitespace-nowrap">{countEl}<ChevronDown aria-hidden="true" className={cx("ml-1 inline-block size-6 align-middle text-ink-muted transition-transform duration-fast", !open && "-rotate-90")} /></span>
                 </button>
               </h2>
-            ) : <h2 id={hid} className="font-display text-heading-lg text-ink">{num}{title}</h2>}
-            {count !== undefined && <CountPill>{count}</CountPill>}
+            ) : <><h2 id={hid} className="font-display text-heading-lg text-ink">{num}{title}</h2>{count !== undefined && <CountPill>{count}</CountPill>}</>}
           </div>
           {aside && open && <div className="flex min-w-0 flex-wrap items-center gap-3 text-body-sm text-ink-muted">{aside}</div>}
         </header>
@@ -200,12 +202,14 @@ export function Row({ href, onOpen, leading, title, subtitle, meta, badge, actio
   /** A word for the action box ("Review"); without it the box is just an arrow. */ action?: string;
   /** Fill the action box (the oldest in the queue). */ strong?: boolean; className?: string;
 }) {
-  const target = "min-w-0 truncate text-left font-display text-heading-sm font-extrabold text-ink after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-focus";
+  // min-h-6 (the globals.css escape from the 44px phone minimum): the whole row is the target (the ::after overlay).
+  const target = "min-h-6 min-w-0 truncate text-left font-display text-heading-sm font-extrabold text-ink after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-focus";
   return (
     <li data-fit="" className={cx("group @container relative flex min-h-20 min-w-0 items-center gap-4 border-b border-line py-3 transition-colors duration-fast hover:bg-surface-hover", className)}>
       <span className="shrink-0">{leading}</span>
       <span className="grid min-w-0 flex-1 gap-0.5">
-        <span className="flex min-w-0 items-center gap-2">
+        {/* In a narrow row the badge drops under the name instead of cutting the name short. */}
+        <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
           {onOpen ? <button type="button" onClick={onOpen} className={target}>{title}</button> : <Link href={href ?? "#"} className={target}>{title}</Link>}
           {badge}
         </span>
@@ -215,11 +219,54 @@ export function Row({ href, onOpen, leading, title, subtitle, meta, badge, actio
       {meta && <span className="hidden shrink-0 items-center gap-6 text-body-sm whitespace-nowrap text-ink-muted tabular-nums @lg:flex">{meta}</span>}
       <span aria-hidden="true" className={cx("inline-flex h-11 shrink-0 items-center justify-center gap-3 border-2 text-label-md font-bold transition-colors duration-fast",
         action ? "w-11 @md:w-auto @md:min-w-30 @md:px-4" : "w-11",
-        strong ? "border-surface-brand bg-surface-brand text-ink-on-brand dark:border-action dark:bg-action dark:text-on-action" : "border-line-strong text-ink group-hover:bg-ink group-hover:text-bg")}>
+        // In the dark the page's one mint fill is its main button, so the first row's box is mint-outlined.
+        strong ? "border-surface-brand bg-surface-brand text-ink-on-brand dark:border-action dark:bg-transparent dark:text-ink-brand dark:group-hover:bg-action dark:group-hover:text-on-action" : "border-line-strong text-ink group-hover:bg-ink group-hover:text-bg")}>
         {action && <span className="hidden @md:inline">{action}</span>}
         <ArrowRight className="size-4 transition-transform duration-fast group-hover:translate-x-0.5" />
       </span>
     </li>
+  );
+}
+
+/**
+ * The column heads over a list of Rows ("Gigster · Complete · Waiting"), on a 2px rule. Shown only where the rows
+ * show their meta (a wide row, by container); narrower, the list draws the 2px rule itself. Put both inside one @container.
+ * `cols` are the meta columns with the same widths the rows use; `lead` matches the rows' photo.
+ */
+export function RowHead({ first, cols, lead = "w-12 @md:w-16", action = true }: {
+  first: string; cols: { label: string; className: string }[]; lead?: string; /** Rows with an action word ("Review"). */ action?: boolean;
+}) {
+  return (
+    <div aria-hidden="true" className={cx("hidden items-center gap-4 border-b-2 border-line-strong pb-2 @lg:flex", eyebrow)}>
+      <span className={cx("shrink-0", lead)} />
+      <span className="flex-1">{first}</span>
+      <span className="flex shrink-0 gap-6">{cols.map((c) => <span key={c.label} className={c.className}>{c.label}</span>)}</span>
+      <span className={cx("shrink-0", action ? "w-11 @md:w-30" : "w-11")} />
+    </div>
+  );
+}
+/** The rule a list of Rows starts on when its RowHead is hidden (narrow rows). */
+export const rowListRule = "@max-lg:border-t-2 @max-lg:border-line-strong";
+
+/**
+ * The empty state (no results, nothing waiting, not found). Swiss: flush left on the grid, no box, no icon tile; a
+ * heading, a line saying why, and one way on. `size="sm"` for a narrow panel (the dashboard's list). `rule` opens it
+ * on a section's 4px rule when it stands in for a section.
+ */
+export function EmptyNote({ title, children, action, icon, size = "lg", rule = false, headingLevel = 2, className }: {
+  title: React.ReactNode; children?: React.ReactNode; action?: React.ReactNode; /** A mark above the heading (the end-of-queue wrap). */ icon?: React.ReactNode;
+  size?: "sm" | "lg"; rule?: boolean; headingLevel?: 2 | 3; className?: string;
+}) {
+  const H = headingLevel === 3 ? "h3" : "h2";
+  return (
+    <div className={cx("grid grid-cols-12 gap-x-6", size === "lg" ? "pt-6 pb-8 sm:pt-8" : "pt-5 pb-6", rule && "border-t-4 border-line-strong", className)}>
+      <div className={cx("col-span-12 grid justify-items-start", size === "lg" ? "gap-4 lg:col-span-8" : "gap-3 xl:col-span-10")}>
+        {icon}
+        <H className={cx("font-display text-balance text-ink", size === "lg" ? "text-display-sm" : "text-heading-lg")}>{title}</H>
+        {children && <p className={cx("max-w-xl text-pretty text-ink-muted", size === "lg" ? "text-body-lg" : "text-body-md")}>{children}</p>}
+        {action && <div className="mt-2 flex flex-wrap gap-2">{action}</div>}
+      </div>
+    </div>
   );
 }
 
@@ -292,14 +339,16 @@ export function StatTab({ label, value, hint, selected, attention = false, onSel
       aria-label={`${label}: ${value ?? "none"}, ${hint}${attention ? ", needs attention" : ""}`}
       className={cx("group relative flex h-full w-full min-w-0 flex-col justify-between gap-1 text-left transition-colors duration-fast",
         "after:absolute after:inset-x-0 after:-bottom-3 after:h-1 after:bg-ink after:opacity-0 after:transition-opacity after:duration-fast aria-selected:after:opacity-100",
-        attention ? "bg-tint-mint px-4 pt-3 pb-3 text-forest-950 sm:px-5 sm:pt-3 sm:pb-4" : "border-t-4 border-line-strong pt-3 text-ink hover:bg-surface-hover")}>
-      <span className="flex items-baseline gap-1 font-display text-display-sm tabular-nums sm:text-display-md">
+        // Light: the screen's one mint block. Dark: the main button is the mint fill, so this is a 4px mint frame.
+        attention ? "bg-tint-mint px-4 pt-3 pb-3 text-forest-950 sm:px-5 sm:pt-3 sm:pb-4 dark:border-4 dark:border-action dark:bg-transparent dark:text-ink dark:hover:bg-surface-hover"
+          : "border-t-4 border-line-strong pt-3 text-ink hover:bg-surface-hover")}>
+      <span className={cx("flex items-baseline gap-1 font-display text-display-sm tabular-nums sm:text-display-md 3xl:text-display-lg", attention && "dark:text-ink-brand")}>
         {value ?? "—"}
-        {suffix && <span className={cx("text-heading-lg", attention ? "text-forest-900" : "text-ink-muted")}>{suffix}</span>}
+        {suffix && <span className={cx("text-heading-lg", attention ? "text-forest-900 dark:text-ink-muted" : "text-ink-muted")}>{suffix}</span>}
       </span>
       <span className="grid gap-0.5">
         <span className="text-label-md font-bold text-balance">{label}</span>
-        <span className={cx("truncate text-body-sm max-sm:hidden", attention ? "text-forest-900" : "text-ink-muted")}>{hint}</span>
+        <span className={cx("truncate text-body-sm max-sm:hidden", attention ? "text-forest-900 dark:text-ink-muted" : "text-ink-muted")}>{hint}</span>
       </span>
     </button>
   );

@@ -22,7 +22,7 @@ function uuid(name: string): string {
   return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`;
 }
 
-const sectionLabel: Record<ProfileSection, string> = { about: "About you", skills: "Skills & services", where: "Where & when", story: "Your story" };
+const sectionLabel: Record<ProfileSection, string> = { about: "About you", skills: "Skills & services", where: "Where & when", story: "Your story", photo: "Photo" };
 
 export function toCompanyOsSeed(state: SeedState, waitlist: WaitlistSignup[]): CompanyOsSeed {
   const records: SeedRecord[] = [];

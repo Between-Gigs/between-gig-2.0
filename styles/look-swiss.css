@@ -136,3 +136,7 @@
     --tint-mint: #1fdc8c; --tint-peach: #161816; --tint-butter: #161816; --tint-sky: #161816; --tint-sage: #16251d; --tint-sand: #161816; --tint-ink: #f3f3ef;
   }
 }
+
+/* Tight display leading (0.86–1) plus `truncate` (overflow hidden) clips descenders: "Delgado" loses its g. Give
+   truncated text room below the baseline without moving the layout. */
+:root[data-look=swiss] :is(.truncate, [class*="line-clamp-"]) { padding-bottom: 0.14em; margin-bottom: -0.14em; }

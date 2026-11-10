@@ -19,10 +19,11 @@ import { GateSkeleton, SignedInPanel, useSignedInGate } from "./SignedIn";
 const RESEND_SECONDS = 30;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const requestError: Record<Exclude<RequestCodeResult, { ok: true }>["error"], string> = {
-  "unknown-email": "We couldn't find an account for that email. Check the spelling, or create an account.",
-  "not-registered": "You haven't created your account yet. Create an account first.",
-  "rate-limited": "We just sent you a code. You can ask for another in a few seconds.",
+const requestError: Record<Exclude<RequestCodeResult, { ok: true }>["error"], (email: string) => string> = {
+  "unknown-email": () => "We couldn't find an account for that email. Check the spelling, or create an account.",
+  // Invited but no account yet: joining is by invitation, so point to the invite rather than "create an account".
+  "not-registered": (email) => `Open the invitation we emailed to ${email} to create your account.`,
+  "rate-limited": () => "We just sent you a code. You can ask for another in a few seconds.",
 };
 
 const verifyError: Record<Exclude<SignInResult, { ok: true }>["error"], string> = {
@@ -80,7 +81,7 @@ function ClerkLogin() {
       <div className="grid gap-6">
         <div>
           <h1 className="font-display text-heading-lg text-balance text-ink">Welcome back</h1>
-          <p className="mt-2 text-body-md text-ink-muted">Use the email and password you created.</p>
+          <p className="mt-2 text-body-md text-pretty text-ink-muted">Use the email and password you created.</p>
         </div>
         {params.get("signedOut") && <Banner tone="success" title="You're logged out">See you next time.</Banner>}
         {params.get("__clerk_status") === "client_mismatch" && <Banner tone="warning" title="This sign-in link is out of date">
@@ -109,6 +110,7 @@ function SampleLogin() {
   const [email, setEmail] = React.useState(params.get("email") ?? "");
   const [code, setCode] = React.useState("");
   const [error, setError] = React.useState<string>();
+  const [errorKind, setErrorKind] = React.useState<string>();
   const [codeError, setCodeError] = React.useState<{ kind: string; text: string }>();
   const [busy, setBusy] = React.useState(false);
   const [wait, setWait] = React.useState(0);
@@ -125,12 +127,13 @@ function SampleLogin() {
 
   const send = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!EMAIL_RE.test(email.trim())) { setError("Enter your email address, like name@example.com."); return; }
+    if (!EMAIL_RE.test(email.trim())) { setError("Enter your email address, like name@example.com."); setErrorKind(undefined); return; }
     setBusy(true);
     const r = await data.auth.requestCode(email);
     setBusy(false);
     if (!r.ok) {
-      if (step === "code") setCodeError({ kind: r.error, text: requestError[r.error] }); else setError(requestError[r.error]);
+      const text = requestError[r.error](email.trim().toLowerCase());
+      if (step === "code") setCodeError({ kind: r.error, text }); else { setError(text); setErrorKind(r.error); }
       return;
     }
     setWait(RESEND_SECONDS);
@@ -172,12 +175,15 @@ function SampleLogin() {
           <form noValidate onSubmit={send} className="grid gap-5">
             <div>
               <h1 className="font-display text-heading-lg text-balance text-ink">Welcome back</h1>
-              <p className="mt-2 text-body-md text-ink-muted">Log in with the email you joined with. We'll send you a 6-digit code.</p>
+              <p className="mt-2 text-body-md text-pretty text-ink-muted">Log in with the email you joined with. We'll send you a 6-digit code.</p>
             </div>
             <Field label="Email" error={error}>
               <Input type="email" inputMode="email" autoComplete="email" value={email} start={<Mail />} autoFocus
-                onChange={(e) => { setEmail(e.target.value); setError(undefined); }} />
+                onChange={(e) => { setEmail(e.target.value); setError(undefined); setErrorKind(undefined); }} />
             </Field>
+            {data.kind === "sample" && error && errorKind === "not-registered" && (
+              <p className="-mt-2 text-body-sm text-ink-muted">Sample mode: the invitation is in the <Link href="/emails/" className="inline-flex min-h-6 items-center gap-1 text-link underline underline-offset-2"><Inbox className="size-3.5" aria-hidden="true" />sample outbox</Link>.</p>
+            )}
             <Button type="submit" variant="primary" size="lg" fullWidth className="swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm" loading={busy} iconEnd={<ArrowRight />}>Email me a code</Button>
             <p className="text-body-md text-ink">New here? <Link href="/join/" className="inline-flex min-h-11 items-center font-bold text-ink underline underline-offset-4">Create an account</Link>.</p>
             {data.kind === "sample" && (
@@ -191,7 +197,7 @@ function SampleLogin() {
           <form noValidate onSubmit={(e) => { e.preventDefault(); void verify(); }} className="grid gap-5">
             <div>
               <h1 className="font-display text-heading-lg text-balance text-ink">Check your email</h1>
-              <p className="mt-2 text-body-md text-ink-muted">We sent a 6-digit code to <b className="text-ink">{email.trim().toLowerCase()}</b>. It expires in 10 minutes.</p>
+              <p className="mt-2 text-body-md text-pretty text-ink-muted">We sent a 6-digit code to <b className="text-ink">{email.trim().toLowerCase()}</b>. It expires in 10 minutes.</p>
             </div>
             {needsNewCode && (
               <Banner tone="warning" title={codeError.kind === "expired-code" ? "Code expired" : "Send a new code"}
@@ -200,7 +206,7 @@ function SampleLogin() {
               </Banner>
             )}
             <Field label="6-digit code" error={needsNewCode ? undefined : codeError?.text}>
-              <Input ref={codeInput} inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code}
+              <Input ref={codeInput} size="lg" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code}
                 className="font-mono text-heading-lg tracking-widest"
                 onChange={(e) => {
                   const v = e.target.value.replace(/\D/g, "").slice(0, 6);

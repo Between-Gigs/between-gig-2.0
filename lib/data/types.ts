@@ -31,11 +31,22 @@ export interface Person {
   updatedAt: string;
   /** The owners' notes when status is changes_requested. One short note per section, no threads. */
   reviewNotes?: ReviewNote[];
+  /**
+   * Sent again after "Suggest edits": the notes that round asked for (each with when it was given), so the next review
+   * can check them. Replaced at the next round. Live leaves it unset (Company OS keeps reviews as history).
+   */
+  previousNotes?: ReviewNote[];
+  /** How many times the current version has gone to the team: 1 is a first review, 2 or more a re-review. */
+  reviewRound?: number;
   /** Marks seed people so the UI can label them as fictional. Real records leave it unset. */
   sample?: boolean;
 }
 
-export type ProfileSection = "about" | "skills" | "where" | "story";
+/**
+ * What a review note is about: the questionnaire's four sections, plus the photo (its own note, so it opens the photo).
+ * Older photo notes were saved under "about" as "Photo: …"; readers treat those as photo notes (lib/profile/validate.ts).
+ */
+export type ProfileSection = "about" | "skills" | "where" | "story" | "photo";
 
 export interface ReviewNote {
   section: ProfileSection;
@@ -200,6 +211,11 @@ export interface PersonSummary {
   fields: ProfileFields | null;
   /** True when fields come from an unsubmitted draft. */
   fromDraft: boolean;
+  /**
+   * The Gigster has saved changes (other than availability) since the version the team has, and hasn't sent them:
+   * the owner's "Newer draft not sent". The sample only; live keeps one record, so it's unset there.
+   */
+  unsent?: boolean;
   /** How much of the questionnaire is filled, 0 to 1. */
   completeness: number;
 }

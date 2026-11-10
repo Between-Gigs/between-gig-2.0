@@ -11,7 +11,7 @@ const linkClass = "inline-flex min-h-11 items-center text-body-sm text-ink hover
  */
 export function SiteFooter() {
   return (
-    <footer className="border-t border-line bg-surface-sunken embedded:hidden! swiss:mt-8 swiss:border-t-0 swiss:bg-bg">
+    <footer className="border-t border-line bg-surface-sunken embedded:hidden! swiss:mt-4 swiss:border-t-0 swiss:bg-bg">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
       <div className="grid gap-x-8 gap-y-8 py-10 sm:grid-cols-3 swiss:gap-x-6 swiss:border-t-4 swiss:border-line-strong swiss:pt-5 swiss:pb-8">
         <div className="grid content-start gap-1">

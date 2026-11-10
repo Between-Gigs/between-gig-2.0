@@ -1,6 +1,6 @@
 "use client";
-import { Button, Drawer, EmptyState, Input, SegmentedControl, Select, cx } from "@ds/components";
-import { ArrowRight, LayoutGrid, List, Mail, MapPin, Search, SearchX, SlidersHorizontal, X } from "lucide-react";
+import { Button, Drawer, Input, SegmentedControl, Select, cx } from "@ds/components";
+import { ArrowRight, LayoutGrid, List, Mail, MapPin, Search, SlidersHorizontal, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -8,7 +8,7 @@ import { data, personStatuses, type PeopleQuery, type PeopleSort, type PersonSta
 import { crafts } from "@/lib/profile/department";
 import { laServiceAreas, monthStatusLabel, offSetServices } from "@/lib/data/taxonomy";
 import { PersonStatusBadge, personStatusMeta } from "@/components/people/PersonStatusBadge";
-import { AgoPill, Meter, OwnerAvatar, OwnerPage, Panel, Row, RowSkeletons } from "./kit";
+import { AgoPill, EmptyNote, Meter, OwnerAvatar, OwnerPage, Panel, Row, RowSkeletons } from "./kit";
 import { OwnerShell } from "./OwnerShell";
 import { OwnerGate } from "./OwnerGate";
 import { markArea } from "@/lib/split-area";
@@ -80,7 +80,8 @@ function People() {
   const active = extra.length;
   const clearExtra = () => setQuery((q) => ({ ...blank, text: q.text, status: q.status, sort: q.sort }));
   const selects = (inline: boolean) => {
-    const w = inline ? "w-auto min-w-40" : undefined;
+    // Inline (md+): equal widths that fill the row, flush with the search above.
+    const w = inline ? "min-w-0 flex-1 basis-0" : undefined;
     return (
       <>
         <Select aria-label="Craft" size={inline ? "sm" : undefined} className={w} value={query.craft} onValueChange={set("craft")}
@@ -110,17 +111,16 @@ function People() {
             <div className="min-w-0 flex-1 basis-60">
               <Input aria-label="Search people" type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder="Name, email, ZIP, craft or service" start={<Search />} />
             </div>
-            <Select aria-label="Status" value={query.status} onValueChange={set("status")} className="w-full sm:w-60"
+            <Select aria-label="Status" value={query.status} onValueChange={set("status")} className="min-w-0 flex-1 basis-40 sm:w-60 sm:flex-none"
               options={[{ value: "all", label: `Everyone${counts ? ` · ${total}` : ""}` }, ...personStatuses.map((st) => ({ value: st, label: `${personStatusMeta[st].label}${counts ? ` · ${counts[st]}` : ""}` }))]} />
             <Button type="button" variant="secondary" className="shrink-0 md:hidden" iconStart={<SlidersHorizontal />} onClick={() => setFilters(true)}
               aria-label={active ? `More filters, ${active} on` : "More filters"}>
               Filters{active > 0 && <span aria-hidden="true" className="ml-1 inline-grid size-5 place-items-center bg-ink text-label-sm text-bg tabular-nums">{active}</span>}
             </Button>
           </form>
-          <div role="group" aria-label="Filters" className="hidden flex-wrap items-center gap-2 md:flex">
-            <SlidersHorizontal className="size-4 text-ink-muted" aria-hidden="true" />
+          <div role="group" aria-label="Filters" className="hidden items-center gap-2 md:flex">
             {selects(true)}
-            {active > 0 && <Button size="sm" variant="ghost" iconStart={<X />} onClick={clearExtra}>Clear {active} {active === 1 ? "filter" : "filters"}</Button>}
+            {active > 0 && <Button size="sm" variant="ghost" iconStart={<X />} className="shrink-0" onClick={clearExtra}>Clear {active} {active === 1 ? "filter" : "filters"}</Button>}
           </div>
           {active > 0 && (
             <ul aria-label="Active filters" className="flex flex-wrap gap-2 md:hidden">
@@ -143,7 +143,8 @@ function People() {
         <Panel flush number="01" title={<span aria-live="polite">{rows ? <><span className="tabular-nums">{rows.length}</span> {rows.length === 1 ? "person" : "people"}{filtered && " match"}</> : "People"}</span>}
           aside={
             <>
-              {filtered && <Button size="sm" variant="ghost" onClick={reset}>Reset filters</Button>}
+              {/* With no results the empty state carries the one Reset filters. */}
+              {filtered && rows?.length !== 0 && <Button size="sm" variant="ghost" onClick={reset}>Reset filters</Button>}
               <Select aria-label="Sort" size="sm" value={query.sort} onValueChange={(v) => setQuery((q) => ({ ...q, sort: v as PeopleSort }))} className="w-40 xs:w-44"
                 options={[{ value: "updated", label: "Recently active" }, { value: "status", label: "Furthest along" }, { value: "name", label: "Name, A to Z" }]} />
               <SegmentedControl label="View" size="sm" value={view} onChange={changeView}
@@ -152,9 +153,9 @@ function People() {
           }>
           <section aria-label="Results" data-results={rows ? "" : undefined}>
             {!rows ? <RowSkeletons count={6} /> : rows.length === 0 ? (
-              <EmptyState className="py-12" icon={<SearchX />} title="No one matches all of that" headingLevel={2} action={<Button variant="secondary" onClick={reset}>Reset filters</Button>}>
+              <EmptyNote title="No one matches all of that" action={<Button variant="secondary" size="lg" iconStart={<X />} className="border-2" onClick={reset}>Reset filters</Button>}>
                 Try fewer filters, or search for part of a name or email.
-              </EmptyState>
+              </EmptyNote>
             ) : view === "grid" ? (
               <ul className="grid grid-cols-1 gap-x-6 gap-y-8 pt-4 sm:grid-cols-2 xl:grid-cols-3">
                 {rows.map((r) => <li key={r.person.id}><PersonCard row={r} /></li>)}
@@ -176,9 +177,10 @@ function Avatar({ row: { person: p, fields: f }, className }: { row: PersonSumma
 }
 
 function progress({ person: p, completeness, fromDraft }: PersonSummary) {
-  if (p.status === "invited") return <span className="w-24 whitespace-normal text-ink-muted">Hasn&apos;t joined yet</span>;
-  if (p.status === "registered") return <span className="w-24 text-ink-muted">Not started</span>;
-  return <Meter value={completeness * 100} label={fromDraft ? "Draft complete" : "Profile complete"} />;
+  // One width for every state, wide enough that "Hasn't joined yet" stays on one line.
+  if (p.status === "invited") return <span className="w-32 whitespace-nowrap text-ink-muted">Hasn&apos;t joined yet</span>;
+  if (p.status === "registered") return <span className="w-32 whitespace-nowrap text-ink-muted">Not started</span>;
+  return <span className="w-32"><Meter value={completeness * 100} label={fromDraft ? "Draft complete" : "Profile complete"} /></span>;
 }
 
 function PersonRow({ row }: { row: PersonSummary }) {

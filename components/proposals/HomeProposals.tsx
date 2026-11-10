@@ -1,5 +1,5 @@
 "use client";
-import { Button, SegmentedControl, Select } from "@ds/components";
+import { Button, SegmentedControl, Select, cx } from "@ds/components";
 import { startPageTransition } from "@ds/motion";
 import { Briefcase, Compass, Lightbulb, User } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -75,7 +75,9 @@ export function HomeProposals() {
               <SegmentedControl label="View the home page as" size="sm" value={view} onChange={choose}
                 options={[{ value: "visitor", label: "Signed out", icon: <Compass /> }, { value: "gigster", label: "Gigster", icon: <User /> }, { value: "owner", label: "Owner", icon: <Briefcase /> }]} />
               {view === "gigster" && <Select aria-label="Sample Gigster" size="sm" className="w-56" value={gigster} onValueChange={setGigster} options={gigsters} />}
-              <Button size="sm" variant={notes ? "primary" : "secondary"} aria-pressed={notes} iconStart={<Lightbulb />} onClick={() => setNotes((x) => !x)}>
+              {/* Pressed reads as selected (ink rule, tinted fill), not as a second primary beside the page's own. */}
+              <Button size="sm" variant="secondary" aria-pressed={notes} iconStart={<Lightbulb />} onClick={() => setNotes((x) => !x)}
+                className={cx(notes && "border-line-strong bg-surface-selected text-ink")}>
                 {notes ? "Hide design notes" : "Show design notes"}
               </Button>
               {notes && <Button size="sm" variant="ghost" onClick={() => setDrawer({ open: true, focus: null })}>All {notesFor[view].length} notes</Button>}

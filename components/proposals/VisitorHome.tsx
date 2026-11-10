@@ -60,20 +60,21 @@ export function VisitorHome() {
 
   return (
     <div className="grid gap-14 lg:gap-16">
-      {/* Hero: the line huge and flush left, the search as the screen's one mint block, the brand block beside it. */}
+      {/* Hero: the line huge and flush left, the search as the screen's one mint block, the brand block beside it.
+          The brand block's copy is kept short enough that the mint block, stretched to its height, has no empty band. */}
       <div>
         <section aria-labelledby="v-hero" className="grid grid-cols-12 gap-x-6 gap-y-6">
           <div className="col-span-12 min-w-0">
             <p className={eyebrow}>Extraordinary talent. Everyday solutions.</p>
-            <h2 id="v-hero" className="mt-4 max-w-6xl font-display text-display-sm text-ink sm:text-display-md md:text-display-lg xl:text-display-xl">Hollywood's craftspeople, <span className="text-ink-brand">for everyday life.</span></h2>
+            <h2 id="v-hero" className="mt-4 max-w-6xl font-display text-display-sm text-balance text-ink sm:text-display-md md:text-display-lg xl:text-display-xl">Hollywood's craftspeople, <span className="text-ink-brand">for everyday life.</span></h2>
           </div>
-          <form role="search" onSubmit={(e) => e.preventDefault()} className={cx(mintBlock, "col-span-12 grid content-end gap-4 p-5 sm:grid-cols-12 sm:items-end sm:gap-x-4 sm:p-6 lg:col-span-8")}>
-            <label className="grid gap-1.5 sm:col-span-12 md:col-span-6"><span className="text-label-sm font-bold tracking-widest uppercase">What do you need?</span><Input aria-label="What do you need?" placeholder="Alterations, portraits…" start={<Search />} /></label>
-            <label className="grid gap-1.5 sm:col-span-8 md:col-span-4"><span className="text-label-sm font-bold tracking-widest uppercase">Where?</span><Input aria-label="Where?" defaultValue="Los Angeles, CA" start={<MapPin />} /></label>
+          <form role="search" onSubmit={(e) => e.preventDefault()} className={cx(mintBlock, "col-span-12 grid content-end gap-4 p-5 sm:grid-cols-12 sm:items-end sm:gap-x-4 sm:p-6 lg:col-span-8 lg:p-8")}>
+            <label className="grid gap-1.5 sm:col-span-12 md:col-span-6"><span className="text-label-sm font-bold tracking-widest uppercase">What do you need?</span><Input size="lg" aria-label="What do you need?" placeholder="Alterations, portraits…" start={<Search />} /></label>
+            <label className="grid gap-1.5 sm:col-span-8 md:col-span-4"><span className="text-label-sm font-bold tracking-widest uppercase">Where?</span><Input size="lg" aria-label="Where?" defaultValue="Los Angeles, CA" start={<MapPin />} /></label>
             <Button type="submit" variant="primary" size="lg" className={cx(onMint, "justify-center! sm:col-span-4 md:col-span-2")} iconStart={<Search />}>Search</Button>
           </form>
           <BrandBlock className="col-span-12 lg:col-span-4">
-            <p className="max-w-md p-5 pb-24 text-body-lg text-ink sm:p-6 sm:pb-24">Set builders, costumers, stylists and photographers between productions, ready for projects in your home, event or business.</p>
+            <p className="max-w-md p-5 pb-24 text-body-lg text-ink sm:p-6 sm:pb-24 lg:pb-12 lg:text-body-md">Set builders, costumers, stylists and photographers between productions, ready for projects in your home, event or business.</p>
           </BrandBlock>
         </section>
         <ProposalNote n={1} />

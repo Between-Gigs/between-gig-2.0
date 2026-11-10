@@ -1,11 +1,11 @@
 "use client";
-import { Banner, Breadcrumbs, EmptyState, cx } from "@ds/components";
-import { Eye, Mail, SearchX, Sparkles } from "lucide-react";
+import { Breadcrumbs, cx } from "@ds/components";
+import { Eye, Mail } from "lucide-react";
 import * as React from "react";
 import { data, type PersonSummary, type Profile } from "@/lib/data";
 import { waitlistCategoryLabel } from "@/lib/data/taxonomy";
 import { useSettleWhen } from "@/lib/motion";
-import { sectionLabel } from "@/lib/profile/validate";
+import { readNotes, sectionLabel } from "@/lib/profile/validate";
 import { basePath } from "@/lib/site";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { PersonStatusBadge } from "@/components/people/PersonStatusBadge";
@@ -13,8 +13,9 @@ import { ProfileView } from "@/components/profile/ProfileView";
 import { OwnerShell } from "./OwnerShell";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { OwnerGate } from "./OwnerGate";
-import { HeaderSkeleton, OwnerAvatar, Panel, useScrolledPast } from "./kit";
-import { ReviewWorkspace, type QueueItem } from "./ReviewPanel";
+import { EmptyNote, HeaderSkeleton, OwnerAvatar, Panel, useScrolledPast } from "./kit";
+import { ReviewWorkspace, UnsentDraftFlag, type QueueItem } from "./ReviewPanel";
+import { reviewHistory } from "./history";
 import { shortDate } from "./format";
 import { isHeld } from "./hold";
 import { markArea } from "@/lib/split-area";
@@ -56,12 +57,13 @@ function Person({ id }: { id: string }) {
       <OwnerShell>
         {crumbs("Not found")}
         <h1 className="sr-only">Person not found</h1>
-        <EmptyState className="py-20" icon={<SearchX />} title="We can't find that person" headingLevel={2} action={<ButtonLink href="/owners/people/">Back to people</ButtonLink>}>They may have been removed, or the link is incomplete.</EmptyState>
+        <EmptyNote rule className="mt-6" title="We can't find that person" action={<ButtonLink href="/owners/people/" variant="secondary" size="lg" className="border-2">Back to people</ButtonLink>}>They may have been removed, or the link is incomplete.</EmptyNote>
       </OwnerShell>
     );
   }
 
   const { person: p, fields, completeness, fromDraft } = s;
+  const history = reviewHistory(s);
   const name = p.name || p.email;
   const timeline: [string, string | null][] = [
     ["Invited", shortDate(p.invitedAt)], ["Registered", shortDate(p.registeredAt)], ["Submitted", shortDate(p.submittedAt)], ["Approved", shortDate(p.approvedAt)],
@@ -126,24 +128,24 @@ function Person({ id }: { id: string }) {
     </div>
   );
 
-  // The profile as clients would see it, framed so it doesn't read as part of this page.
-  const preview = fields ? (
-    <Panel className="mt-10" landmark={false} collapsible="person-preview" title="What clients see" aside={fromDraft ? "Unsubmitted draft, shown as it stands" : p.status === "approved" ? "Live on the site" : "Not public yet"} bodyClassName="p-4 sm:p-6">
+  // The profile as clients would see it, framed (hairline sides and foot under the section's rule) so its own
+  // sections don't read as part of this page. `number` is this section's place on the page.
+  const preview = (number: string) => fields ? (
+    <Panel className="mt-10" landmark={false} number={number} collapsible="person-preview" title="What clients see" aside={fromDraft ? "Unsubmitted draft, shown as it stands" : p.status === "approved" ? "Live on the site" : "Not public yet"}
+      bodyClassName="border-x border-b border-line p-4 sm:p-6">
       <ProfileView person={p} fields={fields} extras={profile?.extras} mode="owner" />
     </Panel>
   ) : (
-    <Panel className="mt-10">
-      <EmptyState className="py-12" icon={<Sparkles />} title={p.status === "invited" ? "Hasn't joined yet" : "Hasn't started their profile"} headingLevel={2}>
-        {p.status === "invited" ? "They've been invited but haven't created an account yet." : "They've created an account. Their answers appear here as they fill in the questionnaire."}
-      </EmptyState>
-    </Panel>
+    <EmptyNote rule className="mt-10" title={p.status === "invited" ? "Hasn't joined yet" : "Hasn't started their profile"}>
+      {p.status === "invited" ? "They've been invited but haven't created an account yet." : "They've created an account. Their answers appear here as they fill in the questionnaire."}
+    </EmptyNote>
   );
 
   if (p.status === "submitted" && fields) {
     return (
       <OwnerShell section={section}>
         {crumbs(name)}
-        <ReviewWorkspace person={p} fields={fields} queue={queue} header={<>{header}{heroMark}</>}>{preview}</ReviewWorkspace>
+        <ReviewWorkspace person={p} fields={fields} queue={queue} history={history} scrolled={pastHero} header={<>{header}{heroMark}</>}>{preview("02")}</ReviewWorkspace>
       </OwnerShell>
     );
   }
@@ -154,15 +156,29 @@ function Person({ id }: { id: string }) {
       {condensed(false)}
       {header}
       {heroMark}
+      {history.unsentDraft && <UnsentDraftFlag className="mt-4" />}
+      {/* Where they stand, as the page's first section: the notes they're working on, or that they're live. */}
       {p.status === "changes_requested" && (
-        <Banner tone="warning" className="mt-6" title="Changes requested">
-          <ul className="grid gap-1">{(p.reviewNotes ?? []).map((n) => <li key={n.note}><b>{sectionLabel[n.section]}:</b> {n.note}</li>)}</ul>
-        </Banner>
+        <Panel className="mt-8" number="01" title="Changes requested" aside="Waiting on their edits" flush>
+          <ul className="border-t-2 border-line-strong">
+            {readNotes(p.reviewNotes ?? []).map((n) => (
+              <li key={`${n.section}-${n.note}`} className="grid gap-x-6 gap-y-1 border-b border-line py-3 sm:grid-cols-12 sm:items-baseline">
+                <b className="text-label-md font-bold text-ink sm:col-span-3">{sectionLabel[n.section]}</b>
+                <span className="max-w-2xl text-body-md text-pretty text-ink sm:col-span-9">{n.note}</span>
+              </li>
+            ))}
+          </ul>
+        </Panel>
       )}
       {p.status === "approved" && (
-        <Banner tone="success" className="mt-6" title="Live" action={<ButtonLink href={`/p/${p.slug}/`} size="sm" iconStart={<Eye />}>Public page</ButtonLink>}>Clients can find this profile.</Banner>
+        <Panel className="mt-8" number="01" title="Live" flush>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-line-strong py-3">
+            <p className="text-body-md text-ink">Clients can find this profile.</p>
+            <ButtonLink href={`/p/${p.slug}/`} variant="secondary" className="border-2" iconStart={<Eye />}>Public page</ButtonLink>
+          </div>
+        </Panel>
       )}
-      {preview}
+      {preview(p.status === "changes_requested" || p.status === "approved" ? "02" : "01")}
     </OwnerShell>
   );
 }

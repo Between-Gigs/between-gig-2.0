@@ -44,7 +44,7 @@ export function OwnerHome() {
         <section aria-labelledby="o-today" className="grid grid-cols-12 gap-x-6 gap-y-6">
           <div className="col-span-12 min-w-0 self-end lg:col-span-8">
             <p className="text-label-md text-ink-muted">Today on the call sheet</p>
-            <h2 id="o-today" className="mt-4 font-display text-display-sm text-ink sm:text-display-md md:text-display-lg">
+            <h2 id="o-today" className="mt-4 font-display text-display-sm text-balance text-ink sm:text-display-md md:text-display-lg">
               {queue.length ? <>{queue.length} {queue.length === 1 ? "Gigster is" : "Gigsters are"} <span className="text-ink-brand">waiting on you.</span></> : <>Nobody is waiting. <span className="text-ink-brand">Enjoy your day.</span></>}
             </h2>
           </div>
@@ -62,7 +62,9 @@ export function OwnerHome() {
         {/* Four plain numbers under thick rules; the first (what needs doing today) is the screen's one mint block. */}
         <section aria-label="At a glance" className="grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-6 md:grid-cols-4">
           {stats.map(([k, v], i) => (
-            <div key={k} className={cx("grid min-w-0 content-between gap-3", i === 0 && queue.length > 0 ? cx(mintBlock, "p-4 sm:p-5") : "border-t-4 border-line-strong pt-3")}>
+            // Every stat opens on the same 4px rule and padding, so numbers share a top line and labels a bottom line; the mint
+            // one only adds side padding.
+            <div key={k} className={cx("grid min-w-0 content-between gap-3 border-t-4 pt-3 pb-4", i === 0 && queue.length > 0 ? cx(mintBlock, "border-forest-950 px-4 sm:px-5") : "border-line-strong")}>
               <span className="font-display text-display-md tabular-nums sm:text-stat">{v}</span>
               <span className="text-label-md font-bold">{k}</span>
             </div>
@@ -74,7 +76,7 @@ export function OwnerHome() {
       <div>
         <div className="grid grid-cols-12 gap-x-6 gap-y-14">
           <section aria-labelledby="o-queue" className="col-span-12 border-t-4 border-line-strong pt-3 lg:col-span-7">
-            <h2 id="o-queue" className="font-display text-heading-lg text-ink"><span aria-hidden="true" className="mr-3 align-middle text-label-sm font-extrabold tabular-nums">01</span>Up next</h2>
+            <h2 id="o-queue" className="font-display text-heading-lg text-ink"><span aria-hidden="true" className="mb-1 block font-sans text-label-sm font-extrabold tracking-normal tabular-nums">01</span>Up next</h2>
             <ul className="mt-3 grid border-t-2 border-line-strong">
               {queue.slice(0, 4).map(({ person: p, fields }) => (
                 <li key={p.id} className="group relative flex min-h-18 items-center gap-4 border-b border-line py-3">
@@ -95,7 +97,7 @@ export function OwnerHome() {
             </div>
           </section>
           <section aria-labelledby="o-activity" className="col-span-12 border-t-4 border-line-strong pt-3 lg:col-span-5">
-            <h2 id="o-activity" className="mb-3 font-display text-heading-lg text-ink"><span aria-hidden="true" className="mr-3 align-middle text-label-sm font-extrabold tabular-nums">02</span>Lately</h2>
+            <h2 id="o-activity" className="mb-3 font-display text-heading-lg text-ink"><span aria-hidden="true" className="mb-1 block font-sans text-label-sm font-extrabold tracking-normal tabular-nums">02</span>Lately</h2>
             <ActivityList events={d.activity.slice(0, 5)} />
           </section>
         </div>

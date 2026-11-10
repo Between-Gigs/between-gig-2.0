@@ -97,7 +97,7 @@ export const StoryBook = React.forwardRef<StoryBookHandle, { onPlan: (kind: "buy
                   <TurnButton dir="next" disabled={!state.canNext} onClick={next} />
                 </div>
               </div>
-              <p className={cx("text-body-sm text-ink-muted transition-opacity duration-slow", hinted && "opacity-0")}>Drag the page or use the arrows to turn</p>
+              <p className={cx("text-body-sm text-ink-muted transition-opacity duration-slow", hinted && "opacity-0 max-md:hidden")}>Drag the page or use the arrows to turn</p>
             </div>
             <div ref={captions} aria-hidden="true" className="sb-captions col-span-12 md:col-span-5 lg:col-span-6" />
             <div className="col-span-12 grid content-start gap-3 md:col-span-4 lg:col-span-3">

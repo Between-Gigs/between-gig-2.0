@@ -53,8 +53,9 @@ export function CrewCall() {
           <h1 id="cc-h" className="col-span-12 font-display text-display-md text-ink md:text-display-lg xl:text-display-xl">
             {hero.title[0]}<br /><span className="text-ink-brand">{hero.title[1]}</span>
           </h1>
-          <div className="col-span-12 grid content-start gap-6 lg:col-span-5">
-            <p className="text-body-lg text-ink">{hero.lead}</p>
+          {/* From lg the column spans the photo: the lead on its top edge, the search on its bottom edge. */}
+          <div className="col-span-12 grid content-start gap-6 lg:col-span-5 lg:content-between">
+            <p className="text-body-lg text-pretty text-ink">{hero.lead}</p>
             <form role="search" onSubmit={(e) => { e.preventDefault(); if (q.trim() && !shown.length && !soon.length) open(q.trim()); else toCrew(); }}
               className="flex items-stretch border-4 border-line-strong bg-surface focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus">
               <label htmlFor="cc-search" className="sr-only">Search the crew</label>
@@ -98,9 +99,10 @@ export function CrewCall() {
 
         {/* 02 Crew Call */}
         <section ref={crew} id="crew" aria-labelledby="cc-crew-h" className={cx(wrap, "scroll-mt-20 pt-16 pb-16 lg:pt-24")}>
-          <div className="grid grid-cols-12 gap-x-6 gap-y-3 border-t-4 border-line-strong pt-3">
-            <span aria-hidden="true" className="col-span-12 text-label-sm text-ink tabular-nums lg:col-span-3">02</span>
-            <div className="col-span-12 grid content-start gap-3 lg:col-span-9">
+          {/* Number above, the heading flush left on column 1, so it shares its edge with the card grid below. */}
+          <div className="grid gap-y-1 border-t-4 border-line-strong pt-3">
+            <span aria-hidden="true" className="text-label-sm text-ink tabular-nums">02</span>
+            <div className="grid content-start gap-3">
               <h2 id="cc-crew-h" className="font-display text-display-md text-ink uppercase sm:text-display-lg">Crew Call</h2>
               {q && (
                 <p aria-live="polite" className="flex flex-wrap items-center gap-2 text-body-md text-ink-muted">
@@ -113,25 +115,29 @@ export function CrewCall() {
 
           {shown.length > 0 && (
             <ul className="mt-10 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-              {shown.map((s) => (
-                <li key={s.id} className="flex">
-                  <ServiceCard title={s.title} line={s.line} badge={s.badge} icon={icons[s.icon]} image={s.image} onOpen={() => pick(s.title, <img src={asset(s.badge)} alt="" width={192} height={192} className="size-14" />, false)} />
+              {shown.map((s, i) => {
+                // Two across (sm to lg): an odd last card takes the whole row instead of standing alone.
+                const wide = shown.length % 2 === 1 && i === shown.length - 1 && shown.length > 1;
+                return (
+                <li key={s.id} className={cx("flex", wide && "sm:max-lg:col-span-2")}>
+                  <ServiceCard wide={wide} title={s.title} line={s.line} badge={s.badge} icon={icons[s.icon]} image={s.image} onOpen={() => pick(s.title, <img src={asset(s.badge)} alt="" width={192} height={192} className="size-14" />, false)} />
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
           {q && !shown.length && !soon.length && (
             <div className="mt-10 grid max-w-xl justify-items-start gap-4 border-t-4 border-line-strong pt-4">
-              <p className="font-display text-heading-md text-ink">Tell us what you need, and we&apos;ll cast the right person.</p>
+              <p className="font-display text-heading-md text-balance text-ink">Tell us what you need, and we&apos;ll cast the right person.</p>
               <Button variant="primary" iconEnd={<ArrowRight />} onClick={() => open(q)}>Describe your project</Button>
             </div>
           )}
 
-          {/* The page's one mint block. */}
-          <Link href="/storyboard/#plates"
+          {/* The page's one mint block (held back while a search has no results: the empty state's button is the action then). */}
+          {(!q || shown.length + soon.length > 0) && <Link href="/storyboard/#plates"
             className="group mt-12 flex min-h-20 items-center justify-between gap-4 border-t-4 border-forest-950 bg-tint-mint px-5 py-4 font-display text-heading-md text-forest-950 uppercase sm:px-8 sm:text-heading-lg">
             Explore all services<ArrowRight className="size-8 shrink-0 transition-transform duration-fast group-hover:translate-x-1 motion-reduce:transition-none" aria-hidden="true" />
-          </Link>
+          </Link>}
 
           {soon.length > 0 && (
             <div className="mt-16 grid grid-cols-12 gap-x-6 gap-y-6 border-t-4 border-line-strong pt-3">
@@ -141,7 +147,7 @@ export function CrewCall() {
               </div>
               <ul className="col-span-12 grid grid-cols-2 gap-x-6 sm:grid-cols-3 md:grid-cols-5 lg:col-span-9">
                 {soon.map((s) => (
-                  <li key={s.id} className="flex border-t border-line">
+                  <li key={s.id} className="flex border-b border-line">
                     <button type="button" onClick={() => pick(s.title, <SoonTile icon={icons[s.icon]} small />, true)} aria-label={`${s.title}, coming soon. Tell us you need it.`}
                       className="group grid w-full content-start justify-items-start gap-3 py-4 text-left transition-colors duration-fast hover:bg-surface-hover">
                       <SoonTile icon={icons[s.icon]} />
@@ -155,10 +161,13 @@ export function CrewCall() {
               </ul>
             </div>
           )}
-          <p className="mt-12 text-body-sm text-ink-muted">Private design preview · Featured services are provisional until Gigster profiles are reviewed.</p>
         </section>
+        {/* The small print, together under one hairline. */}
         <div className={wrap}>
-          <p className="border-t border-line py-6 text-body-sm text-ink-muted">Sample quotes, generated photos, names, ratings and production-credit claims are unverified mockup content. Real testimonials require review before publication.</p>
+          <div className="grid gap-2 border-t border-line py-6 text-body-sm text-ink-muted">
+            <p>Private design preview · Featured services are provisional until Gigster profiles are reviewed.</p>
+            <p>Sample quotes, generated photos, names, ratings and production-credit claims are unverified mockup content. Real testimonials require review before publication.</p>
+          </div>
         </div>
       </div>
 
@@ -220,11 +229,11 @@ function SoonTile({ icon: Icon, small = false }: { icon: LucideIcon; small?: boo
 }
 
 /** One featured service: the photo hard-cropped into its grid cell, then the embroidered patch and the words. */
-function ServiceCard({ title, line, badge, icon, image, onOpen }: { title: string; line: string; badge: string; icon: LucideIcon; image: string | null; onOpen: () => void }) {
+function ServiceCard({ title, line, badge, icon, image, onOpen, wide = false }: { title: string; line: string; badge: string; icon: LucideIcon; image: string | null; onOpen: () => void; wide?: boolean }) {
   const Icon = icon;
   return (
     <article className="group relative grid w-full content-start gap-4 border-t-4 border-line-strong pt-4">
-      <div aria-hidden="true" className="aspect-3/2 overflow-hidden bg-surface-sunken">
+      <div aria-hidden="true" className={cx("aspect-3/2 overflow-hidden bg-surface-sunken", wide && "sm:max-lg:aspect-3/1")}>
         {image ? (
           <img src={asset(image)} alt="" width={800} height={800} loading="lazy" decoding="async" className="size-full object-cover transition-transform duration-slow group-hover:scale-105 motion-reduce:transition-none" />
         ) : (

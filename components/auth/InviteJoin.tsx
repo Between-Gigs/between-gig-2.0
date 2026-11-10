@@ -49,7 +49,7 @@ function Details() {
     <AuthShell header="Sign up"
       lead={<p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
       <h1 className="font-display text-heading-lg text-balance text-ink">Create your account</h1>
-      <p className="mt-2 text-body-md text-ink-muted">Your invitation confirms your email. Tell us your name to get started.</p>
+      <p className="mt-2 text-body-md text-pretty text-ink-muted">Your invitation confirms your email. Tell us your name to get started.</p>
       <form noValidate onSubmit={submit} className="mt-8 grid gap-5">
         <Field label="Full name" error={errors.name}>
           <Input value={name} autoComplete="name" autoFocus onChange={(e) => { setName(e.target.value); setErrors((x) => ({ ...x, name: undefined })); }} />
@@ -59,7 +59,7 @@ function Details() {
             onChange={(e) => { setTerms(e.target.checked); setErrors((x) => ({ ...x, terms: undefined })); }}
             label={<>I agree to the <a className="text-link underline underline-offset-2" href="https://between-gigs.com/terms" target="_blank" rel="noreferrer">Terms of Use</a> and <a className="text-link underline underline-offset-2" href="https://between-gigs.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.</>}
             description="You can ask us to delete your account at any time." />
-          {errors.terms && <p id="terms-error" className="text-body-sm text-danger">{errors.terms}</p>}
+          {errors.terms && <p id="terms-error" className="pl-7.5 text-body-sm text-danger">{errors.terms}</p>}
         </div>
         <Button type="submit" variant="primary" size="lg" fullWidth className="glow-hover swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm" iconEnd={<ArrowRight />}>Continue</Button>
         <p className="text-body-md text-ink">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-bold text-ink underline underline-offset-4">Log in</Link></p>
@@ -95,12 +95,12 @@ function InviteOnly() {
       <div className="grid gap-6">
         <div>
             <h1 className="font-display text-heading-lg text-balance text-ink">Joining is by invitation</h1>
-            <p className="mt-2 text-body-md text-ink-muted">Open the link in your invitation email to create your account. No invitation yet? Get on the call sheet and we'll email you when it's your turn.</p>
+            <p className="mt-2 text-body-md text-pretty text-ink-muted">Open the link in your invitation email to create your account. No invitation yet? Get on the call sheet and we'll email you when it's your turn.</p>
         </div>
         <Banner tone="info" title="Already joined?">Log in with the email your invitation was sent to.</Banner>
-        <div className="flex flex-wrap gap-2 border-t border-line pt-6">
-          <ButtonLink href="/login/" variant="primary" iconEnd={<ArrowRight />}>Log in</ButtonLink>
-          <ButtonLink href="/professionals/">Get on the call sheet</ButtonLink>
+        <div className="grid gap-3 border-t border-line pt-6">
+          <ButtonLink href="/login/" variant="primary" size="lg" fullWidth className="swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm" iconEnd={<ArrowRight />}>Log in</ButtonLink>
+          <div><ButtonLink href="/professionals/" size="lg">Get on the call sheet</ButtonLink></div>
         </div>
       </div>
     </AuthShell>

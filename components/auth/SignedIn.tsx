@@ -73,8 +73,8 @@ export function SignedInPanel({ session, title, inviteFor }: { session: Session;
   return (
     <div className="grid gap-6">
       <div>
-        <h1 className="font-display text-heading-lg text-balance text-ink">{inviteFor ? <>This invite is for <span className="break-all">{inviteFor}</span></> : title ?? "You're already signed in"}</h1>
-        <p className="mt-2 text-body-md text-ink-muted">
+        <h1 className="font-display text-heading-lg text-balance text-ink">{inviteFor ? <>This invite is for <span className="block break-words">{inviteFor}</span></> : title ?? "You're already signed in"}</h1>
+        <p className="mt-2 text-body-md text-pretty text-ink-muted">
           You&apos;re signed in as <b className="text-ink">{name}</b>{session.name && session.email ? <> ({session.email})</> : null}.
           {inviteFor ? " Log out to create that account with this invite." : ""}
         </p>

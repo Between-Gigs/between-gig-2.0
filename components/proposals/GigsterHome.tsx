@@ -92,8 +92,8 @@ export function GigsterHome({ personId }: { personId: string }) {
       <div>
         <div className="grid grid-cols-12 gap-x-6 gap-y-14">
           <section aria-labelledby="g-requests" className="col-span-12 border-t-4 border-line-strong pt-3 lg:col-span-7">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 id="g-requests" className="font-display text-heading-lg text-ink"><span aria-hidden="true" className="mr-3 align-middle text-label-sm font-extrabold tabular-nums">02</span>Requests</h2>
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <h2 id="g-requests" className="font-display text-heading-lg text-ink"><span aria-hidden="true" className="mb-1 block font-sans text-label-sm font-extrabold tracking-normal tabular-nums">02</span>Requests</h2>
               <Badge tone="info" size="sm">Coming with booking</Badge>
             </div>
             <EmptyState className="mt-4 py-10" icon={<Inbox />} title="No requests yet" headingLevel={3}>
@@ -101,7 +101,7 @@ export function GigsterHome({ personId }: { personId: string }) {
             </EmptyState>
           </section>
           <section aria-labelledby="g-profile" className="col-span-12 grid content-start gap-4 border-t-4 border-line-strong pt-3 lg:col-span-5">
-            <h2 id="g-profile" className="font-display text-heading-lg text-ink"><span aria-hidden="true" className="mr-3 align-middle text-label-sm font-extrabold tabular-nums">03</span>Your profile</h2>
+            <h2 id="g-profile" className="font-display text-heading-lg text-ink"><span aria-hidden="true" className="mb-1 block font-sans text-label-sm font-extrabold tracking-normal tabular-nums">03</span>Your profile</h2>
             <div className="flex items-end gap-4">
               <span className="font-display text-stat text-ink tabular-nums">{parts.done}<span className="text-heading-lg text-ink-muted">/{parts.total}</span></span>
               <Progress value={parts.done} max={parts.total} label={`${parts.done} of ${parts.total} parts done`} valueText="" size="md" className="mb-3 flex-1" />

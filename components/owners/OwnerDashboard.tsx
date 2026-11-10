@@ -1,6 +1,6 @@
 "use client";
-import { Button, EmptyState, SegmentedControl, Skeleton, cx } from "@ds/components";
-import { ArrowRight, Inbox, Mail, Plus } from "lucide-react";
+import { Button, SegmentedControl, Skeleton, cx } from "@ds/components";
+import { ArrowRight, Mail, Plus } from "lucide-react";
 import * as React from "react";
 import { data, type DashboardSummary, type PersonStatus, type PersonSummary, type Session, type WaitlistRow } from "@/lib/data";
 import { waitlistCategoryLabel } from "@/lib/data/taxonomy";
@@ -9,7 +9,7 @@ import { ButtonLink } from "@/components/ui/ButtonLink";
 import { ActivityList, ago } from "./activity";
 import { shortDate } from "./format";
 import { FunnelCompact } from "./Funnel";
-import { eyebrow, forestButton, Meter, OwnerAvatar, OwnerPage, Panel, PanelLink, Row, RowSkeletons, StatTab, useFitList } from "./kit";
+import { EmptyNote, forestButton, Meter, OwnerAvatar, OwnerPage, Panel, PanelLink, Row, RowHead, rowListRule, RowSkeletons, StatTab, useFitList } from "./kit";
 import { OwnerGate } from "./OwnerGate";
 import { OwnerShell } from "./OwnerShell";
 import { isHeld } from "./hold";
@@ -65,6 +65,7 @@ function Dashboard({ session }: { session: Session }) {
   /** The open person: the list they were opened from (a view, or one person from Recent activity) and where in it. */
   const [drawer, setDrawer] = React.useState<{ rows: PersonSummary[]; index: number; from: View | "one"; invitedOnly?: boolean } | null>(null);
   const [expanded, setExpanded] = React.useState(false);
+  const [sideExpanded, setSideExpanded] = React.useState(false);
   const [side, setSide] = React.useState<"activity" | "funnel">("activity");
 
   // Everything loads once, so switching tabs is instant: no spinners, no layout shifts.
@@ -133,7 +134,7 @@ function Dashboard({ session }: { session: Session }) {
             }>
             <div ref={listRef} id="dash-list" role="tabpanel" aria-label={v.title} className="@container min-h-0 flex-1 lg:overflow-hidden">
               {count === 0 ? (
-                <EmptyState className="py-10" icon={<Inbox />} title="Nothing here" headingLevel={3}>{v.empty}</EmptyState>
+                <EmptyNote size="sm" headingLevel={3} title="Nothing here">{v.empty}</EmptyNote>
               ) : view === "not_invited" ? (
                 <ul className="border-t-2 border-line-strong">
                   {waitlist.map((w, i) => (
@@ -149,13 +150,8 @@ function Dashboard({ session }: { session: Session }) {
                 </ul>
               ) : (
                 <>
-                  <div aria-hidden="true" className={cx("hidden items-center gap-4 border-b-2 border-line-strong pb-2 @lg:flex", eyebrow)}>
-                    <span className="w-16 shrink-0" />
-                    <span className="flex-1">Gigster</span>
-                    <span className="flex shrink-0 gap-6"><span className="w-24">Complete</span><span className="w-28">{view === "submitted" ? "Waiting" : "Updated"}</span></span>
-                    <span className="w-11 shrink-0 @md:w-30" />
-                  </div>
-                  <ul className="@max-lg:border-t-2 @max-lg:border-line-strong">
+                  <RowHead first="Gigster" cols={[{ label: "Complete", className: "w-24" }, { label: view === "submitted" ? "Waiting" : "Updated", className: "w-28" }]} />
+                  <ul className={rowListRule}>
                     {rows.map((r, i) => {
                       const p = r.person;
                       const when = ago((view === "submitted" ? p.submittedAt : p.updatedAt) ?? p.updatedAt);
@@ -188,7 +184,12 @@ function Dashboard({ session }: { session: Session }) {
               options={[{ value: "activity", label: "Activity" }, { value: "funnel", label: "Funnel" }]} />
             <div ref={sideRef} className="min-h-0 flex-1 lg:overflow-hidden">
               {side === "activity"
-                ? <ActivityList events={d.activity.slice(0, 12)} onOpen={openPerson} photoFor={(id) => photos.get(id)} />
+                ? <>
+                    <ActivityList events={d.activity.slice(0, 12)} onOpen={openPerson} photoFor={(id) => photos.get(id)} phoneLimit={sideExpanded ? undefined : PHONE_ROWS} />
+                    {!sideExpanded && d.activity.slice(0, 12).length > PHONE_ROWS && (
+                      <div className="border-b border-line py-2 lg:hidden"><Button variant="ghost" size="sm" onClick={() => setSideExpanded(true)}>Show all {d.activity.slice(0, 12).length}</Button></div>
+                    )}
+                  </>
                 : <>
                     <p className="pt-2 pb-1 text-body-sm text-ink-muted tabular-nums">Out of {d.funnel.invited} invited. Pick a step to list it.</p>
                     <FunnelCompact bare d={d} selected={cohort === "invited" ? view : undefined} onSelect={(x) => pick(x, "invited")} />
@@ -211,7 +212,7 @@ function DashboardSkeleton() {
       <div aria-hidden="true" className="grid gap-3"><Skeleton className="h-3 w-48" /><Skeleton className="h-20 w-full max-w-xl" /><Skeleton className="h-4 w-80" /></div>
       <div aria-hidden="true" className="mt-8 flex min-h-0 flex-1 flex-col gap-10">
         <div className="grid grid-cols-2 gap-x-6 gap-y-8 xl:grid-cols-10">
-          {["xl:col-span-3 bg-tint-mint", "xl:col-span-2 border-t-4 border-line-strong", "xl:col-span-2 border-t-4 border-line-strong", "xl:col-span-3 border-t-4 border-line-strong"].map((t, i) => <div key={i} className={cx("grid min-h-36 content-between p-4", t)}><Skeleton className="h-16 w-20" /><Skeleton className="h-4 w-32" /></div>)}
+          {["xl:col-span-3 bg-tint-mint dark:border-4 dark:border-action dark:bg-transparent", "xl:col-span-2 border-t-4 border-line-strong", "xl:col-span-2 border-t-4 border-line-strong", "xl:col-span-3 border-t-4 border-line-strong"].map((t, i) => <div key={i} className={cx("grid min-h-36 content-between p-4", t)}><Skeleton className="h-16 w-20" /><Skeleton className="h-4 w-32" /></div>)}
         </div>
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-10">
           <div className="overflow-hidden border-t-4 border-line-strong lg:col-span-7"><div className="h-16" /><RowSkeletons count={5} /></div>

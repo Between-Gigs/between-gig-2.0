@@ -1,6 +1,6 @@
 "use client";
 import { Accordion, Button, Field, Input, Modal, Select, Textarea, cx, useToast } from "@ds/components";
-import { ArrowRight, Check, ChevronLeft, ChevronRight, Heart, Info, MapPin, MessageSquare, Share } from "lucide-react";
+import { ArrowRight, Check, ChevronLeft, ChevronRight, CircleDashed, Heart, Info, MapPin, MessageSquare, Share } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { data, type Person, type Profile, type ProfileFields } from "@/lib/data";
@@ -8,7 +8,7 @@ import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/d
 import { locationLabel } from "@/lib/profile/location";
 import { absoluteUrl, asset } from "@/lib/site";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
-import { pinnedCredits } from "@/lib/profile/validate";
+import { hasRate, pinnedCredits } from "@/lib/profile/validate";
 import { craftHref } from "@/lib/profile/browse";
 
 export type ProfileMode = "public" | "own" | "owner";
@@ -54,6 +54,10 @@ const splitCredit = (c: string) => { const [title, ...rest] = c.split("·").map(
 export function ProfileView({ person, fields: f, extras, mode, similar = [], draft = false, part, aside }: Props) {
   const toast = useToast();
   const first = f.name.split(" ")[0] || "this Gigster";
+  // On buttons ("Request …"): a long or double-barrelled first name keeps to its first part, so the button fits.
+  const callName = shortName(first);
+  // The editor's label over the name: the page is live once approved, private until then.
+  const pageLabel = person.status === "approved" ? "Live" : "Your page · private";
   const services = f.services;
   const helps = extras?.helps ?? [];
   const portfolio = extras?.portfolio ?? [];
@@ -65,7 +69,9 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
   const [saved, setSaved] = React.useState(false);
   // The owner view already has the person's name as its page title.
   const Name = mode === "owner" ? "h2" : "h1";
-  const rate = f.rate ? `$${f.rate}/${basisShort[f.basis]}` : null;
+  // A rate of 0 (or none) reads "Rate on request", as everywhere.
+  const priced = hasRate(f.rate);
+  const rate = priced ? `$${f.rate}/${basisShort[f.basis]}` : null;
   const where = f.market === "la" ? (f.areas.length ? locationLabel(f) : "") : locationLabel(f);
   const credits = pinnedCredits(f);
   // Live, the public page reads only what Company OS's public_reader may see: no insurance answer, so it's left out.
@@ -99,13 +105,14 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
   const [datesHead, ...datesRest] = f.dates.split(";").map((s) => s.trim());
   const datesNote = datesRest.join("; ");
 
-  // Only the numbers that say something: a zero reads as a weakness, so it's left out (the editor shows years to fill).
+  // Only the numbers that say something: a zero reads as a weakness, so it's left out. The editor keeps all four cells
+  // (years to fill in place, the rest a quiet dash until their parts are in), so the row keeps its shape as it fills.
   const offered = helps.length || services.length;
   const stats: [string, string, boolean][] = ([
     [f.years || "", f.years === "1" ? "Year in the business" : "Years in the business", !!f.years || editing],
-    [String(offered), offered === 1 ? "Service" : "Services", offered > 0],
-    [String(credits.length), credits.length === 1 ? "Credit" : "Credits", credits.length > 0],
-    [f.rate ? `$${f.rate}` : "", `${basisLong[f.basis]}, from`, !!f.rate && !editing],
+    [offered ? String(offered) : "", offered === 1 ? "Service" : "Services", offered > 0 || editing],
+    [credits.length ? String(credits.length) : "", credits.length === 1 ? "Credit" : "Credits", credits.length > 0 || editing],
+    [priced ? `$${f.rate}` : "", `${basisLong[f.basis]}, from`, priced || editing],
   ] as [string, string, boolean][]).filter(([, , keep]) => keep);
 
   // Sections are numbered in the order they appear, so a missing one leaves no gap.
@@ -125,14 +132,17 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
   );
 
   const facts = [
-    (f.languages || show) && <Row key="speaks" term="Speaks">{P("languages", !!f.languages.trim(), <span>{f.languages}</span>, "Languages you speak (optional)")}</Row>,
+    (f.languages || show) && <Row key="speaks" term="Speaks">{P("languages", !!f.languages.trim(), <span>{f.languages}</span>, "Languages (optional)")}</Row>,
     works && <Row key="works" term="Works">{works}</Row>,
     brings && <Row key="brings" term="Brings">{brings}</Row>,
   ].filter(Boolean);
 
   const identity = (
+    // Phones: the portrait in 9 columns with the craft up its side, the name under it. Tablets: the portrait in 5 columns
+    // beside the name, the availability and facts across the full width under both. Desktop: the portrait in 4 columns
+    // spanning both rows, the availability and facts bottom-aligned with it.
     <section aria-label={`About ${first}`} className="grid grid-cols-12 gap-x-3 sm:gap-x-6">
-      <div className="relative col-span-9 lg:col-span-4">
+      <div className="relative col-span-9 md:col-span-5 lg:col-span-4 lg:row-span-2">
         {P("photo", !!f.photo || !show, (
           <PersonPhoto id={person.id} morph={!editing} name={f.name} src={f.photo || undefined} fallback="brand" department={f.position} skills={f.skills}
             alt={f.photo ? `Portrait of ${f.name}${sample ? " (fictional)" : ""}` : undefined}
@@ -140,36 +150,43 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
         ), "Add photo", "photo")}
       </div>
       {/* Phones: the craft runs up the side of the portrait, with the reviewed mark at its foot. */}
-      <div aria-hidden="true" className="relative col-span-3 flex flex-col items-start justify-start lg:hidden">
+      <div aria-hidden="true" className="relative col-span-3 flex flex-col items-start justify-start md:hidden">
         {reviewed && <span className="grid size-11 place-items-center bg-ink-brand text-bg"><Check className="size-5" strokeWidth={3} /></span>}
-        {craft && <span className="absolute bottom-0 left-0 origin-bottom-left translate-x-4 -rotate-90 text-eyebrow whitespace-nowrap text-ink uppercase">{craft}</span>}
+        {/* Up the side of the portrait, it can't wrap: a long department is cut to the portrait's height (it's in full under the name). */}
+        {craft && <span className="absolute bottom-0 left-0 origin-bottom-left translate-x-4 -rotate-90 text-eyebrow whitespace-nowrap text-ink uppercase">{craft.length > SIDE_MAX ? `${craft.slice(0, SIDE_MAX - 1).trimEnd()}…` : craft}</span>}
       </div>
 
-      <div className="col-span-12 mt-6 flex min-w-0 flex-col lg:col-span-8 lg:mt-0">
-        <p className="flex flex-wrap gap-x-5 gap-y-1 text-eyebrow uppercase max-lg:hidden">
-          <span className="text-ink">Gigster</span>{craft && <span className="text-ink-muted">{craft}</span>}
-          {editing && <span className="text-ink-brand">Your page · private</span>}
+      <div className="col-span-12 mt-6 min-w-0 md:col-span-7 md:mt-0 lg:col-span-8">
+        <p className="flex flex-wrap gap-x-5 gap-y-1 text-eyebrow uppercase max-md:hidden">
+          <span className="text-ink">Gigster</span>{craft && <span className="min-w-0 break-words text-ink-muted">{craft}</span>}
+          {editing && <span className="text-ink-brand">{pageLabel}</span>}
         </p>
-        {editing && <p className="text-eyebrow text-ink-brand uppercase lg:hidden">Your page · private</p>}
-        <div className="mt-2 lg:mt-5">
+        {editing && <p className="text-eyebrow text-ink-brand uppercase md:hidden">{pageLabel}</p>}
+        <div className="mt-2 md:mt-4 lg:mt-5">
           {P("name", !!f.name.trim(), (
-            <Name className="font-display text-display-md break-words text-ink sm:text-display-lg xl:text-display-xl">
-              {f.name.trim().includes(" ") ? <>{f.name.trim().split(" ")[0]} <span className="block">{f.name.trim().split(" ").slice(1).join(" ")}</span></> : f.name}
+            <Name className={cx("font-display break-words text-ink", longestWord(f.name) > 16 ? "text-display-sm md:text-display-sm lg:text-display-md xl:text-display-lg"
+              : longestWord(f.name) > 10 ? "text-display-sm sm:text-display-md md:text-display-sm lg:text-display-md xl:text-display-lg"
+              : "text-display-md sm:text-display-lg md:text-display-md lg:text-display-lg xl:text-display-xl")}>
+              {f.name.trim().includes(" ") ? <><Breakable text={f.name.trim().split(" ")[0]} /> <span className="block"><Breakable text={f.name.trim().split(" ").slice(1).join(" ")} /></span></> : <Breakable text={f.name} />}
             </Name>
           ), "Your name", "title")}
         </div>
-        <div className="mt-4 lg:mt-7">
+        <div className="mt-4 md:mt-5 lg:mt-7">
           {P("position", !!f.position, (
-            <p className="max-w-3xl font-display text-editorial-md font-medium text-ink lg:text-editorial-lg">{f.position}{where ? `. Works in ${where}.` : ""}</p>
+            <p className="max-w-3xl font-display text-editorial-md font-medium text-pretty break-words text-ink lg:text-editorial-lg">{f.position}{where ? `. Works in ${where}.` : ""}</p>
           ), "Department")}
         </div>
-        {reviewed && <p className="mt-3 flex items-center gap-2.5 font-display text-label-md text-ink-brand lg:mt-5 lg:text-ink">{tick}Reviewed by Between Gigs</p>}
-        <div className="mt-5 grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:mt-auto lg:pt-8">
+        {reviewed && <p className="mt-3 flex items-center gap-2.5 font-display text-label-md text-ink-brand md:mt-5 md:text-ink">{tick}Reviewed by Between Gigs</p>}
+      </div>
+
+      <div className="col-span-12 mt-5 min-w-0 md:mt-10 lg:col-span-8 lg:col-start-5 lg:mt-0 lg:self-end lg:pt-8">
+        <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
           <div>{P("availability", !!f.dates.trim() || !show, (
-            <div className="h-full bg-surface-brand p-5 text-ink-on-brand">
-              <p className="text-eyebrow text-mint-300 uppercase">{monthStatusLabel[f.monthStatus]}</p>
-              <p className="mt-2 font-display text-heading-md text-ink-on-brand">{datesHead || monthStatusLabel[f.monthStatus]}</p>
-              {datesNote && <p className="mt-1 text-body-md text-forest-100 first-letter:uppercase">{datesNote}</p>}
+            <div className="h-full min-w-0 bg-surface-brand p-5 text-ink-on-brand">
+              {/* With no dates the heading is the status itself, so the eyebrow doesn't repeat it. */}
+              <p className="text-eyebrow text-mint-300 uppercase">{datesHead ? monthStatusLabel[f.monthStatus] : "This month"}</p>
+              <p className="mt-2 font-display text-heading-md break-words text-ink-on-brand">{datesHead || monthStatusLabel[f.monthStatus]}</p>
+              {datesNote && <p className="mt-1 text-body-md break-words text-forest-100 first-letter:uppercase">{datesNote}</p>}
             </div>
           ), "When you're free this month", "block")}</div>
           {facts.length > 0 && <dl className="self-end border-b border-line text-body-md">{facts}</dl>}
@@ -180,24 +197,37 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
   );
 
   const statRow = stats.length > 0 && (
-    <dl className="mt-12 grid grid-cols-2 gap-x-3 gap-y-6 sm:gap-x-6 lg:mt-14 lg:grid-cols-4">
+    <dl className="mt-12 grid grid-cols-2 gap-x-3 gap-y-6 sm:gap-x-6 md:grid-cols-4 lg:mt-14">
       {stats.map(([v, k]) => (
-        <div key={k} className="grid content-start gap-3 border-t-4 border-line-strong pt-3">
+        <div key={k} className="@container grid min-w-0 content-start gap-3 border-t-4 border-line-strong pt-3">
           <dt className="order-2 font-display text-label-md text-ink">{k.toLowerCase()}</dt>
-          <dd className="order-1 font-display text-display-md text-ink tabular-nums sm:text-stat">{k.startsWith("Year") && part ? part("years", { content: <span>{v}</span>, hint: "Add", kind: "line" }) : v}</dd>
+          <dd className={cx("order-1 flex min-h-lh items-center font-display text-ink tabular-nums",
+            // Set by the cell's own width (the owner view's columns are narrower than the public page's) and the length.
+            v.length >= 4 ? "text-display-sm @3xs:text-stat" : "text-display-md @3xs:text-stat")}>
+            {/* Empty, the Add sits in a small-type box so the stat font's line box doesn't push its label down. */}
+            {k.startsWith("Year") && part ? (v ? part("years", { content: <span>{v}</span>, hint: "Add", kind: "line" })
+              : <span className="flex text-body-md">{part("years", { content: <span>{v}</span>, hint: "Add", kind: "line" })}</span>)
+              : v || <><span aria-hidden="true" className="text-ink-subtle">–</span><span className="sr-only">None yet</span></>}
+          </dd>
         </div>
       ))}
     </dl>
   );
 
   const booking = (
-    <section aria-label={`Book ${first}`} className="grid gap-5 bg-tint-mint p-5 text-forest-950">
-      {f.rate
-        ? <p className="grid gap-1"><span className="text-eyebrow uppercase">Starting rate</span><span className="flex items-baseline gap-1.5"><span className="font-display text-stat tabular-nums">${f.rate}</span><span className="font-display text-heading-md">/ {basisShort[f.basis]}</span></span></p>
+    <section aria-label={`Book ${first}`} className="@container grid gap-5 bg-tint-mint p-5 text-forest-950">
+      {priced
+        // The unit wraps under the number when the column is narrow ("/ project" beside "$500" in the 3-column aside).
+        // The number sets by the block's own width (a container query) and its length, so it never leaves the block:
+        // the owner view's aside is under 150px wide at 1024.
+        ? <p className="grid min-w-0 gap-1"><span className="text-eyebrow uppercase">Starting rate</span><span className="flex min-w-0 flex-wrap items-baseline gap-x-1.5">
+            <span className={cx("font-display tabular-nums", f.rate.length >= 4 ? "text-heading-md @3xs:text-display-sm" : f.rate.length === 3 ? "text-heading-lg @3xs:text-display-md" : "text-display-sm @3xs:text-stat")}>${f.rate}</span>
+            <span className="font-display text-heading-md whitespace-nowrap">/ {basisShort[f.basis]}</span>
+          </span></p>
         : <p className="font-display text-heading-lg">Rate on request</p>}
       <Button variant="primary" size="lg" fullWidth disabled={mode !== "public"} aria-describedby={`${person.id}-request-note`} onClick={() => setRequest(true)}
         iconEnd={<ArrowRight />} className={onMint}>
-        Request {first}
+        <span className="min-w-0 text-left whitespace-normal">Request {callName}</span>
       </Button>
       <p id={`${person.id}-request-note`} className="text-body-sm">
         {mode === "public" ? "You won't be charged. Scope and rate are agreed first." : mode === "own" ? "Clients see this card on your profile." : "Owner view: requests are off here."}
@@ -207,8 +237,11 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
 
   const checkedList = (
     <ul className="grid text-body-md text-ink">
-      <li className="flex items-start gap-3 border-t border-line py-3 first:border-t-0 first:pt-0"><Check className="mt-0.5 size-4 shrink-0" strokeWidth={3} aria-hidden="true" /><span><b>Profile reviewed</b> by the Between Gigs team</span></li>
-      <li className="flex items-start gap-3 border-t border-line py-3"><Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span>Credits and details are shared by {first}, not independently verified</span></li>
+      {/* Only an approved profile has been reviewed; before that (owner view, the Gigster's preview) it says what will happen. */}
+      {mode === "public" || person.status === "approved"
+        ? <li className="flex items-start gap-3 border-t border-line py-3 first:border-t-0 first:pt-0"><Check className="mt-0.5 size-4 shrink-0" strokeWidth={3} aria-hidden="true" /><span><b>Profile reviewed</b> by the Between Gigs team</span></li>
+        : <li className="flex items-start gap-3 border-t border-line py-3 first:border-t-0 first:pt-0"><CircleDashed className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span><b>Reviewed by the Between Gigs team</b> before it goes public</span></li>}
+      <li className="flex items-start gap-3 border-t border-line py-3"><Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span className="min-w-0 break-words">Credits and details are shared by {first}, not independently verified</span></li>
     </ul>
   );
   const checked = (
@@ -229,7 +262,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
             <li><Link href="/p/" className="inline-flex min-h-11 items-center underline-offset-4 hover:text-ink hover:underline">Gigsters</Link></li>
             {craft && <><li aria-hidden="true">/</li><li><Link href={craftHref(f.position, f.skills)} className="inline-flex min-h-11 items-center underline-offset-4 hover:text-ink hover:underline">{craft}</Link></li></>}
             <li aria-hidden="true">/</li>
-            <li aria-current="page" className="text-ink">{f.name}</li>
+            <li aria-current="page" className="min-w-0 break-words text-ink">{f.name}</li>
           </ol>
         </nav>
       )}
@@ -297,7 +330,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
               ), "Your notable credits, best first", "block")}</div>
               {(mode === "owner" || editing || draft) && <div className="sm:col-span-2">{P("imdb", !!f.imdb, (
                 <p className="text-body-sm text-ink-muted"><a className="inline-flex min-h-11 items-center text-link underline underline-offset-2" href={f.imdb} target="_blank" rel="noreferrer">IMDb page<span className="sr-only"> (opens in a new tab)</span></a> · only the Between Gigs team sees this</p>
-              ), "Your IMDb link (optional, only the team sees it)", "block")}</div>}
+              ), "Your IMDb link. Only the team sees it.", "block")}</div>}
             </div>
           </Section>}
 
@@ -305,13 +338,13 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
             <dl className="text-body-md">
               {(where || show) && <Row term="Works in" wide>{P("where", !!where, <span>{where}</span>, "Where you work", "block")}</Row>}
               {!editing && <Row term="Availability" wide>{monthStatusLabel[f.monthStatus]}{f.dates && <span className="text-ink-muted"> · {f.dates}</span>}</Row>}
-              {(rate || show) && <Row term="Rate" wide>{P("rate", !!rate, <span>From {rate}</span>, "Your starting rate (optional)", "block")}</Row>}
+              {(rate || show) && <Row term="Rate" wide>{P("rate", !!rate, <span>From {rate}</span>, "Your starting rate", "block")}</Row>}
               {!editing && f.languages && <Row term="Languages" wide>{f.languages}</Row>}
               {!editing && works && <Row term={`How ${first} works`} wide>{works}</Row>}
               {!editing && brings && <Row term="Brings" wide>{brings}</Row>}
               {editing && <Row term="How you work" wide>{P("details", !!(f.tools.trim() || f.transport.trim()), (
                 <span>{[modeLabel[f.mode], f.transport, f.tools, insuranceLabel[f.insurance]].filter(Boolean).join(" · ")}</span>
-              ), "Tools, transport, insurance and how you work (optional)", "block")}</Row>}
+              ), "Tools, transport, insurance and how you work", "block")}</Row>}
             </dl>
           </Section>
 
@@ -336,7 +369,10 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
         <section aria-labelledby={`${ids}-similar`} className="mt-20 grid grid-cols-12 gap-x-6 gap-y-4 lg:mt-28">
           <div className="col-span-12 border-t-4 border-line-strong pt-3 lg:col-span-3">
             <p aria-hidden="true" className="text-label-sm text-ink tabular-nums"><span className="lg:hidden">{pad(n + 1)}</span><span className="max-lg:hidden">{pad(mode === "public" && !aside ? n : n + 1)}</span></p>
-            <h2 id={`${ids}-similar`} className="mt-1 font-display text-heading-lg text-ink lg:text-display-sm">More Gigsters like {first}</h2>
+            <h2 id={`${ids}-similar`} className="mt-1 font-display text-heading-lg text-balance break-words text-ink lg:text-display-sm">More Gigsters like {first}</h2>
+            <Link href="/p/" className="mt-2 inline-flex min-h-11 items-center gap-2 font-display text-label-md font-bold text-ink underline underline-offset-4 hover:no-underline lg:mt-4">
+              Browse all Gigsters<ArrowRight aria-hidden="true" className="size-4" />
+            </Link>
           </div>
           <ul className="col-span-12 grid gap-x-6 lg:col-span-9 lg:grid-cols-3">
             {similar.slice(0, 3).map(({ person: o, profile }) => (
@@ -348,7 +384,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
                       <span className="truncate font-display text-editorial-lg font-bold tracking-tight text-ink group-hover:underline lg:text-heading-md">{o.name}</span>
                       <span className="truncate text-body-md text-ink-muted">{profile.fields.position || profile.fields.services[0]}</span>
                     </span>
-                    {profile.fields.rate && <span className="shrink-0 text-right font-display text-heading-md text-ink tabular-nums lg:text-heading-lg">${profile.fields.rate}<span className="block text-label-sm text-ink-muted">/ {basisShort[profile.fields.basis]}</span></span>}
+                    {hasRate(profile.fields.rate) && <span className="shrink-0 text-right font-display text-heading-md text-ink tabular-nums lg:text-heading-lg">${profile.fields.rate}<span className="block text-label-sm text-ink-muted">/ {basisShort[profile.fields.basis]}</span></span>}
                   </span>
                 </Link>
               </li>
@@ -359,19 +395,19 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
 
       {/* Phones and tablets: the booking block becomes a bar that stays in reach. */}
       {mode === "public" && !aside && (
-        <div className="fixed inset-x-0 bottom-0 z-sticky border-t-4 border-forest-950 bg-tint-mint px-4 py-3 text-forest-950 lg:hidden">
-          <div className="mx-auto flex max-w-xl items-center gap-4">
+        <div className="fixed inset-x-0 bottom-0 z-sticky border-t-4 border-forest-950 bg-tint-mint px-4 py-3 text-forest-950 sm:px-6 lg:hidden">
+          <div className="flex items-center justify-between gap-4">
             <p className="grid shrink-0">
-              {rate ? <><b className="font-display text-heading-lg tabular-nums">${f.rate}</b><span className="text-label-sm">/ {basisShort[f.basis]} · from</span></> : <b className="font-display text-heading-md">Rate on request</b>}
+              {rate ? <><b className={cx("font-display tabular-nums", f.rate.length >= 4 ? "text-heading-md" : "text-heading-lg")}>${f.rate}</b><span className="text-label-sm whitespace-nowrap">/ {basisShort[f.basis]} · from</span></> : <b className="font-display text-heading-md">Rate on request</b>}
             </p>
-            <Button variant="primary" size="lg" iconEnd={<ArrowRight />} className={cx(onMint, "flex-1")} onClick={() => setRequest(true)}>Request {first}</Button>
+            <Button variant="primary" size="lg" iconEnd={<ArrowRight />} className={cx(onMint, "min-w-0 flex-1 sm:w-80 sm:flex-none")} onClick={() => setRequest(true)}><span className="min-w-0 truncate">Request {callName}</span></Button>
           </div>
         </div>
       )}
       {mode === "public" && !aside && <div aria-hidden="true" className="h-24 lg:hidden" />}
 
       <Lightbox name={f.name} items={portfolio} index={lightbox} onIndex={setLightbox} />
-      <RequestModal first={first} open={request} onClose={() => setRequest(false)} />
+      <RequestModal first={callName} open={request} onClose={() => setRequest(false)} />
     </div>
   );
 }
@@ -381,6 +417,18 @@ const onMint = "justify-between! enabled:bg-forest-950! enabled:text-white! enab
 
 const pad = (i: number) => String(i).padStart(2, "0");
 
+/** The department up the portrait's side on phones: what fits its height. */
+const SIDE_MAX = 26;
+const longestWord = (s: string) => Math.max(0, ...s.trim().split(/\s+/).map((w) => w.length));
+/** "Bartholomew-Maximilian" → "Bartholomew"; a long single first name is cut with an ellipsis. */
+const shortName = (first: string) => { const part = first.length > 14 ? first.split("-")[0] : first; return part.length > 16 ? `${part.slice(0, 15)}…` : part; };
+
+/** A name that breaks after its hyphens before it breaks anywhere else. */
+function Breakable({ text }: { text: string }) {
+  const parts = text.split("-");
+  return <>{parts.map((p, i) => <React.Fragment key={i}>{p}{i < parts.length - 1 && <>-<wbr /></>}</React.Fragment>)}</>;
+}
+
 /** "per hour, from": the rate's unit in words, under the big number. */
 const basisLong = { hourly: "Per hour", project: "Per project", day: "Per day" } as const;
 
@@ -389,7 +437,7 @@ function Row({ term, wide = false, children }: { term: string; wide?: boolean; c
   return (
     <div className={cx("grid grid-cols-3 gap-x-6", wide ? "border-b border-line py-3 first:pt-0" : "border-t border-line py-2.5")}>
       <dt className="font-display font-bold text-ink">{term}</dt>
-      <dd className="col-span-2 min-w-0 text-ink">{children}</dd>
+      <dd className="col-span-2 min-w-0 break-words text-ink">{children}</dd>
     </div>
   );
 }
@@ -432,9 +480,9 @@ function Lightbox({ name, items, index, onIndex }: { name: string; items: { src:
         <div className="grid gap-3">
           <img key={it.src} src={asset(it.src)} alt={it.caption} className="aspect-video w-full object-cover" />
           <div className="flex items-center justify-between">
-            <Button variant="secondary" size="sm" iconStart={<ChevronLeft />} onClick={() => onIndex(((index ?? 0) - 1 + n) % n)}>Previous</Button>
-            <span className="font-mono text-data-sm text-ink-subtle">{(index ?? 0) + 1} / {n}</span>
-            <Button variant="secondary" size="sm" iconEnd={<ChevronRight />} onClick={() => onIndex(((index ?? 0) + 1) % n)}>Next</Button>
+            <Button variant="secondary" size="md" iconStart={<ChevronLeft />} onClick={() => onIndex(((index ?? 0) - 1 + n) % n)}>Previous</Button>
+            <span className="text-label-sm text-ink-muted tabular-nums">{(index ?? 0) + 1} / {n}</span>
+            <Button variant="secondary" size="md" iconEnd={<ChevronRight />} onClick={() => onIndex(((index ?? 0) + 1) % n)}>Next</Button>
           </div>
         </div>
       )}
@@ -457,7 +505,7 @@ function RequestModal({ first, open, onClose }: { first: string; open: boolean; 
         </>
       )}>
       {sent ? (
-        <p className="py-6 text-center text-body-md text-ink-muted">When requests open, {first} gets your note and replies to agree scope, timing and the final rate. Nothing was sent.</p>
+        <p className="max-w-prose text-body-md text-pretty text-ink-muted">When requests open, {first} gets your note and replies to agree scope, timing and the final rate. Nothing was sent.</p>
       ) : (
         <div className="grid gap-4">
           <Field label="What's the project?" error={err} hint={err ? undefined : "For example: “Hem two pairs of trousers and take in a jacket.”"}>

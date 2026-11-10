@@ -5,7 +5,7 @@ import * as React from "react";
 import type { ProfileFields } from "@/lib/data";
 import { basisShort, monthStatusLabel } from "@/lib/data/taxonomy";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
-import { pinnedCredits } from "@/lib/profile/validate";
+import { hasRate, pinnedCredits } from "@/lib/profile/validate";
 
 export const areaLine = (f: ProfileFields) =>
   f.market === "la" ? (f.areas.length ? `${f.areas.slice(0, 2).join(" · ")}, Los Angeles` : "Los Angeles") : f.otherCity || "Another market";
@@ -35,7 +35,8 @@ function Live({ value, className, children }: { value: unknown; className?: stri
 /**
  * The client's view of a profile card, as it appears in search. Beside the builder it updates as they
  * type; on My profile it shows the finished card. Empty fields show quiet placeholders, not prompts. In the Swiss look it
- * hangs from a thick rule with the photo hard-cropped, no box or shadow.
+ * hangs from its section's thick rule (it draws none of its own) with the photo hard-cropped square, as the search cards
+ * crop it, so faces aren't cut; no box or shadow.
  */
 export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview", className, step }: {
   fields: ProfileFields; personId: string; badge?: string | null; className?: string;
@@ -49,8 +50,8 @@ export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview"
   const ring = (n: number) => cx(live && "-mx-2.5 rounded-l-none! rounded-r-md border-l-2 pr-2.5 pl-2 transition-colors", live && (step === n ? "border-ink-brand bg-surface-selected" : "border-transparent"));
   const later = (n: number, what: string) => <span className="text-body-sm text-ink-subtle italic">{what} · added in step {n + 1}</span>;
   return (
-    <article aria-label={badge ? `${badge} of your profile card` : `${d.name || "Profile"} card`} className={cx("overflow-hidden border-t-4 border-line-strong bg-surface", className)}>
-      <div className="relative mt-3 aspect-video overflow-hidden">
+    <article aria-label={badge ? `${badge} of your profile card` : `${d.name || "Profile"} card`} className={cx("overflow-hidden bg-surface", className)}>
+      <div className="relative aspect-square overflow-hidden">
         <PersonPhoto id={personId} name={d.name} src={d.photo || undefined} alt={d.photo ? `Profile photo of ${d.name || "you"}` : "No photo yet"}
           fallback="brand" department={d.position} skills={d.skills} iconClass="size-10" textClass="text-heading-lg" className="size-full" />
         <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
@@ -68,9 +69,10 @@ export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview"
               <Live value={[d.position, d.years]}>{d.position || <span className="text-ink-subtle">Your role</span>}{d.years && ` · ${d.years} ${d.years === "1" ? "year" : "years"}`}</Live>
             </p>
           </div>
-          <Live value={[d.rate, d.basis]} className={cx("shrink-0 text-right", ring(2))}>
-            {d.rate
-              ? <b className="font-display text-heading-md text-ink tabular-nums">${d.rate}<span className="text-body-sm font-normal text-ink-muted">/{basisShort[d.basis]}</span></b>
+          <Live value={[d.rate, d.basis]} className={cx("max-w-1/2 shrink-0 text-right", ring(2))}>
+            {/* A rate of 0 is "Rate on request". The unit drops under the number when the card is narrow. */}
+            {hasRate(d.rate)
+              ? <b className="inline-flex flex-wrap items-baseline justify-end font-display text-heading-md text-ink tabular-nums">${d.rate}<span className="text-body-sm font-normal whitespace-nowrap text-ink-muted">/{basisShort[d.basis]}</span></b>
               : <span className="text-body-sm text-ink-subtle">Rate on request</span>}
           </Live>
         </div>

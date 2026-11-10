@@ -1,12 +1,11 @@
 "use client";
-import { Badge } from "@ds/components";
 import { ArrowRight, CircleCheck, MessageSquareWarning, PartyPopper, PencilLine, Users } from "lucide-react";
 import * as React from "react";
 import { data, type ActivityEvent, type PersonSummary, type ProfileFields } from "@/lib/data";
 import { fieldLabel, validateAll } from "@/lib/profile/validate";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { ago } from "./activity";
-import { AgoPill, forestButton, HeaderSkeleton, Meter, OwnerAvatar, OwnerPage, Panel, Row, RowSkeletons } from "./kit";
+import { AgoPill, EmptyNote, forestButton, HeaderSkeleton, Meter, OwnerAvatar, OwnerPage, Panel, Row, RowHead, rowListRule, RowSkeletons } from "./kit";
 import { OwnerGate } from "./OwnerGate";
 import { OwnerShell } from "./OwnerShell";
 import { isHeld } from "./hold";
@@ -58,27 +57,30 @@ function Queue() {
         {rows.length === 0 ? <Wrap today={decided.filter((e) => isToday(e.at))} /> : (
           <Panel number="01" title="Waiting for review" count={rows.length} flush collapsible="queue-waiting"
             aside={common && <span className="inline-flex items-center gap-1.5"><MessageSquareWarning className="size-4 text-warning" aria-hidden="true" /><span className="tabular-nums">{common[1]} of {rows.length}</span> missing {common[0].toLowerCase()}</span>}>
-            <ol className="@container border-t-2 border-line-strong">
+            <div className="@container">
+            <RowHead first="Gigster" cols={[{ label: "Complete", className: "w-24" }, { label: "Sent", className: "min-w-32" }]} />
+            <ol className={rowListRule}>
               {rows.map(({ person: p, fields, completeness }, i) => (
                 <Row key={p.id} href={reviewHref(p.id)} title={p.name}
                   leading={<OwnerAvatar id={p.id} name={p.name} src={fields?.photo || undefined} className="size-12 @md:size-16" textClass="text-heading-sm" />}
                   action="Review" strong={i === 0}
-                  badge={i === 0 ? <Badge tone="warning" size="sm">Oldest</Badge> : undefined}
+                  badge={i === 0 ? <span className="inline-flex h-6 shrink-0 items-center border-2 border-ink px-1.5 text-label-sm font-bold tracking-widest text-ink uppercase">Oldest</span> : undefined}
                   subtitle={[fields?.position, fields?.services.join(", ")].filter(Boolean).join(" · ")}
                   meta={<><Meter value={completeness * 100} label="Profile complete" /><AgoPill className="min-w-32">Sent {p.submittedAt ? ago(p.submittedAt).toLowerCase() : ""}</AgoPill></>} />
               ))}
             </ol>
+            </div>
           </Panel>
         )}
 
         <Panel number={rows.length ? "02" : "01"} title="Decided recently" flush collapsible="queue-decided" aside={decided.length > 0 && <span>Undo is in the toast right after each decision</span>}>
           {decided.length === 0 ? <p className="pb-5 text-body-md text-ink-muted">Nothing decided yet. Approvals and suggested edits show up here.</p> : (
-            <ul className="border-t-2 border-line-strong">
+            <ul className="@container border-t-2 border-line-strong">
               {decided.slice(0, 5).map((e) => {
                 const approved = e.kind === "approved";
                 return (
                   <Row key={e.id} href={e.personId ? `/owners/people/${e.personId}/` : "/owners/people/"} title={e.who}
-                    leading={<span className="grid size-12 place-items-center bg-surface-sunken text-ink">
+                    leading={<span className="grid size-12 place-items-center bg-surface-sunken text-ink @md:size-16">
                       {approved ? <CircleCheck aria-hidden="true" className="size-5" strokeWidth={1.75} /> : <PencilLine aria-hidden="true" className="size-5" strokeWidth={1.75} />}
                     </span>}
                     subtitle={approved ? "Approved · live on the site" : "Sent suggested edits"}
@@ -98,20 +100,19 @@ function Wrap({ today }: { today: ActivityEvent[] }) {
   const approved = today.filter((e) => e.kind === "approved").length;
   const edits = today.length - approved;
   return (
-    <Panel>
-      <div className="grid max-w-2xl justify-items-start gap-4 border-t-4 border-line-strong pt-6 pb-8">
-        <span className="grid size-16 place-items-center bg-tint-mint text-forest-950"><PartyPopper aria-hidden="true" className="size-8" strokeWidth={1.75} /></span>
-        <h2 className="font-display text-display-sm text-ink sm:text-display-md">That&apos;s a wrap.</h2>
-        <p className="text-body-md text-ink-muted">
-          {today.length
-            ? <>Nobody is waiting on you. Today you approved <b className="text-ink tabular-nums">{approved}</b> and suggested edits to <b className="text-ink tabular-nums">{edits}</b>.</>
-            : "Nobody is waiting on you. New submissions appear here as soon as a Gigster sends their profile."}
-        </p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <ButtonLink href="/owners/" variant="strong" className={forestButton} iconEnd={<ArrowRight />}>Back to the dashboard</ButtonLink>
-          <ButtonLink href="/owners/people/" variant="secondary" className="border-2" iconStart={<Users />}>See everyone</ButtonLink>
-        </div>
-      </div>
-    </Panel>
+    <section aria-labelledby="queue-wrap">
+      <EmptyNote rule title={<span id="queue-wrap">That&apos;s a wrap.</span>}
+        icon={<span className="grid size-16 place-items-center bg-tint-mint text-forest-950 dark:border-4 dark:border-action dark:bg-transparent dark:text-ink-brand"><PartyPopper aria-hidden="true" className="size-8" strokeWidth={1.75} /></span>}
+        action={
+          <>
+            <ButtonLink href="/owners/" variant="strong" className={forestButton} iconEnd={<ArrowRight />}>Back to the dashboard</ButtonLink>
+            <ButtonLink href="/owners/people/" variant="secondary" className="border-2" iconStart={<Users />}>See everyone</ButtonLink>
+          </>
+        }>
+        {today.length
+          ? <>Nobody is waiting on you. Today you approved <b className="text-ink tabular-nums">{approved}</b> and suggested edits to <b className="text-ink tabular-nums">{edits}</b>.</>
+          : "Nobody is waiting on you. New submissions appear here as soon as a Gigster sends their profile."}
+      </EmptyNote>
+    </section>
   );
 }

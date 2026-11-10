@@ -128,12 +128,12 @@ export function PersonDrawer({ rows, index, onIndex, onClose, onChanged }: {
                 <h3 id="pd-check" className={cx("border-t-4 border-line-strong pt-3", eyebrow)}>Before you approve</h3>
                 <ul className="grid gap-2">
                   {missing.map((m) => (
-                    <li key={m.label} className="flex items-start gap-3 rounded-md bg-warning-soft p-3 text-body-sm text-ink">
+                    <li key={m.label} className="flex items-start gap-3 border-l-4 border-warning bg-warning-soft p-3 text-body-sm text-ink">
                       <CircleDashed className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
                       <span><b className="font-semibold">{m.label} is missing.</b> Suggest edits and the note is written for you.</span>
                     </li>
                   ))}
-                  <li className="flex items-start gap-3 bg-surface-sunken p-3 text-body-sm text-ink-muted">
+                  <li className="flex items-start gap-3 border-l-4 border-line-strong bg-surface-sunken p-3 text-body-sm text-ink-muted">
                     <CircleCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />
                     <span>{missing.length ? "Everything else is filled in." : "Every required answer is filled in."} Check their card below reads well for clients.</span>
                   </li>
@@ -145,7 +145,7 @@ export function PersonDrawer({ rows, index, onIndex, onClose, onChanged }: {
                 <h3 id="pd-notes" className={cx("border-t-4 border-line-strong pt-3", eyebrow)}>Waiting on their edits</h3>
                 <ul className="grid gap-2">
                   {(p.reviewNotes ?? []).map((n) => (
-                    <li key={n.note} className="flex items-start gap-3 rounded-md bg-warning-soft p-3 text-body-sm text-ink">
+                    <li key={n.note} className="flex items-start gap-3 border-l-4 border-warning bg-warning-soft p-3 text-body-sm text-ink">
                       <MessageSquareWarning className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" /><span><b className="font-semibold">{sectionLabel[n.section]}:</b> {n.note}</span>
                     </li>
                   ))}

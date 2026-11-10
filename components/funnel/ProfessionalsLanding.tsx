@@ -77,7 +77,7 @@ export function ProfessionalsLanding() {
             </Reveal>
             <Reveal effect="fade-up" delay={80} className="col-span-12">
               <h1 id="hero-h" className="font-display text-display-sm text-ink sm:text-display-md md:text-display-lg xl:text-display-xl">
-                Your skills don&apos;t stop when the <span className="glow-text text-ink-brand">cameras do.</span>
+                Your skills don’t stop when the <span className="glow-text text-ink-brand">cameras do.</span>
               </h1>
             </Reveal>
             <Reveal effect="fade-up" delay={160} className="col-span-12 grid content-start gap-3 lg:col-span-5">
@@ -103,7 +103,7 @@ export function ProfessionalsLanding() {
       </div>
 
       {/* 01 Benefits */}
-      <section aria-labelledby="benefits-h" className={cx(wrap, "grid grid-cols-12 gap-x-6 gap-y-6 pt-16 lg:pt-20")}>
+      <section aria-labelledby="benefits-h" className={cx(wrap, "grid grid-cols-12 gap-x-6 gap-y-6 pt-16 lg:pt-24")}>
         <SectionHeading compact id="benefits-h" n="01" title="Designed around production life" className="col-span-12 lg:col-span-3" />
         <ul className="col-span-12 grid gap-x-6 gap-y-6 sm:grid-cols-3 lg:col-span-9">
           {benefits.map(([t, d], i) => (
@@ -118,10 +118,10 @@ export function ProfessionalsLanding() {
       </section>
 
       {/* 02 How it works / services: a ruled list, one row per craft. */}
-      <section id="services" aria-labelledby="services-h" className={cx(wrap, "scroll-mt-20 pt-20 lg:pt-28")}>
+      <section id="services" aria-labelledby="services-h" className={cx(wrap, "scroll-mt-20 pt-16 lg:pt-24")}>
         <SectionHeading id="services-h" n="02" eyebrow="How it works" title="Your craft." accent="More possibilities.">
           <Reveal effect="fade-up" delay={120} className="grid max-w-2xl gap-3">
-            <h3 className="font-display text-heading-lg text-ink">An on-demand talent marketplace for entertainment industry professionals.</h3>
+            <h3 className="font-display text-heading-md text-balance text-ink sm:text-heading-lg">An on-demand talent marketplace for entertainment industry professionals.</h3>
             <p className="text-body-lg text-ink-muted">We connect skilled people between gigs with clients who need their expertise for projects, tasks, and services.</p>
             <p className="text-body-lg text-ink-muted">Our professionals come from entertainment. Our clients are anyone who could use their expertise.</p>
           </Reveal>
@@ -159,7 +159,7 @@ export function ProfessionalsLanding() {
       </section>
 
       {/* 03 Sample profiles: two across, each Gigster beside their work, square crops. */}
-      <section id="profiles" aria-labelledby="profiles-h" className={cx(wrap, "scroll-mt-20 pt-20 lg:pt-28")}>
+      <section id="profiles" aria-labelledby="profiles-h" className={cx(wrap, "scroll-mt-20 pt-16 lg:pt-24")}>
         <SectionHeading id="profiles-h" n="03" eyebrow="Sample professional profiles" title="Here's how your skills" accent="could translate." />
         <Right className="mt-12">
           <ul className="grid gap-x-6 gap-y-12 md:grid-cols-2">
@@ -202,17 +202,17 @@ export function ProfessionalsLanding() {
       </section>
 
       {/* 04 Your next chapter */}
-      <section id="next-chapter" aria-labelledby="next-chapter-h" className={cx(wrap, "scroll-mt-20 pt-20 lg:pt-28")}>
+      <section id="next-chapter" aria-labelledby="next-chapter-h" className={cx(wrap, "scroll-mt-20 pt-16 lg:pt-24")}>
         <SectionHeading id="next-chapter-h" n="04" title="Your next chapter" accent="starts here.">
           <Reveal effect="fade-up" delay={100} className="grid max-w-2xl gap-4">
-            <h3 className="font-display text-heading-lg text-ink">Extraordinary Talent. Everyday Solutions.</h3>
+            <h3 className="font-display text-heading-md text-ink sm:text-heading-lg">Extraordinary Talent. Everyday Solutions.</h3>
             <p className="text-body-lg font-semibold text-ink">Professional expertise. Available between productions.</p>
             <p className="text-body-lg text-ink-muted">Between Gigs connects you with clients who value the creativity, craftsmanship, and expertise you&apos;ve developed in entertainment.</p>
             <p className="text-body-lg text-ink-muted">Bring your skills beyond the set to projects, tasks, and services for people and businesses. Choose work that fits your interests, set your rates, and make room for your next production.</p>
             <p className="font-display text-heading-md text-ink">Your expertise. New clients. On your terms.</p>
           </Reveal>
         </SectionHeading>
-        <Right className="mt-10 grid gap-4">
+        <Right className="mt-12 grid gap-4">
           <Reveal effect="fade-up" delay={160}>
             <div data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots px-6 pt-6 pb-24 sm:px-8 lg:pb-16">
               <Horizon />
@@ -227,11 +227,11 @@ export function ProfessionalsLanding() {
       </section>
 
       {/* 05 FAQ */}
-      <section id="faq" aria-labelledby="faq-h" className={cx(wrap, "scroll-mt-20 pt-20 lg:pt-28")}>
+      <section id="faq" aria-labelledby="faq-h" className={cx(wrap, "scroll-mt-20 pt-16 lg:pt-24")}>
         <SectionHeading id="faq-h" n="05" eyebrow="Professional FAQ" title="Built around life" accent="between productions." />
-        <Right className="mt-10">
+        <Right className="mt-12">
           <div className="max-w-3xl border-y-4 border-line-strong">
-            <Accordion variant="flush" items={faqs.map(([q, a], i) => ({ id: `faq-${i}`, title: q, content: <div className="grid gap-3">{a.split("\n\n").map((para) => <p key={para}>{para}</p>)}</div> }))} />
+            <Accordion variant="flush" items={faqs.map(([q, a], i) => ({ id: `faq-${i}`, title: <span className="font-display text-body-lg font-bold">{q}</span>, content: <div className="grid max-w-prose gap-3 text-body-lg">{a.split("\n\n").map((para) => <p key={para}>{para}</p>)}</div> }))} />
           </div>
         </Right>
       </section>
@@ -239,7 +239,7 @@ export function ProfessionalsLanding() {
       <Founders n="06" peterBio="Writer, producer, and showrunner with over 40 years of experience across film, television, and comic books. Credits include Hawaii Five-0, 24, CSI: NY, R.I.P.D., Demolition Man, and Magnum P.I." />
 
       {/* Final call to action: the forest block again, flush left. */}
-      <div className={cx(wrap, "pb-16 lg:pb-20")}>
+      <div className={cx(wrap, "pb-16 lg:pb-24")}>
         <section id="waitlist" aria-labelledby="final-h" data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
           <Horizon />
           <div className="relative z-raised grid grid-cols-12 gap-x-6 gap-y-6 px-5 pt-6 pb-32 sm:px-8 lg:px-10 lg:pt-8 lg:pb-20">

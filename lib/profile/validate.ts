@@ -1,12 +1,49 @@
-import type { ProfileFields, ProfileSection } from "@/lib/data/types";
+import type { ProfileFields, ProfileSection, ReviewNote } from "@/lib/data/types";
 
 /** The builder's five steps. The first four are profile sections; the fifth is the review. */
 export const STEPS = ["About you", "Skills", "Where & when", "Your story", "Review"] as const;
 export const SECTIONS: ProfileSection[] = ["about", "skills", "where", "story"];
-export const sectionLabel: Record<ProfileSection, string> = { about: "About you", skills: "Skills & services", where: "Where & when", story: "Your story" };
+export const sectionLabel: Record<ProfileSection, string> = { about: "About you", skills: "Skills & services", where: "Where & when", story: "Your story", photo: "Photo" };
 
 export const IMDB_RE = /^https:\/\/(www\.|m\.)?imdb\.com\/name\/nm\d+\/?$/;
 export const ABOUT_MAX = 600;
+/** Longest answers the page lays out well. Names also make the /p/ link, which live caps at 60 characters. */
+export const NAME_MAX = 60;
+export const DEPARTMENT_MAX = 40;
+export const DATES_MAX = 80;
+
+/** A starting rate clients see: a whole number above 0. Blank or 0 reads "Rate on request" everywhere. */
+export const hasRate = (rate: string | undefined) => Number(rate) > 0;
+
+/** Availability is the one thing a live profile changes without a review (Company OS decision N-09). */
+export const LIVE_FIELDS = ["month", "monthStatus", "dates"] as const satisfies readonly (keyof ProfileFields)[];
+
+/**
+ * Whether two versions differ in anything but availability: the changes that need the team. Credit pins are compared
+ * as shown (a missing pin is a pinned credit), and key order doesn't matter.
+ */
+export function contentChanged(a: ProfileFields, b: ProfileFields): boolean {
+  const norm = (f: ProfileFields) => {
+    const rest: Record<string, unknown> = { ...f, creditPins: f.credits.map((_, i) => f.creditPins?.[i] !== false) };
+    for (const k of LIVE_FIELDS) delete rest[k];
+    return JSON.stringify(rest, Object.keys(rest).sort());
+  };
+  return norm(a) !== norm(b);
+}
+
+/**
+ * Review notes as the Gigster reads them: a photo note is about the photo, whether it was saved under "photo" or, as
+ * older notes were, under "About you" starting "Photo:" (anything after the first line break there is about the rest).
+ */
+export function readNotes<N extends Pick<ReviewNote, "section" | "note">>(notes: N[]): N[] {
+  return notes.flatMap((n) => {
+    const m = n.section === "about" ? /^\s*photo:\s*/i.exec(n.note) : null;
+    if (!m) return [n];
+    const [photo, ...rest] = n.note.slice(m[0].length).split("\n");
+    const about = rest.join("\n").trim();
+    return [{ ...n, section: "photo" as const, note: photo.trim() }, ...(about ? [{ ...n, note: about }] : [])];
+  });
+}
 
 export type FieldErrors = Partial<Record<keyof ProfileFields, string>>;
 
@@ -19,8 +56,10 @@ export function validateStep(step: number, d: ProfileFields): FieldErrors {
   if (step === 0) {
     if (!d.photo) e.photo = "Add a profile photo.";
     if (!d.name.trim()) e.name = "Enter your full name.";
+    else if (d.name.trim().length > NAME_MAX) e.name = `Keep your name to ${NAME_MAX} characters.`;
     if (d.years === "" || Number.isNaN(Number(d.years))) e.years = "Enter years in the business, like 6.";
     if (!d.position.trim()) e.position = "Enter your industry position or department.";
+    else if (d.position.trim().length > DEPARTMENT_MAX) e.position = `Keep your department to ${DEPARTMENT_MAX} characters.`;
     if (d.imdb.trim() && !IMDB_RE.test(d.imdb.trim())) e.imdb = "Use an IMDb name-profile link, like https://www.imdb.com/name/nm1234567/, or leave it empty.";
     if (!d.credits.some((c) => c.trim())) e.credits = "Add at least one credit.";
   }
@@ -33,8 +72,10 @@ export function validateStep(step: number, d: ProfileFields): FieldErrors {
     if (!/^\d{5}$/.test(d.zip)) e.zip = "Enter a 5-digit ZIP code, like 90026.";
     if (d.market === "la" && !d.areas.length) e.areas = "Pick at least one service area.";
     if (!d.dates.trim()) e.dates = "Add the dates or times you're free this month.";
+    else if (d.dates.trim().length > DATES_MAX) e.dates = `Keep the dates to ${DATES_MAX} characters.`;
   }
   if (step === 3 && !d.about.trim()) e.about = "Write a few lines about you and the help you offer.";
+  else if (step === 3 && d.about.length > ABOUT_MAX) e.about = `Keep About me to ${ABOUT_MAX} characters. It's ${d.about.length} now.`;
   return e;
 }
 
@@ -95,7 +136,7 @@ export function isPartFilled(id: ProfilePartId, d: ProfileFields): boolean {
     case "skills": return d.skills.length > 0;
     case "where": return /^\d{5}$/.test(d.zip) && (d.market === "other" ? !!d.otherCity.trim() : d.areas.length > 0);
     case "availability": return !!d.dates.trim();
-    case "rate": return !!d.rate;
+    case "rate": return hasRate(d.rate);
     case "about": return !!d.about.trim();
     case "credits": return d.credits.some((c) => c.trim());
     case "imdb": return !!d.imdb.trim();

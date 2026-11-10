@@ -48,28 +48,30 @@ export function MyProfile() {
 
   return (
     <Page>
-      <div className="grid gap-x-6 sm:pt-4 lg:grid-cols-12">
-        <div className="lg:col-span-9">
+      <div className="grid gap-x-6 sm:pt-4 md:grid-cols-12">
+        <div className="min-w-0 md:col-span-12 lg:col-span-9">
           <p className="flex flex-wrap items-center gap-x-5 gap-y-2 text-eyebrow text-ink uppercase">
             <span>My profile</span>
             {/* Changes requested: a neutral tag, not yellow; the notes in the mint block below are the one highlight. */}
-            {state === "changes_requested"
-              ? <Badge tone="neutral" icon={<MessageSquareWarning aria-hidden="true" />}>{personStatusMeta.changes_requested.gigsterLabel}</Badge>
+            {/* Draft too: the palette has no yellow. */}
+            {state === "changes_requested" || state === "draft"
+              ? <Badge tone="neutral" icon={state === "draft" ? <FilePen aria-hidden="true" /> : <MessageSquareWarning aria-hidden="true" />}>{personStatusMeta[state].gigsterLabel}</Badge>
               : state !== "new" && <PersonStatusBadge status={person.status} audience="gigster" />}
           </p>
-          <h1 className="mt-4 font-display text-display-md text-ink sm:text-display-lg xl:text-display-xl">Hi, {first}</h1>
-          <p className="mt-5 max-w-xl font-display text-heading-md font-medium leading-snug text-ink">Here&apos;s where your profile stands.</p>
+          {/* A long name breaks inside the word (overflow-wrap: anywhere) instead of running off the screen. */}
+          <h1 className="mt-4 font-display text-display-md wrap-anywhere text-ink sm:text-display-lg xl:text-display-xl">Hi, {first}</h1>
+          <p className="mt-5 max-w-xl font-display text-heading-md font-medium leading-snug text-pretty text-ink">Here&apos;s where your profile stands.</p>
         </div>
       </div>
 
-      <div className="mt-12 grid items-start gap-x-6 gap-y-14 lg:mt-16 lg:grid-cols-12">
-        <section aria-labelledby="stand-h" className="border-t-4 border-line-strong pt-4 lg:col-span-8">
+      <div className="mt-12 grid items-start gap-x-6 gap-y-14 md:grid-cols-12 lg:mt-16">
+        <section aria-labelledby="stand-h" className="min-w-0 border-t-4 border-line-strong pt-4 md:col-span-7 lg:col-span-8">
           <SectionLabel n="01" id="stand-h">{state === "approved" ? "Your page" : "Next step"}</SectionLabel>
           <div className="mt-6">
             {state === "approved" && fields ? <Live person={person} /> : <Status person={person} state={state} parts={partsDone(fields, person.name)} first={first} />}
           </div>
         </section>
-        <section aria-labelledby="card-h" className="border-t-4 border-line-strong pt-4 lg:col-span-4">
+        <section aria-labelledby="card-h" className="min-w-0 border-t-4 border-line-strong pt-4 md:col-span-5 lg:col-span-4">
           <SectionLabel n="02" id="card-h">Your card in search</SectionLabel>
           <p className="mt-2 text-body-md text-ink-muted">What clients see when they browse.</p>
           <div className="mt-6">
@@ -108,8 +110,8 @@ function Status({ person, state, parts, first }: { person: Person; state: string
     <div className="grid gap-6 bg-tint-mint p-6 text-forest-950 sm:p-8">
       <div className="grid gap-3">
         <Icon aria-hidden="true" className="size-8" strokeWidth={2.25} />
-        <h3 className="font-display text-heading-lg">{c.title}</h3>
-        <p className="max-w-prose text-body-lg">{c.body}</p>
+        <h3 className="font-display text-heading-lg text-balance">{c.title}</h3>
+        <p className="max-w-prose text-body-lg wrap-anywhere">{c.body}</p>
       </div>
       {state === "changes_requested" && notes.length > 0 && (
         <ul className="grid">
@@ -147,7 +149,7 @@ function Live({ person }: { person: Person }) {
       <span aria-hidden="true" className="glow-horizon -z-10 opacity-50" />
       <div className="grid gap-3">
           <p className="text-eyebrow text-ink-brand uppercase">Live on Between Gigs</p>
-          <h3 className="font-display text-display-sm text-ink sm:text-display-md">You&apos;re live, {first}</h3>
+          <h3 className="font-display text-display-sm wrap-anywhere text-ink sm:text-display-md">You&apos;re live, {first}</h3>
           <p className="max-w-prose text-body-lg text-ink">The Between Gigs team approved your profile{person.approvedAt && ` on ${when(person.approvedAt)}`}, and clients can find it now. Keep this month's availability current from Edit profile.</p>
       </div>
       <div className="grid gap-2">

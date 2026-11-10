@@ -17,6 +17,9 @@ import { ClerkSlot } from "./ClerkSlot";
 import { displayName, GateSkeleton, homeFor, SignedInPanel, useLeave, useSignedInGate } from "./SignedIn";
 
 /** Open signup, with an optional invite to prefill the email and retain its attribution. Live, invite-only: InviteJoin. */
+/** Longest full name: it heads the public page and becomes the profile link (live slugs are capped at 60). */
+const NAME_MAX = 60;
+
 export function JoinView() {
   return data.kind === "live" ? <InviteJoin /> : <SampleJoin />;
 }
@@ -91,6 +94,7 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
     const next: typeof errors = {};
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) next.email = "Enter your email address, like name@example.com.";
     if (!name.trim()) next.name = "Enter your full name, as you'd like clients to see it.";
+    else if (name.trim().length > NAME_MAX) next.name = `Keep your name to ${NAME_MAX} characters or fewer.`;
     if (!terms) next.terms = "Agree to the Terms of Use and Privacy Policy to continue.";
     setErrors(next);
     if (Object.keys(next).length) return;
@@ -120,21 +124,21 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
     <AuthShell header="Sign up" eyebrow={token ? "You're invited" : undefined}
       lead={token ? <p className="flex items-center gap-2"><ShieldCheck aria-hidden="true" className="size-5 shrink-0 text-ink-brand" />Your page stays private until our team approves it.</p> : <p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
       <h1 className="font-display text-heading-lg text-balance text-ink">{authenticated ? "Finish your account setup" : "Create your account"}</h1>
-      <p className="mt-2 text-body-md text-ink-muted">{authenticated ? "You're logged in. Confirm your details and agree to the terms to create your profile." : token ? "Your invitation is here. Add your name to get started." : "No invite needed. Enter your details to get started."}</p>
+      <p className="mt-2 text-body-md text-pretty text-ink-muted">{authenticated ? "You're logged in. Confirm your details and agree to the terms to create your profile." : token ? "Your invitation is here. Add your name to get started." : "No invite needed. Enter your details to get started."}</p>
       <form noValidate onSubmit={submit} className="mt-8 grid gap-5">
         {errors.form && <Banner tone="danger" title="We couldn't create your account">{errors.form}</Banner>}
         <Field label="Email" error={errors.email} hint={authenticated ? "You're logged in with this email." : token ? "From your invitation. You can change it." : "Use the email you want to log in with."}>
           <Input type="email" value={email} readOnly={authenticated} autoComplete="email" start={<Mail />} onChange={(e) => { setEmail(e.target.value); setErrors((x) => ({ ...x, email: undefined })); }} />
         </Field>
         <Field label="Full name" error={errors.name}>
-          <Input value={name} autoComplete="name" autoFocus onChange={(e) => { setName(e.target.value); setErrors((x) => ({ ...x, name: undefined })); }} />
+          <Input value={name} autoComplete="name" autoFocus maxLength={NAME_MAX} onChange={(e) => { setName(e.target.value); setErrors((x) => ({ ...x, name: undefined })); }} />
         </Field>
         <div className="grid gap-1.5">
           <Checkbox checked={terms} aria-invalid={!!errors.terms || undefined} aria-describedby={errors.terms ? "terms-error" : undefined}
             onChange={(e) => { setTerms(e.target.checked); setErrors((x) => ({ ...x, terms: undefined })); }}
             label={<>I agree to the <a className="text-link underline underline-offset-2" href="https://between-gigs.com/terms" target="_blank" rel="noreferrer">Terms of Use</a> and <a className="text-link underline underline-offset-2" href="https://between-gigs.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.</>}
             description="You can ask us to delete your account at any time." />
-          {errors.terms && <p id="terms-error" className="text-body-sm text-danger">{errors.terms}</p>}
+          {errors.terms && <p id="terms-error" className="pl-7.5 text-body-sm text-danger">{errors.terms}</p>}
         </div>
         {clerkEnabled && !authenticated && <p className="text-body-sm text-ink-muted">Next, create your password (at least 8 characters). Clerk may then ask for a code to verify your email.</p>}
         <Button type="submit" variant="primary" size="lg" fullWidth className="glow-hover swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm" loading={busy} iconEnd={<ArrowRight />}>{authenticated ? "Finish setup" : clerkEnabled ? "Continue to password" : "Create my profile"}</Button>
@@ -175,6 +179,9 @@ function ClerkAccount({ token, email, name }: { token?: string; email?: string; 
   );
 }
 
+/** The invite screens' main action: the same 56px full-width button as the sign-up form. */
+const BIG = "swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm";
+
 function InviteProblem({ lookup, session }: { lookup: InviteLookup; session?: Session }) {
   const email = lookup.invite?.email;
   const leave = useLeave();
@@ -185,21 +192,21 @@ function InviteProblem({ lookup, session }: { lookup: InviteLookup; session?: Se
       icon: <UserCheck />, title: "You've already joined",
       body: `This invite has been used to create an account${email ? ` for ${email}` : ""}.`,
       steps: ["Log in with the same email.", "Use your existing sign-in method.", "You'll pick up your profile where you left off."],
-      primary: <ButtonLink href={`/login/?email=${encodeURIComponent(email ?? "")}`} {...away(`/login/?email=${encodeURIComponent(email ?? "")}`)} variant="primary" iconEnd={<ArrowRight />}>Log in</ButtonLink>,
+      primary: <ButtonLink href={`/login/?email=${encodeURIComponent(email ?? "")}`} {...away(`/login/?email=${encodeURIComponent(email ?? "")}`)} variant="primary" className={BIG} size="lg" fullWidth iconEnd={<ArrowRight />}>Log in</ButtonLink>,
     },
     expired: {
       icon: <Clock />, title: "This invite has expired",
       body: "Invites last 30 days, and this one has run out.",
       steps: ["You can create an account without an invite.", "Already created your account? Log in instead."],
-      primary: <ButtonLink href="/join/" {...away("/join/")} variant="primary" iconEnd={<ArrowRight />}>Create an account</ButtonLink>,
-      secondary: <ButtonLink href="/login/" {...away("/login/")} iconEnd={<ArrowRight />}>Log in</ButtonLink>,
+      primary: <ButtonLink href="/join/" {...away("/join/")} variant="primary" className={BIG} size="lg" fullWidth iconEnd={<ArrowRight />}>Create an account</ButtonLink>,
+      secondary: <ButtonLink href="/login/" {...away("/login/")} size="lg" iconEnd={<ArrowRight />}>Log in</ButtonLink>,
     },
     unknown: {
       icon: <SearchX />, title: "We can't find that invite",
       body: "The link may be incomplete or mistyped. You can still sign up.",
       steps: ["Create an account without an invite.", "Already joined? Log in with your existing account."],
-      primary: <ButtonLink href="/join/" {...away("/join/")} variant="primary" iconEnd={<ArrowRight />}>Create an account</ButtonLink>,
-      secondary: <ButtonLink href="/login/" {...away("/login/")} iconEnd={<ArrowRight />}>Log in</ButtonLink>,
+      primary: <ButtonLink href="/join/" {...away("/join/")} variant="primary" className={BIG} size="lg" fullWidth iconEnd={<ArrowRight />}>Create an account</ButtonLink>,
+      secondary: <ButtonLink href="/login/" {...away("/login/")} size="lg" iconEnd={<ArrowRight />}>Log in</ButtonLink>,
     },
     valid: { icon: <Mail />, title: "", body: "", steps: [] },
   };
@@ -210,7 +217,7 @@ function InviteProblem({ lookup, session }: { lookup: InviteLookup; session?: Se
       <div className="grid gap-6">
         <div>
           <h1 className="font-display text-heading-lg text-balance text-ink">{c.title}</h1>
-          <p className="mt-2 text-body-md text-ink-muted">{c.body}</p>
+          <p className="mt-2 text-body-md text-pretty text-ink-muted">{c.body}</p>
         </div>
         {session && <Banner tone="info" title={`You're signed in as ${displayName(session)}`}>
           Logging in or creating an account here logs you out first. <Link className="inline-flex min-h-6 items-center text-link underline underline-offset-2" href={homeFor(session)}>{session.role === "owner" ? "Go to the dashboard" : "Go to my profile"}</Link>
@@ -225,7 +232,10 @@ function InviteProblem({ lookup, session }: { lookup: InviteLookup; session?: Se
             ))}
           </ol>
         </div>
-        <div className="flex flex-wrap gap-2 border-t border-line pt-6">{c.primary}{c.secondary}{lookup.state === "used" && <ButtonLink href="/join/" {...away("/join/")}>Create another account</ButtonLink>}</div>
+        <div className="grid gap-3 border-t border-line pt-6">
+          {c.primary}
+          <div className="flex flex-wrap gap-3">{c.secondary}{lookup.state === "used" && <ButtonLink href="/join/" {...away("/join/")} size="lg">Create another account</ButtonLink>}</div>
+        </div>
         <p className="text-body-sm text-ink-muted">Questions? Write to <a className="text-link underline underline-offset-2" href="mailto:hello@between-gigs.com">hello@between-gigs.com</a>.</p>
       </div>
     </AuthShell>

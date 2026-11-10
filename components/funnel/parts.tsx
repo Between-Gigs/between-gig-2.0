@@ -63,9 +63,9 @@ export function Founders({ peterBio, n }: { peterBio: string; n?: string }) {
     { name: "Patti Lenkov", photo: "art/founders/patti-lenkov.jpg", bio: "Founder of Agility Executive Search, Patti has spent three decades identifying and recruiting exceptional leaders. Her career has focused on understanding what people do best, recognizing transferable skills, and connecting talent with the right opportunities. At Between Gigs, she brings that expertise to help experienced professionals turn what they know and do well into new ways of working.", link: "https://www.linkedin.com/in/patricialenkov/", linkLabel: "Professional background" },
   ];
   return (
-    <section id="founders" aria-labelledby="founders-heading" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-20 sm:px-6 lg:py-28">
+    <section id="founders" aria-labelledby="founders-heading" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-16 sm:px-6 lg:py-24">
       <SectionHeading id="founders-heading" n={n} eyebrow="Meet the Founders" title="Real people." accent="A shared belief in your craft.">
-        <ul className="mt-4 grid gap-x-6 gap-y-12 md:grid-cols-2">
+        <ul className="mt-6 grid gap-x-6 gap-y-12 md:grid-cols-2">
           {people.map((p, i) => (
             <li key={p.name}>
               <Reveal effect="fade-up" delay={i * 80} className="grid h-full grid-cols-12 content-start gap-x-6 gap-y-4 border-t border-line pt-4">

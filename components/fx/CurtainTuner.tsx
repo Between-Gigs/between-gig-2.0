@@ -49,7 +49,8 @@ const save = (k: string, v: CurtainParams) => { try { localStorage.setItem(k, JS
 /**
  * /preview/curtain: the home page with the stage curtain and a panel to tune it live. Brush it with the mouse,
  * play the opening, save up to three favourites (this browser only) and copy the settings to send them over.
- * The panel is a desktop tool: it hides on phones, where the curtain still shows.
+ * The panel is a desktop tool: it hides on phones, where the curtain still shows. It starts below the page header
+ * (64px, 80px from lg) so the theme toggle and Log in stay reachable.
  */
 export function CurtainTuner() {
   const toast = useToast();
@@ -77,7 +78,7 @@ export function CurtainTuner() {
   return (
     <div className="relative">
       <CallSheetHome curtain={curtain} />
-      <aside aria-label="Curtain tuner" className={cx("fixed top-3 right-3 bottom-3 z-sticky flex w-80 max-sm:hidden max-w-full flex-col rounded-2xl border border-line bg-surface shadow-lg transition-transform duration-base", !panel && "translate-x-full")}>
+      <aside aria-label="Curtain tuner" className={cx("fixed top-20 right-3 bottom-3 z-sticky lg:top-24 flex w-80 max-sm:hidden max-w-full flex-col rounded-2xl border border-line bg-surface shadow-lg transition-transform duration-base", !panel && "translate-x-full")}>
         <div className="flex items-center justify-between gap-2 border-b border-line p-3">
           <p className="flex items-center gap-2 font-display text-heading-sm text-ink"><SlidersHorizontal className="size-4 text-ink-brand" aria-hidden="true" />Curtain tuner</p>
           <IconButton label="Hide the tuner" variant="ghost" icon={<ChevronRight />} onClick={() => setPanel(false)} />
@@ -112,7 +113,7 @@ export function CurtainTuner() {
         </div>
       </aside>
       {!panel && (
-        <Button className="fixed top-3 right-3 z-sticky max-sm:hidden" size="sm" variant="secondary" iconStart={<SlidersHorizontal />} onClick={() => setPanel(true)}>Tuner</Button>
+        <Button className="fixed top-20 right-3 z-sticky max-sm:hidden lg:top-24" size="sm" variant="secondary" iconStart={<SlidersHorizontal />} onClick={() => setPanel(true)}>Tuner</Button>
       )}
     </div>
   );

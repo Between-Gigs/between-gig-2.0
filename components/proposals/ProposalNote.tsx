@@ -46,7 +46,7 @@ export function NotesDrawer({ open, focus, onClose, title, summary, principles, 
         <ol className="grid gap-3">
           {notes.map((note, i) => (
             <li key={note.title} id={`design-note-${i + 1}`}
-              className={cx("scroll-mt-4 border-2 border-dashed p-4 text-body-sm text-ink-muted", focus === i + 1 ? "border-line-strong bg-surface-selected" : "border-line-dashed bg-surface")}>
+              className={cx("scroll-mt-4 border-2 border-dashed p-4 text-body-md text-ink-muted", focus === i + 1 ? "border-line-strong bg-surface-selected" : "border-line-dashed bg-surface")}>
               <p className="mb-1 flex items-center gap-2 text-label-md font-bold text-ink"><NoteNumber n={i + 1} /><Lightbulb className="size-4 shrink-0 text-ink-brand" aria-hidden="true" />{note.title}</p>
               <div className="grid gap-1.5">{note.body}</div>
             </li>

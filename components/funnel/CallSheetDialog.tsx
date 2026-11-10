@@ -86,11 +86,11 @@ export function CallSheetDialog({ open, onClose, category: initialCategory, plac
             <Honeypot />
             {category && <p className="border-l-4 border-line-strong bg-surface-sunken px-3 py-2 text-body-sm text-ink">Interested in offering: <b>{waitlistCategoryLabel(category)}</b></p>}
             <Field label="Email" error={errors.email}>
-              <Input type="email" autoComplete="email" maxLength={254} placeholder="you@example.com" value={email} start={<Mail />} autoFocus
+              <Input size="lg" type="email" autoComplete="email" maxLength={254} placeholder="you@example.com" value={email} start={<Mail />} autoFocus
                 onChange={(e) => { setEmail(e.target.value); setErrors((x) => ({ ...x, email: undefined })); }} />
             </Field>
             <Field label="ZIP code" error={errors.zip}>
-              <Input inputMode="numeric" autoComplete="postal-code" maxLength={5} placeholder="90026" value={zip} start={<MapPin />}
+              <Input size="lg" inputMode="numeric" autoComplete="postal-code" maxLength={5} placeholder="90026" value={zip} start={<MapPin />}
                 onChange={(e) => { setZip(e.target.value.replace(/\D/g, "").slice(0, 5)); setErrors((x) => ({ ...x, zip: undefined })); }} />
             </Field>
             <p className="text-body-sm text-ink-muted">
@@ -104,14 +104,14 @@ export function CallSheetDialog({ open, onClose, category: initialCategory, plac
           <form noValidate onSubmit={saveDetails} className="grid gap-4">
             <Honeypot />
             <Field label="Service category" optional>
-              <Select placeholder="Choose a service" value={category || undefined} onValueChange={setCategory}
+              <Select size="lg" placeholder="Choose a service" value={category || undefined} onValueChange={setCategory}
                 options={waitlistCategories.filter(([value]) => value !== "styling").map(([value, label]) => ({ value, label }))} />
             </Field>
             <Field label="What would you offer?" optional>
               <Textarea rows={3} maxLength={2000} value={details} placeholder="Your services, experience or availability…" onChange={(e) => setDetails(e.target.value)} />
             </Field>
             <Button type="submit" variant="primary" size="lg" fullWidth loading={busy}>Save optional details</Button>
-            <Button variant="ghost" fullWidth disabled={busy} onClick={() => go("done")}>Skip, my signup is complete</Button>
+            <Button variant="ghost" size="lg" fullWidth disabled={busy} onClick={() => go("done")}>Skip, my signup is complete</Button>
           </form>
         )}
         {step === "done" && (
@@ -129,8 +129,8 @@ export function CallSheetDialog({ open, onClose, category: initialCategory, plac
             </div>
             {data.kind === "sample" && <p className="text-body-sm text-ink-subtle">Sample mode: emails are in the <Link href="/emails/" className="inline-flex items-center gap-1 text-link underline underline-offset-2"><Inbox className="size-3.5" aria-hidden="true" />sample outbox</Link>.</p>}
             <div className="flex flex-wrap gap-3">
-              <ButtonLink href="/storyboard/" variant="primary" iconEnd={<ArrowRight />}>Open the Storyboard</ButtonLink>
-              <Button onClick={onClose}>Done</Button>
+              <ButtonLink href="/storyboard/" variant="primary" size="lg" iconEnd={<ArrowRight />}>Open the Storyboard</ButtonLink>
+              <Button size="lg" onClick={onClose}>Done</Button>
             </div>
           </div>
         )}

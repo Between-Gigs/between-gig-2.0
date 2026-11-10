@@ -1,6 +1,6 @@
 "use client";
-import { Button, EmptyState, Input, Select, Skeleton } from "@ds/components";
-import { Search, SearchX, X } from "lucide-react";
+import { Button, Input, Select, Skeleton, cx } from "@ds/components";
+import { Search, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -38,7 +38,10 @@ function Header({ count }: { count: number | null }) {
           {count === null ? "–" : count}<span className="sr-only"> listed</span>
         </span>
       </h1>
-      <p className="col-span-12 mt-6 border-t-4 border-line-strong pt-4 text-body-lg text-ink lg:col-span-8">Film and TV crew, available between productions.</p>
+      {/* The rule runs the full width; the lead keeps a readable 8 columns. Room under the h1 for its descenders. */}
+      <div className="col-span-12 mt-8 border-t-4 border-line-strong pt-4 sm:mt-10">
+        <p className="max-w-2xl text-body-lg text-pretty text-ink">Film and TV crew, available between productions.</p>
+      </div>
     </header>
   );
 }
@@ -72,6 +75,19 @@ function Browse() {
 
   const rows = React.useMemo(() => all && filterGigsters(all, filters), [all, filters]);
   const total = all ? filterGigsters(all, noFilters).length : null;
+  // How many approved Gigsters each craft has. Crafts with nobody yet stay out of the list (unless a link picked one).
+  const perCraft = React.useMemo(() => {
+    if (!all) return null;
+    const n: Record<string, number> = {};
+    for (const o of craftOptions) n[o.value] = filterGigsters(all, { ...noFilters, craft: o.value }).length;
+    return n;
+  }, [all]);
+  const crafts = craftOptions
+    .filter((o) => !perCraft || perCraft[o.value] > 0 || o.value === filters.craft)
+    .map((o) => (perCraft ? { value: o.value, label: `${o.label} (${perCraft[o.value]})` } : o));
+  const craftLabel = craftOptions.find((o) => o.value === filters.craft)?.label;
+  // The one filter is a craft with nobody in it: say so, rather than "try fewer filters".
+  const emptyCraft = !!craftLabel && perCraft?.[filters.craft] === 0;
   const chips: [keyof BrowseFilters, string | undefined][] = [
     ["craft", craftOptions.find((o) => o.value === filters.craft)?.label],
     ["area", areaOptions.find((o) => o.value === filters.area)?.label],
@@ -88,13 +104,13 @@ function Browse() {
       <form role="search" aria-label="Find a Gigster" onSubmit={(e) => { e.preventDefault(); go({ ...filters, q: text }); }}
         className="mt-10 grid grid-cols-12 gap-x-6 gap-y-3 lg:mt-14">
         <div className="col-span-12 lg:col-span-3">
-          <Input aria-label="Search Gigsters" type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder="Name, craft or service" start={<Search />} />
+          <Input size="lg" aria-label="Search Gigsters" type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder="Name, craft or service" start={<Search />} />
         </div>
-        <Select aria-label="Craft" className="col-span-12 sm:col-span-4 lg:col-span-3" value={filters.craft || "all"} onValueChange={set("craft")}
-          options={[{ value: "all", label: "Any craft" }, ...craftOptions]} />
-        <Select aria-label="Area" className="col-span-12 sm:col-span-4 lg:col-span-3" value={filters.area || "all"} onValueChange={set("area")}
+        <Select size="lg" aria-label="Craft" className="col-span-12 sm:col-span-4 lg:col-span-3" value={filters.craft || "all"} onValueChange={set("craft")}
+          options={[{ value: "all", label: "Any craft" }, ...crafts]} />
+        <Select size="lg" aria-label="Area" className="col-span-12 sm:col-span-4 lg:col-span-3" value={filters.area || "all"} onValueChange={set("area")}
           options={[{ value: "all", label: "Any area" }, ...areaOptions]} />
-        <Select aria-label="Availability" className="col-span-12 sm:col-span-4 lg:col-span-3" value={filters.availability || "all"} onValueChange={set("availability")}
+        <Select size="lg" aria-label="Availability" className="col-span-12 sm:col-span-4 lg:col-span-3" value={filters.availability || "all"} onValueChange={set("availability")}
           options={[{ value: "all", label: "Any availability" }, ...availabilityOptions]} />
       </form>
 
@@ -112,26 +128,42 @@ function Browse() {
                 </button>
               </li>
             ))}
-            <li><Button variant="ghost" iconStart={<X />} onClick={clear}>Clear filters</Button></li>
+            {/* With no results the empty state carries the one Clear filters. */}
+            {rows?.length !== 0 && <li><Button variant="ghost" iconStart={<X />} onClick={clear}>Clear filters</Button></li>}
           </ul>
         )}
       </div>
 
       <section aria-label="Results" data-results={rows ? "" : undefined} className="mt-8">
         {!rows ? (
-          <ul aria-busy="true" aria-label="Loading Gigsters" className="grid grid-cols-12 gap-x-6 gap-y-10">
+          <ul aria-busy="true" aria-label="Loading Gigsters" className={grid}>
             {Array.from({ length: 8 }, (_, i) => (
-              <li key={i} className="col-span-12 grid gap-3 sm:col-span-6 lg:col-span-3"><Skeleton shape="block" className="aspect-square" /><Skeleton className="h-6 w-2/3" /><Skeleton className="w-1/2" /></li>
+              <li key={i} className={cx(cell, "grid content-start gap-3")}><Skeleton shape="block" className="aspect-square" /><Skeleton className="h-6 w-2/3" /><Skeleton className="w-1/2" /></li>
             ))}
           </ul>
+        ) : rows.length === 0 && emptyCraft ? (
+          <div className="grid grid-cols-12 gap-x-6 pt-4 pb-8 sm:pt-8">
+            <div className="col-span-12 grid justify-items-start gap-4 lg:col-span-8">
+              <h2 className="font-display text-display-sm text-balance text-ink">No {craftLabel} Gigsters yet</h2>
+              <p className="max-w-xl text-body-lg text-pretty text-ink-muted">
+                Work in {craftLabel.toLowerCase()}? <Link href="/professionals/" className="font-bold text-ink underline underline-offset-4">Get on the call sheet</Link>.
+                Looking for this kind of help? Tell us on <Link href="/crew-call/" className="font-bold text-ink underline underline-offset-4">Crew Call</Link>.
+              </p>
+              <Button variant="secondary" size="lg" iconStart={<X />} className="mt-2" onClick={clear}>{active.length > 1 ? "Clear filters" : "See every Gigster"}</Button>
+            </div>
+          </div>
         ) : rows.length === 0 ? (
-          <EmptyState className="py-16" icon={<SearchX />} title="No Gigsters match all of that" headingLevel={2}
-            action={<Button variant="secondary" onClick={clear}>Clear filters</Button>}>
-            Try fewer filters, or search for part of a name or craft.
-          </EmptyState>
+          // Swiss empty state: flush left on the grid, no box, one way on.
+          <div className="grid grid-cols-12 gap-x-6 pt-4 pb-8 sm:pt-8">
+            <div className="col-span-12 grid justify-items-start gap-4 lg:col-span-8">
+              <h2 className="font-display text-display-sm text-balance text-ink">No Gigsters match all of that</h2>
+              <p className="max-w-xl text-body-lg text-pretty text-ink-muted">Try fewer filters, or search for part of a name or craft.</p>
+              <Button variant="secondary" size="lg" iconStart={<X />} className="mt-2" onClick={clear}>Clear filters</Button>
+            </div>
+          </div>
         ) : (
-          <ul className="grid grid-cols-12 gap-x-6 gap-y-12">
-            {rows.map((r) => <li key={r.person.id} className="col-span-12 sm:col-span-6 lg:col-span-3"><GigsterCard row={r} /></li>)}
+          <ul className={grid}>
+            {rows.map((r) => <li key={r.person.id} className={cell}><GigsterCard row={r} /></li>)}
           </ul>
         )}
       </section>
@@ -141,20 +173,25 @@ function Browse() {
   );
 }
 
+/** Two up on phones, three on tablets, four on desktop, on the 12-column grid. */
+const grid = "grid grid-cols-12 gap-x-3 gap-y-10 sm:gap-x-6 sm:gap-y-12";
+const cell = "col-span-6 min-w-0 md:col-span-4 lg:col-span-3";
+
 function GigsterCard({ row: { person, profile } }: { row: Listed }) {
   const f = profile.fields;
   const name = f.name || person.name;
   const department = craftOf(f.position, f.skills) ?? (f.position || f.services[0] || "");
   const area = f.market === "la" ? f.areas.join(" · ") || "Los Angeles" : "Another market";
   return (
-    <Link href={`/p/${person.slug}/`} className="group grid gap-4 border-t-4 border-line-strong pt-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus">
+    <Link href={`/p/${person.slug}/`} className="group grid gap-3 border-t-4 border-line-strong pt-3 sm:gap-4 sm:pt-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus">
       <span className="block aspect-square overflow-hidden">
         <PersonPhoto id={person.id} name={name} src={f.photo || undefined} alt="" fallback="brand" department={f.position} skills={f.skills}
           className="size-full transition-transform duration-slow group-hover:scale-105 motion-reduce:transition-none" />
       </span>
-      <span className="grid gap-1">
-        <span className="font-display text-heading-md font-bold tracking-tight text-ink group-hover:underline">{name}</span>
-        {department && <span className="text-body-md text-ink">{department}</span>}
+      <span className="grid min-w-0 gap-1">
+        {/* A long name breaks inside the word rather than running into the next card. */}
+        <span className="font-display text-editorial-lg font-bold tracking-tight text-balance wrap-anywhere text-ink group-hover:underline sm:text-heading-md">{name}</span>
+        {department && <span className="text-body-sm text-ink sm:text-body-md">{department}</span>}
         <span className="text-body-sm text-ink-muted">{area}</span>
       </span>
       <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t border-line pt-3">

@@ -1,13 +1,15 @@
 "use client";
 import { Banner, Button, Checkbox, Field, IconButton, Kbd, Modal, Popover, Tag, Textarea, Tooltip, cx, useToast } from "@ds/components";
-import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, CircleDashed, Keyboard, ListChecks, MessageSquareWarning } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, CircleDashed, Keyboard, ListChecks, MessageSquareWarning, PencilLine } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
 import { SECTIONS, fieldLabel, sectionLabel, validateAll } from "@/lib/profile/validate";
 import { typingOrDialog } from "./format";
+import { ordinal, type ReviewHistory } from "./history";
 import { HOLD_MS, holdDecision, type Hold } from "./hold";
 import { Panel } from "./kit";
+import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { markArea } from "@/lib/split-area";
 
 markArea("bg-split:dashboard");
@@ -43,8 +45,10 @@ function nextAfter(queue: QueueItem[], id: string) {
  * decision is held until the toast goes: hold.ts).
  * The checklist sits under the person's header: a guide, not a gate.
  */
-export function ReviewWorkspace({ person, fields, queue, header, children }: {
-  person: Person; fields: ProfileFields; queue: QueueItem[]; header: React.ReactNode; children: React.ReactNode;
+export function ReviewWorkspace({ person, fields, queue, header, history, scrolled = false, children }: {
+  person: Person; fields: ProfileFields; queue: QueueItem[]; header: React.ReactNode;
+  /** The review round, last round's notes and an unsent draft, when the data layer reports them. */ history?: ReviewHistory;
+  /** The person's header has scrolled away: the bar then names who you're deciding on. */ scrolled?: boolean; children: React.ReactNode;
 }) {
   const toast = useToast();
   const router = useRouter();
@@ -127,6 +131,11 @@ export function ReviewWorkspace({ person, fields, queue, header, children }: {
           </p>
           <IconButton variant="ghost" size="sm" label={next ? `Next in queue: ${next.name} (J)` : "Next in queue"} icon={<ChevronRight />} disabled={!next} onClick={() => go(next)} />
         </nav>
+        {/* Once their header scrolls away, the bar says who this is (from md; phones keep the room for the buttons). */}
+        <span className={cx("hidden min-w-0 items-center gap-2 border-l border-line pl-3", scrolled && "md:flex")}>
+          <PersonPhoto id={person.id} name={person.name || "?"} src={fields.photo || undefined} alt="" className="size-9 shrink-0" textClass="text-label-sm" />
+          <span className="truncate font-display text-label-md font-extrabold text-ink">{person.name}</span>
+        </span>
         <span className="ml-1 hidden md:inline-flex">
           <Tooltip side="bottom" content={<span className="inline-flex items-center gap-3"><span className="inline-flex items-center gap-1"><Kbd keys={["J"]} /><Kbd keys={["K"]} />next / previous</span><span className="inline-flex items-center gap-1"><Kbd keys={["A"]} />approve</span><span className="inline-flex items-center gap-1"><Kbd keys={["E"]} />edits</span></span>}>
             <IconButton variant="ghost" size="sm" label="Keyboard shortcuts" icon={<Keyboard />} />
@@ -151,8 +160,10 @@ export function ReviewWorkspace({ person, fields, queue, header, children }: {
       </div>
 
       {header}
+      {history?.unsentDraft && <UnsentDraftFlag className="mt-4" />}
+      {history && <PreviousNotes history={history} className="mt-8" />}
 
-      <Panel className="mt-8" id="review-h" title="Review checklist" collapsible="review-checklist"
+      <Panel className="mt-8" id="review-h" number="01" title="Review checklist" collapsible="review-checklist"
         aside={<span className="tabular-nums">{ticked.length} of {checks.length} checked · a guide, nothing is saved until you decide</span>}>
         {checklist("page")}
       </Panel>
@@ -165,9 +176,49 @@ export function ReviewWorkspace({ person, fields, queue, header, children }: {
   );
 }
 
-type NoteKey = "photo" | ProfileSection;
-const NOTE_KEYS: NoteKey[] = ["photo", ...SECTIONS];
-const noteLabel: Record<NoteKey, string> = { photo: "Photo", ...sectionLabel };
+
+/** Quiet flag: the Gigster has changed their profile since sending it; the owners are reviewing the sent version. */
+export function UnsentDraftFlag({ className }: { className?: string }) {
+  return (
+    <p className={cx("flex items-center gap-2 text-body-sm text-ink-muted", className)}>
+      <PencilLine aria-hidden="true" className="size-4 shrink-0" />
+      <span>They&apos;re still editing: newer changes not sent yet</span>
+    </p>
+  );
+}
+
+/** On a profile that came back after Suggest edits: which review this is, and what was asked for last time. */
+function PreviousNotes({ history, className }: { history: ReviewHistory; className?: string }) {
+  if (history.round < 2 && !history.asked.length) return null;
+  return (
+    <section aria-labelledby="previous-notes-h" className={cx("border-l-4 border-line-strong bg-surface-sunken p-4", className)}>
+      <h2 id="previous-notes-h" className="font-display text-label-md font-extrabold text-ink">{ordinal(Math.max(2, history.round))} review</h2>
+      {history.asked.length > 0 && (
+        <>
+          <p className="mt-1 text-body-sm text-ink-muted">You asked for:</p>
+          <ul className="mt-2 grid gap-1">
+            {history.asked.map((n) => (
+              <li key={`${n.section}-${n.note}`} className="grid gap-x-4 text-body-md text-ink sm:grid-cols-12 sm:items-baseline">
+                <b className="text-label-md font-bold sm:col-span-3">{sectionLabel[n.section]}</b>
+                <span className="max-w-2xl text-pretty break-words sm:col-span-9">{n.note}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  );
+}
+
+type NoteKey = ProfileSection;
+const NOTE_KEYS: NoteKey[] = ["photo", ...SECTIONS.filter((k) => k !== "photo")];
+/**
+ * Photo notes are saved under their own "photo" section, so the Gigster's note opens the photo part. The live
+ * server (lib/server/gigs.ts) only accepts the four questionnaire sections so far, so live keeps the older form:
+ * under "About you", starting "Photo:" (readNotes in lib/profile/validate.ts reads both as photo notes).
+ */
+const PHOTO_SECTION = data.kind !== "live";
+const noteLabel: Record<NoteKey, string> = sectionLabel;
 
 /** One-tap reasons, per section. Tapping adds the sentence to that section's note; tapping again takes it out. */
 const reasons: Record<NoteKey, string[]> = {
@@ -223,9 +274,11 @@ export function SuggestEdits({ open, person, fields, onClose, onSent }: { open: 
   };
 
   const send = async () => {
-    // The photo is part of "About you" in the questionnaire, so its note travels with that section.
-    const about = [notes.photo.trim() && `Photo: ${notes.photo.trim()}`, notes.about.trim()].filter(Boolean).join(" ");
-    const list = SECTIONS.map((section) => ({ section, note: section === "about" ? about : notes[section] })).filter((n) => n.note.trim());
+    // The photo has its own section where the data layer has one, so the Gigster's note opens the photo part.
+    // Until then it travels with "About you" (where the photo sits in the questionnaire), prefixed "Photo:".
+    const about = PHOTO_SECTION ? notes.about.trim() : [notes.photo.trim() && `Photo: ${notes.photo.trim()}`, notes.about.trim()].filter(Boolean).join("\n");
+    const photo = PHOTO_SECTION && notes.photo.trim() ? [{ section: "photo" as const, note: notes.photo.trim() }] : [];
+    const list = [...photo, ...SECTIONS.filter((k) => k !== "photo").map((section) => ({ section, note: section === "about" ? about : notes[section] }))].filter((n) => n.note.trim());
     // Nothing to send: open every section so there's somewhere to type straight away.
     if (!list.length) { setError("Add a note to at least one section."); setOpened(NOTE_KEYS); return; }
     setBusy(true);

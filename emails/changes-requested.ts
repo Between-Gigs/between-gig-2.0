@@ -4,13 +4,13 @@ import { button, defaultContext, esc, FONT_UI, hero, layout, p, section, signatu
 
 export interface ChangesRequestedProps {
   firstName: string;
-  /** One note per line, "section|note". Sections: about, skills, where, story. */
+  /** One note per line, "section|note". Sections: about, skills, where, story, photo. */
   notes: string;
   editUrl: string;
 }
 
 const REASON = "You're receiving this because you submitted a profile on Between Gigs.";
-const sectionLabel: Record<string, string> = { about: "About you", skills: "Skills & services", where: "Where & when", story: "Your story" };
+const sectionLabel: Record<string, string> = { about: "About you", skills: "Skills & services", where: "Where & when", story: "Your story", photo: "Photo" };
 
 export const parseNotes = (notes: string) => notes.split("\n").filter(Boolean).map((line) => {
   const [section, ...rest] = line.split("|");

@@ -39,9 +39,10 @@ function dayLabel(iso: string) {
 const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
 /** "Recent activity": who did what, newest first, grouped under a heading per day with the time on each line. */
-export function ActivityList({ events, className, onOpen, photoFor }: {
+export function ActivityList({ events, className, onOpen, photoFor, phoneLimit }: {
   events: ActivityEvent[]; className?: string; /** Opens the person in place instead of going to their page. */ onOpen?: (personId: string) => void;
   /** The person's photo, shown square beside the line; without one, the event's line icon. */ photoFor?: (personId: string) => string | undefined;
+  /** Below lg, show only this many events (the caller offers "Show all"), so the phone page stays short. */ phoneLimit?: number;
 }) {
   if (!events.length) return <p className="py-4 text-body-sm text-ink-muted">Nothing yet. Invites, sign-ups and reviews show up here.</p>;
   const days: [string, ActivityEvent[]][] = [];
@@ -50,17 +51,20 @@ export function ActivityList({ events, className, onOpen, photoFor }: {
     const last = days[days.length - 1];
     if (last && last[0] === label) last[1].push(e); else days.push([label, [e]]);
   }
+  let n = 0;
+  const cut = (i: number) => phoneLimit !== undefined && i >= phoneLimit && "max-lg:hidden";
   return (
     <div className={cx("grid gap-1 pb-2", className)}>
       {days.map(([label, list]) => (
-        <section key={label} aria-label={label} data-fit-group="">
+        <section key={label} aria-label={label} data-fit-group="" className={cx(cut(n) || undefined)}>
           <h3 className="border-b-2 border-line-strong pt-3 pb-1.5 text-label-sm font-bold tracking-widest text-ink-muted uppercase">{label}</h3>
           <ol>
             {list.map((e) => {
+              const i = n++;
               const m = meta[e.kind];
               const photo = e.personId ? photoFor?.(e.personId) : undefined;
               return (
-                <li key={e.id} data-fit="" className="flex min-h-18 items-start gap-3.5 border-b border-line py-3">
+                <li key={e.id} data-fit="" className={cx("flex min-h-18 items-start gap-3.5 border-b border-line py-3", cut(i))}>
                   {photo ? <PersonPhoto id={e.personId!} name={e.who} src={photo} alt="" className="size-12 shrink-0" />
                     : <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center bg-surface-sunken text-ink"><m.icon className="size-5" strokeWidth={1.75} /></span>}
                   <p className="min-w-0 flex-1 text-body-md text-ink-muted">

@@ -253,7 +253,8 @@ async function publicProfiles(ctx: Ctx, profiles: Row[]) {
 }
 
 export async function getPublic(ctx: Ctx, slug: string) {
-  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug) || slug.length > 60) return { person: null, profile: null };
+  // 60 characters from a capped name, plus room for a number Company OS may add to keep it unique.
+  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug) || slug.length > 64) return { person: null, profile: null };
   const rows = await ctx.cos.query(ctx.cred, { entity: "profile", filter: eq("public_handle", slug), limit: 1 });
   return rows[0] ? (await publicProfiles(ctx, rows))[0]! : { person: null, profile: null };
 }
@@ -328,7 +329,9 @@ export function draftOps(personId: string, fields: ProfileFields, existing: { pr
   return ops;
 }
 
-export async function saveDraft(ctx: Ctx, personId: string, fields: ProfileFields): Promise<ProfileDraft> {
+export async function saveDraft(ctx: Ctx, personId: string, input: ProfileFields): Promise<ProfileDraft> {
+  // Names make the public handle (at most 60 characters, getPublic), so they're capped as the editor caps them.
+  const fields = typeof input?.name === "string" && input.name.length > 60 ? { ...input, name: input.name.trim().replace(/\s+/g, " ").slice(0, 60).trim() } : input;
   const own = await ownProfile(ctx, personId);
   if (!own.profile) {
     // Only the person themself may create their profile; Company OS refuses anyone else (forbidden).
@@ -593,7 +596,7 @@ async function decide(ctx: Ctx, personId: string, status: "approved" | "changes_
   // Only a submitted profile is decided on. Company OS would take a review of an approved profile as a note.
   if (profile.data.status !== "submitted") throw new CompanyOsError(422, "invalid_status_transition", "only a submitted profile can be reviewed");
   const sections = Object.fromEntries(notes.map((n) => [n.section, n.note]));
-  const label: Record<ProfileSection, string> = { about: "About you", skills: "Skills & services", where: "Where & when", story: "Your story" };
+  const label: Record<ProfileSection, string> = { about: "About you", skills: "Skills & services", where: "Where & when", story: "Your story", photo: "Photo" };
   const note = notes.length ? notes.map((n) => `${label[n.section]}: ${n.note}`).join("\n") : "Approved";
   await ctx.cos.batch(ctx.cred, [
     { op: "create", entity: "profile_review", data: { profile: profile.id, note, section_notes: sections } },
@@ -607,7 +610,15 @@ async function decide(ctx: Ctx, personId: string, status: "approved" | "changes_
 export const approve = (ctx: Ctx, personId: string) => decide(ctx, personId, "approved", []);
 
 export function requestChanges(ctx: Ctx, personId: string, notes: ReviewNoteInput[]) {
-  const kept = (Array.isArray(notes) ? notes : [])
+  const list = Array.isArray(notes) ? notes : [];
+  // A photo note is stored with "About you", first, as "Photo: …" on its own line (Company OS's section_notes keep the
+  // questionnaire's four sections); the editor reads it back as a photo note (lib/profile/validate.ts readNotes).
+  const photo = list.filter((n) => n?.section === "photo" && typeof n.note === "string" && n.note.trim()).map((n) => n.note.trim().replace(/\s*\n\s*/g, " "));
+  const about = list.filter((n) => n?.section === "about" && typeof n.note === "string").map((n) => n.note.trim()).filter(Boolean);
+  const folded = photo.length
+    ? [...list.filter((n) => n?.section !== "photo" && n?.section !== "about"), { section: "about" as const, note: [`Photo: ${photo.join(" ")}`, ...about].join("\n") }]
+    : list;
+  const kept = folded
     .filter((n) => SECTIONS.includes(n?.section) && typeof n.note === "string")
     .map((n) => ({ section: n.section, note: n.note.trim().slice(0, 600) }))
     .filter((n) => n.note);
