@@ -224,10 +224,10 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
   return (
     <div className="relative">
       {mode === "public" && !editing && (
-        <nav aria-label="Breadcrumb" className="mb-6 lg:mb-10">
-          <ol className="flex flex-wrap items-center gap-2 font-display text-label-md text-ink-muted">
-            <li><Link href="/p/" className="underline-offset-4 hover:text-ink hover:underline">Gigsters</Link></li>
-            {craft && <><li aria-hidden="true">/</li><li><Link href={craftHref(f.position, f.skills)} className="underline-offset-4 hover:text-ink hover:underline">{craft}</Link></li></>}
+        <nav aria-label="Breadcrumb" className="mb-3 lg:mb-7">
+          <ol className="flex flex-wrap items-center gap-x-2 font-display text-label-md text-ink-muted">
+            <li><Link href="/p/" className="inline-flex min-h-11 items-center underline-offset-4 hover:text-ink hover:underline">Gigsters</Link></li>
+            {craft && <><li aria-hidden="true">/</li><li><Link href={craftHref(f.position, f.skills)} className="inline-flex min-h-11 items-center underline-offset-4 hover:text-ink hover:underline">{craft}</Link></li></>}
             <li aria-hidden="true">/</li>
             <li aria-current="page" className="text-ink">{f.name}</li>
           </ol>
