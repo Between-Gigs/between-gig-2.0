@@ -145,7 +145,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
         {P("photo", !!f.photo || !show, (
           <PersonPhoto id={person.id} morph={!editing} name={f.name} src={f.photo || undefined} fallback="brand" department={f.position} skills={f.skills}
             alt={f.photo ? `Portrait of ${f.name}${sample ? " (fictional)" : ""}` : undefined}
-            className="aspect-square w-full object-cover" textClass="text-display-md" />
+            className="aspect-square w-full rounded-xl object-cover" textClass="text-display-md" />
         ), "Add photo", "photo")}
       </div>
       {/* Phones: the craft runs up the side of the portrait, with the reviewed mark at its foot. */}
@@ -214,7 +214,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
   );
 
   const booking = (
-    <section aria-label={`Book ${first}`} className="@container grid gap-5 bg-tint-mint p-5 text-forest-950">
+    <section aria-label={`Book ${first}`} className="@container grid gap-5 rounded-xl bg-tint-mint p-5 text-forest-950">
       {priced
         // The unit wraps under the number when the column is narrow ("/ project" beside "$500" in the 3-column aside).
         // The number sets by the block's own width (a container query) and its length, so it never leaves the block:

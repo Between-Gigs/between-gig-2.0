@@ -1,9 +1,17 @@
 [
   {
+    "n": 6,
+    "name": "Theme switcher",
+    "date": "11 Nov 2026",
+    "current": true,
+    "summary": "Choose Warm & friendly, Between Gigs classic or Swiss grid from the header. Each design works with Day and Night on the current site.",
+    "highlights": ["Warm & friendly by default", "Switch on the same page", "Remembers your choice on this browser"]
+  },
+  {
     "n": 5,
     "name": "Swiss grid",
     "date": "6 Nov 2026",
-    "current": true,
+    "commit": "aa9568841a9641310a4164cee220761c30243396",
     "summary": "Direction G on every screen Gigsters, clients, visitors and owners see: a strict 12-column grid, oversized Inter Tight headlines, thick black rules, square corners and one mint block per screen.",
     "highlights": ["Square corners and no shadows", "Forest primary in light, mint in dark", "Gigster browse at /p/", "Design QA and corner-case fixes (10 Nov)", "Square profile photo"]
   },

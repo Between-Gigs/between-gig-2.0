@@ -6,6 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuthActions } from "@/lib/auth/context";
 import { useSession } from "@/lib/session";
 
+import { LookSwitcher } from "./LookSwitcher";
+
 interface NavLink { href: string; label: string }
 
 /**
@@ -60,7 +62,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
         </div>
         {/* Airbnb-style: the page links sit in the middle, the current one underlined. */}
         {links.length > 0 && (
-          <nav aria-label="Main" className={cx("hidden items-center gap-2 swiss:md:gap-8", links.length > 3 ? "lg:flex swiss:lg:col-span-7 swiss:lg:gap-5" : "md:flex swiss:md:col-span-5 swiss:md:col-start-5")}>
+          <nav aria-label="Main" className={cx("hidden items-center gap-2 swiss:md:gap-8", links.length > 3 ? "lg:flex swiss:lg:col-span-6 swiss:lg:gap-5" : "md:flex swiss:md:col-span-5")}>
             {links.map((l) => (
               <Link key={l.href} href={l.href} aria-current={current(l.href) ? "page" : undefined}
                 className={cx("relative inline-flex min-h-11 items-center px-3 text-label-md transition-colors duration-fast",
@@ -71,7 +73,8 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
             ))}
           </nav>
         )}
-        <div className={cx("flex flex-1 items-center justify-end gap-2 xs:gap-3", links.length > 3 ? "swiss:md:col-span-9 swiss:lg:col-span-2" : "swiss:md:col-span-3")}>
+        <div className={cx("flex flex-1 items-center justify-end gap-1 sm:gap-2", links.length > 3 ? "swiss:md:col-span-9 swiss:lg:col-span-3" : "swiss:md:col-span-4")}>
+          <LookSwitcher />
           <ThemeToggle size="sm" showLabel={false} className="pr-0.5!" />
           {app ? null : loading ? <span className="h-11 w-20" aria-hidden="true" /> : session ? (
             <Menu align="end" items={menu}

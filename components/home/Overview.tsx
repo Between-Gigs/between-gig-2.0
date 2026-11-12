@@ -61,7 +61,7 @@ function GuideCard({ thumb, title, body, href, onClick, tag, step, view }: { thu
   const badge = tag && <span className="inline-flex bg-bg px-2 py-1 text-eyebrow text-ink uppercase">{step ?? tag}</span>;
   const inner = (
     <>
-      <span className={cx("relative block shrink-0 overflow-hidden bg-surface-sunken", list && "w-28 sm:w-40")}>
+      <span className={cx("relative block shrink-0 overflow-hidden rounded-lg bg-surface-sunken", list && "w-28 sm:w-40")}>
         <img src={asset(`thumbs/${thumb}.jpg`)} alt="" width={1280} height={800} loading="lazy" decoding="async"
           className="aspect-video w-full object-cover object-top transition-transform duration-slow ease-standard group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100" />
         {badge && !list && <span className="absolute top-0 left-0">{badge}</span>}
@@ -78,7 +78,7 @@ function GuideCard({ thumb, title, body, href, onClick, tag, step, view }: { thu
   );
   const cls = list
     ? "row-lift group flex w-full items-center gap-4 border-t border-line py-3 text-left hover:bg-surface-hover"
-    : "group grid h-full w-full content-start gap-3 border-t-4 border-line-strong pt-3 text-left";
+    : "group grid h-full w-full content-start gap-3 rounded-xl border border-line bg-surface-raised p-4 text-left shadow-sm swiss:border-0 swiss:border-t-4 swiss:border-line-strong swiss:bg-transparent swiss:p-0 swiss:pt-3";
   return href
     ? <Link href={href} className={cls}>{inner}</Link>
     : <button type="button" onClick={onClick} className={cls}>{inner}</button>;
@@ -141,7 +141,7 @@ export function Overview() {
         <div className="mt-8 flex flex-wrap items-center gap-4">
           <ul aria-label="Sample Gigsters" className="flex">
             {faces.map((f, i) => (
-              <li key={f}><Reveal effect="fade-up" delay={i * 50}><img src={asset(`img/people/${f}.jpg`)} alt="" className="size-12 border-2 border-surface-brand object-cover" /></Reveal></li>
+              <li key={f}><Reveal effect="fade-up" delay={i * 50}><img src={asset(`img/people/${f}.jpg`)} alt="" className="size-12 rounded-full border-2 border-surface-brand object-cover" /></Reveal></li>
             ))}
           </ul>
           <p className="text-label-md text-ink">6 sample Gigsters<span className="block text-body-sm text-ink-muted">one at every stage of the journey</span></p>
@@ -154,7 +154,7 @@ export function Overview() {
               const now = i === 1;
               return (
                 <li key={s.n}>
-                  <Reveal effect="fade-up" delay={i * 70} className={cx("flex h-full flex-col gap-4 border-t-4", now ? "border-tint-mint bg-tint-mint p-5 text-forest-950" : "border-line-strong pt-4 text-ink")}>
+                  <Reveal effect="fade-up" delay={i * 70} className={cx("flex h-full flex-col gap-4 rounded-xl border border-line bg-surface-raised p-5 swiss:border-0 swiss:border-t-4 swiss:bg-transparent swiss:p-0", now ? "border-tint-mint bg-tint-mint! p-5! text-forest-950" : "swiss:border-line-strong swiss:pt-4 text-ink")}>
                     <img src={asset(`thumbs/${s.thumb}.jpg`)} alt="" width={1280} height={800} loading="lazy" decoding="async" className="aspect-video w-full object-cover object-top" />
                     <div className="flex items-start gap-4">
                       <span aria-hidden="true" className="font-display text-stat tabular-nums">{i + 1}</span>

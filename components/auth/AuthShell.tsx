@@ -35,7 +35,7 @@ export function AuthShell({ header, lead, children, className, eyebrow, steps: s
           </p>
         </aside>
 
-        <div className="border-t-8 border-line-strong pt-6 md:col-span-6 lg:col-span-5 xl:col-span-4">
+        <div className="self-start rounded-2xl border border-line bg-surface-raised p-5 shadow-sm sm:p-6 swiss:border-0 swiss:border-t-8 swiss:border-line-strong swiss:bg-transparent swiss:p-0 swiss:pt-6 md:col-span-6 lg:col-span-5 xl:col-span-4">
           <div className={className}>
             {children}
             {lead && <div className="mt-8 border-t border-line pt-5 text-body-sm text-ink-muted">{lead}</div>}

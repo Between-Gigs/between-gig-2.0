@@ -1,14 +1,18 @@
-/*
- * The "swiss" look (direction G · Swiss grid, chosen 6 Nov 2026): a strict grid, oversized Inter Tight display type,
- * thick black rules, no rounding, one mint block per screen, on every page Gigsters, clients, visitors and owners see
- * (product screens and the public site, 6 Nov 2026; the Storyboard keeps its sketchbook artwork). The internal tools
- * (studio, workspace) keep their own look. styles/look-swiss.css holds the tokens under :root[data-look=swiss]; the root layout's first-paint script
- * and <LookSync> set the attribute.
- */
-// Anchored, with the deploy's base path optional (the first-paint script tests location.pathname, which includes it;
-// <LookSync> tests usePathname(), which doesn't). Every page is Swiss except the internal tools (studio, workspace,
-// the journal), so a 404 or any new page gets it too.
-const BASE = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-export const SWISS_PATHS = `^(?!(${BASE})?/(studio|workspace|_journal)(/|$))`;
+/** Appearance preferences apply to the shared site. Studio, Workspace and the journal have their own chrome. */
+const base = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+export const SITE_LOOK_PATHS = `^(?!(${base})?/(studio|workspace|_journal)(/|$))`;
 
-export const isSwiss = (pathname: string) => new RegExp(SWISS_PATHS).test(pathname);
+export const looks = {
+  friendly: { name: "Warm & friendly", detail: "Soft cards and forest tones" },
+  classic: { name: "Between Gigs classic", detail: "Original type and mint accents" },
+  swiss: { name: "Swiss grid", detail: "Bold type and square corners" },
+} as const;
+export type Look = keyof typeof looks;
+export const lookIds = Object.keys(looks) as Look[];
+export const defaultLook: Look = "friendly";
+export const lookKey = "bg2-site-look";
+export const isLook = (value: string | null): value is Look => lookIds.some((look) => look === value);
+export const hasSiteLook = (pathname: string) => new RegExp(SITE_LOOK_PATHS).test(pathname);
+
+/** Runs in the root layout before paint, including on a static export with a base path. */
+export const firstPaintLook = `(function(){if(!new RegExp(${JSON.stringify(SITE_LOOK_PATHS)}).test(location.pathname))return;var v;try{v=localStorage.getItem(${JSON.stringify(lookKey)})}catch(e){}document.documentElement.dataset.look=${JSON.stringify(lookIds)}.includes(v)?v:${JSON.stringify(defaultLook)}})();`;

@@ -1,0 +1,77 @@
+/* Warm & friendly uses the type, shapes and palette from design version 4. */
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("../app/fonts/PlusJakartaSans-Variable.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("../app/fonts/PlusJakartaSans-Italic-Variable.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root[data-look=friendly] {
+  --tint-mint: #d6f6e6;
+  --tint-peach: #ffe2cc;
+  --tint-butter: #fff0bf;
+  --tint-sky: #dcebf7;
+  --tint-sage: #e3ebdd;
+  --tint-sand: #f6ecdf;
+  --tint-ink: #0f3d29;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-look=friendly]:not([data-theme=light]) {
+    --tint-mint: #a3e8c8; --tint-peach: #2c2f26; --tint-butter: #263322; --tint-sky: #16343a; --tint-sage: #1b3527; --tint-sand: #1f3127; --tint-ink: #eaf4ee;
+  }
+}
+:root[data-look=friendly][data-theme=dark] {
+  --tint-mint: #a3e8c8; --tint-peach: #2c2f26; --tint-butter: #263322; --tint-sky: #16343a; --tint-sage: #1b3527; --tint-sand: #1f3127; --tint-ink: #eaf4ee;
+}
+
+/* `friendly:` variant for the few shared components (site header) that differ on product screens. */
+@custom-variant friendly (&:where([data-look=friendly], [data-look=friendly] *));
+
+/* Shapes and type, both themes. */
+:root[data-look=friendly] {
+  --font-sans: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-2xl: 28px;
+  --text-display-xl--font-weight: 800;
+  --text-display-lg--font-weight: 800;
+  --text-display-md--font-weight: 800;
+  --text-display-sm--font-weight: 800;
+  --text-stat--font-weight: 800;
+  --text-heading-lg--font-weight: 800;
+  --text-heading-md--font-weight: 700;
+  --text-heading-sm--font-weight: 700;
+}
+/* Buttons and button-links are pills (inputs, menus and cards keep the rounded rectangle). */
+:root[data-look=friendly] :is(button, a).rounded-md:not([role=menuitem], [role=menuitemradio], [role=menuitemcheckbox], [role=option]) {
+  border-radius: 9999px;
+}
+
+/* Warm colours, light theme only (explicit light, or the system's light with no saved choice). */
+:root[data-look=friendly][data-theme=light] {
+    --bg: #fbf8f2; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #f6ecdf; --surface-hover: #f3ede2;
+    --surface-selected: #d6f6e6; --line: #e7e0d4; --line-strong: #8a8070; --line-dashed: #cfc5b3;
+    --ink: #0f3d29; --ink-muted: #4b6357; --ink-subtle: #5a6d62; --ink-brand: #17633f;
+    --action: #0f3d29; --action-hover: #175a3d; --on-action: #ffffff; --neutral-soft: #f6ecdf;
+  }
+@media (prefers-color-scheme: light) {
+  :root[data-look=friendly]:not([data-theme=dark]) {
+    --bg: #fbf8f2; --surface: #ffffff; --surface-raised: #ffffff; --surface-sunken: #f6ecdf; --surface-hover: #f3ede2;
+    --surface-selected: #d6f6e6; --line: #e7e0d4; --line-strong: #8a8070; --line-dashed: #cfc5b3;
+    --ink: #0f3d29; --ink-muted: #4b6357; --ink-subtle: #5a6d62; --ink-brand: #17633f;
+    --action: #0f3d29; --action-hover: #175a3d; --on-action: #ffffff; --neutral-soft: #f6ecdf;
+  }
+}
+

@@ -69,7 +69,7 @@ export function ProfessionalsLanding() {
     <Page bare>
       {/* Hero: a square forest block on the grid. */}
       <div className={cx(wrap, "pt-6 lg:pt-8")}>
-        <section data-theme="dark" aria-labelledby="hero-h" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
+        <section data-theme="dark" aria-labelledby="hero-h" className="relative isolate overflow-hidden rounded-2xl bg-surface-brand phosphor-dots">
           <Horizon />
           <div className="relative z-raised grid grid-cols-12 gap-x-6 gap-y-8 px-5 pt-6 pb-32 sm:px-8 lg:px-10 lg:pt-8 lg:pb-14">
             <Reveal effect="fade-up" className="col-span-12 border-t-4 border-ink pt-3">
@@ -92,7 +92,7 @@ export function ProfessionalsLanding() {
             <ul aria-hidden="true" className="col-span-12 grid grid-cols-4 gap-2 self-end lg:col-span-7">
               {heroArt.map((f, i) => (
                 <li key={f}>
-                  <Reveal effect="fade-up" delay={200 + i * 90} className="aspect-square overflow-hidden bg-surface">
+                  <Reveal effect="fade-up" delay={200 + i * 90} className="aspect-square overflow-hidden rounded-xl bg-surface">
                     <img src={asset(`art/storyboard/thumbs/${f}.jpg`)} alt="" width={800} height={533} decoding="async" className="size-full object-cover" />
                   </Reveal>
                 </li>
@@ -214,7 +214,7 @@ export function ProfessionalsLanding() {
         </SectionHeading>
         <Right className="mt-12 grid gap-4">
           <Reveal effect="fade-up" delay={160}>
-            <div data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots px-6 pt-6 pb-24 sm:px-8 lg:pb-16">
+            <div data-theme="dark" className="relative isolate overflow-hidden rounded-2xl bg-surface-brand phosphor-dots px-6 pt-6 pb-24 sm:px-8 lg:pb-16">
               <Horizon />
               <div className="relative z-raised grid gap-2 border-t-4 border-ink pt-3">
                 <p className="font-display text-heading-lg text-ink-brand sm:text-display-sm">Launching in Los Angeles.</p>
@@ -240,7 +240,7 @@ export function ProfessionalsLanding() {
 
       {/* Final call to action: the forest block again, flush left. */}
       <div className={cx(wrap, "pb-16 lg:pb-24")}>
-        <section id="waitlist" aria-labelledby="final-h" data-theme="dark" className="relative isolate overflow-hidden bg-surface-brand phosphor-dots">
+        <section id="waitlist" aria-labelledby="final-h" data-theme="dark" className="relative isolate overflow-hidden rounded-2xl bg-surface-brand phosphor-dots">
           <Horizon />
           <div className="relative z-raised grid grid-cols-12 gap-x-6 gap-y-6 px-5 pt-6 pb-32 sm:px-8 lg:px-10 lg:pt-8 lg:pb-20">
             <p className="col-span-12 border-t-4 border-ink pt-3 text-label-md text-ink-brand">Bring your craft beyond the set</p>

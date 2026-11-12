@@ -1,4 +1,4 @@
-import { SWISS_PATHS } from "@/lib/look";
+import { firstPaintLook } from "@/lib/look";
 import { LookSync } from "@/components/site/LookSync";
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
@@ -26,10 +26,9 @@ export const viewport: Viewport = {
  * Before first paint: restores the saved theme (no light flash for a dark-mode visitor) and the owner sidebar's
  * collapsed rail (components/owners/OwnerShell.tsx), so neither jumps after the page loads. It also marks the
  * workspace (/workspace/) and any page shown inside it (data-embedded), whose own header, footer and sidebar then
- * step aside so the workspace shell is the only navigation. It also sets data-look="swiss" on the product screens
- * (lib/look.ts), so their Swiss theme is there from the first frame.
+ * step aside so the workspace shell is the only navigation. The saved design is applied before paint as well.
  */
-const themeScript = `(function(){try{if(new RegExp(${JSON.stringify(SWISS_PATHS)}).test(location.pathname))document.documentElement.setAttribute("data-look","swiss")}catch(e){}})();(function(){try{var d=document.documentElement,t=localStorage.getItem("bg-theme");if(t==="light"||t==="dark")d.setAttribute("data-theme",t);if(localStorage.getItem("bg2-owner-nav-collapsed")==="1")d.setAttribute("data-owner-nav","collapsed");if(location.pathname.indexOf("/workspace/")>-1)d.setAttribute("data-workspace","")}catch(e){}try{if(window.top!==window&&window.top.document.documentElement.hasAttribute("data-workspace"))d.setAttribute("data-embedded","")}catch(e){}})()`;
+const themeScript = firstPaintLook + `(function(){try{var d=document.documentElement,t=localStorage.getItem("bg-theme");if(t==="light"||t==="dark")d.setAttribute("data-theme",t);if(localStorage.getItem("bg2-owner-nav-collapsed")==="1")d.setAttribute("data-owner-nav","collapsed");if(location.pathname.indexOf("/workspace/")>-1)d.setAttribute("data-workspace","")}catch(e){}try{if(window.top!==window&&window.top.document.documentElement.hasAttribute("data-workspace"))d.setAttribute("data-embedded","")}catch(e){}})()`;
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Server build only: render per request with the CSP nonce from proxy.server.ts (the Pages export stays static).
