@@ -188,7 +188,7 @@ one-time import below.
    - `409 role_mismatch`: that login already has another role in this tenant; change it in Company OS first.
 
 7. **Open sign-up for Gigsters** (decision N-19, 2026-11-12). Company OS v1.12.0 first (`company-os.json` requires
-   `>=1.12.0`). Reset the test tenant `between-gigs-dev` once, as Company OS's runbook `prod-env.md` describes (module
+   `>=1.12.0`). Reset the test tenant `between-gigs-dev` once, as Company OS's runbook `customer-environments.md` § "Giving an existing test tenant the seed" describes (module
    sync never removes a capability, so `provider` loses `profile.edit_own` only through the reset), then deploy the
    test API so the recipe re-applies its people settings (`self_signup` turns on at go-live). Set the test Clerk
    instance's sign-up mode to Public, with email verification and bot protection on. Production's Clerk instance is

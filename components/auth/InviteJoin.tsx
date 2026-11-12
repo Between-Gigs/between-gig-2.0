@@ -43,6 +43,7 @@ const finishError: Record<string, string> = {
 
 function Details({ ticket, finish }: { ticket: boolean; finish?: NonNullable<ReturnType<typeof useAuthActions>["onboarding"]> }) {
   const router = useRouter();
+  const { signOut } = useAuthActions();
   const [name, setName] = React.useState(finish?.name ?? "");
   const [busy, setBusy] = React.useState(false);
   const [failed, setFailed] = React.useState("");
@@ -85,6 +86,9 @@ function Details({ ticket, finish }: { ticket: boolean; finish?: NonNullable<Ret
           {errors.terms && <p id="terms-error" className="pl-7.5 text-body-sm text-danger">{errors.terms}</p>}
         </div>
         {failed && <Banner tone="danger" title="We couldn't finish">{failed}</Banner>}
+        {failed && finish && (
+          <Button type="button" variant="secondary" size="lg" fullWidth onClick={() => void signOut()}>Log out and use another account</Button>
+        )}
         <Button type="submit" variant="primary" size="lg" fullWidth loading={busy} className="glow-hover swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm" iconEnd={<ArrowRight />}>Continue</Button>
         <p className="text-body-md text-ink">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-bold text-ink underline underline-offset-4">Log in</Link></p>
       </form>

@@ -35,12 +35,12 @@ Server environment (never `NEXT_PUBLIC_`; the deploy sets them, docs/handoff/com
 
 ## What behaves differently live (agreed)
 
-No "opened" stage; undo is an 8-second hold in the review toast (`components/owners/hold.ts`); invite-only `/join`
-on Clerk's invitation ticket; editing an approved profile takes it off the site until it's approved again
+No "opened" stage; undo is an 8-second hold in the review toast (`components/owners/hold.ts`); `/join` with open sign-up for Gigsters (N-19) or an invitation ticket;
+editing an approved profile takes it off the site until it's approved again
 (availability exempt), with a warning first; the builder step stays in the browser; emails come from Company OS.
 
 ## New copy (proposals for Anouwar and Justin)
 
-The live-edit warning (`components/profile/LiveEditWarning.tsx`), the invite-only `/join` panel and its details step
+The live-edit warning (`components/profile/LiveEditWarning.tsx`), the `/join` panel (open sign-up and invitations) and its details step
 (`components/auth/InviteJoin.tsx`), the photo upload error (`PhotoPicker`), the failed held-decision toasts and the
 approved-profile banner in the builder.
