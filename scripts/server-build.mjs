@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
  * thumbnails and the workspace's covers) and waiting on the client (Crew Call, proposals).
  */
 export const INTERNAL = [
-  "app/workspace", "app/studio", "app/preview", "app/emails", "app/crew-call", "app/proposals",
+  "app/workspace", "app/studio", "app/preview", "app/emails", "app/crew-call", "app/proposals", "app/profile/simple",
   "app/versions", "public/art/wallpapers", "public/artifacts", "public/studio-source", "public/thumbs", "public/workspace", "public/versions",
 ];
 

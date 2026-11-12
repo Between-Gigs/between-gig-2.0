@@ -100,6 +100,8 @@ export const routes = [
     await page.getByRole("button", { name: /^Next:/ }).first().click(); await page.waitForTimeout(300);
   } },
   { name: "canvas-draft", path: "/profile/canvas/", setup: as("gigster", "elena-petrova"), ready: "[data-spot]" },
+  { name: "simple-profile", path: "/profile/simple/", setup: as("gigster", "maya"), ready: "h1" },
+  { name: "simple-profile-edit", path: "/profile/simple/", setup: as("gigster", "elena-petrova"), ready: "h1", act: async (page) => { await page.getByRole("button", { name: "Edit profile" }).click(); await page.locator("#name").waitFor(); } },
   { name: "canvas-changes", path: "/profile/canvas/", setup: as("gigster", "hana-kim"), ready: "[data-spot]" },
   { name: "canvas-client", path: "/profile/canvas/", setup: as("gigster", "elena-petrova"), ready: "[data-spot]", act: async (page) => { await page.getByRole("radio", { name: "Preview" }).click(); await page.waitForTimeout(400); } },
   { name: "public-maya", path: "/p/maya/", setup: reset, ready: "h1" },
