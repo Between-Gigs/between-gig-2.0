@@ -102,7 +102,7 @@ jobs:
           npm rebuild --prefix .railway @railway/cli
           echo "$GITHUB_WORKSPACE/.railway/node_modules/.bin" >> "$GITHUB_PATH"
 
-            - name: Infra plan
+      - name: Infra plan
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           BG_RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT_NAME }}

@@ -2,7 +2,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
 // @ts-expect-error plain .mjs script
-import { smokeTestAddress } from "./smoke-test-address.mjs";
+import { fetchFailure, smokeTestAddress } from "./smoke-test-address.mjs";
 
 type Handler = (url: string, count: number) => [number, string] | null;
 let server: Server | undefined;
@@ -52,6 +52,16 @@ describe("smokeTestAddress", () => {
   it("fails with a timeout message when /healthz/ never answers 200", async () => {
     const base = await start((u) => (u === "/" ? [401, '<form action="/test-gate/">'] : null));
     await expect(run(base, { timeoutMs: 600, intervalMs: 50, requestMs: 100 })).rejects.toThrow(/healthz.*within/);
+  });
+
+  it("names a certificate that does not cover the address (Railway has not verified the domain yet)", () => {
+    const err = Object.assign(new TypeError("fetch failed"), { cause: { code: "ERR_TLS_CERT_ALTNAME_INVALID" } });
+    expect(fetchFailure("GET /", err)).toMatch(/ERR_TLS_CERT_ALTNAME_INVALID.*certificate.*_railway-verify/);
+  });
+
+  it("names the network error's code when there is one", () => {
+    const err = Object.assign(new TypeError("fetch failed"), { cause: { code: "ENOTFOUND" } });
+    expect(fetchFailure("GET /healthz/", err)).toMatch(/GET \/healthz\/ did not answer \(ENOTFOUND\)/);
   });
 
   it("retries while the deploy comes up (502 twice, then right)", async () => {

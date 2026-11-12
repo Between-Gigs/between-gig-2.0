@@ -28,6 +28,14 @@ function steps(yml: string): string[] {
 }
 
 describe("the workflows", () => {
+  it("every step starts at a job's step indent (6 spaces), so none hides inside the previous step's run: | block", () => {
+    for (const name of workflows) {
+      read(name).split("\n").forEach((line, i) => {
+        if (/^\s*- (name|uses|run|id):/.test(line)) expect(line.length - line.trimStart().length, `${name}:${i + 1}`).toBe(6);
+      });
+    }
+  });
+
   it("never leave the job's token in .git/config: every checkout sets persist-credentials: false", () => {
     for (const name of workflows) {
       const checkouts = steps(read(name)).filter((s) => /uses: actions\/checkout@/.test(s));

@@ -10,13 +10,22 @@ import { fileURLToPath } from "node:url";
 
 const ask = (url, requestMs) => fetch(url, { redirect: "manual", cache: "no-store", signal: AbortSignal.timeout(requestMs) });
 
+/** What a failed fetch means, from its cause's code (never a URL or body). A certificate that doesn't cover the name is
+ *  Railway's wildcard one: the domain isn't verified yet, or its own certificate is still being issued (retried). */
+export function fetchFailure(what, err) {
+  const cause = err && typeof err === "object" ? err.cause : undefined;
+  const code = cause && typeof cause.code === "string" && /^[A-Z0-9_]+$/.test(cause.code) ? cause.code : err instanceof Error ? err.name : "error";
+  if (/CERT|ALTNAME|SELF_SIGNED/.test(code)) return `${what} did not answer (${code}): the certificate does not cover this address yet; Railway has not verified the domain (check its _railway-verify TXT record) or is still issuing the certificate`;
+  return `${what} did not answer (${code})`;
+}
+
 /** One look at the address: null when it is right, else what is wrong. */
 async function look(base, requestMs) {
   let page;
   try {
     page = await ask(`${base}/`, requestMs);
   } catch (err) {
-    return { retry: true, why: `GET / did not answer (${err instanceof Error ? err.name : "error"})` };
+    return { retry: true, why: fetchFailure("GET /", err) };
   }
   const body = await page.text();
   if (page.status === 404 && /Application not found/i.test(body)) return { fatal: true, why: "GET / answered Railway's 404 (Application not found): domain not attached or not verified in Railway (check its CNAME and _railway-verify TXT records)" };
@@ -28,7 +37,7 @@ async function look(base, requestMs) {
     const text = (await health.text()).trim();
     if (health.status !== 200 || text !== "ok") return { retry: true, why: `GET /healthz/ answered ${health.status}, expected 200 ok` };
   } catch (err) {
-    return { retry: true, why: `GET /healthz/ did not answer (${err instanceof Error ? err.name : "error"})` };
+    return { retry: true, why: fetchFailure("GET /healthz/", err) };
   }
   return null;
 }
