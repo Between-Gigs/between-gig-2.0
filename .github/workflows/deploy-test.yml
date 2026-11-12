@@ -1,7 +1,7 @@
 # Deploy the Between Gigs 2.0 server to the `test` environment of Railway project "Between Gigs OS": the `web`
 # service, next to Company OS's `api` (decision N-03; Company OS runbook customer-environments.md §6b, §8 step 3).
 #
-#   "Run workflow" button (any branch) ─► checks ─► infra + address ─► build with test's settings + bundle ─► settings + deploy
+#   "Run workflow" button (any branch) ─► checks ─► infra ─► build with test's settings + bundle ─► settings + deploy ─► outside smoke check
 #
 # By hand only: GitHub -> Actions -> "Deploy web (test)" -> Run workflow -> pick the branch.
 # Company OS must have deployed its `api` to Between Gigs' test environment first: this service's variables
@@ -13,7 +13,8 @@
 #              COMPANY_OS_SUBMIT_TOKEN  the test tenant's submit identity (cos_svc_…, role form_submitter, mode submit)
 #              TEST_GATE_PASSPHRASE     the passphrase in front of the whole test site (playbook rule D5)
 #              COOKIE_SIGNING_SECRET    random (openssl rand -hex 32): signs the gate's and the preview's cookies
-#   variables  CLERK_PUBLISHABLE_KEY    its publishable key (pk_test_…), built into the pages
+#   variables  APP_URL                  https://test.between-gigs.com: the custom domain on `web` (no path, no trailing slash)
+#              CLERK_PUBLISHABLE_KEY    its publishable key (pk_test_…), built into the pages
 #              RAILWAY_PROJECT_NAME     "Between Gigs OS" (a label; the token picks the project)
 #              RAILWAY_REGION           optional: the api's region, us-east4-eqdc4a
 # Any branch may be deployed. To narrow who can, set "Deployment branches" on the `test` environment.
@@ -80,8 +81,10 @@ jobs:
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
           TEST_GATE_PASSPHRASE: ${{ secrets.TEST_GATE_PASSPHRASE }}
           COOKIE_SIGNING_SECRET: ${{ secrets.COOKIE_SIGNING_SECRET }}
+          APP_URL: ${{ vars.APP_URL }}
           BG_RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT_NAME }}
         run: |
+          node scripts/check-app-url.mjs --test
           case "$CLERK_PUBLISHABLE_KEY" in pk_test_?*) ;; *) echo "::error::test requires a Clerk TEST publishable key (pk_test_…) in the test environment's variables"; exit 1 ;; esac
           # The test site is public: it never runs without its passphrase gate (playbook rule D5).
           if [ ${#TEST_GATE_PASSPHRASE} -lt 12 ]; then echo "::error::Set the test environment's secret TEST_GATE_PASSPHRASE (at least 12 characters)"; exit 1; fi
@@ -99,7 +102,6 @@ jobs:
           npm rebuild --prefix .railway @railway/cli
           echo "$GITHUB_WORKSPACE/.railway/node_modules/.bin" >> "$GITHUB_PATH"
 
-      # Infra comes before the build: the build needs the service's address (its share images and canonical links).
       - name: Infra plan
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
@@ -115,24 +117,12 @@ jobs:
           BG_RAILWAY_REGION: ${{ vars.RAILWAY_REGION }}
         run: railway config apply --yes
 
-      # This service's own Railway-generated domain (created here if it has none yet): APP_URL and the site origin.
-      - name: Test address
-        id: site
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: |
-          out=$(railway domain --service "$SERVICE" --environment "$RAILWAY_ENV" 2>&1) || true
-          url=$(printf '%s' "$out" | grep -oE 'https://[a-zA-Z0-9.-]+\.up\.railway\.app' | head -1)
-          if [ -z "$url" ]; then echo "::error::Could not determine the test web service's public URL"; exit 1; fi
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "APP_URL=$url" >> "$GITHUB_ENV"
-
       # The deployed build: this environment's public settings are built into the pages. No secret in this step.
       - name: Server build with test's settings
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_DATA_SOURCE: api
-          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.site.outputs.url }}
+          NEXT_PUBLIC_SITE_ORIGIN: ${{ vars.APP_URL }}
         run: pnpm build:server && pnpm build:preview && pnpm check:server
 
       # The bundle that is uploaded, scanned with this environment's real secret values set: it must contain none.
@@ -149,6 +139,7 @@ jobs:
       - name: Sync secrets and settings
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          APP_URL: ${{ vars.APP_URL }}
           COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
           TEST_GATE_PASSPHRASE: ${{ secrets.TEST_GATE_PASSPHRASE }}
@@ -165,9 +156,13 @@ jobs:
         run: railway up "$RUNNER_TEMP/web" --path-as-root --no-gitignore --ci --service "$SERVICE" --environment "$RAILWAY_ENV" --message "test ${GITHUB_SHA::12}"
 
       - name: Summary
+        env:
+          APP_URL: ${{ vars.APP_URL }}
         run: |
-          {
-            echo "### Site: ${APP_URL} (branch ${GITHUB_REF_NAME}, ${GITHUB_SHA::12})"
-            echo ""
-            echo "First deploy: put this address in Company OS's \`test-between-gigs\` APP_URL and run its Deploy API (test) again, so the API accepts this origin."
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "### Site: ${APP_URL} (branch ${GITHUB_REF_NAME}, ${GITHUB_SHA::12})" >> "$GITHUB_STEP_SUMMARY"
+
+      # From outside, through Railway's edge: the address serves the passphrase-gated site (sends no passphrase).
+      - name: Smoke check (the address serves the gated site)
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: node scripts/smoke-test-address.mjs
