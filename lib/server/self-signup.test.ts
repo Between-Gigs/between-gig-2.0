@@ -27,6 +27,7 @@ const subs = [
   row("s-none", { email: "nobody@example.org", answers: {} }),
 ];
 
+type R = { person: { id: string; source: string; status: string }; signup: { id: string }; source?: string; [k: string]: unknown };
 function run(name: RouteName, args: unknown[] = []) {
   const fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(String(input));
@@ -41,19 +42,20 @@ function run(name: RouteName, args: unknown[] = []) {
   }) as typeof globalThis.fetch;
   const cos = companyOs({ url: COS, tenant: "between-gigs", readerToken: "r".repeat(20), submitterToken: "s".repeat(20), fetch });
   const req = new Request("http://localhost:3000/api/x", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${SESSION}` }, body: JSON.stringify({ args }) });
-  return handle(name, req, { cos, appUrl: "http://localhost:3000" }).then(async (r) => (await r.json() as { result: any }).result);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return handle(name, req, { cos, appUrl: "http://localhost:3000" }).then(async (r) => (await r.json() as { result: R[] & Record<string, R> }).result as any);
 }
 
 describe("self sign-ups on the owner dashboard (live)", () => {
   it("a person's source is self when their login signed up by themselves, else invited", async () => {
     const list = await run("people.list", [{}]);
-    const source = Object.fromEntries(list.map((s: any) => [s.person.id, s.person.source]));
+    const source = Object.fromEntries(list.map((s: R) => [s.person.id, s.person.source]));
     expect(source).toEqual({ "p-inv": "invited", "p-join": "invited", "p-self": "self", "p-wl": "self" });
   });
 
   it("a self sign-up starts as registered and is never 'invited, not joined'", async () => {
     const list = await run("people.list", [{}]);
-    const self = list.find((s: any) => s.person.id === "p-self").person;
+    const self = list.find((s: R) => s.person.id === "p-self").person;
     expect(self.status).toBe("registered");
     const d = await run("owners.dashboard");
     expect(d.invitedCounts.invited).toBe(1);
@@ -70,15 +72,15 @@ describe("self sign-ups on the owner dashboard (live)", () => {
 
   it("people can be filtered by source", async () => {
     const self = await run("people.list", [{ source: "self" }]);
-    expect(self.map((s: any) => s.person.id).sort()).toEqual(["p-self", "p-wl"]);
+    expect(self.map((s: R) => s.person.id).sort()).toEqual(["p-self", "p-wl"]);
     const invited = await run("people.list", [{ source: "invited" }]);
-    expect(invited.map((s: any) => s.person.id).sort()).toEqual(["p-inv", "p-join"]);
+    expect(invited.map((s: R) => s.person.id).sort()).toEqual(["p-inv", "p-join"]);
   });
 
   it("a call-sheet person who signed up by themselves shows as registered, source self", async () => {
     const rows = await run("owners.waitlist", [{}]);
-    const wl = rows.find((r: any) => r.signup.id === "s-wl");
+    const wl = rows.find((r: R) => r.signup.id === "s-wl");
     expect(wl).toMatchObject({ inviteStatus: "registered", source: "self", personId: "p-wl" });
-    expect(rows.find((r: any) => r.signup.id === "s-inv").source).toBe("invited");
+    expect(rows.find((r: R) => r.signup.id === "s-inv").source).toBe("invited");
   });
 });

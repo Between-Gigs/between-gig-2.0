@@ -29,7 +29,7 @@ const daysSince = (iso?: string) => (iso ? Math.max(0, Math.floor((Date.now() - 
 const firstName = (s: Session) => { const n = s.name.replace(/\s*\(.*\)$/, "").trim().split(" ")[0]; return n && n !== "Owner" ? n : ""; };
 
 /** What the main list shows. The first four are the headline tabs; the funnel can also pick "invited" and "building". */
-export type DashboardView = "submitted" | "changes_requested" | "approved" | "not_invited" | "invited" | "building";
+export type DashboardView = "submitted" | "changes_requested" | "approved" | "not_invited" | "invited" | "building" | "signed_up";
 type View = DashboardView;
 const views: Record<View, { title: string; empty: string; more: { href: string; label: string }; statuses?: PersonStatus[] }> = {
   submitted: { title: "Waiting for review", empty: "Nobody is waiting. New submissions appear here, oldest first.", more: { href: "/owners/review/", label: "Open the review queue" }, statuses: ["submitted"] },
@@ -37,6 +37,7 @@ const views: Record<View, { title: string; empty: string; more: { href: string; 
   approved: { title: "Live profiles", empty: "No profiles are live yet.", more: { href: "/owners/people/?status=approved", label: "See them in People" }, statuses: ["approved"] },
   not_invited: { title: "Ready to invite", empty: "Everyone on the waitlist has been invited.", more: { href: "/owners/waitlist/?status=not_invited", label: "Choose who to invite" } },
   invited: { title: "Invited, not joined yet", empty: "Everyone invited has joined.", more: { href: "/owners/people/?status=invited", label: "See them in People" }, statuses: ["invited"] },
+  signed_up: { title: "Signed up on their own", empty: "Nobody has signed up on their own yet.", more: { href: "/owners/people/?source=self", label: "See them in People" } },
   building: { title: "Building their profile", empty: "Nobody is mid-profile right now.", more: { href: "/owners/people/?status=draft", label: "See them in People" }, statuses: ["registered", "draft"] },
 };
 /** On phones the list shows this many, then "Show all": the page stays short. On desktop the panel scrolls. */
@@ -45,6 +46,7 @@ const PHONE_ROWS = 5;
 /** A funnel selection narrows the same current-status list to its invited cohort. */
 function rowsFor(view: View, summary: DashboardSummary, all: PersonSummary[], invitedOnly = false) {
   const statuses = views[view].statuses;
+  if (view === "signed_up") return all.filter((r) => r.person.source === "self");
   const rows = view === "submitted" ? summary.reviewQueue.filter((r) => !isHeld(r.person.id)) : statuses ? all.filter((r) => statuses.includes(r.person.status)) : [];
   const invited = new Set(summary.invitedPersonIds);
   return invitedOnly ? rows.filter((r) => invited.has(r.person.id)) : rows;
@@ -225,8 +227,8 @@ function Dashboard({ session }: { session: Session }) {
                     )}
                   </>
                 : <>
-                    <p className="pt-2 pb-1 text-body-sm text-ink-muted tabular-nums">Out of {d.funnel.invited} invited. Pick a step to list it.</p>
-                    <FunnelCompact bare d={d} selected={cohort === "invited" ? view : undefined} onSelect={(x) => pick(x, "invited")} />
+                    <p className="pt-2 pb-1 text-body-sm text-ink-muted tabular-nums">Out of {d.funnel.invited} invited, plus {d.funnel.signedUp} who signed up on their own. Pick a step to list it.</p>
+                    <FunnelCompact bare d={d} selected={cohort === "invited" || view === "signed_up" ? view : undefined} onSelect={(x) => pick(x, x === "signed_up" ? "all" : "invited")} />
                   </>}
             </div>
           </Panel>

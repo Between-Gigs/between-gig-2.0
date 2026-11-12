@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { renderEmail } from "@/emails";
+import { PersonSourceBadge } from "@/components/people/PersonSourceBadge";
 import { data, inviteStatuses, type InviteStatus, type WaitlistQuery, type WaitlistRow } from "@/lib/data";
 import { waitlistCategories, waitlistCategoryLabel } from "@/lib/data/taxonomy";
 import { inChunks } from "@/lib/owners/batch";
@@ -175,7 +176,7 @@ function Waitlist() {
                     <td className="px-2 text-ink-muted tabular-nums">{r.signup.zip}</td>
                     <td className="px-2 text-ink-muted">{r.signup.category ? <span className="block max-w-40 truncate lg:max-w-28 xl:max-w-none" title={waitlistCategoryLabel(r.signup.category)}>{waitlistCategoryLabel(r.signup.category)}</span> : "—"}</td>
                     <td className="px-2 whitespace-nowrap text-ink-muted tabular-nums">{shortDate(r.signup.createdAt)}</td>
-                    <td className="px-2">{r.inviteStatus === "not_invited" ? <span className="text-body-sm text-ink-muted">Not invited</span> : <span className="inline-flex items-center gap-1"><Badge tone={statusMeta[r.inviteStatus].tone} size="sm">{statusMeta[r.inviteStatus].label}</Badge>{resendButton(r)}</span>}</td>
+                    <td className="px-2">{r.inviteStatus === "not_invited" ? <span className="text-body-sm text-ink-muted">Not invited</span> : <span className="inline-flex items-center gap-1"><Badge tone={statusMeta[r.inviteStatus].tone} size="sm">{statusMeta[r.inviteStatus].label}</Badge>{r.source === "self" && <PersonSourceBadge source="self" />}{resendButton(r)}</span>}</td>
                   </tr>
                 );
               })}
@@ -200,6 +201,7 @@ function Waitlist() {
                   <span className="truncate text-body-sm text-ink-muted tabular-nums">{r.signup.zip} · {shortDate(r.signup.createdAt)}{r.signup.category ? ` · ${waitlistCategoryLabel(r.signup.category)}` : ""}</span>
                 </div>
                 {r.inviteStatus !== "not_invited" && <Badge tone={statusMeta[r.inviteStatus].tone} size="sm" className="shrink-0">{statusMeta[r.inviteStatus].label}</Badge>}
+                {r.source === "self" && <PersonSourceBadge source="self" className="shrink-0" />}
                 {resendButton(r)}
               </li>
             );
