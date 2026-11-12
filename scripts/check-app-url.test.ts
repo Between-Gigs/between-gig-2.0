@@ -49,6 +49,11 @@ describe("checkAppUrl", () => {
     expect(check("https://between-gigs.com", { test: true })).toEqual(expect.any(String));
   });
 
+  it("refuses capitals: the value is built into links as written", () => {
+    expect(check("https://TEST.between-gigs.com", { test: true })).toEqual(expect.any(String));
+    expect(check("https://Between-Gigs.com")).toEqual(expect.any(String));
+  });
+
   it("in test mode the first label must be exactly test", () => {
     expect(check("https://testing.between-gigs.com", { test: true })).toEqual(expect.any(String));
     expect(check("https://test-x.between-gigs.com", { test: true })).toEqual(expect.any(String));

@@ -8,11 +8,11 @@ import { fileURLToPath } from "node:url";
 /** Returns null when the value is fine, else what is wrong (without the value). */
 export function checkAppUrl(value, { test = false } = {}) {
   if (!value) return "APP_URL is not set: set the environment's variable APP_URL to https://<the domain> (no path, no trailing slash)";
-  const shape = "APP_URL must look like https://<the domain>: https, no path, query, fragment, port or trailing slash, no spaces";
+  const shape = "APP_URL must look like https://<the domain>: https, lowercase, no path, query, fragment, port or trailing slash, no spaces";
   if (/[\s\u0000-\u001f\u007f]/.test(value)) return shape;
-  const m = /^https:\/\/([a-zA-Z0-9.-]+)$/.exec(value);
+  const m = /^https:\/\/([a-z0-9.-]+)$/.exec(value);
   if (!m) return shape;
-  const host = m[1].toLowerCase();
+  const host = m[1];
   const labels = host.split(".");
   if (labels.length < 2 || !labels.every((l) => /^[a-z0-9-]+$/.test(l) && !l.startsWith("-") && !l.endsWith("-"))) return shape;
   if (host === "localhost" || host.endsWith(".localhost")) return "APP_URL is a local address: use the real domain";

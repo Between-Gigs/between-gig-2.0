@@ -145,7 +145,9 @@ one-time import below.
        secrets.
 4. **`company-os.json`:** replace the placeholder with the Company OS release that carries the bg-2 work and delete
    its `todo` line. Cut release and the production deploy refuse the placeholder; test deploys only warn.
-5. **Order** (rule E9): first, in Railway, attach `test.between-gigs.com` to `web` (a CNAME plus the
+5. **Order** (rule E9): first, in Railway, attach `test.between-gigs.com` to `web` (it exists already; in a fresh
+   project the first deploy creates it and its smoke check goes red once, Company OS runbook `customer-environments.md`
+   §5b) (a CNAME plus the
    `_railway-verify.test` TXT record exactly as Railway shows them; the TXT value starts `railway-verify=`) and set
    `APP_URL` (`https://test.between-gigs.com`) in the `test` environments of both repos. Then Company OS *Deploy API
    (test)* → this repo's *Deploy web (test)* (it ends with a check from outside that the address serves the gated
