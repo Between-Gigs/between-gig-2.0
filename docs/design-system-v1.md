@@ -77,7 +77,7 @@ Templates live on Figma **DS · Templates** and in `components/ds/templates`.
 | Create account / Log in | `AuthTemplate` | `/join/`, `/login/` (via `components/auth/AuthShell`) |
 | Public profile | `ProfileTemplate` | `/p/<slug>/`, `/profile/` |
 | Find a professional | `SearchTemplate` | `/p/` |
-| Profile submitted | `ConfirmationTemplate` | `/profile/` after Send for review |
+| Profile submitted | `ConfirmationTemplate` | available for a full-page confirmation; `/profile/` keeps its "Submitted for review" card and the full profile preview |
 | Profile builder | `components/builder/ProfileBuilder` with StepNavItem, Completeness, AddTile (photo) | `/profile/edit/` |
 | Invite email | `emails/invite.ts` | Stage 2 invite |
 
