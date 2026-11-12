@@ -1,3 +1,5 @@
+import { isGuideThumbnail } from "../guide-thumbnail";
+
 /*
  * Clerk is the sign-in provider. It switches on when NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is set at build time;
  * without a key (local QA, demos offline) the app keeps the sample email-code login in lib/data/sample.ts.
@@ -5,7 +7,7 @@
  * with no server, so server-side checks move to the Worker API (see docs/handoff/clerk.md).
  */
 export const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
-export const clerkEnabled = clerkPublishableKey.startsWith("pk_");
+export const clerkEnabled = clerkPublishableKey.startsWith("pk_") && !isGuideThumbnail();
 
 /**
  * Between Gigs theme for Clerk's components: every value is a design-system CSS variable, so Clerk follows

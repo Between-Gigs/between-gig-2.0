@@ -1,8 +1,5 @@
-// Thumbnails for the Preview guide (/preview/): a small screenshot of every page its links open, so the
-// links show where they go. Run after `pnpm build` (uses out/ and the preinstalled Chromium):
-//   pnpm thumbs            (or: node scripts/preview-thumbs.mjs canvas elena  for just those)
-// Writes public/thumbs/<name>.jpg (1280×800, dark theme, the site's default; sharp on high-density screens). Commit them; re-run when a
-// page changes enough that its thumbnail no longer matches.
+// Optional still images used by Workspace project covers. The /preview/ guide renders its pages live.
+// Run after building out/: pnpm thumbs (or node scripts/preview-thumbs.mjs canvas elena for specific covers).
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,7 +10,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = path.join(ROOT, "public/thumbs");
 const as = (role, id) => `window.bgSample.reset().then(() => window.bgSample.signInAs(${JSON.stringify(role)}, ${JSON.stringify(id)}))`;
 
-/** name → where it goes, and who to be first. Names match the Preview guide (components/home/Overview.tsx). */
+/** name → where it goes, and who to be first. */
 export const thumbs = [
   { name: "home", path: "/" },
   { name: "proposals", path: "/proposals/home/" },
