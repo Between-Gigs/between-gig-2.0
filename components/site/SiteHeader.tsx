@@ -67,7 +67,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
               <Link key={l.href} href={l.href} aria-current={current(l.href) ? "page" : undefined}
                 className={cx("relative inline-flex min-h-11 items-center px-3 text-label-md transition-colors duration-fast",
                   "swiss:px-0 swiss:font-display swiss:font-semibold swiss:text-ink swiss:underline-offset-8",
-                  current(l.href) ? "text-ink after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:rounded-full after:bg-ink swiss:underline swiss:decoration-4 swiss:after:hidden" : "text-ink-muted hover:text-ink swiss:decoration-2 swiss:hover:underline")}>
+                  current(l.href) ? "text-ink after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:rounded-full after:bg-ink friendly:rounded-full friendly:bg-surface-selected friendly:after:hidden swiss:underline swiss:decoration-4 swiss:after:hidden" : "text-ink-muted hover:text-ink friendly:rounded-full friendly:hover:bg-surface-hover swiss:decoration-2 swiss:hover:underline")}>
                 {l.label}
               </Link>
             ))}

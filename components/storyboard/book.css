@@ -94,17 +94,22 @@
 .sb-prev { left: 0; width: 50%; }
 .sb-next { right: 0; width: 50%; }
 
-/* Captions under the book, Swiss: flush left, the page title in the display face, its story in plain text.
-   Old fades out before new fades in. */
-.sb-captions { display: grid; justify-items: start; text-align: left; min-height: 56px; }
+/* The original book uses centered captions. Swiss grid aligns them to its text column. */
+.sb-captions { display: grid; justify-items: center; text-align: center; min-height: 56px; }
 .sb-captions > * { grid-area: 1 / 1; margin: 0; }
-.sb-caption { display: grid; gap: 10px; animation: sb-cap-in .5s ease both; }
+.sb-caption { display: grid; gap: 6px; animation: sb-cap-in .5s ease both; }
 .sb-caption.live { animation: none; }
-.sb-caption-title {
+.sb-caption-title { font-size: var(--text-label-md); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-muted); font-weight: 600; }
+.sb-caption-story { font-family: var(--font-sans); font-size: var(--text-body-lg); line-height: 1.35; font-style: italic; color: var(--ink-subtle); }
+
+:root[data-look=swiss] .sb-captions { display: grid; justify-items: start; text-align: left; min-height: 56px; }
+:root[data-look=swiss] .sb-caption { display: grid; gap: 10px; animation: sb-cap-in .5s ease both; }
+:root[data-look=swiss] .sb-caption-title {
+  text-transform: none;
   font-family: var(--font-display); font-size: var(--text-heading-lg); line-height: var(--text-heading-lg--line-height);
   letter-spacing: var(--text-heading-lg--letter-spacing); font-weight: var(--text-heading-lg--font-weight); color: var(--ink); text-wrap: balance;
 }
-.sb-caption-story { font-family: var(--font-sans); font-size: var(--text-body-lg); line-height: 1.4; color: var(--ink-muted); text-wrap: pretty; }
+:root[data-look=swiss] .sb-caption-story { font-family: var(--font-sans); font-size: var(--text-body-lg); line-height: 1.4; font-style: normal; color: var(--ink-muted); text-wrap: pretty; }
 @keyframes sb-cap-in { 0% { opacity: 0; } }
 
 /* Peter's handwritten "Your next chapter starts here." is black ink on transparent: lift it to light ink in dark mode. */

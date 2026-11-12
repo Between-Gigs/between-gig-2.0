@@ -16,6 +16,22 @@ export function Horizon({ className }: { className?: string }) {
   );
 }
 
+export function BrandSectionHeading({ id, eyebrow, title, accent, center, className, children }: {
+  id?: string; eyebrow?: string; title: string; accent?: string; center?: boolean; className?: string; children?: React.ReactNode;
+}) {
+  return (
+    <div className={cx("grid content-start gap-3", center && "justify-items-center text-center", className)}>
+      {eyebrow && <Reveal effect="fade-up"><p className="text-eyebrow text-ink-brand uppercase">{eyebrow}</p></Reveal>}
+      <Reveal effect="fade-up" delay={60}>
+        <h2 id={id} className="max-w-3xl font-display text-display-sm text-balance text-ink sm:text-display-md">
+          {title}{accent && <><br /><span className="text-ink-brand">{accent}</span></>}
+        </h2>
+      </Reveal>
+      {children}
+    </div>
+  );
+}
+
 /**
  * A numbered Swiss section head (direction G): a 4px rule, the section number and eyebrow in the label column,
  * the display heading flush left across the other nine columns, its accent line in ink-brand. `compact` puts a
@@ -57,11 +73,33 @@ export function CallSheetButton({ onClick, label = "Get on the call sheet", size
 }
 
 /** Founders, copy from the live site (components/current-founders.tsx): a numbered Swiss section, square portraits. */
-export function Founders({ peterBio, n }: { peterBio: string; n?: string }) {
+export function Founders({ peterBio, n, centered = false }: { peterBio: string; n?: string; centered?: boolean }) {
   const people = [
     { name: "Peter Lenkov", photo: "art/founders/peter-lenkov.jpg", bio: peterBio, link: "https://www.imdb.com/name/nm0006997/", linkLabel: "View credits" },
     { name: "Patti Lenkov", photo: "art/founders/patti-lenkov.jpg", bio: "Founder of Agility Executive Search, Patti has spent three decades identifying and recruiting exceptional leaders. Her career has focused on understanding what people do best, recognizing transferable skills, and connecting talent with the right opportunities. At Between Gigs, she brings that expertise to help experienced professionals turn what they know and do well into new ways of working.", link: "https://www.linkedin.com/in/patricialenkov/", linkLabel: "Professional background" },
   ];
+  if (centered) return (
+    <section id="founders" aria-labelledby="founders-heading" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-20 sm:px-6">
+      <BrandSectionHeading id="founders-heading" eyebrow="Meet the Founders" title="Real people." accent="A shared belief in your craft." center />
+      <ul className="mt-10 grid gap-6 md:grid-cols-2">
+        {people.map((p, i) => (
+          <li key={p.name}>
+            <Reveal effect="fade-up" delay={i * 80} className="grid h-full gap-5 rounded-2xl border border-line bg-surface p-5 sm:grid-cols-12">
+              <img src={asset(p.photo)} alt={`${p.name}, co-founder of Between Gigs`} loading="lazy" className="aspect-4/5 w-32 rounded-xl object-cover sm:col-span-4 sm:w-full" />
+              <div className="grid content-start gap-2 sm:col-span-8">
+                <h3 className="font-display text-heading-lg text-ink">{p.name}</h3>
+                <p className="text-label-md text-ink-brand">Co-founder</p>
+                <p className="text-body-md text-ink-muted">{p.bio}</p>
+                <a href={p.link} target="_blank" rel="noreferrer" className="inline-flex min-h-11 w-fit items-center gap-1 text-label-md text-link underline underline-offset-4 sm:min-h-6">
+                  {p.linkLabel}<ArrowUpRight className="size-4" aria-hidden="true" /><span className="sr-only"> (opens in a new tab)</span>
+                </a>
+              </div>
+            </Reveal>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
   return (
     <section id="founders" aria-labelledby="founders-heading" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-16 sm:px-6 lg:py-24">
       <SectionHeading id="founders-heading" n={n} eyebrow="Meet the Founders" title="Real people." accent="A shared belief in your craft.">

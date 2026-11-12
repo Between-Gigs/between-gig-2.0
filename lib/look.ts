@@ -2,6 +2,10 @@
 const base = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export const SITE_LOOK_PATHS = `^(?!(${base})?/(studio|workspace|_journal)(/|$))`;
 
+// The original Warm & friendly release kept the existing brand typography on its public marketing pages.
+export const BRAND_PATHS = `^(?:${base})?(?:/?$|/(?:professionals|storyboard|crew-call|proposals)(?:/|$))`;
+export const isBrandPage = (pathname: string) => new RegExp(BRAND_PATHS).test(pathname);
+
 export const looks = {
   friendly: { name: "Warm & friendly", detail: "Soft cards and forest tones" },
   classic: { name: "Between Gigs classic", detail: "Original type and mint accents" },
@@ -15,4 +19,4 @@ export const isLook = (value: string | null): value is Look => lookIds.some((loo
 export const hasSiteLook = (pathname: string) => new RegExp(SITE_LOOK_PATHS).test(pathname);
 
 /** Runs in the root layout before paint, including on a static export with a base path. */
-export const firstPaintLook = `(function(){if(!new RegExp(${JSON.stringify(SITE_LOOK_PATHS)}).test(location.pathname))return;var v;try{v=localStorage.getItem(${JSON.stringify(lookKey)})}catch(e){}document.documentElement.dataset.look=${JSON.stringify(lookIds)}.includes(v)?v:${JSON.stringify(defaultLook)}})();`;
+export const firstPaintLook = `(function(){if(!new RegExp(${JSON.stringify(SITE_LOOK_PATHS)}).test(location.pathname))return;if(new RegExp(${JSON.stringify(BRAND_PATHS)}).test(location.pathname))document.documentElement.dataset.brandPage="";var v;try{v=localStorage.getItem(${JSON.stringify(lookKey)})}catch(e){}document.documentElement.dataset.look=${JSON.stringify(lookIds)}.includes(v)?v:${JSON.stringify(defaultLook)}})();`;

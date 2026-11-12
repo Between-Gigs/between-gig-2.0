@@ -5,6 +5,7 @@ import { Reveal } from "@ds/motion";
 import { ArrowRight, Check, Inbox, Mail, MapPin } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { useLook } from "@/components/site/LookSync";
 import { data, type WaitlistSignup } from "@/lib/data";
 import { waitlistCategories, waitlistCategoryLabel } from "@/lib/data/taxonomy";
 import { asset } from "@/lib/site";
@@ -26,6 +27,7 @@ const copy: Record<Step, { title: string; description: string }> = {
  * (1) email + ZIP → welcome email queued, (2) optional category and details, (3) thanks.
  */
 export function CallSheetDialog({ open, onClose, category: initialCategory, placement }: { open: boolean; onClose: () => void; category: string; placement: string }) {
+  const swiss = useLook() === "swiss";
   const [step, setStep] = React.useState<Step>("signup");
   const [email, setEmail] = React.useState("");
   const [zip, setZip] = React.useState("");
@@ -115,20 +117,20 @@ export function CallSheetDialog({ open, onClose, category: initialCategory, plac
           </form>
         )}
         {step === "done" && (
-          <div className="grid gap-5 py-2">
+          <div className={swiss ? "grid gap-5 py-2" : "grid justify-items-center gap-5 py-2 text-center"}>
             {/* The Storyboard's cover as a keepsake, with the check that says it worked. */}
-            <Reveal effect="pop" className="relative w-full">
+            <Reveal effect="pop" className={swiss ? "relative w-full" : "relative w-52"}>
               <img src={asset("art/storyboard/thumbs/front-cover.jpg")} alt="" width={800} height={533} decoding="async"
-                className="aspect-2/1 h-auto w-full object-cover" />
-              <span className="absolute bottom-0 left-0 grid size-12 place-items-center bg-action text-on-action"><Check className="size-6" aria-hidden="true" /></span>
+                className={swiss ? "aspect-2/1 h-auto w-full object-cover" : "aspect-3/2 h-auto w-full rotate-2 rounded-xl border-4 border-surface object-cover shadow-lg"} />
+              <span className={swiss ? "absolute bottom-0 left-0 grid size-12 place-items-center bg-action text-on-action" : "absolute -bottom-3 -left-3 grid size-12 place-items-center rounded-full bg-action text-on-action shadow-md"}><Check className="size-6" aria-hidden="true" /></span>
             </Reveal>
             {/* The dialog's one mint block. */}
-            <div className="grid w-full gap-1 border-t-4 border-forest-950 bg-tint-mint px-4 py-3 text-left text-forest-950">
-              <span className="text-eyebrow uppercase">While you wait</span>
-              <span className="text-body-sm">Flip through the Storyboard to see the kinds of work clients could bring to you.</span>
+            <div className={swiss ? "grid w-full gap-1 border-t-4 border-forest-950 bg-tint-mint px-4 py-3 text-left text-forest-950" : "grid w-full gap-1 rounded-xl bg-surface-selected px-4 py-3 text-left"}>
+              <span className={swiss ? "text-eyebrow uppercase" : "text-label-sm text-ink-brand"}>While you wait</span>
+              <span className={swiss ? "text-body-sm" : "text-body-sm text-ink"}>Flip through the Storyboard to see the kinds of work clients could bring to you.</span>
             </div>
             {data.kind === "sample" && <p className="text-body-sm text-ink-subtle">Sample mode: emails are in the <Link href="/emails/" className="inline-flex items-center gap-1 text-link underline underline-offset-2"><Inbox className="size-3.5" aria-hidden="true" />sample outbox</Link>.</p>}
-            <div className="flex flex-wrap gap-3">
+            <div className={swiss ? "flex flex-wrap gap-3" : "flex flex-wrap justify-center gap-3"}>
               <ButtonLink href="/storyboard/" variant="primary" size="lg" iconEnd={<ArrowRight />}>Open the Storyboard</ButtonLink>
               <Button size="lg" onClick={onClose}>Done</Button>
             </div>

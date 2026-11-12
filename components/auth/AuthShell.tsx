@@ -1,3 +1,7 @@
+"use client";
+import { useLook } from "@/components/site/LookSync";
+import { asset } from "@/lib/site";
+import { Icon3D } from "@/components/ui/Icon3D";
 import { cx } from "@ds/components";
 import { Page } from "@/components/site/Page";
 
@@ -18,31 +22,35 @@ export function AuthShell({ header, lead, children, className, eyebrow, steps: s
   /** Sign up only: the three-step row. Off when there is nothing to start (an invite already used, invite-only). */
   steps?: boolean;
 }) {
+  const warm = useLook() === "friendly";
   const login = header === "Log in";
   return (
-    <Page>
-      <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:pt-6 md:grid-cols-12 lg:pt-10">
-        <aside aria-label="Welcome to Between Gigs" className="md:col-span-6 lg:col-span-7 xl:col-span-8">
-          <p className="flex flex-wrap gap-x-5 gap-y-1 text-eyebrow text-ink uppercase">
-            <span>{eyebrow ?? (login ? "Welcome back" : "Welcome")}</span>
-            <span className="text-ink-muted">{login ? "Log in" : showSteps ? "Account · Step 1 of 3" : "Sign up"}</span>
-          </p>
-          <p className="mt-5 font-display text-display-sm text-ink sm:text-display-md md:text-display-sm lg:mt-7 lg:text-display-lg xl:text-display-xl">
-            Your craft.<br />More<br />possibilities.
-          </p>
-          <p className="mt-6 hidden max-w-xl font-display text-heading-md font-medium leading-snug text-pretty text-ink sm:block lg:mt-9">
-            {login ? "Your page is right where you left it. Log in to keep it current." : "Bring the work you already have. Show what your skills can offer, on set and beyond."}
-          </p>
-        </aside>
+    <Page className={warm ? "max-w-6xl" : undefined}>
+      <div className={warm ? "grid gap-6 sm:my-2 lg:grid-cols-2" : "grid grid-cols-1 gap-x-6 gap-y-10 sm:pt-6 md:grid-cols-12 lg:pt-10"}>
+        {warm ? <WarmWelcome login={login} eyebrow={eyebrow} showSteps={showSteps} /> : (
+          <aside aria-label="Welcome to Between Gigs" className="md:col-span-6 lg:col-span-7 xl:col-span-8">
+            <p className="flex flex-wrap gap-x-5 gap-y-1 text-eyebrow text-ink uppercase">
+              <span>{eyebrow ?? (login ? "Welcome back" : "Welcome")}</span>
+              <span className="text-ink-muted">{login ? "Log in" : showSteps ? "Account · Step 1 of 3" : "Sign up"}</span>
+            </p>
+            <p className="mt-5 font-display text-display-sm text-ink sm:text-display-md md:text-display-sm lg:mt-7 lg:text-display-lg xl:text-display-xl">
+              Your craft.<br />More<br />possibilities.
+            </p>
+            <p className="mt-6 hidden max-w-xl font-display text-heading-md font-medium leading-snug text-pretty text-ink sm:block lg:mt-9">
+              {login ? "Your page is right where you left it. Log in to keep it current." : "Bring the work you already have. Show what your skills can offer, on set and beyond."}
+            </p>
+          </aside>
+        )}
 
-        <div className="self-start rounded-2xl border border-line bg-surface-raised p-5 shadow-sm sm:p-6 swiss:border-0 swiss:border-t-8 swiss:border-line-strong swiss:bg-transparent swiss:p-0 swiss:pt-6 md:col-span-6 lg:col-span-5 xl:col-span-4">
-          <div className={className}>
+        <div className={warm ? "rounded-2xl bg-surface p-6 shadow-md sm:p-10 lg:p-14" : "self-start rounded-2xl border border-line bg-surface-raised p-5 shadow-sm sm:p-6 swiss:border-0 swiss:border-t-8 swiss:border-line-strong swiss:bg-transparent swiss:p-0 swiss:pt-6 md:col-span-6 lg:col-span-5 xl:col-span-4"}>
+          {warm && <span aria-hidden="true" className="grid size-16 place-items-center rounded-xl bg-tint-mint-soft"><Icon3D name={login ? "waving_hand" : "key"} className="size-9" /></span>}
+          <div className={cx(warm && "mt-6", className)}>
             {children}
             {lead && <div className="mt-8 border-t border-line pt-5 text-body-sm text-ink-muted">{lead}</div>}
           </div>
         </div>
 
-        {!login && showSteps && (
+        {!warm && !login && showSteps && (
           <ol aria-label="Three steps" className="grid gap-x-6 gap-y-4 md:col-span-12 md:grid-cols-3 lg:mt-8">
             {steps.map((s, i) => (
               <li key={s.title} aria-current={i === 0 ? "step" : undefined}
@@ -59,5 +67,44 @@ export function AuthShell({ header, lead, children, className, eyebrow, steps: s
         )}
       </div>
     </Page>
+  );
+}
+
+function WarmWelcome({ login, eyebrow, showSteps }: { login: boolean; eyebrow?: string; showSteps: boolean }) {
+  return (
+    <aside aria-label="Welcome to Between Gigs" className="relative isolate hidden flex-col overflow-hidden rounded-2xl bg-tint-peach text-tint-ink lg:flex">
+      <div className="px-12 pt-12">
+        <span className="inline-flex items-center gap-2 rounded-full bg-surface px-3.5 py-1.5 text-label-md text-ink">
+          <Icon3D name="waving_hand" className="size-5" />{eyebrow ?? (login ? "Welcome back" : "Welcome")}
+        </span>
+        <p className="mt-8 font-display text-display-md text-balance">
+          Your craft.<br />
+          <span className="bg-linear-to-t from-mint-500 from-25% to-transparent to-25% px-0.5">More possibilities.</span>
+        </p>
+        <p className="mt-5 max-w-md text-body-lg">
+          {login ? "Your page is right where you left it. Log in to keep it current." : "Bring the work you already have. Show what your skills can offer, on set and beyond."}
+        </p>
+        {!login && showSteps && (
+          <ol className="mt-7 flex max-w-md flex-wrap gap-2.5" aria-label="Three steps">
+            {["Open your link", "Fill in your page", "Send it for review"].map((s, i) => (
+              <li key={s} className="inline-flex items-center gap-2 rounded-full bg-surface py-1.5 pr-4 pl-1.5 text-label-md text-ink">
+                <span aria-hidden="true" className={cx("grid size-7 place-items-center rounded-full text-label-sm", i === 0 ? "bg-mint-500 text-ink" : "bg-ink text-bg")}>{i + 1}</span>{s}
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+      <div className="relative mt-auto ml-12 pt-32">
+        <span className="absolute top-6 left-4 z-raised inline-flex -rotate-3 items-center gap-3 rounded-xl bg-surface px-4 py-3 text-ink shadow-md">
+          <Icon3D name="sparkles" className="size-7" />
+          <span className="grid"><b className="text-label-md">About 10 minutes</b><span className="text-body-sm text-ink-muted">It saves as you go</span></span>
+        </span>
+        <span className="absolute top-20 right-6 z-raised inline-flex rotate-2 items-center gap-3 rounded-xl bg-surface px-4 py-3 text-ink shadow-md">
+          <Icon3D name="clapper_board" className="size-7" />
+          <span className="grid"><b className="text-label-md">Production comes first</b><span className="text-body-sm text-ink-muted">Pause any time</span></span>
+        </span>
+        <img src={asset("email/craft-bottom.jpg")} alt="" className="block aspect-video w-full rounded-tl-2xl object-cover" />
+      </div>
+    </aside>
   );
 }

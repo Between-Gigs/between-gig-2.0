@@ -1,9 +1,10 @@
 "use client";
 import { Banner, Button, Field, Input, Modal, SegmentedControl, Select, Textarea, cx } from "@ds/components";
-import { Check, Inbox, LayoutGrid, List } from "lucide-react";
+import { Check, Inbox, LayoutGrid, List, Sparkles } from "lucide-react";
 import { Reveal } from "@ds/motion";
 import Link from "next/link";
 import * as React from "react";
+import { useLook } from "@/components/site/LookSync";
 import { flushSync } from "react-dom";
 import { data } from "@/lib/data";
 import { asset } from "@/lib/site";
@@ -26,6 +27,7 @@ function reflow(update: () => void) {
  * turn (components/storyboard), the credits, the catalog of commissions, and the two forms.
  */
 export function Storyboard() {
+  const swiss = useLook() === "swiss";
   const [planner, setPlanner] = React.useState<Kind | null>(null);
   const bookRef = React.useRef<StoryBookHandle>(null);
   const top = React.useRef<HTMLDivElement>(null);
@@ -43,16 +45,16 @@ export function Storyboard() {
       <StoryBook ref={bookRef} onPlan={setPlanner} onScrollOn={() => document.getElementById("credits")?.scrollIntoView({ behavior: "smooth", block: "start" })} />
 
       {/* The credits keep rolling */}
-      <section id="credits" aria-labelledby="credits-h" className="mx-auto max-w-7xl scroll-mt-20 px-4 pt-8 pb-16 sm:px-6 lg:pt-12 lg:pb-24">
-        <div className="grid grid-cols-12 gap-x-6 gap-y-6 border-t-4 border-line-strong pt-4">
-          <div className="col-span-12 lg:col-span-3">
-            <span aria-hidden="true" className="text-label-sm text-ink tabular-nums">01</span>
-            <h2 id="credits-h" className="mt-1 font-display text-heading-lg text-balance text-ink">The credits keep rolling</h2>
+      <section id="credits" aria-labelledby="credits-h" className={swiss ? "mx-auto max-w-7xl scroll-mt-20 px-4 pt-8 pb-16 sm:px-6 lg:pt-12 lg:pb-24" : "mx-auto grid max-w-3xl scroll-mt-20 gap-5 border-t border-line px-4 py-20 text-center sm:px-6"}>
+        <div className={swiss ? "grid grid-cols-12 gap-x-6 gap-y-6 border-t-4 border-line-strong pt-4" : "contents"}>
+          <div className={swiss ? "col-span-12 lg:col-span-3" : "contents"}>
+            {swiss && <span aria-hidden="true" className="text-label-sm text-ink tabular-nums">01</span>}
+            <h2 id="credits-h" className={swiss ? "mt-1 font-display text-heading-lg text-balance text-ink" : "text-eyebrow text-ink-brand uppercase"}>The credits keep rolling</h2>
           </div>
-          <div className="col-span-12 grid content-start gap-8 lg:col-span-9">
-            <p className="max-w-3xl text-body-lg text-pretty text-ink sm:text-editorial-lg">Between Gigs gives everyday people and businesses access to the remarkable range of entertainment professionals between productions. A family can hire a scenic carpenter to reinvent a room. A bakery can bring in a food stylist and editor. A school can build a fundraiser with a producer and sound crew. Production designers, grips, writers, actors, builders, assistants and animal handlers can be booked for one afternoon or an entire season. You describe the outcome; we help cast one person or the right crew.</p>
+          <div className={swiss ? "col-span-12 grid content-start gap-8 lg:col-span-9" : "contents"}>
+            <p className={swiss ? "max-w-3xl text-body-lg text-pretty text-ink sm:text-editorial-lg" : "text-left text-body-lg text-pretty text-ink sm:text-editorial-lg"}>Between Gigs gives everyday people and businesses access to the remarkable range of entertainment professionals between productions. A family can hire a scenic carpenter to reinvent a room. A bakery can bring in a food stylist and editor. A school can build a fundraiser with a producer and sound crew. Production designers, grips, writers, actors, builders, assistants and animal handlers can be booked for one afternoon or an entire season. You describe the outcome; we help cast one person or the right crew.</p>
             {/* The page's one mint block. */}
-            <p className="bg-tint-mint p-5 font-display text-heading-lg leading-snug text-balance text-forest-950 sm:p-6">Your next useful skill may be the one nobody has thought to cast yet.</p>
+            <p className={swiss ? "bg-tint-mint p-5 font-display text-heading-lg leading-snug text-balance text-forest-950 sm:p-6" : "text-body-lg text-ink-muted italic"}>Your next useful skill may be the one nobody has thought to cast yet.</p>
           </div>
         </div>
       </section>
@@ -67,6 +69,7 @@ export function Storyboard() {
 }
 
 function Catalog({ onOpen, onIntent }: { onOpen: (index: number) => void; onIntent: (index: number) => void }) {
+  const swiss = useLook() === "swiss";
   const [talent, setTalent] = React.useState("all");
   const [customer, setCustomer] = React.useState("all");
   const [order, setOrder] = React.useState("book");
@@ -80,19 +83,19 @@ function Catalog({ onOpen, onIntent }: { onOpen: (index: number) => void; onInte
   const set = (fn: (v: string) => void) => (v: string) => reflow(() => fn(v));
 
   return (
-    <section id="plates" aria-labelledby="plates-h" className="pb-20 lg:pb-28">
+    <section id="plates" aria-labelledby="plates-h" className={swiss ? "pb-20 lg:pb-28" : "border-t border-line bg-surface-sunken py-20"}>
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="grid grid-cols-12 gap-x-6 gap-y-4 border-t-4 border-line-strong pt-4">
-          <div className="col-span-12 lg:col-span-3">
-            <span aria-hidden="true" className="text-label-sm text-ink tabular-nums">02</span>
-            <p className="mt-1 text-eyebrow text-ink-muted uppercase">Browse the commissions</p>
+        <div className={swiss ? "grid grid-cols-12 gap-x-6 gap-y-4 border-t-4 border-line-strong pt-4" : "contents"}>
+          <div className={swiss ? "col-span-12 lg:col-span-3" : "contents"}>
+            {swiss && <span aria-hidden="true" className="text-label-sm text-ink tabular-nums">02</span>}
+            <p className={swiss ? "mt-1 text-eyebrow text-ink-muted uppercase" : "text-eyebrow text-ink-brand uppercase"}>Browse the commissions</p>
           </div>
-          <div className="col-span-12 lg:col-span-9">
-            <h2 id="plates-h" className="font-display text-display-sm text-balance text-ink lg:text-display-md">Every page in the book</h2>
-            <p className="mt-3 max-w-2xl text-body-lg text-ink-muted">Choose a commission to open it in the book, or narrow the possibilities below.</p>
+          <div className={swiss ? "col-span-12 lg:col-span-9" : "contents"}>
+            <h2 id="plates-h" className={swiss ? "font-display text-display-sm text-balance text-ink lg:text-display-md" : "mt-2 font-display text-display-sm text-ink"}>Every page in the book</h2>
+            <p className={swiss ? "mt-3 max-w-2xl text-body-lg text-ink-muted" : "mt-2 text-body-md text-ink-muted"}>Choose a commission to open it in the book, or narrow the possibilities below.</p>
           </div>
         </div>
-        <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-line-strong pt-4">
+        <div className={swiss ? "mt-10 flex flex-wrap items-center gap-3 border-t border-line-strong pt-4" : "mt-6 flex flex-wrap items-center gap-3"}>
           <Select aria-label="Talent" size="sm" className="w-52" value={talent} onValueChange={set(setTalent)} options={[{ value: "all", label: "Everyone" }, { value: "solo", label: "One talented person" }, { value: "crew", label: "Crews and teams" }]} />
           <Select aria-label="Customer" size="sm" className="w-56" value={customer} onValueChange={set(setCustomer)} options={[{ value: "all", label: "Individuals + businesses" }, { value: "individual", label: "Individuals" }, { value: "business", label: "Businesses + organizations" }]} />
           <Select aria-label="Order" size="sm" className="w-40" value={order} onValueChange={set(setOrder)} options={[{ value: "book", label: "Book order" }, { value: "title", label: "By need" }, { value: "talent", label: "By talent" }]} />
@@ -101,21 +104,22 @@ function Catalog({ onOpen, onIntent }: { onOpen: (index: number) => void; onInte
             <SegmentedControl label="Index view" size="sm" value={view} onChange={set(setView)} options={[{ value: "list", label: "List", icon: <List /> }, { value: "gallery", label: "Gallery", icon: <LayoutGrid /> }]} />
           </div>
         </div>
-        <ol className={cx("mt-8 grid", view === "gallery" ? "gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3" : "gap-0")}>
+        <ol className={swiss ? cx("mt-8 grid", view === "gallery" ? "gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3" : "gap-0") : cx("mt-6 grid gap-3", view === "gallery" && "sm:grid-cols-2 lg:grid-cols-3")}>
           {items.map((s) => (
             <li key={s.file} style={{ viewTransitionName: `plate-${s.file.replace(/\W/g, "")}` }}>
               <button type="button" onClick={() => onOpen(s.index)} onPointerEnter={() => onIntent(s.index)} onFocus={() => onIntent(s.index)}
-                className={cx("group flex w-full gap-4 text-left",
-                  view === "gallery" ? "h-full flex-col border-t-4 border-line-strong pt-3" : "items-center border-t border-line-strong py-3")}>
-                <span className={cx("block shrink-0 overflow-hidden bg-surface-sunken", view === "gallery" ? "w-full" : "w-28 sm:w-36")}>
+                className={swiss ? cx("group flex w-full gap-4 text-left",
+                  view === "gallery" ? "h-full flex-col border-t-4 border-line-strong pt-3" : "items-center border-t border-line-strong py-3") : cx("group flex w-full gap-4 rounded-2xl border border-line bg-surface p-3 text-left transition duration-base ease-standard hover:-translate-y-1 hover:border-line-strong hover:shadow-lg focus-visible:-translate-y-1 motion-reduce:transform-none motion-reduce:transition-none",
+                  view === "gallery" ? "h-full flex-col" : "items-center")}>
+                <span className={swiss ? cx("block shrink-0 overflow-hidden bg-surface-sunken", view === "gallery" ? "w-full" : "w-28 sm:w-36") : cx("block shrink-0 overflow-hidden rounded-xl", view === "gallery" ? "w-full" : "w-28 sm:w-36")}>
                   {/* 800px thumbnails, loaded as they near the viewport; the book itself uses the full pages. */}
                   <img src={asset(`art/storyboard/thumbs/${s.file}`)} alt="" width={800} height={533} loading="lazy" decoding="async"
                     className="aspect-3/2 h-auto w-full object-cover transition-transform duration-slow ease-standard group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100" />
                 </span>
                 <span className="grid min-w-0 gap-1">
-                  <span className="text-label-sm text-ink-muted tabular-nums">Page {s.index + 1}</span>
-                  <span className="font-display text-heading-md text-balance text-ink underline-offset-4 group-hover:underline">{s.title}</span>
-                  <span className="text-eyebrow text-ink-brand uppercase">{s.place}</span>
+                  <span className={swiss ? "text-label-sm text-ink-muted tabular-nums" : "text-label-sm text-ink-subtle tabular-nums"}>Page {s.index + 1}</span>
+                  <span className={swiss ? "font-display text-heading-md text-balance text-ink underline-offset-4 group-hover:underline" : "font-display text-heading-md text-ink group-hover:text-ink-brand"}>{s.title}</span>
+                  <span className={swiss ? "text-eyebrow text-ink-brand uppercase" : "text-label-sm text-ink-brand"}>{s.place}</span>
                   <span className={cx("text-body-sm text-ink-muted", view === "list" && "hidden sm:block")}>{s.story}</span>
                 </span>
               </button>
@@ -157,6 +161,7 @@ const required: Record<string, string> = {
 
 /** The talent and buyer forms. Also used by /crew-call, which opens the buyer form for the service they picked. */
 export function Planner({ kind, onClose, onBrowse, initial, topic }: { kind: Kind | null; onClose: () => void; onBrowse: () => void; initial?: Record<string, string>; topic?: PlannerTopic }) {
+  const swiss = useLook() === "swiss";
   const [values, setValues] = React.useState<Record<string, string>>(initial ?? {});
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [state, setState] = React.useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -187,21 +192,21 @@ export function Planner({ kind, onClose, onBrowse, initial, topic }: { kind: Kin
     <Modal open={!!plan} onClose={onClose} size="lg" title={plan ? (state === "saved" ? plan.saved : plan.title) : ""}
       description={plan && state !== "saved" ? <><span className="mb-2 block text-eyebrow text-ink-brand uppercase">{plan.eyebrow}</span>{plan.intro}</> : undefined}>
       {plan && state === "saved" ? (
-        <div className="grid justify-items-start gap-5 py-2">
+        <div className={swiss ? "grid justify-items-start gap-5 py-2" : "grid justify-items-center gap-5 py-4 text-center"}>
           {/* The book's back cover, "Glad you're here.", as a keepsake for the saved request, with the check that says it
               worked (the same done state as the call-sheet dialog). */}
-          <Reveal effect="pop" className="relative w-full">
+          <Reveal effect="pop" className={swiss ? "relative w-full" : "relative w-56"}>
             <img src={asset("art/storyboard/thumbs/back-cover.jpg")} alt="" width={800} height={533} decoding="async"
-              className="aspect-2/1 h-auto w-full object-cover" />
-            <span className="absolute bottom-0 left-0 grid size-12 place-items-center bg-action text-on-action"><Check className="size-6" aria-hidden="true" /></span>
+              className={swiss ? "aspect-2/1 h-auto w-full object-cover" : "aspect-3/2 h-auto w-full -rotate-2 rounded-xl border-4 border-surface object-cover shadow-lg"} />
+            <span className={swiss ? "absolute bottom-0 left-0 grid size-12 place-items-center bg-action text-on-action" : "absolute -right-3 -bottom-3 grid size-12 place-items-center rounded-full bg-action text-on-action shadow-md"}>{swiss ? <Check className="size-6" aria-hidden="true" /> : <Sparkles className="size-6" aria-hidden="true" />}</span>
           </Reveal>
-          <p role="status" className="max-w-xl text-body-lg text-pretty text-ink-muted">Thank you for your interest. Between Gigs is coming soon. We've saved your submission and will email you when we're ready.</p>
-          <div className="grid w-full gap-1 border-t-4 border-forest-950 bg-tint-mint px-4 py-3 text-forest-950">
-            <span className="text-eyebrow uppercase">What happens next</span>
-            <span className="text-body-md">{kind === "talent" ? "Browse the book for more ideas of what your craft could offer people and businesses." : "Browse the book for more ideas of who could help, one person or a whole crew."}</span>
+          <p role="status" className={swiss ? "max-w-xl text-body-lg text-pretty text-ink-muted" : "max-w-md text-body-lg text-ink-muted"}>Thank you for your interest. Between Gigs is coming soon. We've saved your submission and will email you when we're ready.</p>
+          <div className={swiss ? "grid w-full gap-1 border-t-4 border-forest-950 bg-tint-mint px-4 py-3 text-forest-950" : "grid w-full max-w-md gap-1 rounded-xl bg-surface-selected px-4 py-3 text-left"}>
+            <span className={swiss ? "text-eyebrow uppercase" : "text-label-sm text-ink-brand"}>What happens next</span>
+            <span className={swiss ? "text-body-md" : "text-body-sm text-ink"}>{kind === "talent" ? "Browse the book for more ideas of what your craft could offer people and businesses." : "Browse the book for more ideas of who could help, one person or a whole crew."}</span>
           </div>
           {data.kind === "sample" && <p className="text-body-sm text-ink-subtle">Sample mode: the confirmation is in the <Link href="/emails/" className="inline-flex items-center gap-1 text-link underline underline-offset-2"><Inbox className="size-3.5" aria-hidden="true" />sample outbox</Link>.</p>}
-          <div className="flex flex-wrap gap-3">
+          <div className={swiss ? "flex flex-wrap gap-3" : "flex flex-wrap justify-center gap-3"}>
             <Button variant="primary" size="lg" onClick={onBrowse}>Browse every page in the book</Button>
             <Button size="lg" onClick={onClose}>Close</Button>
           </div>
@@ -211,10 +216,10 @@ export function Planner({ kind, onClose, onBrowse, initial, topic }: { kind: Kin
           <Honeypot />
           {state === "error" && <Banner tone="danger" className="sm:col-span-2" title="We could not save that yet">Your entries are still here—please try again.</Banner>}
           {topic && (
-            <div className="flex items-center gap-4 border-t-4 border-b border-line-strong py-3 sm:col-span-2">
+            <div className={swiss ? "flex items-center gap-4 border-t-4 border-b border-line-strong py-3 sm:col-span-2" : "flex items-center gap-4 rounded-xl border border-line bg-surface-sunken p-3 sm:col-span-2"}>
               <span className="shrink-0">{topic.media}</span>
               <span className="grid min-w-0 flex-1 gap-0.5">
-                <span className="text-eyebrow text-ink-muted uppercase">You picked</span>
+                <span className={swiss ? "text-eyebrow text-ink-muted uppercase" : "text-label-sm text-ink-muted"}>You picked</span>
                 <span className="font-display text-heading-sm text-ink">{topic.title}</span>
                 <span className="text-body-sm text-ink-muted">{topic.note}</span>
               </span>
@@ -233,7 +238,7 @@ export function Planner({ kind, onClose, onBrowse, initial, topic }: { kind: Kin
               </Field>
             );
           })}
-          <div className="grid gap-3 border-t-4 border-line-strong pt-4 sm:col-span-2">
+          <div className={swiss ? "grid gap-3 border-t-4 border-line-strong pt-4 sm:col-span-2" : "grid gap-3 sm:col-span-2"}>
             <Button type="submit" variant="primary" size="lg" loading={state === "saving"}>{plan.button}</Button>
             <p className="text-body-sm text-ink-muted">This is an early-interest form, not a booking or published profile. We may follow up about your submission. Read our <Link className="text-link underline underline-offset-2" href="/privacy/">Privacy Policy</Link> and <Link className="text-link underline underline-offset-2" href="/terms/">Terms of Use</Link>.</p>
           </div>

@@ -1,7 +1,7 @@
 "use client";
 import { usePathname } from "next/navigation";
 import { useLayoutEffect, useSyncExternalStore } from "react";
-import { defaultLook, hasSiteLook, isLook, lookKey, type Look } from "@/lib/look";
+import { defaultLook, hasSiteLook, isBrandPage, isLook, lookKey, type Look } from "@/lib/look";
 
 const changeEvent = "bg2-look-change";
 let unsaved: Look | undefined;
@@ -47,6 +47,7 @@ export function LookSync() {
   const look = useLook();
   useLayoutEffect(() => {
     // During hydration the server snapshot is the default. Keep the pre-paint choice until React catches up.
+    document.documentElement.toggleAttribute("data-brand-page", isBrandPage(pathname));
     if (hasSiteLook(pathname)) document.documentElement.dataset.look = readLook();
     else delete document.documentElement.dataset.look;
   }, [pathname, look]);
