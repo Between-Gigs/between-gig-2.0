@@ -70,6 +70,14 @@ function Bridge({ children }: { children: React.ReactNode }) {
       // (they ride along in Clerk's metadata) is registered now; anyone else finishes on /join/ (no sign-out, no loop there).
       if (!result.ok && result.error === "needs-signup" && data.auth.signUp && meta.name?.trim() && meta.acceptedTerms === true) {
         try { result = await data.auth.signUp({ name: meta.name.trim(), acceptedTerms: true }); } catch { /* finish on /join/ */ }
+        // Registered: drop the sign-up details from Clerk's metadata, so a Gigster an owner later removes is never signed
+        // back up silently on their next sign-in (they would have to sign up again on /join/). Best effort.
+        if (result.ok) {
+          const rest = { ...((user?.unsafeMetadata ?? {}) as Record<string, unknown>) };
+          delete rest.name;
+          delete rest.acceptedTerms;
+          void user?.update({ unsafeMetadata: rest }).catch(() => undefined);
+        }
         if (cancelled) return;
       }
       if (!result.ok && (result.error === "terms" || result.error === "needs-signup")) {
