@@ -322,12 +322,12 @@ export function ModernDashboard({
               </>
             ) : (
               <div className="mo-funnel">
-                <p>Out of {d.funnel.invited} invited. Pick a step to list it.</p>
+                <p>Out of {d.funnel.invited} invited, plus {d.funnel.signedUp} who signed up on their own. Pick a step to list it.</p>
                 <FunnelCompact
                   bare
                   d={d}
-                  selected={cohort === "invited" ? view : undefined}
-                  onSelect={(x) => pick(x, "invited")}
+                  selected={cohort === "invited" || view === "signed_up" ? view : undefined}
+                  onSelect={(x) => pick(x, x === "signed_up" ? "all" : "invited")}
                 />
               </div>
             )}

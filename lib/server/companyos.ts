@@ -42,7 +42,7 @@ export type Filter = Record<string, unknown>;
 export type QuerySpec = { entity: string; filter?: Filter; sort?: { field: string; dir?: "asc" | "desc" }[]; limit?: number; offset?: number; include?: unknown[] };
 export type BatchOp = { op: "create" | "update" | "delete"; entity: string; id?: string; data?: Record<string, unknown> };
 export type Me = { user: { id: string; email: string; name?: string | null }; roleKeys: string[]; isSuperAdmin: boolean };
-export type AdminUser = { userId: string; email: string; name?: string | null; signedUp: boolean; memberships?: { roleKey?: string }[] };
+export type AdminUser = { userId: string; email: string; name?: string | null; signedUp: boolean; selfSignedUp?: boolean; memberships?: { roleKey?: string }[] };
 
 export const eq = (field: string, value: unknown): Filter => ({ field, op: "eq", value });
 export const isIn = (field: string, value: unknown[]): Filter => ({ field, op: "in", value });

@@ -7,6 +7,7 @@ import { basisShort, monthStatusLabel } from "@/lib/data/taxonomy";
 import { sectionLabel } from "@/lib/profile/validate";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { PersonStatusBadge } from "@/components/people/PersonStatusBadge";
+import { PersonSourceBadge } from "@/components/people/PersonSourceBadge";
 import { ProfilePreviewCard } from "@/components/profile/ProfilePreviewCard";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { shortDate } from "./format";
@@ -77,7 +78,7 @@ export function PersonDrawer({ rows, index, onIndex, onClose, onChanged }: {
   return (
     <>
       <Drawer open={open} onClose={onClose} side="right" size="lg" title={name || "Person"}
-        description={p ? <span className="inline-flex flex-wrap items-center gap-2"><PersonStatusBadge status={p.status} size="sm" />{f?.position}</span> : undefined}
+        description={p ? <span className="inline-flex flex-wrap items-center gap-2"><PersonStatusBadge status={p.status} size="sm" /><PersonSourceBadge source={p.source} />{f?.position}</span> : undefined}
         footer={p && (
           <div className="flex w-full flex-wrap items-center gap-2">
             {/* Named neighbours: you always know who's before and after. */}

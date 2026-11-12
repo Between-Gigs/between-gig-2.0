@@ -4,10 +4,11 @@ import { ArrowRight, LayoutGrid, List, Mail, MapPin, Search, SlidersHorizontal, 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
-import { data, personStatuses, type PeopleQuery, type PeopleSort, type PersonStatus, type PersonSummary, type ProfileFilter } from "@/lib/data";
+import { data, personStatuses, type PeopleQuery, type PeopleSort, type PersonSource, type PersonStatus, type PersonSummary, type ProfileFilter } from "@/lib/data";
 import { crafts } from "@/lib/profile/department";
 import { laServiceAreas, monthStatusLabel, serviceChoices } from "@/lib/data/taxonomy";
 import { PersonStatusBadge, personStatusMeta } from "@/components/people/PersonStatusBadge";
+import { PersonSourceBadge, personSourceLabel } from "@/components/people/PersonSourceBadge";
 import { AgoPill, EmptyNote, Meter, OwnerAvatar, OwnerPage, Panel, Row, RowSkeletons } from "./kit";
 import { OwnerShell } from "./OwnerShell";
 import { OwnerGate } from "./OwnerGate";
@@ -16,7 +17,7 @@ import { markArea } from "@/lib/split-area";
 markArea("bg-split:dashboard");
 
 const VIEW_KEY = "bg2-people-view";
-const blank: Required<PeopleQuery> = { text: "", status: "all", service: "all", area: "all", availability: "all", craft: "all", profile: "all", sort: "updated" };
+const blank: Required<PeopleQuery> = { text: "", status: "all", service: "all", area: "all", availability: "all", craft: "all", profile: "all", sort: "updated", source: "all" };
 const profileFilterLabel: Record<Exclude<ProfileFilter, "all">, string> = { complete: "Profile complete", missing: "Something missing", "no-photo": "No photo yet" };
 
 const ago = (iso: string) => {
@@ -39,12 +40,16 @@ function People() {
   const params = useSearchParams();
   const q = params.get("q");
   const status = params.get("status");
+  const source = params.get("source");
 
   // "Find a person" in the sidebar lands here with ?q=; the dashboard funnel with ?status=.
   React.useEffect(() => { if (q !== null) setText(q); }, [q]); // eslint-disable-line react-hooks/set-state-in-effect
   React.useEffect(() => {
     if (status && (personStatuses as string[]).includes(status)) setQuery((x) => ({ ...x, status: status as PersonStatus })); // eslint-disable-line react-hooks/set-state-in-effect
   }, [status]);
+  React.useEffect(() => {
+    if (source === "self" || source === "invited") setQuery((x) => ({ ...x, source })); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [source]);
 
   React.useEffect(() => {
     try { const v = localStorage.getItem(VIEW_KEY); if (v === "grid" || v === "list") setView(v); } catch { /* ignore */ } // eslint-disable-line react-hooks/set-state-in-effect
@@ -68,7 +73,7 @@ function People() {
   }, [query]);
 
   const set = <K extends keyof PeopleQuery>(k: K) => (v: string) => setQuery((q) => ({ ...q, [k]: v }));
-  const filtered = query.status !== "all" || query.service !== "all" || query.area !== "all" || query.availability !== "all" || query.craft !== "all" || query.profile !== "all" || !!query.text;
+  const filtered = query.status !== "all" || query.service !== "all" || query.area !== "all" || query.availability !== "all" || query.craft !== "all" || query.profile !== "all" || query.source !== "all" || !!query.text;
   // The filters besides status, with how each reads as a chip.
   const extra = ([
     ["craft", query.craft, query.craft],
@@ -76,6 +81,7 @@ function People() {
     ["area", query.area, query.area],
     ["availability", query.availability, monthStatusLabel[query.availability as keyof typeof monthStatusLabel]],
     ["profile", query.profile, profileFilterLabel[query.profile as keyof typeof profileFilterLabel]],
+    ["source", query.source, personSourceLabel[query.source as PersonSource]],
   ] as const).filter(([, v]) => v !== "all");
   const active = extra.length;
   const clearExtra = () => setQuery((q) => ({ ...blank, text: q.text, status: q.status, sort: q.sort }));
@@ -94,6 +100,8 @@ function People() {
           options={[{ value: "all", label: "Any availability" }, ...Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))]} />
         <Select aria-label="Profile" size={inline ? "sm" : undefined} className={w} value={query.profile} onValueChange={set("profile")}
           options={[{ value: "all", label: "Any profile" }, ...Object.entries(profileFilterLabel).map(([value, label]) => ({ value, label }))]} />
+        <Select aria-label="Source" size={inline ? "sm" : undefined} className={w} value={query.source} onValueChange={set("source")}
+          options={[{ value: "all", label: "Any source" }, ...Object.entries(personSourceLabel).map(([value, label]) => ({ value, label }))]} />
       </>
     );
   };
@@ -188,7 +196,7 @@ function PersonRow({ row }: { row: PersonSummary }) {
   return (
     <Row href={`/owners/people/${p.id}/`} title={p.name || p.email}
       leading={<Avatar row={row} className="size-12 swiss:@md:size-16" />}
-      badge={<PersonStatusBadge status={p.status} size="sm" />}
+      badge={<span className="inline-flex flex-wrap items-center gap-1"><PersonStatusBadge status={p.status} size="sm" /><PersonSourceBadge source={p.source} /></span>}
       subtitle={f?.position ? [f.position, f.areas.join(" · ")].filter(Boolean).join(" · ") : p.name ? p.email : `Waitlist · ZIP ${p.waitlistZip}`}
       meta={<>{progress(row)}<AgoPill className="min-w-36">Active {ago(p.updatedAt).toLowerCase()}</AgoPill></>} />
   );
@@ -209,7 +217,7 @@ function PersonCard({ row }: { row: PersonSummary }) {
       </div>
       {f?.areas.length ? <p className="flex min-w-0 items-center gap-1 text-body-sm text-ink-muted"><MapPin className="size-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{f.areas.join(" · ")}</span></p> : null}
       <div className="mt-auto flex items-center justify-between gap-3 border-t border-line pt-3 text-body-sm">
-        <PersonStatusBadge status={p.status} size="sm" />
+        <span className="inline-flex flex-wrap items-center gap-1"><PersonStatusBadge status={p.status} size="sm" /><PersonSourceBadge source={p.source} /></span>
         {progress(row)}
       </div>
       {p.sample && <span className="sr-only">(fictional sample)</span>}
