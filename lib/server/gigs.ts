@@ -9,7 +9,7 @@ import { completeness } from "@/lib/profile/validate";
 import { fromProfile, toProfile, type ProfileItem } from "@/lib/data/companyos/fields";
 import { personStatuses, inviteStatuses } from "@/lib/data/types";
 import type {
-  ActivityEvent, ActivityKind, DashboardSummary, FunnelCounts, InviteStatus, PeopleQuery, Person, PersonStatus, PersonSummary, Profile,
+  ActivityEvent, ActivityKind, DashboardSummary, FunnelCounts, InviteStatus, PeopleQuery, Person, PersonSource, PersonStatus, PersonSummary, Profile,
   ProfileDraft, ProfileFields, ProfileSection, ReviewNote, ReviewNoteInput, Session, SketchKind, SyncExternalResult, WaitlistQuery,
   WaitlistResult, WaitlistRow, WaitlistSignup,
 } from "@/lib/data/types";
@@ -112,6 +112,7 @@ function personOf(w: World, row: Row, signedUpSelf = false): Person {
   const login = str(row.data.user);
   const user = w.users.get(login);
   const status = statusOf(profile, signedUpSelf || !!user?.signedUp);
+  const source: PersonSource = user?.selfSignedUp ? "self" : "invited";
   const email = str(row.data.email);
   const sub = w.submissionByPerson.get(row.id);
   const answers = (sub?.data.answers ?? {}) as Record<string, unknown>;
@@ -124,6 +125,7 @@ function personOf(w: World, row: Row, signedUpSelf = false): Person {
     name: rawName === email ? "" : rawName,
     slug: str(profile?.data.public_handle),
     status,
+    source,
     waitlistZip: str(answers.zip),
     waitlistCategory: str(answers.category),
     invitedAt: iso(row.createdAt),
@@ -144,6 +146,7 @@ function summaryOf(w: World, row: Row, signedUpSelf = false): PersonSummary {
 function matches(s: PersonSummary, q: PeopleQuery) {
   const f = s.fields;
   if (q.status && q.status !== "all" && s.person.status !== q.status) return false;
+  if (q.source && q.source !== "all" && (s.person.source ?? "invited") !== q.source) return false;
   if (q.service && q.service !== "all" && !f?.services.includes(q.service)) return false;
   if (q.area && q.area !== "all" && !f?.areas.includes(q.area)) return false;
   if (q.availability && q.availability !== "all" && f?.monthStatus !== q.availability) return false;
@@ -195,16 +198,36 @@ export async function session(ctx: Ctx): Promise<Session | null> {
   return { personId: person?.id ?? null, email: me.user.email, role: "gigster", name: name === me.user.email ? "" : name, startedAt, via: "clerk" };
 }
 
-/** After Clerk signs someone in. Invite-only (N-05): an account Company OS doesn't know is "unknown-email". */
+/** After Clerk signs someone in. An account Company OS doesn't know yet is "needs-signup" when open sign-up is on, else "unknown-email". */
 export async function syncExternal(ctx: Ctx): Promise<SyncExternalResult> {
   try {
     await ctx.cos.me(ctx.cred);
   } catch (e) {
-    if (e instanceof CompanyOsError && (e.status === 401 || e.status === 403)) return { ok: false, error: "unknown-email" };
+    if (e instanceof CompanyOsError && (e.status === 401 || e.status === 403)) {
+      try {
+        if ((await ctx.cos.signupInfo(ctx.cred)).enabled === true) return { ok: false, error: "needs-signup" };
+      } catch (e2) {
+        if (!(e2 instanceof CompanyOsError && e2.status < 500)) throw e2;
+      }
+      return { ok: false, error: "unknown-email" };
+    }
     throw e;
   }
   const s = await session(ctx);
   return s ? { ok: true, session: s, created: false } : { ok: false, error: "unknown-email" };
+}
+
+/** Open sign-up: registers the signed-in Clerk account as a Gigster with every document Company OS lists, then answers like syncExternal. */
+export async function signUp(ctx: Ctx, name: string): Promise<SyncExternalResult> {
+  const info = await ctx.cos.signupInfo(ctx.cred);
+  if (info.enabled !== true) throw new CompanyOsError(403, "signup_disabled");
+  try {
+    await ctx.cos.signUp(ctx.cred, { name: name.trim(), consents: info.consents ?? [] });
+  } catch (e) {
+    if (!(e instanceof CompanyOsError && e.status === 409 && e.code === "already_registered")) throw e;
+  }
+  const r = await syncExternal(ctx);
+  return r.ok ? { ...r, created: true } : r;
 }
 
 /** Owner routes: a Super Admin, or Company OS's own refusal for that route (403 super-admin only). */
@@ -484,7 +507,8 @@ async function waitlistRows(ctx: Ctx, w?: World) {
     const answers = (s.data.answers ?? {}) as Record<string, unknown>;
     const person = personById.get(str(s.data.person));
     // No "opened" stage: Clerk doesn't report an opened invite (N-10, gap analysis §13.3 #6).
-    const inviteStatus: InviteStatus = !person ? "not_invited" : users.get(str(person.data.user))?.signedUp ? "registered" : "invited";
+    const login = person ? users.get(str(person.data.user)) : undefined;
+    const inviteStatus: InviteStatus = !person ? "not_invited" : login?.signedUp ? "registered" : "invited";
     return {
       signup: {
         id: s.id, email: str(s.data.email), zip: str(answers.zip), category: str(answers.category), details: str(answers.details),
@@ -492,6 +516,7 @@ async function waitlistRows(ctx: Ctx, w?: World) {
       },
       inviteStatus,
       ...(person ? { personId: person.id, invitedAt: iso(person.createdAt) } : {}),
+      ...(login?.selfSignedUp ? { source: "self" as const } : { ...(person ? { source: "invited" as const } : {}) }),
     };
   });
 }
@@ -677,7 +702,9 @@ export async function dashboard(ctx: Ctx): Promise<DashboardSummary> {
   const counts = countBy(personStatuses, summaries.map((s) => s.person.status));
   const waitlist = { ...countBy(inviteStatuses, rows.map((r) => r.inviteStatus)), total: rows.length };
   const cohortIds = new Set(rows.map((r) => r.personId).filter((x): x is string => !!x));
-  const cohort = summaries.filter((s) => cohortIds.has(s.person.id));
+  // Invited means an owner invited them: someone who signed up by themselves is counted in "signed up" instead.
+  const cohort = summaries.filter((s) => cohortIds.has(s.person.id) && s.person.source !== "self");
+  const selfSignedUp = summaries.filter((s) => s.person.source === "self");
   const invitedCounts = countBy(personStatuses, cohort.map((s) => s.person.status));
   const accounts = cohort.filter((s) => s.person.status !== "invited").length;
   const funnel: FunnelCounts = {
@@ -687,7 +714,8 @@ export async function dashboard(ctx: Ctx): Promise<DashboardSummary> {
     accounts,
     submitted: cohort.filter((s) => SENT.has(s.person.status) || !!s.person.submittedAt).length,
     approved: invitedCounts.approved,
+    signedUp: selfSignedUp.length,
   };
   const reviewQueue = summaries.filter((s) => s.person.status === "submitted").sort((a, b) => (a.person.submittedAt ?? "").localeCompare(b.person.submittedAt ?? ""));
-  return { counts, invitedCounts, invitedPersonIds: cohort.map((s) => s.person.id), funnel, waitlist, reviewQueue, activity: await activityFrom(ctx, 12, w) };
+  return { counts, invitedCounts, invitedPersonIds: cohort.map((s) => s.person.id), signedUpPersonIds: selfSignedUp.map((s) => s.person.id), funnel, waitlist, reviewQueue, activity: await activityFrom(ctx, 12, w) };
 }

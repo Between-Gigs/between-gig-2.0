@@ -23,6 +23,10 @@ export interface SeedPerson {
   step?: number;
   notes?: [ProfileSection, string][];
   days: number;
+  /** "self": signed up by themselves, with no invitation. */
+  source?: "self";
+  /** A self sign-up who had also joined the call sheet. */
+  onCallSheet?: boolean;
 }
 
 const img = (id: string, captions: string[]) => captions.map((caption, i) => ({ src: `img/people/${id}-${i + 1}.jpg`, caption }));
@@ -162,6 +166,9 @@ const monogramPeople: SeedPerson[] = [
   { id: "riley-park", name: "Riley Park", status: "invited", zip: "90029", category: "interiors", days: 0 },
   { id: "quinn-harper", name: "Quinn Harper", status: "invited", zip: "90068", category: "photo", days: 0 },
   { id: "sky-morales", name: "Sky Morales", status: "invited", zip: "90302", category: "events", days: 9 },
+  { id: "jules-moreau", name: "Jules Moreau", status: "registered", zip: "90019", category: "wardrobe", days: 0, source: "self" },
+  { id: "tamsin-reid", name: "Tamsin Reid", status: "draft", zip: "90065", category: "interiors", days: 2, step: 1, source: "self", fields: { position: "Art department" } },
+  { id: "kofi-mensah", name: "Kofi Mensah", status: "registered", zip: "90005", category: "photo", days: 1, source: "self", onCallSheet: true },
 ];
 
 export const seedPeople = [...photoPeople, ...monogramPeople];
@@ -194,6 +201,7 @@ export function buildSeed(records: SeedPerson[] = seedPeople): SeedState {
       name: invited ? "" : s.name,
       slug: invited ? "" : s.id,
       status: s.status,
+      ...(s.source === "self" ? { source: "self" as const } : {}),
       waitlistZip: s.zip,
       waitlistCategory: s.category,
       invitedAt: dayIso(Math.max(s.days, 0) + 1, 10),
@@ -206,6 +214,13 @@ export function buildSeed(records: SeedPerson[] = seedPeople): SeedState {
     };
     people.push(person);
 
+    if (s.source === "self") {
+      if (s.fields) {
+        const fields: ProfileFields = { ...blankFields(s.name), imdb: IMDB_SAMPLE, ...s.fields };
+        drafts.push({ personId: s.id, fields, step: s.step ?? 4, savedAt: updated });
+      }
+      continue;
+    }
     const token = s.id === "riley-park" ? DEMO_TOKENS.valid : s.id === "grace-liu" ? DEMO_TOKENS.used : s.id === "sky-morales" ? DEMO_TOKENS.expired : `${s.id}-invite`;
     const createdAt = person.invitedAt;
     const expired = s.id === "sky-morales";
@@ -241,11 +256,13 @@ function prng(seed: number) {
  * About 500 fictional waitlist sign-ups (the client's real list is ~500), including the 24 seed people.
  * Emails are @example.com; joined between 20 Sep and 18 Oct 2026, like the live call sheet.
  */
+const SELF_ON_CALL_SHEET = new Set(seedPeople.filter((p) => p.onCallSheet).map((p) => p.id));
+
 export function buildWaitlist(people: Person[], total = 500) {
   const rand = prng(20261021);
   const pick = <T,>(xs: T[]) => xs[Math.floor(rand() * xs.length)];
   const joined = () => new Date(Date.UTC(2026, 8, 20) + Math.floor(rand() * 28 * 86400000)).toISOString();
-  const rows = people.map((p, i) => ({ id: `wl-${String(i).padStart(3, "0")}`, email: p.email, zip: p.waitlistZip, category: p.waitlistCategory, details: "", placement: "hero", createdAt: new Date(new Date(p.invitedAt).getTime() - (5 + Math.floor(rand() * 20)) * 86400000).toISOString() }));
+  const rows = people.filter((p) => p.source !== "self" || SELF_ON_CALL_SHEET.has(p.id)).map((p, i) => ({ id: `wl-${String(i).padStart(3, "0")}`, email: p.email, zip: p.waitlistZip, category: p.waitlistCategory, details: "", placement: "hero", createdAt: new Date(new Date(p.invitedAt).getTime() - (5 + Math.floor(rand() * 20)) * 86400000).toISOString() }));
   const used = new Set(rows.map((r) => r.email));
   for (let i = rows.length; rows.length < total; i++) {
     const f = pick(FIRST), l = pick(LAST);
@@ -262,7 +279,7 @@ export function buildActivity(people: Person[]) {
   const events: { id: string; kind: "invited" | "registered" | "submitted" | "approved" | "changes_requested"; personId: string; who: string; by?: string; at: string }[] = [];
   for (const p of people) {
     const who = p.name || p.email;
-    events.push({ id: `a-${p.id}-inv`, kind: "invited", personId: p.id, who, by: SAMPLE_OWNER.name, at: p.invitedAt });
+    if (p.source !== "self") events.push({ id: `a-${p.id}-inv`, kind: "invited", personId: p.id, who, by: SAMPLE_OWNER.name, at: p.invitedAt });
     if (p.registeredAt) events.push({ id: `a-${p.id}-reg`, kind: "registered", personId: p.id, who, at: p.registeredAt });
     if (p.submittedAt) events.push({ id: `a-${p.id}-sub`, kind: "submitted", personId: p.id, who, at: p.submittedAt });
     if (p.approvedAt) events.push({ id: `a-${p.id}-app`, kind: "approved", personId: p.id, who, by: SAMPLE_OWNER.name, at: p.approvedAt });

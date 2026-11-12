@@ -62,11 +62,15 @@ export function Funnel({ d }: { d: DashboardSummary }) {
           </li>
         ))}
       </ol>
+      <Link href="/owners/people/?source=self" className="flex min-h-11 items-center justify-between gap-3 border-t border-line px-5 text-body-sm text-ink-muted hover:text-ink">
+        <span>Signed up on their own</span>
+        <span className="text-label-md tabular-nums">{f.signedUp}</span>
+      </Link>
     </Panel>
   );
 }
 
-export type FunnelView = "invited" | "building" | "submitted" | "approved";
+export type FunnelView = "invited" | "building" | "submitted" | "approved" | "signed_up";
 
 /**
  * The same funnel, compact, for the one-screen dashboard: one tight row per stage. Selecting a stage shows
@@ -106,8 +110,16 @@ export function FunnelCompact({ d, onSelect, selected, bare = false }: { d: Dash
       })}
     </ol>
   );
-  if (bare) return rows;
+  // Self sign-ups are a separate source, not a stage after "Invited": one line of their own under the stages.
+  const own = (
+    <button type="button" onClick={() => onSelect("signed_up")} aria-pressed={selected === "signed_up"}
+      className={cx("flex min-h-11 w-full items-center justify-between gap-3 border-t border-line text-left text-body-sm transition-colors duration-fast", brand ? "px-5" : "px-1", selected === "signed_up" ? (brand ? "bg-surface-selected text-ink" : "bg-ink text-bg") : "text-ink-muted hover:bg-surface-hover")}>
+      <span>Signed up on their own</span>
+      <span className="text-label-md tabular-nums">{f.signedUp}</span>
+    </button>
+  );
+  if (bare) return <>{rows}{own}</>;
   return (
-    <Panel title="From invite to live" aside={<span className="tabular-nums">Out of {f.invited} invited</span>} flush className="shrink-0">{rows}</Panel>
+    <Panel title="From invite to live" aside={<span className="tabular-nums">Out of {f.invited} invited</span>} flush className="shrink-0">{rows}{own}</Panel>
   );
 }

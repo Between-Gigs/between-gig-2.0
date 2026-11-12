@@ -21,7 +21,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const requestError: Record<Exclude<RequestCodeResult, { ok: true }>["error"], (email: string) => string> = {
   "unknown-email": () => "We couldn't find an account for that email. Check the spelling, or create an account.",
-  // Invited but no account yet: joining is by invitation, so point to the invite rather than "create an account".
+  // Sample only: invited but no account yet, so point to the invite rather than "create an account".
   "not-registered": (email) => `Open the invitation we emailed to ${email} to create your account.`,
   "rate-limited": () => "We just sent you a code. You can ask for another in a few seconds.",
 };

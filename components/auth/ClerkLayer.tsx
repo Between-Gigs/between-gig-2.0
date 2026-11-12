@@ -63,10 +63,25 @@ function Bridge({ children }: { children: React.ReactNode }) {
         return;
       }
       const meta = (user?.unsafeMetadata ?? {}) as { inviteToken?: string; name?: string; acceptedTerms?: boolean };
-      const result = await data.auth.syncExternal({ email, name: meta.name || user?.fullName || undefined,
+      let result = await data.auth.syncExternal({ email, name: meta.name || user?.fullName || undefined,
         role: role === "owner" ? "owner" : undefined, inviteToken: meta.inviteToken, acceptedTerms: meta.acceptedTerms });
       if (cancelled) return;
-      if (!result.ok && result.error === "terms") {
+      // Open sign-up: a verified account Company OS doesn't know yet. Someone who gave their name and the terms on /join/
+      // (they ride along in Clerk's metadata) is registered now; anyone else finishes on /join/ (no sign-out, no loop there).
+      if (!result.ok && result.error === "needs-signup" && data.auth.signUp && meta.name?.trim() && meta.acceptedTerms === true) {
+        try { result = await data.auth.signUp({ name: meta.name.trim(), acceptedTerms: true }); } catch { /* finish on /join/ */ }
+        if (cancelled) return;
+      }
+      // Live, once the account works (open sign-up or an invitation ticket): drop the sign-up details from Clerk's metadata,
+      // so a Gigster an owner later removes is never signed back up silently on their next sign-in (they would have to
+      // sign up again on /join/). Best effort. The sample keeps them: its sync reads them on every sign-in.
+      if (result.ok && live && (meta.name !== undefined || meta.acceptedTerms !== undefined)) {
+        const rest = { ...((user?.unsafeMetadata ?? {}) as Record<string, unknown>) };
+        delete rest.name;
+        delete rest.acceptedTerms;
+        void user?.update({ unsafeMetadata: rest }).catch(() => undefined);
+      }
+      if (!result.ok && (result.error === "terms" || result.error === "needs-signup")) {
         setNeedsConsent(identity ?? null);
         if (!pathname.startsWith("/join")) router.replace("/join/");
         return;
@@ -89,7 +104,10 @@ function Bridge({ children }: { children: React.ReactNode }) {
       finish: async ({ name, acceptTerms }) => {
         if (!acceptTerms || !name.trim()) throw new Error("Enter your name and agree to the terms to continue.");
         const meta = (user?.unsafeMetadata ?? {}) as { inviteToken?: string };
-        const result = await data.auth.syncExternal({ email, name, acceptedTerms: true, inviteToken: meta.inviteToken, role: role === "owner" ? "owner" : undefined });
+        // Live, an account Company OS doesn't know is registered by open sign-up; the sample creates it in syncExternal.
+        const result = live && data.auth.signUp
+          ? await data.auth.signUp({ name: name.trim(), acceptedTerms: true })
+          : await data.auth.syncExternal({ email, name, acceptedTerms: true, inviteToken: meta.inviteToken, role: role === "owner" ? "owner" : undefined });
         if (!result.ok) throw new Error("Your setup could not be completed. Try again.");
         setNeedsConsent(null);
         setSyncedIdentity(identity);
@@ -100,6 +118,6 @@ function Bridge({ children }: { children: React.ReactNode }) {
       if (isLoaded) await clerk.signOut({ redirectUrl: `${basePath}/login/?signedOut=1` });
       else router.replace("/login/?signedOut=1");
     },
-  }), [clerk, isLoaded, syncedIdentity, identity, needsConsent, isSignedIn, email, user, role, router]);
+  }), [clerk, isLoaded, syncedIdentity, identity, needsConsent, isSignedIn, email, user, role, router, live]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

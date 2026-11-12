@@ -8,6 +8,7 @@ import { useSettleWhen } from "@/lib/motion";
 import { readNotes, sectionLabel } from "@/lib/profile/validate";
 import { basePath } from "@/lib/site";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
+import { PersonSourceBadge } from "@/components/people/PersonSourceBadge";
 import { PersonStatusBadge } from "@/components/people/PersonStatusBadge";
 import { ProfileView } from "@/components/profile/ProfileView";
 import { OwnerShell } from "./OwnerShell";
@@ -78,6 +79,7 @@ function Person({ id }: { id: string }) {
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <h1 className="min-w-0 truncate font-display text-heading-lg text-ink sm:text-display-sm">{name}</h1>
             <PersonStatusBadge status={p.status} size="sm" />
+            <PersonSourceBadge source={p.source} />
           </div>
           <p className="flex min-w-0 flex-wrap gap-x-3 text-body-sm text-ink-muted">
             <a className="inline-flex min-h-6 min-w-0 items-center gap-1 hover:text-ink" href={`mailto:${p.email}`}><Mail className="size-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{p.email}</span></a>

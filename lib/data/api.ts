@@ -95,6 +95,11 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
         sessionCache = { at: Date.now(), value: Promise.resolve(r.ok ? r.session : null) };
         return r;
       },
+      async signUp(input) {
+        const r = await send("auth/signup", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: input.name, acceptedTerms: true }) }) as Awaited<ReturnType<DataSource["auth"]["syncExternal"]>>;
+        sessionCache = { at: Date.now(), value: Promise.resolve(r.ok ? r.session : null) };
+        return r;
+      },
       async signOut() { lastToken = null; changed(); },
       onChange(listener) { listeners.add(listener); return () => void listeners.delete(listener); },
     },

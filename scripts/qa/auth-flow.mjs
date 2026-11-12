@@ -47,6 +47,9 @@ try {
     assert.equal(changed.invites.find((i) => i.token === "riley-7q2m").usedAt, undefined);
     await page.goto(`${url}/login/`);
     await page.getByRole("link", { name: "Create an account", exact: true }).waitFor();
+    // Open sign-up: the link goes to /join/, never to an invitation-only screen.
+    assert.equal(await page.getByRole("link", { name: "Create an account", exact: true }).getAttribute("href"), "/join/");
+    assert.equal(await page.getByText("Joining is by invitation", { exact: true }).count(), 0);
     assert.deepEqual(errors, []);
     await context.close();
     console.log(`Open signup UI passed at ${width}px: open entry, validation, recovery, editable invite, owner gate, login link.`);

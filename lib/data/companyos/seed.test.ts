@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildSeed, buildWaitlist } from "../seed.ts";
+import { buildSeed, buildWaitlist, seedPeople } from "../seed.ts";
 import { offSetServices, onSetSkills, laServiceAreas } from "../taxonomy.ts";
 import { optionKey } from "./fields.ts";
 import { toCompanyOsSeed } from "./seed.ts";
@@ -29,7 +29,10 @@ describe("toCompanyOsSeed", () => {
     const people = of("person");
     expect(people).toHaveLength(state.people.length);
     const linked = subs.filter((s) => s.data.person);
-    expect(linked).toHaveLength(people.length);
+    // Everyone came through the call sheet except the sample's self sign-ups who never used it (N-19).
+    const fromCallSheet = state.people.filter((p) => p.source !== "self" || seedPeople.some((s) => s.id === p.id && s.onCallSheet));
+    expect(fromCallSheet.length).toBeLessThan(state.people.length);
+    expect(linked).toHaveLength(fromCallSheet.length);
     for (const s of linked) expect(people.map((p) => p.id)).toContain(s.data.person);
   });
 

@@ -27,6 +27,9 @@ export function configFromEnv(env: Record<string, string | undefined> = process.
   };
 }
 
+export interface SignupConsent { document: string; version: string }
+export interface SignupInfo { enabled: boolean; consents?: SignupConsent[]; registered?: boolean }
+
 /** A refusal from Company OS: its status and code ({ error }), passed through to the browser as they came. */
 export class CompanyOsError extends Error {
   constructor(readonly status: number, readonly code: string, readonly detail?: string) {
@@ -39,7 +42,7 @@ export type Filter = Record<string, unknown>;
 export type QuerySpec = { entity: string; filter?: Filter; sort?: { field: string; dir?: "asc" | "desc" }[]; limit?: number; offset?: number; include?: unknown[] };
 export type BatchOp = { op: "create" | "update" | "delete"; entity: string; id?: string; data?: Record<string, unknown> };
 export type Me = { user: { id: string; email: string; name?: string | null }; roleKeys: string[]; isSuperAdmin: boolean };
-export type AdminUser = { userId: string; email: string; name?: string | null; signedUp: boolean; memberships?: { roleKey?: string }[] };
+export type AdminUser = { userId: string; email: string; name?: string | null; signedUp: boolean; selfSignedUp?: boolean; memberships?: { roleKey?: string }[] };
 
 export const eq = (field: string, value: unknown): Filter => ({ field, op: "eq", value });
 export const isIn = (field: string, value: unknown[]): Filter => ({ field, op: "in", value });
@@ -85,6 +88,10 @@ export function companyOs(cfg: CompanyOsConfig) {
     /** The secret the call sheet's sign-up tokens are signed from (gigs.signupToken): the submit identity's token. */
     signingSecret: () => cfg.submitterToken,
     me: (cred: Credential) => call<Me>(cred, "GET", "/me"),
+    /** Self sign-up (Company OS 1.12): whether it is on, and the documents to accept. Needs the person's session. */
+    signupInfo: (cred: Credential) => call<SignupInfo>(cred, "GET", "/signup"),
+    signUp: (cred: Credential, body: { name: string; consents: SignupConsent[] }) =>
+      call<{ userId: string; personId: string; facetId?: string }>(cred, "POST", "/signup", { person: { name: body.name }, facet: {}, consents: body.consents }),
     /** One page of rows. */
     query: async (cred: Credential, spec: QuerySpec) => (await call<{ data: Row[] }>(cred, "POST", "/query", spec)).data,
     /** Every row, page by page (500 a page, Company OS's maximum; its id tiebreak keeps pages stable). */
