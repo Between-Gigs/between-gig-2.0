@@ -24,10 +24,10 @@ const sectionTitles: Record<ProfileSectionId, string> = {
 };
 
 /** Direction E. The same parts, actions and public data feed the live page and the editable canvas. */
-export function ModernProfile({ person, fields: f, mode, draft, part, aside, first, callName, pageLabel,
+export function ModernProfile({ person, fields: f, mode, embedded, draft, part, aside, first, callName, pageLabel,
   services, helps, portfolio, sample, editing, show, priced, rate, where, credits, unseen, reviewed, P,
   creditRows, questions, sections, saved, onSave, onShare, onPhoto, onRequest, ids, similar = [] }: ProfileLayoutProps) {
-  const Name = mode === "owner" ? "h2" : "h1";
+  const Name = embedded || mode === "owner" ? "h2" : "h1";
   const offered = helps.length ? helps : services;
   const dates = monthStatusLabel[f.monthStatus];
   const how = [modeLabel[f.mode], f.travel, f.transport, !unseen && f.insurance === "yes" ? insuranceLabel.yes : ""].filter(Boolean).join(" · ");

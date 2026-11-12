@@ -1,6 +1,6 @@
 "use client";
 import { Badge, Button, Skeleton, cx, useToast } from "@ds/components";
-import { ArrowRight, Copy, Eye, FilePen, Hourglass, MessageSquareWarning, PencilLine, Share2, Sparkles } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronUp, Copy, Eye, FilePen, Hourglass, MessageSquareWarning, PencilLine, Share2, Sparkles } from "lucide-react";
 import * as React from "react";
 import { useLook } from "@/components/site/LookSync";
 import { useProfileTemplate } from "@/lib/profile/use-profile-template";
@@ -14,6 +14,7 @@ import { partsDone, sectionLabel } from "@/lib/profile/validate";
 import { PersonStatusBadge, personStatusMeta } from "@/components/people/PersonStatusBadge";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
+import { ProfileView } from "./ProfileView";
 import { ProfilePreviewCard } from "./ProfilePreviewCard";
 import { markArea } from "@/lib/split-area";
 
@@ -25,7 +26,7 @@ const when = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-US", 
 /**
  * /profile: where the Gigster stands (direction G · Swiss grid). A huge greeting, then two numbered sections under thick
  * rules: 01 the one next step (the screen's single mint block; once approved, the forest "You're live" island) and 02 the
- * card clients see in search. The full profile lives on its own page (public once approved) and in Edit.
+ * card clients see in search. The search card can open a full-width, read-only preview below both columns.
  */
 export function MyProfile() {
   const warm = useLook() !== "swiss";
@@ -33,15 +34,22 @@ export function MyProfile() {
   const session = useRequireRole("gigster");
   const [s, setS] = React.useState<PersonSummary | null>(null);
   const [profile, setProfile] = React.useState<Profile | null>(null);
-  const [loaded, setLoaded] = React.useState(false);
+  const [loadedId, setLoadedId] = React.useState("");
+  const [expandedId, setExpandedId] = React.useState("");
+  const previewId = React.useId();
+  const toggleRef = React.useRef<HTMLButtonElement>(null);
 
   React.useEffect(() => {
     if (!session?.personId) return;
     const id = session.personId;
-    void Promise.all([data.people.get(id), data.profiles.getProfile(id)]).then(([summary, p]) => { setS(summary); setProfile(p); setLoaded(true); });
+    let current = true;
+    void Promise.all([data.people.get(id), data.profiles.getProfile(id)]).then(([summary, p]) => {
+      if (current) { setS(summary); setProfile(p); setLoadedId(id); }
+    });
+    return () => { current = false; };
   }, [session?.personId]);
 
-  if (!session || !loaded || !s) {
+  if (!session || loadedId !== session.personId || !s) {
     return <Page><div aria-busy="true" aria-label="Loading your profile" className="grid gap-4"><Skeleton className="h-10 w-1/3" /><Skeleton shape="block" className="h-24" /><Skeleton shape="block" className="h-96" /></div></Page>;
   }
 
@@ -55,7 +63,27 @@ export function MyProfile() {
   const nextStep = state === "approved" && fields
     ? <Live person={person} warm={warm} />
     : <Status person={person} state={state} parts={partsDone(fields, person.name, template)} first={first} warm={warm} />;
-  const card = <ProfilePreviewCard fields={fields ?? blankFields(person.name)} personId={person.id} badge={state === "approved" ? null : state === "new" ? "Fills in as you go" : "Preview"} />;
+  const expanded = expandedId === person.id;
+  const previewFields = fields ?? blankFields(person.name);
+  const card = (
+    <div className="relative grid gap-3">
+      <ProfilePreviewCard fields={previewFields} personId={person.id} badge={state === "approved" ? null : state === "new" ? "Fills in as you go" : "Preview"} />
+      <button type="button" ref={toggleRef} aria-expanded={expanded} aria-controls={previewId}
+        onClick={() => setExpandedId(expanded ? "" : person.id)}
+        className="flex min-h-11 items-center justify-center gap-2 rounded-md border border-line-strong bg-surface px-3 text-label-md text-ink hover:bg-surface-hover after:absolute after:inset-0 after:rounded-xl focus-visible:after:outline-2 focus-visible:after:outline-focus">
+        {expanded ? "Hide full profile preview" : "Show full profile preview"}{expanded ? <ChevronUp aria-hidden="true" size={18} /> : <ChevronDown aria-hidden="true" size={18} />}
+      </button>
+    </div>
+  );
+  const preview = (
+    <section id={previewId} aria-label="Full profile preview" hidden={!expanded} className="mt-8 min-w-0 border-t border-line pt-6">
+      {expanded && <>
+        <p className="mb-5 text-eyebrow text-ink-muted uppercase">Full profile preview</p>
+        <ProfileView person={person} fields={previewFields} extras={profile?.extras} mode="own" embedded />
+        <Button variant="secondary" iconStart={<ChevronUp />} onClick={() => { setExpandedId(""); toggleRef.current?.focus(); }}>Collapse profile preview</Button>
+      </>}
+    </section>
+  );
 
   if (warm) return (
     <Page>
@@ -74,6 +102,7 @@ export function MyProfile() {
           {card}
         </aside>
       </div>
+      {preview}
     </Page>
   );
 
@@ -110,6 +139,7 @@ export function MyProfile() {
           </div>
         </section>
       </div>
+      {preview}
     </Page>
   );
 }

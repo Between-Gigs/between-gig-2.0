@@ -34,7 +34,15 @@ export function ClerkProvider({ children, routerPush, afterSignOutUrl }: Provide
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 export const useUser = () => { const c = React.useContext(Context); return { isLoaded: c.isLoaded, isSignedIn: !!c.user, user: c.user }; };
-export const useClerk = () => { const c = React.useContext(Context); return React.useMemo(() => ({ loaded: c.isLoaded, status: c.isLoaded ? "ready" : "loading", signOut: c.signOut, get user(): Identity | null { return typeof window === "undefined" ? null : JSON.parse(localStorage.getItem(ACTIVE) ?? "null"); } }), [c.isLoaded, c.signOut]); };
+type OAuthRequest = { strategy: string; redirectUrl: string; redirectUrlComplete: string; unsafeMetadata?: Record<string, unknown> };
+const mockSignUp = {
+  async authenticateWithRedirect(request: OAuthRequest) {
+    sessionStorage.setItem("qa-google-request", JSON.stringify(request));
+    if (sessionStorage.getItem("qa-google-unavailable")) throw new Error("Google unavailable");
+    callback({ ...google, unsafeMetadata: request.unsafeMetadata ?? {} }, request.redirectUrlComplete);
+  },
+};
+export const useClerk = () => { const c = React.useContext(Context); return React.useMemo(() => ({ client: { signUp: mockSignUp }, loaded: c.isLoaded, status: c.isLoaded ? "ready" : "loading", signOut: c.signOut, get user(): Identity | null { return typeof window === "undefined" ? null : JSON.parse(localStorage.getItem(ACTIVE) ?? "null"); } }), [c.isLoaded, c.signOut]); };
 
 function callback(user: Identity, to: string) {
   localStorage.setItem(ACTIVE, JSON.stringify(user));

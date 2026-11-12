@@ -129,6 +129,12 @@ export async function flow({ browser, base, outDir }) {
       await page.waitForURL(/\/profile\/?$/);
       await expectText("Submitted for review");
       await page.getByRole("heading", { name: "Hi, Riley", level: 1 }).waitFor();
+      await page.getByRole("button", { name: "Show full profile preview" }).click();
+      const preview = page.getByRole("region", { name: "Full profile preview" });
+      await preview.getByText(/Fifteen years dressing sets/).waitFor();
+      await preview.getByRole("button", { name: "Collapse profile preview" }).click();
+      await preview.waitFor({ state: "hidden" });
+      await page.getByRole("button", { name: "Show full profile preview" }).waitFor();
     })
     && await step("confirmation-email", async () => {
       await page.goto(`${base}/emails/`);

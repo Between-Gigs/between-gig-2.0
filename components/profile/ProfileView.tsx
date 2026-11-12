@@ -31,6 +31,8 @@ interface Props {
   extras?: Profile["extras"];
   /** public: what clients see. own: the Gigster's preview of it. owner: the team's view inside search. */
   mode: ProfileMode;
+  /** The profile name is a secondary heading when this view sits inside another page. */
+  embedded?: boolean;
   similar?: { person: Person; profile: Profile }[];
   /** A draft being previewed: empty parts show where they'll go instead of disappearing. */
   draft?: boolean;
@@ -121,10 +123,10 @@ export function ProfileView(props: Props) {
   );
 }
 
-function SwissProfile({ person, fields: f, mode, similar = [], draft = false, part, aside, first, callName, pageLabel,
+function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft = false, part, aside, first, callName, pageLabel,
   services, helps, portfolio, sample, editing, show, priced, rate, where, credits, unseen, reviewed, P, creditRows,
   questions, sections, saved, onSave, onShare, onPhoto, onRequest, ids }: ProfileLayoutProps) {
-  const Name = mode === "owner" ? "h2" : "h1";
+  const Name = embedded || mode === "owner" ? "h2" : "h1";
   const craft = f.position || services[0] || "";
   // How they work (mode and travel, transport, insurance when shared) and what they bring, as the facts table reads.
   const works = [

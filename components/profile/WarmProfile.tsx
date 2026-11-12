@@ -19,10 +19,10 @@ function Pill({ children, className }: { children: React.ReactNode; className?: 
 }
 
 /** Original v4 presentation. All modes use the same data, edit spots, permissions and actions as the Swiss layout. */
-export function WarmProfile({ person, fields: f, mode, similar = [], draft = false, part, aside, first, callName,
+export function WarmProfile({ person, fields: f, mode, embedded, similar = [], draft = false, part, aside, first, callName,
   pageLabel, services, helps, portfolio, sample, editing, show, priced, rate, where, credits, unseen, reviewed, P,
   creditRows, questions, sections, saved, onSave, onShare, onPhoto, onRequest, ids }: ProfileLayoutProps) {
-  const Name = mode === "owner" ? "h2" : "h1";
+  const Name = embedded || mode === "owner" ? "h2" : "h1";
   const craft = craftIcon(f.position || services[0] || f.skills[0] || "", services[0]);
   // Only the numbers that say something: a zero reads as a weakness, so it's left out (the editor shows years to fill).
   const offered = helps.length || services.length;

@@ -13,6 +13,7 @@ import { useSession } from "@/lib/session";
 import { basePath } from "@/lib/site";
 import { AuthShell } from "./AuthShell";
 import { InviteJoin } from "./InviteJoin";
+import { GoogleSignup } from "./GoogleSignup";
 import { ClerkSlot } from "./ClerkSlot";
 import { displayName, GateSkeleton, homeFor, SignedInPanel, useLeave, useSignedInGate } from "./SignedIn";
 
@@ -25,7 +26,8 @@ export function JoinView() {
 }
 
 function SampleJoin() {
-  const token = useSearchParams().get("invite") ?? "";
+  const params = useSearchParams();
+  const token = params.get("invite") ?? "";
   const { onboarding } = useAuthActions();
   const [resumeClerk, setResumeClerk] = React.useState(false);
   React.useEffect(() => {
@@ -35,7 +37,7 @@ function SampleJoin() {
     setResumeClerk(clerkEnabled && (window.location.hash.startsWith("#/") || /^#(?:sso-callback|verify-email-address|verify-phone-number)(?:[/?]|$)/.test(window.location.hash))); // eslint-disable-line react-hooks/set-state-in-effect
   }, []);
   if (onboarding) return <JoinForm key={`onboarding-${onboarding.email}`} initialEmail={onboarding.email} initialName={onboarding.name} authenticated />;
-  if (resumeClerk) return <ClerkAccount />;
+  if (resumeClerk) return <ClerkAccount google={params.get("method") === "google"} />;
   return <JoinForToken key={token} token={token} />;
 }
 
@@ -125,13 +127,14 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
       lead={token ? <p className="flex items-center gap-2"><ShieldCheck aria-hidden="true" className="size-5 shrink-0 text-ink-brand" />Your page stays private until our team approves it.</p> : <p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
       <h1 className="font-display text-heading-lg text-balance text-ink">{authenticated ? "Finish your account setup" : "Create your account"}</h1>
       <p className="mt-2 text-body-md text-pretty text-ink-muted">{authenticated ? "You're logged in. Confirm your details and agree to the terms to create your profile." : token ? "Your invitation is here. Add your name to get started." : "No invite needed. Enter your details to get started."}</p>
-      <form noValidate onSubmit={submit} className="mt-8 grid gap-5">
+      {clerkEnabled && !authenticated && <GoogleSignup token={token} />}
+      <form noValidate onSubmit={submit} className="mt-6 grid gap-5">
         {errors.form && <Banner tone="danger" title="We couldn't create your account">{errors.form}</Banner>}
         <Field label="Email" error={errors.email} hint={authenticated ? "You're logged in with this email." : token ? "From your invitation. You can change it." : "Use the email you want to log in with."}>
           <Input type="email" value={email} readOnly={authenticated} autoComplete="email" start={<Mail />} onChange={(e) => { setEmail(e.target.value); setErrors((x) => ({ ...x, email: undefined })); }} />
         </Field>
         <Field label="Full name" error={errors.name}>
-          <Input value={name} autoComplete="name" autoFocus maxLength={NAME_MAX} onChange={(e) => { setName(e.target.value); setErrors((x) => ({ ...x, name: undefined })); }} />
+          <Input value={name} autoComplete="name" autoFocus={authenticated || !clerkEnabled} maxLength={NAME_MAX} onChange={(e) => { setName(e.target.value); setErrors((x) => ({ ...x, name: undefined })); }} />
         </Field>
         <div className="grid gap-1.5">
           <Checkbox checked={terms} aria-invalid={!!errors.terms || undefined} aria-describedby={errors.terms ? "terms-error" : undefined}
@@ -157,17 +160,17 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
  * Clerk mode, step 1b: Clerk's sign-up collects the password and verifies the chosen email. The invite token, name and
  * terms ride along in unsafeMetadata; ClerkLayer reads them and registers the person, then we head to step 2.
  */
-function ClerkAccount({ token, email, name }: { token?: string; email?: string; name?: string }) {
+function ClerkAccount({ token, email, name, google = false }: { token?: string; email?: string; name?: string; google?: boolean }) {
   const router = useRouter();
   const { session, loading } = useSession();
   React.useEffect(() => { if (!loading && session?.via === "clerk") router.replace("/profile/canvas/"); }, [session, loading, router]);
   const [firstName, ...rest] = (name ?? "").split(" ");
   return (
     <AuthShell header="Sign up"
-      lead={<p>{email ? `Create a password for ${email}.` : "Continue your account setup."} You may need to verify your email before continuing.</p>}>
+      lead={<p>{google ? "Finish connecting your Google account." : <>{email ? `Create a password for ${email}.` : "Continue your account setup."} You may need to verify your email before continuing.</>}</p>}>
       <div className="grid gap-6">
         <h1 className="font-display text-heading-lg text-balance text-ink">{email ? "Create your password" : "Continue your signup"}</h1>
-        <p className="text-body-md text-ink-muted">Use at least 8 characters. If Clerk asks for a 6-digit code afterward, that confirms your email; it does not replace your password.</p>
+        {!google && <p className="text-body-md text-ink-muted">Use at least 8 characters. If Clerk asks for a 6-digit code afterward, that confirms your email; it does not replace your password.</p>}
         <ClerkSlot label="Loading sign-up">
           <SignUp routing="hash" signInUrl={`${basePath}/login/`}
             initialValues={email ? { emailAddress: email, firstName, lastName: rest.join(" ") || undefined } : undefined}
