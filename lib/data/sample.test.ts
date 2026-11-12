@@ -151,3 +151,33 @@ describe("names and slugs", () => {
     expect(b.person.slug.length).toBeLessThanOrEqual(60);
   });
 });
+
+describe("self sign-ups (source)", () => {
+  it("the sample has a few people who signed up by themselves, never counted as invited", async () => {
+    await s.owners.dashboard().then(() => {});
+    const all = await s.people.list({});
+    const self = all.filter((x) => x.person.source === "self");
+    expect(self.length).toBeGreaterThanOrEqual(3);
+    expect(self.every((x) => x.person.status !== "invited")).toBe(true);
+    expect(all.filter((x) => x.person.source !== "self").every((x) => x.person.source === "invited")).toBe(true);
+  });
+
+  it("the funnel has a separate signed-up count, and invited-not-joined excludes self sign-ups", async () => {
+    const d = await s.owners.dashboard();
+    const self = (await s.people.list({ source: "self" })).map((x) => x.person.id);
+    expect(d.funnel.signedUp).toBe(self.length);
+    expect([...d.signedUpPersonIds].sort()).toEqual([...self].sort());
+    for (const id of self) expect(d.invitedPersonIds).not.toContain(id);
+  });
+
+  it("people filter by source", async () => {
+    const inv = await s.people.list({ source: "invited" });
+    expect(inv.length).toBeGreaterThan(0);
+    expect(inv.every((x) => x.person.source === "invited")).toBe(true);
+  });
+
+  it("a call-sheet person who then signed up by themselves shows registered with source self", async () => {
+    const rows = await s.owners.waitlist({ inviteStatus: "registered" });
+    expect(rows.some((r) => r.source === "self")).toBe(true);
+  });
+});
