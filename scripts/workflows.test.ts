@@ -52,13 +52,38 @@ describe("the workflows", () => {
     expect(yml).toContain("pnpm build:server && pnpm build:preview && pnpm check:server");
   });
 
-  it("the test deploy builds with its own address as the site origin, found before the build", () => {
+  it("the test deploy takes its address from the APP_URL variable, never from Railway's generated domain", () => {
+    for (const name of ["deploy-test.yml", "deploy-prod.yml"]) expect(read(name), name).not.toContain("railway domain");
+    expect(read("deploy-test.yml")).not.toMatch(/steps\.site/);
+  });
+
+  it("test validates APP_URL in the Require step, before the infra plan", () => {
     const s = steps(read("deploy-test.yml"));
-    const domain = s.findIndex((x) => x.includes("railway domain"));
-    const build = s.findIndex((x) => x.includes("pnpm build:server") && x.includes("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"));
-    expect(domain).toBeGreaterThan(-1);
-    expect(build).toBeGreaterThan(domain);
-    expect(s[build]).toMatch(/NEXT_PUBLIC_SITE_ORIGIN: \$\{\{ steps\.\w+\.outputs\.url \}\}/);
+    const req = s.findIndex((x) => x.includes("Require test configuration"));
+    const plan = s.findIndex((x) => x.includes("Infra plan"));
+    expect(req).toBeGreaterThan(-1);
+    expect(plan).toBeGreaterThan(req);
+    expect(s[req]).toContain("APP_URL: ${{ vars.APP_URL }}");
+    expect(s[req]).toContain("node scripts/check-app-url.mjs --test");
+  });
+
+  it("the test build uses the APP_URL variable as the site origin", () => {
+    const build = steps(read("deploy-test.yml")).find((x) => x.includes("pnpm build:server") && x.includes("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"));
+    expect(build).toBeDefined();
+    expect(build!).toContain("NEXT_PUBLIC_SITE_ORIGIN: ${{ vars.APP_URL }}");
+  });
+
+  it("test sends APP_URL from the variable to Railway", () => {
+    const sync = steps(read("deploy-test.yml")).find((x) => x.includes("railway variable set"))!;
+    expect(sync).toContain("APP_URL: ${{ vars.APP_URL }}");
+    expect(sync).toMatch(/for name in [^;]*\bAPP_URL\b/);
+  });
+
+  it("the last step of the test deploy checks, from outside, that the address serves the gated site", () => {
+    const deploy = read("deploy-test.yml").split(/^ {2}deploy:/m)[1];
+    const last = steps(deploy).at(-1)!;
+    expect(last).toContain("node scripts/smoke-test-address.mjs");
+    expect(last).toContain("APP_URL: ${{ vars.APP_URL }}");
   });
 
   it("every server build also builds the preview export before its checks (preview, split)", () => {
