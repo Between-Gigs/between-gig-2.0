@@ -98,7 +98,7 @@ of them.
 | `BG_BUILD` | `server` (set by `pnpm build:server`) |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | `pk_test_…` on test, `pk_live_…` on production (from the GitHub variable `CLERK_PUBLISHABLE_KEY`) |
 | `NEXT_PUBLIC_DATA_SOURCE` | `api` (the workflows set it; unset = the sample data) |
-| `NEXT_PUBLIC_SITE_ORIGIN` | the site's origin, for share images and canonical links: production `APP_URL`; test the service's Railway address, which the workflow finds (or creates) before it builds |
+| `NEXT_PUBLIC_SITE_ORIGIN` | the site's origin, for share images and canonical links: the GitHub variable `APP_URL`: `https://between-gigs.com` on production, `https://test.between-gigs.com` on test |
 
 **Runtime** (Railway service `web`, `.railway/railway.ts`; server only, never in the browser):
 
@@ -108,7 +108,7 @@ of them.
 | `COMPANY_OS_TENANT` | `between-gigs-dev` on test, `between-gigs` on production (N-13) | the IaC |
 | `COMPANY_OS_READ_TOKEN` | `cos_svc_…`, a read identity (role `public_reader`): public pages | workflow, from the GitHub secret |
 | `COMPANY_OS_SUBMIT_TOKEN` | `cos_svc_…`, a submit identity (role `form_submitter`, mode `submit`): public forms | workflow, from the GitHub secret |
-| `APP_URL` | the site's origin, `https://…`, no trailing slash (test: the Railway domain) | workflow |
+| `APP_URL` | the site's origin, `https://…`, no trailing slash (test: `https://test.between-gigs.com`) | workflow, from the GitHub variable `APP_URL` |
 | `COOKIE_SIGNING_SECRET` | random, different per environment: signs the preview's and the gate's cookies | workflow, from the GitHub secret |
 | `TEST_GATE_PASSPHRASE` | test only: the passphrase in front of the test site | workflow, from the GitHub secret |
 | `NODE_ENV`, `PORT`, `HOSTNAME` | `production`, `3000`, `0.0.0.0` | the IaC |
@@ -129,7 +129,7 @@ one-time import below.
 3. **GitHub environments** in this repo (Settings → Environments), created before the first run:
    - `test`: secrets `RAILWAY_TOKEN` (the test project token), `COMPANY_OS_READ_TOKEN`, `COMPANY_OS_SUBMIT_TOKEN`,
      `TEST_GATE_PASSPHRASE` (your choice, at least 12 characters) and `COOKIE_SIGNING_SECRET` (`openssl rand -hex 32`);
-     variables `CLERK_PUBLISHABLE_KEY` (`pk_test_…`),
+     variables `APP_URL` (`https://test.between-gigs.com`), `CLERK_PUBLISHABLE_KEY` (`pk_test_…`),
      `RAILWAY_PROJECT_NAME` (`Between Gigs OS`), `RAILWAY_REGION` (`us-east4-eqdc4a`).
    - `production`: the same names with production values (`pk_live_…`, the production token and
      identities, its own `COOKIE_SIGNING_SECRET`), plus the variable `APP_URL` (`https://between-gigs.com`), and
@@ -145,15 +145,18 @@ one-time import below.
        secrets.
 4. **`company-os.json`:** replace the placeholder with the Company OS release that carries the bg-2 work and delete
    its `todo` line. Cut release and the production deploy refuse the placeholder; test deploys only warn.
-5. **Order** (rule E9): Company OS *Deploy API (test)* → this repo's *Deploy web (test)* → put the printed address
-   in Company OS `test-between-gigs`'s `APP_URL` and deploy the API (test) again → test the flows →
-   Company OS *Deploy API (prod)* → *Cut release* here (bump `package.json`'s version first) → *Deploy web (prod)*
-   from that tag. Rollback: deploy the previous tag.
+5. **Order** (rule E9): first, in Railway, attach `test.between-gigs.com` to `web` (a CNAME plus the
+   `_railway-verify.test` TXT record exactly as Railway shows them; the TXT value starts `railway-verify=`) and set
+   `APP_URL` (`https://test.between-gigs.com`) in the `test` environments of both repos. Then Company OS *Deploy API
+   (test)* → this repo's *Deploy web (test)* (it ends with a check from outside that the address serves the gated
+   site) → test the flows → Company OS *Deploy API (prod)* → *Cut release* here (bump `package.json`'s version first)
+   → *Deploy web (prod)* from that tag. Rollback: deploy the previous tag. Then remove the generated
+   `*.up.railway.app` domain from `web`.
 
    On test, Company OS's `APP_URL` starts as the placeholder `https://placeholder.invalid` (its runbook
-   `customer-environments.md` §8 step 3). Until the API is deployed the second time with the real address, every
+   `customer-environments.md` §8 step 3). Until the API is deployed with the real address, every
    email it sends (invitations, form notifications) links to `placeholder.invalid`, and it refuses invitation
-   redirects to this site. Send no test email before that second deploy; one sent earlier has a dead link and
+   redirects to this site. Send no test email before that deploy; one sent earlier has a dead link and
    must be sent again.
 6. **The first Super Admins** (owner's decision), at go-live, once production's `api` has `APP_URL` set to the
    real domain: the operator invites **Peter, Patti and the owner** as Super Admins, one call each, and hands each
@@ -250,6 +253,9 @@ The export holds real people's data: never commit it, attach it to an issue or k
   any branch, and a run uses that branch's workflow file with the `test` environment's secrets in scope. The guard is
   GitHub's, not the workflow's: the owner must restrict the `test` environment's *Deployment branches* to `main` and
   `companyos` (step 3 of the setup above). Until then, anyone who can push a branch can read the test secrets.
+- **The test deploy's last check cannot prove the live build is this commit.** `scripts/smoke-test-address.mjs` shows
+  that `APP_URL` serves the gated site (401 gate page, `/healthz/` 200) from outside, but `/healthz/` reports no
+  commit, so on a re-run it can pass against the previous instance while the new one is still starting.
 - **IPv6 callers each get their own rate-limit bucket.** The public-form limit keys on the full `X-Real-IP`, and one
   IPv6 client controls a whole /64, so it can rotate addresses and never hit the limit. To do: key IPv6 by its /64, add
   a global ceiling for the form routes, and evict past 10,000 keys (the map's current cap). Company OS's submit

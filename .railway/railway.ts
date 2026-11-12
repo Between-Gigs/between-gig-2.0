@@ -6,8 +6,8 @@
  * - No source: Railway never deploys by itself. The workflow builds and checks the server on GitHub
  *   (`pnpm build:server`), then uploads the bundle from scripts/make-bundle.mjs with `railway up`; Railway only runs
  *   its Dockerfile (the prebuilt standalone server, nothing installed or built there).
- * - Public: test gets a Railway-generated *.up.railway.app domain from the workflow; production gets the customer's
- *   domain by hand (APP_URL).
+ * - Public: each environment gets its custom domain attached to `web` by hand (test: test.between-gigs.com;
+ *   production: between-gigs.com); the workflows read it from the GitHub variable APP_URL.
  * - It reaches the private API over Railway's internal network; `${{api.…}}` resolves against the api service's own
  *   variables. The API never gets a public address.
  * - Secrets are `preserve()`: written by the workflow from the GitHub Environment, never in git. The Clerk
