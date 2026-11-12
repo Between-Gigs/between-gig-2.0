@@ -6,7 +6,7 @@ import { asset } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Wallpapers & background art",
-  description: "Download the Between Gigs invitation artwork and the Los Angeles Call Sheet backgrounds.",
+  description: "Download the Between Gigs invitation artwork, Crew Call film set and Los Angeles Call Sheet backgrounds.",
   robots: { index: false, follow: false },
 };
 
@@ -29,6 +29,19 @@ const invitation: Artwork[] = [
     file: "craft-invitation-portrait.jpg", title: "Invitation portrait",
     alt: "Portrait arrangement of the invitation’s craft tools and wedding photograph around a clear ivory center.",
     width: 979, height: 1280,
+  },
+];
+
+const crewCall: Artwork[] = [
+  {
+    file: "crew-call-desktop.jpg", title: "Desktop",
+    alt: "A sunlit film set framed by the Between Gigs director’s chair, a studio light and equipment cases.",
+    width: 1920, height: 1080,
+  },
+  {
+    file: "crew-call-portrait.jpg", title: "Portrait",
+    alt: "A portrait adaptation of the Crew Call set, with the branded director’s chair and equipment case framing a sunlit wall.",
+    width: 1080, height: 1920,
   },
 ];
 
@@ -115,6 +128,11 @@ export default function WallpapersPage() {
           <h2 id="invitation-art" className="font-display text-heading-lg text-ink">The craft invitation</h2>
           <p className="mt-2 max-w-2xl text-body-md text-ink-muted">The invitation’s original portrait composition and a widescreen companion, both with a clear center.</p>
           <FormatPair items={invitation} collection="The craft invitation" />
+        </section>
+        <section aria-labelledby="crew-call-art" className="mt-14 border-t border-line pt-8 sm:mt-16 swiss:border-t-4 swiss:border-line-strong">
+          <h2 id="crew-call-art" className="font-display text-heading-lg text-ink">Crew Call film set</h2>
+          <p className="mt-2 max-w-2xl text-body-md text-ink-muted">The sunlit film set from Crew Call, in a widescreen crop and a portrait adaptation.</p>
+          <FormatPair items={crewCall} collection="Crew Call film set" />
         </section>
         <section aria-labelledby="call-sheet-art" className="mt-14 border-t border-line pt-8 sm:mt-16 swiss:border-t-4 swiss:border-line-strong">
           <h2 id="call-sheet-art" className="font-display text-heading-lg text-ink">Los Angeles Call Sheet</h2>
