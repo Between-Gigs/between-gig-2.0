@@ -262,3 +262,27 @@ export async function handleUpload(req: Request, deps: Deps = {}): Promise<Respo
     return failure(e);
   }
 }
+
+/**
+ * auth.signUp: open sign-up for a verified Clerk account. The body is exactly `{ name, acceptedTerms: true }` (not the
+ * `{ args }` envelope); Company OS gets the trimmed name and every document it lists, so no version lives here.
+ */
+export async function handleSignup(req: Request, deps: Deps = {}): Promise<Response> {
+  if (req.method !== "POST") return json(405, { error: "method not allowed" });
+  if (!(req.headers.get("content-type") ?? "").toLowerCase().startsWith("application/json")) return json(415, { error: "unsupported media type" });
+  const token = bearer(req);
+  if (!token) return json(401, { error: "unauthorized" });
+  const raw = await readCapped(req, 4096);
+  if (!raw) return json(413, { error: "too large" });
+  let body: unknown;
+  try { body = JSON.parse(new TextDecoder().decode(raw) || "null"); } catch { return json(400, { error: "invalid body" }); }
+  const b = body && typeof body === "object" && !Array.isArray(body) ? (body as Record<string, unknown>) : null;
+  const name = b && typeof b.name === "string" ? b.name.trim() : "";
+  if (!b || Object.keys(b).length !== 2 || b.acceptedTerms !== true || !name || name.length > 200) return json(400, { error: "invalid body" });
+  try {
+    const { cos, appUrl } = deps.cos ? { cos: deps.cos, appUrl: deps.appUrl ?? "" } : fromEnv();
+    return json(200, { result: await gigs.signUp({ cos, cred: { kind: "session", token }, appUrl }, name) });
+  } catch (e) {
+    return failure(e);
+  }
+}

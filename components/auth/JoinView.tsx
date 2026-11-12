@@ -17,7 +17,7 @@ import { GoogleSignup } from "./GoogleSignup";
 import { ClerkSlot } from "./ClerkSlot";
 import { displayName, GateSkeleton, homeFor, SignedInPanel, useLeave, useSignedInGate } from "./SignedIn";
 
-/** Open signup, with an optional invite to prefill the email and retain its attribution. Live, invite-only: InviteJoin. */
+/** Open signup, with an optional invite to prefill the email and retain its attribution. Live: InviteJoin (open sign-up for Gigsters, or an invitation ticket). */
 /** Longest full name: it heads the public page and becomes the profile link (live slugs are capped at 60). */
 const NAME_MAX = 60;
 

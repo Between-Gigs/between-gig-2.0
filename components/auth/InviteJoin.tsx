@@ -5,8 +5,8 @@ import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
-import { ButtonLink } from "@/components/ui/ButtonLink";
 import { clerkEnabled } from "@/lib/auth/clerk";
+import { useAuthActions } from "@/lib/auth/context";
 import { useSession } from "@/lib/session";
 import { basePath } from "@/lib/site";
 import { AuthShell } from "./AuthShell";
@@ -14,43 +14,66 @@ import { ClerkSlot } from "./ClerkSlot";
 import { SignedInPanel, useSignedInGate } from "./SignedIn";
 
 /**
- * /join live: invite-only (Company OS decision N-05). The invitation email's link carries Clerk's ticket
- * (`__clerk_ticket`), which already proves the address: the person gives their name and agrees to the terms, then
- * Clerk's sign-up takes the ticket and finishes the account. Without a ticket there is nothing to join yet.
+ * /join live: open sign-up for Gigsters. With the invitation email's link (Clerk's ticket, `__clerk_ticket`) the address is
+ * already proven; without one Clerk's public sign-up proves it. Either way: name and terms, Clerk's sign-up, then Company OS
+ * registers the account (the app's bridge calls /api/auth/signup; a login that arrives without a name finishes here).
  */
 export function InviteJoin() {
   const ticket = useSearchParams().get("__clerk_ticket") ?? "";
   const [resume, setResume] = React.useState(false);
   // Clerk owns its hash routes (a verification step after a reload): mount its sign-up so it can carry on.
   React.useEffect(() => { setResume(clerkEnabled && window.location.hash.startsWith("#/")); }, []); // eslint-disable-line react-hooks/set-state-in-effect
+  // Signed in with Clerk but not registered yet (Google from the login page, say): finish with the name and terms.
+  const { onboarding } = useAuthActions();
   // Already signed in: who they are and Log out, instead of a sign-up they don't need.
   const gate = useSignedInGate();
+  if (onboarding) return <Details key={onboarding.email} ticket={!!ticket} finish={onboarding} />;
   if (resume) return <TicketSignUp />;
   if (gate) return <AuthShell header="Sign up" steps={false}><SignedInPanel session={gate} /></AuthShell>;
-  if (!ticket || !clerkEnabled) return <InviteOnly />;
-  return <Details />;
+  if (!clerkEnabled) return <Unavailable />;
+  return <Details ticket={!!ticket} />;
 }
 
-function Details() {
-  const [name, setName] = React.useState("");
+const finishError: Record<string, string> = {
+  email_not_verified: "Verify your email address first, then try again.",
+  email_linked_to_other_login: "That email already belongs to another login. Contact us and we'll sort it out.",
+  signup_disabled: "Sign-up is closed right now. Please try again later.",
+  consent_required: "The terms changed while you were signing up. Reload the page and try again.",
+};
+
+function Details({ ticket, finish }: { ticket: boolean; finish?: NonNullable<ReturnType<typeof useAuthActions>["onboarding"]> }) {
+  const router = useRouter();
+  const [name, setName] = React.useState(finish?.name ?? "");
+  const [busy, setBusy] = React.useState(false);
+  const [failed, setFailed] = React.useState("");
   const [terms, setTerms] = React.useState(false);
   const [errors, setErrors] = React.useState<{ name?: string; terms?: string }>({});
   const [next, setNext] = React.useState(false);
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const found: typeof errors = {};
     if (!name.trim()) found.name = "Enter your full name, as you'd like clients to see it.";
     if (!terms) found.terms = "Agree to the Terms of Use and Privacy Policy to continue.";
     setErrors(found);
-    if (!Object.keys(found).length) setNext(true);
+    if (Object.keys(found).length) return;
+    if (!finish) { setNext(true); return; }
+    setBusy(true);
+    setFailed("");
+    try {
+      await finish.finish({ name: name.trim(), acceptTerms: true });
+      router.replace("/profile/canvas/");
+    } catch (err) {
+      setFailed(finishError[(err as { code?: string }).code ?? ""] ?? "Your setup could not be completed. Try again.");
+      setBusy(false);
+    }
   };
   if (next) return <TicketSignUp name={name.trim()} />;
   return (
     <AuthShell header="Sign up"
       lead={<p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
       <h1 className="font-display text-heading-lg text-balance text-ink">Create your account</h1>
-      <p className="mt-2 text-body-md text-pretty text-ink-muted">Your invitation confirms your email. Tell us your name to get started.</p>
-      <form noValidate onSubmit={submit} className="mt-8 grid gap-5">
+      <p className="mt-2 text-body-md text-pretty text-ink-muted">{ticket ? "Your invitation confirms your email. Tell us your name to get started." : finish ? `You're signed in as ${finish.email}. Tell us your name to finish.` : "Tell us your name, then we'll confirm your email."}</p>
+      <form noValidate onSubmit={(e) => void submit(e)} className="mt-8 grid gap-5">
         <Field label="Full name" error={errors.name}>
           <Input value={name} autoComplete="name" autoFocus onChange={(e) => { setName(e.target.value); setErrors((x) => ({ ...x, name: undefined })); }} />
         </Field>
@@ -61,7 +84,8 @@ function Details() {
             description="You can ask us to delete your account at any time." />
           {errors.terms && <p id="terms-error" className="pl-7.5 text-body-sm text-danger">{errors.terms}</p>}
         </div>
-        <Button type="submit" variant="primary" size="lg" fullWidth className="glow-hover swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm" iconEnd={<ArrowRight />}>Continue</Button>
+        {failed && <Banner tone="danger" title="We couldn't finish">{failed}</Banner>}
+        <Button type="submit" variant="primary" size="lg" fullWidth loading={busy} className="glow-hover swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm" iconEnd={<ArrowRight />}>Continue</Button>
         <p className="text-body-md text-ink">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-bold text-ink underline underline-offset-4">Log in</Link></p>
       </form>
     </AuthShell>
@@ -89,19 +113,12 @@ function TicketSignUp({ name }: { name?: string }) {
   );
 }
 
-function InviteOnly() {
+function Unavailable() {
   return (
     <AuthShell header="Sign up" steps={false}>
-      <div className="grid gap-6">
-        <div>
-            <h1 className="font-display text-heading-lg text-balance text-ink">Joining is by invitation</h1>
-            <p className="mt-2 text-body-md text-pretty text-ink-muted">Open the link in your invitation email to create your account. No invitation yet? Get on the call sheet and we'll email you when it's your turn.</p>
-        </div>
-        <Banner tone="info" title="Already joined?">Log in with the email your invitation was sent to.</Banner>
-        <div className="grid gap-3 border-t border-line pt-6">
-          <ButtonLink href="/login/" variant="primary" size="lg" fullWidth className="swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm" iconEnd={<ArrowRight />}>Log in</ButtonLink>
-          <div><ButtonLink href="/professionals/" size="lg">Get on the call sheet</ButtonLink></div>
-        </div>
+      <div className="grid gap-4">
+        <h1 className="font-display text-heading-lg text-balance text-ink">Sign-up isn&apos;t available</h1>
+        <p className="text-body-md text-pretty text-ink-muted">Sign-in couldn&apos;t load. Reload the page, or <Link href="/login/" className="text-link underline underline-offset-2">log in</Link> if you already joined.</p>
       </div>
     </AuthShell>
   );

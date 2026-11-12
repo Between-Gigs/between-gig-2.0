@@ -166,7 +166,7 @@ export interface ExternalIdentity {
 
 export type SyncExternalResult =
   | { ok: true; session: Session; created: boolean }
-  | { ok: false; error: "unknown-email" | "invite-mismatch" | "terms" };
+  | { ok: false; error: "unknown-email" | "invite-mismatch" | "terms" | "needs-signup" };
 
 export type SignInResult =
   | { ok: true; session: Session }
