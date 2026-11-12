@@ -5,6 +5,12 @@
 /* Site designs share semantic tokens and the independent Day/Night preference. */
 @import "../styles/look-swiss.css";
 @import "../styles/look-friendly.css";
+@import "../styles/look-call-sheet.css";
+@import "../styles/look-modern.css";
+@import "../styles/modern-auth.css";
+@import "../styles/modern-editor.css";
+@import "../styles/modern-owners.css";
+@import "../styles/look-options.css";
 
 /* Tailwind scans the vendored components for the classes they use. */
 @source "../packages/design-system/src";

@@ -1,0 +1,15 @@
+/* A small sample of each design in the chooser; appearance stays identifiable in every surrounding theme. */
+.look-option {
+  display: grid; align-content: center; justify-items: start; gap: 3px;
+  width: 1.875rem; height: 1.875rem; padding: 5px;
+  border: 1px solid var(--swatch-line); border-radius: var(--swatch-radius, 5px);
+  background: var(--swatch-surface);
+}
+.look-option::before, .look-option::after { content: ""; display: block; border-radius: inherit; }
+.look-option::before { width: 80%; height: 3px; background: var(--swatch-ink); }
+.look-option::after { width: 54%; height: 5px; background: var(--swatch-accent); }
+.look-option[data-option="friendly"] { --swatch-surface: #fbf8f2; --swatch-ink: #0f3d29; --swatch-accent: #f2bf97; --swatch-line: #cbbda8; --swatch-radius: 9px; }
+.look-option[data-option="classic"] { --swatch-surface: #eef5f0; --swatch-ink: #13392b; --swatch-accent: #41d795; --swatch-line: #9fb9a9; }
+.look-option[data-option="swiss"] { --swatch-surface: #fff; --swatch-ink: #101210; --swatch-accent: #1fdc8c; --swatch-line: #101210; --swatch-radius: 0; }
+.look-option[data-option="call-sheet"] { --swatch-surface: #09261b; --swatch-ink: #c6f7de; --swatch-accent: #40e499; --swatch-line: #376c51; }
+.look-option[data-option="modern"] { --swatch-surface: #f7f8f7; --swatch-ink: #15231c; --swatch-accent: #99edc9; --swatch-line: #c7d2ca; --swatch-radius: 4px; }

@@ -12,7 +12,8 @@ function readLook(): Look {
     const saved = localStorage.getItem(lookKey);
     if (isLook(saved)) return saved;
   } catch { /* Storage is optional. */ }
-  return defaultLook;
+  const entry = document.documentElement.dataset.entryLook ?? null;
+  return isLook(entry) ? entry : defaultLook;
 }
 
 function subscribe(onChange: () => void) {
@@ -35,6 +36,13 @@ export function useLook() {
 }
 
 export function selectLook(look: Look) {
+  // A shared theme link is an entry point. A later manual choice must still survive refresh.
+  const url = new URL(window.location.href);
+  if (url.searchParams.has("look")) {
+    url.searchParams.delete("look");
+    window.history.replaceState(window.history.state, "", url);
+  }
+  delete document.documentElement.dataset.entryLook;
   try {
     localStorage.setItem(lookKey, look);
     unsaved = undefined;
@@ -48,7 +56,8 @@ export function LookSync() {
   useLayoutEffect(() => {
     // During hydration the server snapshot is the default. Keep the pre-paint choice until React catches up.
     document.documentElement.toggleAttribute("data-brand-page", isBrandPage(pathname));
-    if (hasSiteLook(pathname)) document.documentElement.dataset.look = readLook();
+    const active = readLook();
+    if (hasSiteLook(pathname, active)) document.documentElement.dataset.look = active;
     else delete document.documentElement.dataset.look;
   }, [pathname, look]);
   return null;

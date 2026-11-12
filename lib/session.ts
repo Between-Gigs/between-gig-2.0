@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { isLocalSampleSession } from "@/lib/auth/sample-session";
 import { useAuthActions } from "@/lib/auth/context";
 import { data, type Session } from "@/lib/data";
 
@@ -17,5 +18,5 @@ export function useSession() {
     void refresh(); // eslint-disable-line react-hooks/set-state-in-effect
     return data.auth.onChange(() => void refresh());
   }, [refresh]);
-  return { session, loading: loading || auth.loading, refresh };
+  return { session, loading: loading || (auth.loading && !isLocalSampleSession(data.kind, session)), refresh };
 }

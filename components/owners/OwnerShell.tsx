@@ -1,14 +1,18 @@
 "use client";
-import { IconButton, Input, Menu, cx } from "@ds/components";
+import { useLook } from "@/components/site/LookSync";
+import { Drawer, IconButton, Input, Logo, Menu, ThemeToggle, cx } from "@ds/components";
 import { initials } from "@ds/components/Avatar";
-import { Ellipsis, Inbox, LayoutDashboard, ListChecks, LogOut, Mail, PanelLeftClose, PanelLeftOpen, Search, Users, X, type LucideIcon } from "lucide-react";
+import { Ellipsis, Inbox, LayoutDashboard, ListChecks, LogOut, Mail, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Search, Users, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import { data, type DashboardSummary } from "@/lib/data";
 import { useAuthActions } from "@/lib/auth/context";
 import { useSession } from "@/lib/session";
+import { LookSwitcher } from "@/components/site/LookSwitcher";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { Icon3D } from "@/components/ui/Icon3D";
+import type { Icon3DName } from "@/lib/icons3d";
 import { markArea } from "@/lib/split-area";
 import { SAMPLE_OWNER } from "@/lib/data/fields";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
@@ -19,20 +23,20 @@ markArea("bg-split:dashboard");
 export const COLLAPSED_KEY = "bg2-owner-nav-collapsed";
 
 type CountKey = "review" | "people" | "waitlist";
-interface Item { href: string; label: string; icon: LucideIcon; exact?: boolean; count?: CountKey; hint?: string; short?: string }
+interface Item { href: string; label: string; icon: LucideIcon; art: Icon3DName; exact?: boolean; count?: CountKey; hint?: string; short?: string }
 
 /** The owners' sections, grouped by the job: see the day, look after Gigsters, talk to people. */
 const sections: { title: string; items: Item[] }[] = [
-  { title: "Overview", items: [{ href: "/owners/", label: "Dashboard", icon: LayoutDashboard, exact: true }] },
+  { title: "Overview", items: [{ href: "/owners/", label: "Dashboard", icon: LayoutDashboard, art: "house", exact: true }] },
   {
     title: "Gigsters",
     items: [
-      { href: "/owners/review/", label: "Review queue", short: "Review", icon: Inbox, count: "review", hint: "waiting for review" },
-      { href: "/owners/people/", label: "People", icon: Users, count: "people", hint: "invited so far" },
-      { href: "/owners/waitlist/", label: "Waitlist", icon: ListChecks, count: "waitlist", hint: "not invited yet" },
+      { href: "/owners/review/", label: "Review queue", short: "Review", icon: Inbox, art: "eyes", count: "review", hint: "waiting for review" },
+      { href: "/owners/people/", label: "People", icon: Users, art: "handshake", count: "people", hint: "invited so far" },
+      { href: "/owners/waitlist/", label: "Waitlist", icon: ListChecks, art: "hourglass_done", count: "waitlist", hint: "not invited yet" },
     ],
   },
-  { title: "Messages", items: [{ href: "/emails/", label: "Emails", icon: Mail }] },
+  { title: "Messages", items: [{ href: "/emails/", label: "Emails", icon: Mail, art: "envelope" }] },
 ];
 
 function countsFrom(d: DashboardSummary): Record<CountKey, number> {
@@ -72,6 +76,10 @@ export function OwnerShell({ children, section, fit = false }: { children: React
  * so it's right from the first paint; `[` toggles it.
  */
 export function OwnerFrame({ children, section: fixed, fit: fixedFit = false }: { children: React.ReactNode; section?: string; fit?: boolean }) {
+  const look = useLook();
+  const brand = look !== "swiss";
+  const modern = look === "modern";
+  const [drawer, setDrawer] = React.useState(false);
   const pathname = usePathname();
   const [section, setSection] = React.useState<string | undefined>(fixed);
   const [fit, setFit] = React.useState(fixedFit);
@@ -106,15 +114,16 @@ export function OwnerFrame({ children, section: fixed, fit: fixedFit = false }: 
     return () => removeEventListener("keydown", onKey);
   }, [toggle]);
 
+  const Navigation = brand ? CardNavigation : OwnerNav;
   const openSearch = () => { toggle(false); requestAnimationFrame(() => search.current?.focus()); };
 
   return (
     <FrameContext.Provider value={ctx}>
-      <div className="flex h-dvh flex-col bg-bg text-ink">
-        <SiteHeader app />
+      <div data-modern-owner={modern ? "" : undefined} className="flex h-dvh flex-col bg-bg text-ink">
+        {modern ? <ModernOwnerToolbar onOpenNav={() => setDrawer(true)} /> : <SiteHeader app onOpenNav={brand ? () => setDrawer(true) : undefined} />}
         <div className="flex min-h-0 flex-1">
-          <nav aria-label="Owner workspace" className="hidden embedded:hidden! w-60 shrink-0 flex-col border-r border-line bg-bg lg:flex nav-collapsed:w-18">
-            <OwnerNav counts={counts} section={section} searchRef={search} onOpenSearch={openSearch}
+          <nav aria-label="Owner workspace" className={cx("hidden embedded:hidden! shrink-0 flex-col border-r border-line lg:flex nav-collapsed:w-18", brand ? "w-66 bg-tint-sand" : "w-60 bg-bg")}>
+            <Navigation counts={counts} section={section} searchRef={search} onOpenSearch={openSearch}
               toggle={
                 <>
                   <span className="nav-collapsed:hidden"><IconButton variant="ghost" size="sm" onClick={() => toggle(true)} label="Collapse sidebar ([)" icon={<PanelLeftClose />} /></span>
@@ -122,16 +131,19 @@ export function OwnerFrame({ children, section: fixed, fit: fixedFit = false }: 
                 </>
               } />
           </nav>
+          {brand && <Drawer side="left" open={drawer} onClose={() => setDrawer(false)} title="Owner workspace">
+            <CardNavigation drawer counts={counts} section={section} onNavigate={() => setDrawer(false)} />
+          </Drawer>}
           <main ref={main} id="main" tabIndex={-1} className={cx("flex min-w-0 flex-1 flex-col overflow-y-auto outline-none", fit && "lg:overflow-hidden")}>
             {/* Big screens (3xl): the page widens to 96rem rather than floating as a 1280px island in the middle. */}
-            <div className={cx("mx-auto w-full max-w-7xl flex-1 3xl:max-w-(--breakpoint-2xl) px-4 pt-4 sm:px-6 lg:px-10", fit ? "pb-8 lg:flex lg:min-h-0 lg:flex-col lg:pb-4" : "pb-16")}>
-              <TopLine section={section} />
+            <div className={cx("mx-auto w-full max-w-7xl flex-1 3xl:max-w-(--breakpoint-2xl) px-4 pt-4 sm:px-6 lg:px-10", brand && "pt-6", fit ? "pb-8 lg:flex lg:min-h-0 lg:flex-col lg:pb-4" : "pb-16")}>
+              {!brand && <TopLine section={section} />}
               {children}
             </div>
             <p className={cx("mx-auto w-full max-w-7xl shrink-0 3xl:max-w-(--breakpoint-2xl) px-4 text-caption text-ink-muted sm:px-6 lg:px-10", fit ? "pb-6 lg:pb-3" : "pb-6")}>Sample data: everyone shown here is fictional.</p>
           </main>
         </div>
-        <TabBar counts={counts} section={section} />
+        {!brand && <TabBar counts={counts} section={section} />}
       </div>
     </FrameContext.Provider>
   );
@@ -182,6 +194,17 @@ function useFind(onDone?: () => void) {
   return { q, setQ, find };
 }
 
+function ModernOwnerToolbar({ onOpenNav }: { onOpenNav: () => void }) {
+  const { q, setQ, find } = useFind();
+  return <header className="mo-toolbar embedded:hidden!">
+    <IconButton label="Open owner menu" variant="ghost" onClick={onOpenNav} icon={<MenuIcon />} className="lg:hidden" />
+    <Link href="/" aria-label="Between Gigs home" className="mo-logo"><Logo height={24} /></Link>
+    <form role="search" onSubmit={find}><Input type="search" size="sm" aria-label="Search people" placeholder="Search people by name or email…" start={<Search />} value={q} onChange={event => setQ(event.target.value)} /></form>
+    <time>{new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</time>
+    <LookSwitcher compact /><ThemeToggle size="sm" showLabel={false} />
+  </header>;
+}
+
 /** Which nav entry the page is in: the one passed in, else the longest matching href. */
 function useActive(section?: string) {
   const pathname = usePathname();
@@ -197,6 +220,50 @@ function useSignOut() {
     await auth.signOut();
     if (auth.provider === "sample") router.push("/login/?signedOut=1");
   };
+}
+
+function CardNavigation({ counts, section, toggle, searchRef, onOpenSearch, onNavigate, drawer = false }: {
+  counts: Record<CountKey, number> | null; section?: string; toggle?: React.ReactNode;
+  searchRef?: React.Ref<HTMLInputElement>; onOpenSearch?: () => void; onNavigate?: () => void; drawer?: boolean;
+}) {
+  const modern = useLook() === "modern";
+  const active = useActive(section);
+  const { q, setQ, find } = useFind(onNavigate);
+  const rail = (classes: string) => drawer ? "" : classes;
+
+  return (
+    <div data-modern-rail={modern ? "" : undefined} className={cx("flex min-h-0 flex-1 flex-col gap-4", !drawer && "py-3")}>
+      {!drawer && (
+        <div className="flex h-9 items-center justify-between gap-2 pr-2 pl-5 nav-collapsed:justify-center nav-collapsed:px-0">
+          <span className="truncate text-label-md text-ink-muted nav-collapsed:hidden">{modern ? <><b className="block text-ink">Owners</b><small>Between Gigs team</small></> : "Owner workspace"}</span>
+          {toggle}
+        </div>
+      )}
+
+      {(!modern || drawer) && <form role="search" onSubmit={find} className={cx(!drawer && "px-3", rail("nav-collapsed:hidden"))}>
+        <Input ref={searchRef} type="search" size="sm" aria-label="Find a person" placeholder="Find a person…" start={<Search />}
+          value={q} onChange={(e) => setQ(e.target.value)} />
+      </form>}
+      {!drawer && !modern && <div className="hidden justify-center nav-collapsed:flex"><IconButton variant="ghost" label="Find a person" icon={<Search />} onClick={onOpenSearch} /></div>}
+
+      <div className={cx("no-scrollbar grid min-h-0 flex-1 content-start gap-5 overflow-x-hidden overflow-y-auto", !drawer && "px-3", rail("nav-collapsed:justify-items-center nav-collapsed:gap-3"))}>
+        {sections.map((s) => (
+          <div key={s.title} className={cx("grid gap-1", rail("nav-collapsed:border-t nav-collapsed:border-line nav-collapsed:pt-3 nav-collapsed:first:border-0 nav-collapsed:first:pt-0"))}>
+            <span className={cx("px-3 pb-1 text-label-sm text-ink-subtle", rail("nav-collapsed:hidden"))}>{s.title}</span>
+            {s.items.map((i) => {
+              const n = i.count && counts ? counts[i.count] : undefined;
+              return (
+                <NavLink key={i.href} item={i} count={n} active={active(i)} onNavigate={onNavigate} drawer={drawer}
+                  attention={i.count === "review" && !!n} />
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      <Account drawer={drawer} />
+    </div>
+  );
 }
 
 function OwnerNav({ counts, section, toggle, searchRef, onOpenSearch }: {
@@ -234,11 +301,23 @@ function OwnerNav({ counts, section, toggle, searchRef, onOpenSearch }: {
 }
 
 /** Who is signed in, and signing out: the foot of the sidebar (collapsed, just the sign-out button). */
-function Account() {
+function Account({ drawer = false }: { drawer?: boolean } = {}) {
+  const brand = useLook() !== "swiss";
+  const rail = (classes: string) => drawer ? "" : classes;
   const { session } = useSession();
   const signOut = useSignOut();
   if (!session) return null;
   const name = (session.name || session.email).replace(/\s*\(.*\)$/, "");
+  if (brand) return (
+    <div className={cx("flex items-center gap-3 rounded-lg bg-surface p-3 shadow-xs", !drawer && "mx-3", rail("nav-collapsed:mx-auto nav-collapsed:flex-col nav-collapsed:gap-2 nav-collapsed:bg-transparent nav-collapsed:p-0 nav-collapsed:shadow-none"))}>
+      <span title={`${name} · ${session.email}`} aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full bg-tint-peach font-display text-label-md text-tint-ink">{initials(name)}</span>
+      <div className={cx("grid min-w-0 flex-1", rail("nav-collapsed:hidden"))}>
+        <span className="truncate text-label-md text-ink">{name}</span>
+        <span className="truncate text-caption text-ink-subtle">{session.email}</span>
+      </div>
+      <IconButton variant="ghost" size="sm" label="Log out" icon={<LogOut />} onClick={() => void signOut()} />
+    </div>
+  );
   return (
     <div className="mx-4 flex items-center gap-3 border-t border-line pt-3 nav-collapsed:mx-auto nav-collapsed:border-0 nav-collapsed:pt-0">
       <div title={`${name} · ${session.email}`} className="grid min-w-0 flex-1 nav-collapsed:hidden">
@@ -330,9 +409,37 @@ function PhoneSearch() {
  * One sidebar row: line icon, label, what the number counts, and the count right-aligned. The current page is
  * a solid black block. Collapsed, it's an icon with the count in its name and a dot when reviews are waiting.
  */
-function NavLink({ item: i, count, active, attention }: { item: Item; count?: number; active: boolean; attention: boolean }) {
+function NavLink({ item: i, count, active, attention, drawer = false, onNavigate }: { item: Item; count?: number; active: boolean; attention: boolean; drawer?: boolean; onNavigate?: () => void }) {
+  const look = useLook();
+  const brand = look !== "swiss";
   const name = count !== undefined && i.hint ? `${i.label}, ${count} ${i.hint}` : i.label;
   const Icon = i.icon;
+  if (brand) return (
+    <Link href={i.href} onClick={onNavigate} aria-current={active ? "page" : undefined} aria-label={name} title={name}
+      className={cx(
+        "group flex min-h-12 items-center gap-3 rounded-lg px-3 py-1.5 text-label-md transition-colors duration-fast",
+        !drawer && "nav-collapsed:size-12 nav-collapsed:min-h-12 nav-collapsed:justify-center nav-collapsed:p-0",
+        active ? "bg-surface-selected font-bold text-ink" : "text-ink-muted hover:bg-surface-hover hover:text-ink",
+      )}>
+      <span className="relative inline-flex">
+        {look === "modern" ? <Icon aria-hidden="true" className="size-4" /> : <Icon3D name={i.art} className="size-7" />}
+        {attention && <span aria-hidden="true" className={cx("absolute -top-1 -right-1 hidden size-2.5 rounded-full border-2 border-tint-sand bg-ink", !drawer && "nav-collapsed:block")} />}
+      </span>
+      <span aria-hidden="true" className={cx("grid min-w-0 flex-1", !drawer && "nav-collapsed:hidden")}>
+        <span className="truncate text-body-md font-bold">{i.label}</span>
+        {/* Says what the number counts, so 476 on the Waitlist isn't read as everyone on it. */}
+        {i.hint && <span className="truncate text-caption text-ink-subtle">{i.hint}</span>}
+      </span>
+      {i.count && (
+        <span aria-hidden="true" className={cx("inline-flex min-w-9 justify-end", !drawer && "nav-collapsed:hidden")}>
+          {count !== undefined && (
+            <span className={cx("inline-flex h-6 min-w-8 items-center justify-center rounded-full px-2.5 text-label-sm font-extrabold tabular-nums",
+              attention ? "bg-tint-peach text-tint-ink" : "bg-surface text-ink ring-1 ring-line")}>{count > 999 ? "999+" : count}</span>
+          )}
+        </span>
+      )}
+    </Link>
+  );
   return (
     <Link href={i.href} aria-current={active ? "page" : undefined} aria-label={name} title={name}
       className={cx(

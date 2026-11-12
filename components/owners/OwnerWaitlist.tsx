@@ -121,7 +121,7 @@ function Waitlist() {
 
   return (
     <OwnerShell>
-      <OwnerPage title="Waitlist" kicker="The call sheet" meta={counts ? total : "–"}
+      <OwnerPage title="Waitlist" icon="hourglass_done" kicker="The call sheet" meta={counts ? total : "–"}
         description="Everyone who got on the call sheet, and where they are with their invite. Pick people and send their personal “Create your profile” link.">
       {/* One line: search, invite status (with counts), interest and order. On phones they wrap. */}
       <div className="flex flex-wrap items-center gap-2">

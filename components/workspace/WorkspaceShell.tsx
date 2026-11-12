@@ -1,4 +1,5 @@
 "use client";
+import { LookSwitcher } from "@/components/site/LookSwitcher";
 import { Button, CommandPalette, Drawer, IconButton, Kbd, Logo, Menu, Modal, Popover, ThemeToggle, cx, useCommandShortcut, type Command, type MenuEntry } from "@ds/components";
 import { Bell, Check, ChevronsUpDown, CircleHelp, FileText, FolderOpen, FolderPlus, History, LayoutGrid, MessageSquare, Moon, PanelLeft, PanelRight, Rocket, RotateCcw, Search, Star } from "lucide-react";
 import Link from "next/link";
@@ -106,7 +107,7 @@ export function WorkspaceShell({ project, crumb, sidebar, sidebarTitle, inspecto
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-bg text-ink">
-      <header className="flex h-14 shrink-0 items-center gap-1.5 border-b border-line bg-surface px-2 sm:gap-2 sm:px-3">
+      <header data-call-sheet-stage="toolbar" className="flex h-14 shrink-0 items-center gap-1.5 border-b border-line bg-surface px-2 sm:gap-2 sm:px-3">
         <IconButton label="Open the left bar" variant="ghost" icon={<PanelLeft />} className="lg:hidden" onClick={() => setLeftDrawer(true)} />
         <Link href="/workspace/" aria-label="Workspace home" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md px-1"><Logo layout="mark" height={24} /><span className="text-label-md text-ink max-md:sr-only">Workspace</span></Link>
         <span aria-hidden="true" className="h-6 w-px shrink-0 bg-line max-sm:hidden" />
@@ -127,6 +128,7 @@ export function WorkspaceShell({ project, crumb, sidebar, sidebarTitle, inspecto
         <IconButton label={left ? "Hide the left bar ([)" : "Show the left bar ([)"} variant="ghost" icon={<PanelLeft />} pressed={left} className="max-lg:hidden" onClick={toggleLeft} />
         {inspector && <IconButton label={right ? "Hide details (])" : "Show details (])"} variant="ghost" icon={<PanelRight />} pressed={right} className="max-xl:hidden" onClick={toggleRight} />}
         {inspector && <IconButton label="Show details" variant="ghost" icon={<PanelRight />} className="xl:hidden" onClick={() => setRightDrawer(true)} />}
+        <span className="hidden sm:inline-flex"><LookSwitcher compact /></span>
         <span data-ws-theme="" className="inline-flex max-sm:hidden"><ThemeToggle size="sm" showLabel={false} /></span>
       </header>
 

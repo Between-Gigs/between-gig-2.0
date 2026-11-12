@@ -179,7 +179,7 @@ export function startCurtain(host: HTMLElement, params: () => CurtainParams): Cu
   const ro = new ResizeObserver(() => { size(); draw(performance.now()); });
   ro.observe(host);
   const mo = new MutationObserver(() => { readInk(); draw(performance.now()); });
-  mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "data-look"] });
   host.addEventListener("pointermove", move, { passive: true });
   return {
     stop: () => { if (raf) cancelAnimationFrame(raf); ro.disconnect(); mo.disconnect(); host.removeEventListener("pointermove", move); canvas.remove(); },

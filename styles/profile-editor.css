@@ -1,0 +1,63 @@
+/* Warm and Classic use the v4 editor's compact toolbar, tinted next step and raised checklist.
+   These hooks surround the same editing controls, form state and accessible progress value as Swiss. */
+:root:not([data-look=swiss], [data-look=modern]):has([data-profile-editor]) {
+  [data-stage] {
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  [data-stage] > div > div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+    padding-block: 0.875rem;
+    border: 0;
+  }
+  [data-stage] p:has(+ div [role=progressbar]) { align-items: baseline; gap: 0.375rem; }
+  [data-stage] p:has(+ div [role=progressbar]) span { font-size: var(--text-label-md); line-height: 1.4; }
+  [data-stage] p:has(+ div [role=progressbar]) > span:last-child { padding-bottom: 0; }
+  [data-stage] div:has(> [role=progressbar]) { flex: 1 1 13rem; }
+  [data-stage] [role=progressbar] { overflow: hidden; gap: 2px; border-radius: var(--radius-xl); }
+  [data-stage] [role=progressbar] > span { height: 0.5rem; border: 0; background-color: var(--surface-sunken); }
+  [data-stage] [role=progressbar] > .bg-ink { background-color: var(--action); }
+  [data-stage] [role=progressbar] > .bg-tint-mint { background-color: var(--ink-brand); }
+  [data-stage] [role=tablist] { border-radius: var(--radius-xl); background: var(--surface-sunken); }
+  [data-stage] [role=tab], [data-stage] button { border-radius: var(--radius-lg); }
+
+  [data-profile-editor] section[aria-labelledby=next-h] {
+    margin-bottom: 2rem;
+    border-radius: var(--radius-xl);
+    background: var(--tint-butter);
+    color: var(--tint-ink);
+  }
+  [data-profile-editor] section[aria-labelledby=next-h] button {
+    border-radius: var(--radius-md);
+  }
+
+  [data-profile-editor] [aria-labelledby=rail-h] {
+    padding: 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+  [data-profile-editor] [aria-labelledby=rail-h] li { border: 0; }
+  [data-profile-editor] [aria-labelledby=rail-h] button { border-radius: var(--radius-md); }
+  [data-profile-editor] [aria-labelledby=rail-h] button.bg-ink {
+    background: var(--tint-butter);
+    color: var(--tint-ink);
+  }
+  [data-profile-editor] [aria-labelledby=rail-h] button > span:first-child { border-radius: 50%; }
+  [data-profile-editor] [data-spot-edit] { border-radius: var(--radius-md); }
+  [data-profile-editor] [data-spot-edit]:not(.absolute):not([aria-pressed=true]) { border-style: dashed; }
+  [data-profile-editor] [data-spot=photo] [data-spot-edit] > span {
+    border-radius: var(--radius-xl);
+    border: 2px dashed var(--line-strong);
+    background: var(--surface);
+  }
+  [data-profile-editor] [data-spot=photo] [data-spot-edit] > span > svg { display: none; }
+  [data-profile-editor] [data-spot=photo] [data-spot-edit] > span > span { border: 0; }
+  [data-profile-editor] [data-spot=photo] [data-spot-edit] > span > span:last-child { background: var(--surface-selected); }
+  [data-editor] { border-radius: var(--radius-xl); border-color: var(--line); box-shadow: var(--shadow-lg); }
+  [data-editor][data-dock] { border-radius: var(--radius-xl) var(--radius-xl) 0 0; }
+}

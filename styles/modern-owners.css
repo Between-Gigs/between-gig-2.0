@@ -1,0 +1,478 @@
+/* Direction E's desktop console: a compact rail, pale mint light across the greeting,
+   four metric cards and a review table next to a narrower activity column. */
+:root[data-look="modern"] {
+  [data-modern-owner] {
+    --owner-rail: clamp(12rem, 17.5vw, 15.5rem);
+    --owner-accent: light-dark(#115137, #60dba2);
+    --owner-mint: light-dark(#c9f8e2, #1e4331);
+    --owner-mono: var(--font-mono, monospace);
+  }
+  &[data-owner-nav="collapsed"] [data-modern-owner] {
+    --owner-rail: 4.5rem;
+  }
+  .mo-toolbar {
+    display: flex;
+    align-items: center;
+    flex: none;
+    gap: 0.5rem;
+    height: 3.25rem;
+    padding-inline: 1rem;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .mo-logo {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    flex: 0 0 calc(var(--owner-rail) - 0.5rem);
+  }
+  .mo-toolbar form {
+    flex: 1;
+    max-width: 36rem;
+  }
+  .mo-toolbar time {
+    margin-left: auto;
+    white-space: nowrap;
+    font: 0.75rem var(--owner-mono);
+    color: var(--ink-muted);
+  }
+  [data-modern-owner] nav[aria-label="Owner workspace"] {
+    width: var(--owner-rail);
+    background: var(--bg);
+  }
+  [data-modern-rail] {
+    gap: 1rem;
+  }
+  [data-modern-rail] > div:first-child:has(b) {
+    height: auto;
+    min-height: 3.5rem;
+    padding-block: 0.4rem;
+  }
+  [data-modern-rail] > .no-scrollbar {
+    gap: 0.2rem;
+  }
+  [data-modern-rail] > .no-scrollbar > div > span {
+    display: none;
+  }
+  [data-modern-rail] a {
+    min-height: 2.5rem;
+    border-radius: 0.4rem;
+  }
+  [data-modern-rail] a[aria-current="page"] {
+    background: var(--surface);
+    box-shadow: 0 1px 4px color-mix(in oklab, var(--ink) 12%, transparent);
+  }
+  [data-modern-rail] a > span:nth-child(2) > span:first-child {
+    font-size: 0.875rem;
+    font-weight: 550;
+  }
+  [data-modern-rail] a > span:nth-child(2) > span:nth-child(2) {
+    display: none;
+  }
+  [data-modern-rail] a > span:nth-child(3) > span {
+    background: none;
+    box-shadow: none;
+    font: 0.75rem var(--font-mono, monospace);
+  }
+  [data-modern-rail] > div:last-child {
+    margin-top: auto;
+  }
+  [data-modern-owner] main:has(.mo-dashboard) {
+    background:
+      radial-gradient(42rem 13rem at 0% 0%, color-mix(in oklab, var(--owner-mint) 50%, transparent), transparent 80%),
+      var(--bg);
+  }
+  [data-modern-owner] main:has(.mo-dashboard) > div {
+    padding: clamp(1rem, 2.5vw, 2.5rem);
+  }
+  .mo-dashboard {
+    max-width: 86rem;
+    margin-inline: auto;
+  }
+  .mo-greeting {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .mo-greeting h1 {
+    font: 650 clamp(1.65rem, 2.25vw, 2.65rem) / 1.12 var(--font-display);
+    letter-spacing: -0.055em;
+  }
+  .mo-greeting p {
+    margin-top: 0.45rem;
+    color: var(--ink-muted);
+    font-size: 0.9375rem;
+  }
+  .mo-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .mo-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.7rem;
+    margin-bottom: 1.25rem;
+  }
+  .mo-stats > button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    min-width: 0;
+    min-height: clamp(7.3rem, 9.6vw, 9.3rem);
+    padding: clamp(0.75rem, 1.15vw, 1.1rem);
+    border: 1px solid var(--line);
+    border-radius: 0.65rem;
+    background: var(--surface);
+    color: var(--ink);
+    text-align: left;
+  }
+  .mo-stats > button:hover {
+    border-color: var(--line-strong);
+  }
+  .mo-stats > button[aria-selected="true"] {
+    background: linear-gradient(0deg, var(--owner-mint), transparent 45%), var(--surface);
+    border-color: color-mix(in oklab, var(--owner-accent) 38%, var(--line));
+    box-shadow: 0 2px 0 var(--owner-accent);
+  }
+  .mo-stat-label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 580;
+    color: var(--ink-muted);
+  }
+  .mo-stat-label small {
+    padding: 0.05rem 0.35rem;
+    border-radius: 0.35rem;
+    background: var(--warning-soft);
+    color: var(--warning);
+    font: 0.65rem var(--owner-mono);
+    white-space: nowrap;
+  }
+  .mo-stats strong {
+    font: 620 clamp(1.8rem, 2.4vw, 2.8rem) / 1.1 var(--font-display);
+    letter-spacing: -0.055em;
+  }
+  .mo-stats strong small {
+    font: 0.8rem var(--owner-mono);
+    color: var(--ink-muted);
+  }
+  .mo-hint {
+    color: var(--ink-muted);
+    font-size: 0.75rem;
+    line-height: 1.3;
+  }
+  .mo-trend {
+    display: flex;
+    gap: 3px;
+    align-items: end;
+    height: 1rem;
+  }
+  .mo-trend i {
+    width: 0.4rem;
+    min-height: 2px;
+    background: var(--owner-accent);
+    border-radius: 1px;
+  }
+  .mo-meter {
+    width: 100%;
+    height: 0.35rem;
+    background: var(--surface-sunken);
+    border-radius: 3rem;
+    overflow: hidden;
+  }
+  .mo-meter i {
+    display: block;
+    height: 100%;
+    background: var(--owner-accent);
+  }
+  .mo-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 2.1fr) minmax(16rem, 0.95fr);
+    align-items: start;
+    gap: 0.8rem;
+  }
+  .mo-panel {
+    overflow: hidden;
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: 0.65rem;
+    background: var(--surface);
+  }
+  .mo-panel > header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0.8rem;
+    min-height: 3.15rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .mo-panel h2 {
+    margin-right: auto;
+    font: 620 0.98rem/1.25 var(--font-display);
+    letter-spacing: -0.035em;
+  }
+  .mo-queue h2 span {
+    display: inline-block;
+    padding: 0.14rem 0.4rem;
+    margin-left: 0.2rem;
+    vertical-align: middle;
+    background: var(--owner-accent);
+    color: light-dark(white, #062719);
+    font: 0.69rem var(--owner-mono);
+    border-radius: 0.3rem;
+  }
+  .mo-panel [role="radiogroup"] {
+    gap: 0;
+    padding: 2px;
+  }
+  .mo-panel [role="radio"],
+  .mo-queue > header a {
+    min-height: 1.8rem;
+    padding: 0.25rem 0.45rem;
+    font-size: 0.73rem;
+  }
+  .mo-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 4.4rem 4.3rem 3.7rem;
+    position: relative;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 4.2rem;
+    padding: 0.5rem 0.85rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .mo-row-labels {
+    min-height: 2rem;
+    color: var(--ink-subtle);
+    background: var(--bg);
+    font: 0.64rem var(--owner-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .mo-row[data-first] {
+    box-shadow: inset 2px 0 var(--owner-accent);
+    background: linear-gradient(90deg, color-mix(in oklab, var(--owner-mint) 60%, var(--surface)), var(--surface));
+  }
+  .mo-row:has(button:hover) {
+    background-color: var(--surface-hover);
+  }
+  .mo-row .mo-person {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+  }
+  .mo-person > :first-child {
+    flex: none;
+    border-radius: 50%;
+  }
+  .mo-person > span:last-child {
+    min-width: 0;
+  }
+  .mo-person button,
+  .mo-person b,
+  .mo-person small {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+  }
+  .mo-person button,
+  .mo-person b {
+    font-size: 0.89rem;
+    font-weight: 650;
+  }
+  .mo-person button::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+  .mo-row:focus-within {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+  .mo-person small {
+    color: var(--ink-muted);
+    font-size: 0.76rem;
+  }
+  .mo-row time,
+  .mo-complete {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font: 0.73rem var(--owner-mono);
+  }
+  .mo-row time svg {
+    width: 0.8rem;
+    height: 0.8rem;
+  }
+  .mo-row .mo-wait {
+    color: var(--warning);
+  }
+  .mo-complete i {
+    position: relative;
+    display: inline-block;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+  }
+  .mo-complete i::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: var(--surface);
+  }
+  .mo-row-action {
+    justify-self: end;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid var(--line);
+    border-radius: 0.35rem;
+  }
+  [data-first] .mo-row-action {
+    background: var(--owner-accent);
+    color: light-dark(white, #062719);
+  }
+  .mo-panel footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0.85rem;
+    color: var(--ink-muted);
+    font-size: 0.75rem;
+  }
+  .mo-panel footer button {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .mo-empty,
+  .mo-funnel {
+    padding: 1rem;
+    color: var(--ink-muted);
+  }
+  .mo-side {
+    display: grid;
+    gap: 0.8rem;
+  }
+  .mo-feed [data-fit-group] h3 {
+    padding: 0.25rem 0.4rem 0;
+    font-size: 0.69rem;
+    font-weight: 500;
+  }
+  .mo-feed [data-fit] {
+    align-items: center;
+    min-height: 3.4rem;
+    padding: 0.3rem 0.4rem;
+    gap: 0.55rem;
+  }
+  .mo-feed [data-fit]::before {
+    border-top: 1px solid var(--line);
+  }
+  .mo-feed [data-fit] p {
+    font-size: 0.8rem;
+    line-height: 1.2rem;
+  }
+  .mo-feed [data-fit] time {
+    font: 0.65rem var(--owner-mono);
+  }
+  .mo-reminder {
+    padding: 1rem;
+    border-radius: 0.6rem;
+    background: linear-gradient(120deg, #092e1f, #144a35);
+    color: #effaf3;
+  }
+  .mo-reminder h2 {
+    font: 600 1rem/1.4 var(--font-display);
+  }
+  .mo-reminder p {
+    margin: 0.35rem 0 0.85rem;
+    color: #c8e0d1;
+    font-size: 0.85rem;
+  }
+  .mo-reminder button {
+    background: #56e5a4;
+    color: #082b1d;
+  }
+  @media (width < 64rem) {
+    .mo-toolbar {
+      padding-inline: 0.65rem;
+    }
+    .mo-logo {
+      flex: 1;
+    }
+    .mo-toolbar form {
+      display: none;
+    }
+    .mo-columns {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .mo-side {
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+      align-items: start;
+    }
+  }
+  @media (width < 48rem) {
+    .mo-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .mo-greeting {
+      align-items: start;
+      gap: 0.7rem;
+    }
+    .mo-stat-label {
+      font-size: 0.75rem;
+    }
+    .mo-toolbar time {
+      display: none;
+    }
+    .mo-panel [role="radio"],
+    .mo-queue > header a,
+    .mo-panel footer button {
+      min-height: 2.75rem;
+    }
+    .mo-queue > header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .mo-queue > header a {
+      grid-area: 1 / 2;
+    }
+    .mo-queue > header [role="radiogroup"] {
+      grid-column: 1 / -1;
+      justify-self: start;
+    }
+    .mo-row {
+      grid-template-columns: minmax(0, 1fr) 3.7rem 3.35rem;
+      gap: 0.35rem;
+      padding-inline: 0.6rem;
+    }
+    .mo-row > :nth-child(4) {
+      display: none;
+    }
+    .mo-queue .mo-person button {
+      min-height: 0;
+    }
+    .mo-panel.mo-queue footer:has(button) {
+      padding-block: 0;
+    }
+  }
+  @media (width < 25rem) {
+    .mo-row {
+      grid-template-columns: minmax(0, 1fr) 3.55rem 3.05rem;
+    }
+  }
+}

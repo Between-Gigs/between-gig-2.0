@@ -19,6 +19,7 @@ export function VersionHistory() {
       <ol className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-12 sm:px-6">
         {versions.map((v) => {
           const open = v.current || olderVersionsOnline;
+          const profileUrl = versionUrl(v, v.profile ?? "/p/maya/");
           return (
             <li key={v.n} className="grid gap-5 border-t-4 border-line-strong pt-5 md:grid-cols-12 md:gap-x-6">
               <div className="md:col-span-2">
@@ -35,10 +36,10 @@ export function VersionHistory() {
                   {open
                     ? <a href={versionUrl(v, "/")} className="inline-flex min-h-11 items-center gap-2 font-display text-label-md font-semibold text-ink underline decoration-2 underline-offset-4">{v.current ? "Open the current site" : `Open v${v.n}`}<ArrowUpRight aria-hidden="true" className="size-4" /></a>
                     : <span className="text-body-sm text-ink-subtle">Older versions open on the preview site.</span>}
-                  {open && !v.current && <a href={versionUrl(v, "/p/maya/")} className="inline-flex min-h-11 items-center text-label-md text-ink-muted underline underline-offset-4 hover:text-ink">Its public profile</a>}
+                  {open && !v.current && <a href={profileUrl} className="inline-flex min-h-11 items-center text-label-md text-ink-muted underline underline-offset-4 hover:text-ink">Its public profile</a>}
                 </div>
               </div>
-              <a href={open ? versionUrl(v, "/p/maya/") : undefined} aria-hidden="true" tabIndex={-1} className="block overflow-hidden border-2 border-line-strong md:col-span-4">
+              <a href={open ? profileUrl : undefined} aria-hidden="true" tabIndex={-1} className="block overflow-hidden border-2 border-line-strong md:col-span-4">
                 <img src={asset(`/versions/v${v.n}.jpg`)} alt="" loading="lazy" className="aspect-video w-full object-cover object-top" />
               </a>
             </li>

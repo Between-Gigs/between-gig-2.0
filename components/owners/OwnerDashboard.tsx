@@ -1,6 +1,8 @@
 "use client";
+import { useLook } from "@/components/site/LookSync";
 import { Button, SegmentedControl, Skeleton, cx } from "@ds/components";
 import { ArrowRight, Mail, Plus } from "lucide-react";
+import { Icon3D } from "@/components/ui/Icon3D";
 import * as React from "react";
 import { data, type DashboardSummary, type PersonStatus, type PersonSummary, type Session, type WaitlistRow } from "@/lib/data";
 import { waitlistCategoryLabel } from "@/lib/data/taxonomy";
@@ -11,6 +13,7 @@ import { shortDate } from "./format";
 import { FunnelCompact } from "./Funnel";
 import { EmptyNote, forestButton, Meter, OwnerAvatar, OwnerPage, Panel, PanelLink, Row, RowHead, rowListRule, RowSkeletons, StatTab, useFitList } from "./kit";
 import { OwnerGate } from "./OwnerGate";
+import { ModernDashboard, sortReviewers, type ModernSort } from "./ModernDashboard";
 import { OwnerShell } from "./OwnerShell";
 import { isHeld } from "./hold";
 import { PersonDrawer } from "./PersonDrawer";
@@ -26,7 +29,8 @@ const daysSince = (iso?: string) => (iso ? Math.max(0, Math.floor((Date.now() - 
 const firstName = (s: Session) => { const n = s.name.replace(/\s*\(.*\)$/, "").trim().split(" ")[0]; return n && n !== "Owner" ? n : ""; };
 
 /** What the main list shows. The first four are the headline tabs; the funnel can also pick "invited" and "building". */
-type View = "submitted" | "changes_requested" | "approved" | "not_invited" | "invited" | "building";
+export type DashboardView = "submitted" | "changes_requested" | "approved" | "not_invited" | "invited" | "building";
+type View = DashboardView;
 const views: Record<View, { title: string; empty: string; more: { href: string; label: string }; statuses?: PersonStatus[] }> = {
   submitted: { title: "Waiting for review", empty: "Nobody is waiting. New submissions appear here, oldest first.", more: { href: "/owners/review/", label: "Open the review queue" }, statuses: ["submitted"] },
   changes_requested: { title: "Making edits", empty: "Nobody is making edits right now.", more: { href: "/owners/people/?status=changes_requested", label: "See them in People" }, statuses: ["changes_requested"] },
@@ -57,6 +61,10 @@ export function OwnerDashboard() {
 }
 
 function Dashboard({ session }: { session: Session }) {
+  const look = useLook();
+  const brand = look !== "swiss";
+  const modern = look === "modern";
+  const [sort, setSort] = React.useState<ModernSort>("oldest");
   const [d, setD] = React.useState<DashboardSummary | null>(null);
   const [people, setPeople] = React.useState<PersonSummary[]>([]);
   const [waitlist, setWaitlist] = React.useState<WaitlistRow[]>([]);
@@ -78,21 +86,23 @@ function Dashboard({ session }: { session: Session }) {
 
   const name = firstName(session);
   const v = views[view];
-  const rows = d ? rowsFor(view, d, people, cohort === "invited") : [];
+  const filteredRows = d ? rowsFor(view, d, people, cohort === "invited") : [];
+  const rows = modern && view === "submitted" ? sortReviewers(filteredRows, sort) : filteredRows;
   const count = view === "not_invited" ? waitlist.length : rows.length;
   const pick = (next: View, nextCohort: "all" | "invited" = "all") => { setView(next); setCohort(nextCohort); setExpanded(false); };
   // No scrollbars: each list shows the rows that fit its card and says how many more there are.
-  const [listRef, listHidden] = useFitList([view, count, d]);
-  const [sideRef] = useFitList([side, d]);
+  const [listRef, listHidden] = useFitList([view, count, d, look]);
+  const [sideRef] = useFitList([side, d, look]);
 
   // After a decision (or Undo): refresh everything, and keep the drawer on the same slot of its now shorter list.
   const refreshAfterDecision = async () => {
     const { summary, all } = await load();
     setDrawer((cur) => {
       if (!cur) return cur;
-      const list = cur.from === "one"
+      const freshRows = cur.from === "one"
         ? cur.rows.map((r) => all.find((x) => x.person.id === r.person.id)).filter((r): r is PersonSummary => !!r)
         : rowsFor(cur.from, summary, all, cur.invitedOnly);
+      const list = modern && cur.from === "submitted" ? sortReviewers(freshRows, sort) : freshRows;
       return list.length ? { ...cur, rows: list, index: Math.min(cur.index, list.length - 1) } : null;
     });
   };
@@ -103,35 +113,60 @@ function Dashboard({ session }: { session: Session }) {
 
   if (!d) return <OwnerShell fit><DashboardSkeleton /></OwnerShell>;
 
+  if (modern) {
+    const reviewQueue = rowsFor("submitted", d, people);
+    const review = () => {
+      setSort("oldest");
+      pick("submitted");
+      if (reviewQueue.length) setDrawer({ rows: reviewQueue, index: 0, from: "submitted" });
+    };
+    return (
+      <OwnerShell>
+        <ModernDashboard summary={d} people={people} waitlist={waitlist} reviewQueue={reviewQueue} rows={rows} greeting={`${greeting()}${name ? `, ${name}` : ""}`}
+          view={view} cohort={cohort} title={v.title} empty={v.empty} more={v.more} sort={sort} onSort={setSort}
+          onPick={pick} onReview={review} onActivity={openPerson}
+          onRow={index => setDrawer({ rows, index, from: view, invitedOnly: cohort === "invited" })} />
+        <PersonDrawer rows={drawer?.rows ?? []} index={drawer ? drawer.index : null}
+          onIndex={index => setDrawer(cur => cur ? { ...cur, index } : cur)} onClose={() => setDrawer(null)} onChanged={refreshAfterDecision} />
+      </OwnerShell>
+    );
+  }
+
   const oldest = daysSince(d.reviewQueue[0]?.person.submittedAt);
   const photos = new Map(people.map((r) => [r.person.id, r.fields?.photo || undefined]));
 
+  const listMore = (
+    <>
+      <PanelLink href={v.more.href}>{cohort === "invited" ? "Browse everyone at this status" : v.more.label}</PanelLink>
+      {listHidden > 0 && <span className="text-body-sm text-ink-muted tabular-nums">+{listHidden} more</span>}
+    </>
+  );
+  const sideSwitch = <SegmentedControl label="Show" size="sm" value={side} onChange={(x) => setSide(x as "activity" | "funnel")}
+    className={brand ? undefined : "mb-2 self-start"}
+    options={[{ value: "activity", label: "Activity" }, { value: "funnel", label: "Funnel" }]} />;
+
   return (
     <OwnerShell fit>
-      <OwnerPage fit hero kicker={today()} title={`${greeting()}${name ? `, ${name}` : ""}.`}
-        description={d.counts.submitted ? `${d.counts.submitted} ${d.counts.submitted === 1 ? "Gigster is" : "Gigsters are"} waiting for your review.` : "Nothing is waiting for review. Enjoy the quiet."}
+      <OwnerPage fit hero icon="waving_hand" kicker={today()} title={`${greeting()}${name ? `, ${name}` : ""}${brand ? "" : "."}`}
+        description={<>{brand && <span className="max-sm:hidden">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · </span>}{d.counts.submitted ? `${d.counts.submitted} ${d.counts.submitted === 1 ? "Gigster is" : "Gigsters are"} waiting for your review.` : "Nothing is waiting for review. Enjoy the quiet."}</>}
         actions={
           <>
-            {d.reviewQueue.length > 0 && <Button variant="strong" size="lg" className={forestButton} iconEnd={<ArrowRight />} onClick={() => { pick("submitted"); setDrawer({ rows: d.reviewQueue, index: 0, from: "submitted" }); }}>Start reviewing</Button>}
-            <ButtonLink href="/owners/waitlist/?status=not_invited" variant="secondary" size="lg" className="border-2" iconEnd={<Plus />}>Invite people</ButtonLink>
+            {d.reviewQueue.length > 0 && <Button variant={brand ? "primary" : "strong"} size={brand ? "md" : "lg"} className={brand ? "order-2" : forestButton} iconEnd={<ArrowRight />} onClick={() => { pick("submitted"); setDrawer({ rows: d.reviewQueue, index: 0, from: "submitted" }); }}>Start reviewing</Button>}
+            <ButtonLink href="/owners/waitlist/?status=not_invited" variant="secondary" size={brand ? "md" : "lg"} className={brand ? undefined : "border-2"} iconStart={brand ? <Mail /> : undefined} iconEnd={brand ? undefined : <Plus />}>Invite people</ButtonLink>
           </>
         }>
-        <div role="tablist" aria-label="At a glance" className="grid shrink-0 grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 xl:grid-cols-10">
-          <div className="col-span-2 sm:col-span-1 xl:col-span-3"><StatTab controls="dash-list" label="Waiting for review" value={d.counts.submitted} hint={d.counts.submitted ? `Oldest waiting ${oldest} ${oldest === 1 ? "day" : "days"}` : "oldest first"} attention={d.counts.submitted > 0} selected={cohort === "all" && view === "submitted"} onSelect={() => pick("submitted")} /></div>
-          <div className="xl:col-span-2"><StatTab controls="dash-list" label="Making edits" value={d.counts.changes_requested} hint="sent back with notes" selected={cohort === "all" && view === "changes_requested"} onSelect={() => pick("changes_requested")} /></div>
-          <div className="xl:col-span-2"><StatTab controls="dash-list" label="Live profiles" value={d.counts.approved} hint="clients can find them" selected={cohort === "all" && view === "approved"} onSelect={() => pick("approved")} /></div>
-          <div className="col-span-2 sm:col-span-1 xl:col-span-3"><StatTab controls="dash-list" label="Ready to invite" value={d.waitlist.not_invited} hint={`${d.waitlist.not_invited} of ${d.waitlist.total} on the waitlist`} suffix={`/${d.waitlist.total}`} selected={cohort === "all" && view === "not_invited"} onSelect={() => pick("not_invited")} /></div>
+        <div role="tablist" aria-label="At a glance" className={brand ? "grid shrink-0 grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4" : "grid shrink-0 grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 xl:grid-cols-10"}>
+          <div className={brand ? "contents" : "col-span-2 sm:col-span-1 xl:col-span-3"}><StatTab tone="peach" icon={<Icon3D name="eyes" className="size-9 sm:size-12" />} controls="dash-list" label="Waiting for review" value={d.counts.submitted} hint={d.counts.submitted ? `Oldest waiting ${oldest} ${oldest === 1 ? "day" : "days"}` : "oldest first"} attention={d.counts.submitted > 0} selected={cohort === "all" && view === "submitted"} onSelect={() => pick("submitted")} /></div>
+          <div className={brand ? "contents" : "xl:col-span-2"}><StatTab tone="butter" icon={<Icon3D name="memo" className="size-9 sm:size-12" />} controls="dash-list" label="Making edits" value={d.counts.changes_requested} hint="sent back with notes" selected={cohort === "all" && view === "changes_requested"} onSelect={() => pick("changes_requested")} /></div>
+          <div className={brand ? "contents" : "xl:col-span-2"}><StatTab tone="mint" icon={<Icon3D name="party_popper" className="size-9 sm:size-12" />} controls="dash-list" label="Live profiles" value={d.counts.approved} hint="clients can find them" selected={cohort === "all" && view === "approved"} onSelect={() => pick("approved")} /></div>
+          <div className={brand ? "contents" : "col-span-2 sm:col-span-1 xl:col-span-3"}><StatTab tone="sage" icon={<Icon3D name="envelope" className="size-9 sm:size-12" />} controls="dash-list" label="Ready to invite" value={d.waitlist.not_invited} hint={`${d.waitlist.not_invited} of ${d.waitlist.total} on the waitlist`} suffix={brand ? `of ${d.waitlist.total}` : `/${d.waitlist.total}`} meter={d.waitlist.total ? d.waitlist.not_invited / d.waitlist.total : 0} selected={cohort === "all" && view === "not_invited"} onSelect={() => pick("not_invited")} /></div>
         </div>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-x-6 gap-y-8 lg:grid-cols-10">
+        <div className={brand ? "grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-12" : "grid min-h-0 flex-1 grid-cols-1 gap-x-6 gap-y-8 lg:grid-cols-10"}>
           <Panel className="min-h-0 lg:col-span-7" number="01" title={cohort === "invited" ? `${v.title} · Invited people` : v.title} flush bodyClassName="flex min-h-0 flex-col"
             count={<><span aria-hidden="true">{count}</span><span className="sr-only">{count} {count === 1 ? "person" : "people"}</span></>}
-            aside={
-              <>
-                {listHidden > 0 && <span className="text-body-sm text-ink-muted tabular-nums">+{listHidden} more</span>}
-                <PanelLink href={v.more.href}>{cohort === "invited" ? "Browse everyone at this status" : v.more.label}</PanelLink>
-              </>
-            }>
+            aside={brand ? undefined : listMore}
+            footer={brand ? <div className="flex flex-wrap items-center justify-between gap-2">{listMore}</div> : undefined}>
             <div ref={listRef} id="dash-list" role="tabpanel" aria-label={v.title} className="@container min-h-0 flex-1 lg:overflow-hidden">
               {count === 0 ? (
                 <EmptyNote size="sm" headingLevel={3} title="Nothing here">{v.empty}</EmptyNote>
@@ -158,7 +193,7 @@ function Dashboard({ session }: { session: Session }) {
                       return (
                         <Row key={p.id} onOpen={() => setDrawer({ rows, index: i, from: view, invitedOnly: cohort === "invited" })} title={p.name || p.email}
                           className={cx(i >= PHONE_ROWS && !expanded && "max-lg:hidden")}
-                          leading={<OwnerAvatar id={p.id} name={p.name} src={r.fields?.photo || undefined} className="size-12 @md:size-16" textClass="text-heading-sm" />}
+                          leading={<OwnerAvatar id={p.id} name={p.name} src={r.fields?.photo || undefined} className="size-12 swiss:@md:size-16" textClass="text-heading-sm" />}
                           badge={view === "building" ? <PersonStatusBadge status={p.status} size="sm" /> : undefined}
                           subtitle={r.fields?.position ? [r.fields.position, r.fields.areas.join(" · ")].filter(Boolean).join(" · ") : p.email}
                           action={view === "submitted" ? "Review" : "Open"} strong={view === "submitted" && i === 0}
@@ -178,10 +213,9 @@ function Dashboard({ session }: { session: Session }) {
           </Panel>
 
           {/* One section for the right column: what just happened, or how the invites are going. */}
-          <Panel className="min-h-0 lg:col-span-3" number="02" flush bodyClassName="flex min-h-0 flex-col"
-            title={side === "activity" ? "Recent activity" : "From invite to live"}>
-            <SegmentedControl label="Show" size="sm" value={side} onChange={(x) => setSide(x as "activity" | "funnel")} className="mb-2 self-start"
-              options={[{ value: "activity", label: "Activity" }, { value: "funnel", label: "Funnel" }]} />
+          <Panel className={brand ? "min-h-0 lg:col-span-5" : "min-h-0 lg:col-span-3"} number="02" flush bodyClassName="flex min-h-0 flex-col"
+            title={side === "activity" ? "Recent activity" : "From invite to live"} aside={brand ? sideSwitch : undefined}>
+            {!brand && sideSwitch}
             <div ref={sideRef} className="min-h-0 flex-1 lg:overflow-hidden">
               {side === "activity"
                 ? <>
@@ -207,6 +241,21 @@ function Dashboard({ session }: { session: Session }) {
 
 /** The dashboard's shape while it loads: the same header, tabs and panels, so nothing moves when data arrives. */
 function DashboardSkeleton() {
+  const brand = useLook() !== "swiss";
+  if (brand) return (
+    <div aria-busy="true" aria-label="Loading dashboard" className="flex min-h-0 flex-1 flex-col">
+      <div aria-hidden="true" className="grid min-h-11 gap-2"><Skeleton className="h-9 w-72" /><Skeleton className="h-4 w-80" /></div>
+      <div aria-hidden="true" className="mt-6 flex min-h-0 flex-1 flex-col gap-6">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+          {(["bg-tint-peach", "bg-tint-butter", "bg-tint-mint-soft", "bg-tint-sage"] as const).map((t) => <div key={t} className={cx("grid min-h-32 content-between rounded-lg p-5 sm:min-h-36", t)}><Skeleton className="h-4 w-32" /><Skeleton className="h-10 w-14" /></div>)}
+        </div>
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-12">
+          <div className="overflow-hidden rounded-xl bg-surface shadow-sm ring-1 ring-line/70 lg:col-span-7"><div className="h-16" /><RowSkeletons count={5} /></div>
+          <div className="overflow-hidden rounded-xl bg-surface shadow-sm ring-1 ring-line/70 lg:col-span-5"><div className="h-16" /><RowSkeletons count={5} /></div>
+        </div>
+      </div>
+    </div>
+  );
   return (
     <div aria-busy="true" aria-label="Loading dashboard" className="flex min-h-0 flex-1 flex-col">
       <div aria-hidden="true" className="grid gap-3"><Skeleton className="h-3 w-48" /><Skeleton className="h-20 w-full max-w-xl" /><Skeleton className="h-4 w-80" /></div>

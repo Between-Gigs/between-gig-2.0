@@ -1,6 +1,9 @@
 "use client";
+import { useLook } from "@/components/site/LookSync";
 import { Skeleton, cx } from "@ds/components";
-import { ArrowRight, ChevronDown } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronRight } from "lucide-react";
+import { Icon3D } from "@/components/ui/Icon3D";
+import type { Icon3DName } from "@/lib/icons3d";
 import { initials } from "@ds/components/Avatar";
 import Link from "next/link";
 import * as React from "react";
@@ -19,9 +22,12 @@ markArea("bg-split:dashboard");
  * Nothing animates in: content swaps in place, and skeletons have the final shape so nothing shifts.
  */
 
-/** Kept for callers that still name a tone: in this direction every tone is the same quiet grey. */
+/** The pastel tints, in the order avatars and tiles take them. */
+const tints = ["bg-tint-sky", "bg-tint-butter", "bg-tint-peach", "bg-tint-mint-soft", "bg-tint-sage", "bg-tint-sand"] as const;
 export type Tint = "mint" | "peach" | "butter" | "sky" | "sage" | "sand";
-export const tintBg: Record<Tint, string> = { mint: "bg-surface-sunken", peach: "bg-surface-sunken", butter: "bg-surface-sunken", sky: "bg-surface-sunken", sage: "bg-surface-sunken", sand: "bg-surface-sunken" };
+export const tintBg: Record<Tint, string> = { mint: "bg-tint-mint-soft", peach: "bg-tint-peach", butter: "bg-tint-butter", sky: "bg-tint-sky", sage: "bg-tint-sage", sand: "bg-tint-sand" };
+/** A stable tint per person, so someone keeps their colour from list to list. */
+const tintFor = (id: string) => tints[[...id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % tints.length];
 
 /** The one forest button (mint in the dark): the main action of a view. Use with Button/ButtonLink variant="strong". */
 export const forestButton = "dark:bg-action dark:text-on-action dark:hover:bg-action-hover";
@@ -32,13 +38,33 @@ export const eyebrow = "text-label-sm font-bold tracking-widest text-ink-muted u
  * The page header: a small eyebrow, the page's name (huge, flush left) with its count beside it in grey, a
  * friendly line under it, and the actions stacked on the right.
  */
-function PageBar({ title, description, meta, kicker, hero = false, actions, sticky = false }: { title: React.ReactNode; description?: React.ReactNode; meta?: React.ReactNode; kicker?: React.ReactNode; hero?: boolean; actions?: React.ReactNode; sticky?: boolean }) {
+function PageBar({ title, description, meta, icon, kicker, hero = false, actions, sticky = false }: { title: React.ReactNode; description?: React.ReactNode; meta?: React.ReactNode; icon?: Icon3DName; kicker?: React.ReactNode; hero?: boolean; actions?: React.ReactNode; sticky?: boolean }) {
   // Pinned on scrolling pages: once the page moves, it gains a solid surface and a rule, keeping its
   // actions in reach. Its height never changes, so nothing below it jumps.
   const [mark, past] = useScrolledPast<HTMLSpanElement>();
   // In the owner frame the page scrolls under the header; on a public page (emails for visitors) the window
   // scrolls, so the bar pins below the 64px site header.
   const framed = useInOwnerFrame();
+  const brand = useLook() !== "swiss";
+  if (brand) return (
+    <>
+    {sticky && <span ref={mark} aria-hidden="true" className="block h-0" />}
+    <header data-call-sheet-stage="owner" className={cx("flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-3",
+      sticky && (framed ? "top-0" : "top-16"),
+      sticky && "sticky z-sticky -mx-4 px-4 py-2 transition-[background-color,box-shadow] duration-fast sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10",
+      sticky && past && "bg-bg shadow-sm")}>
+      <div className="grid min-w-0 gap-1">
+        <div className="flex min-w-0 items-center gap-3">
+          <h1 className="truncate font-display text-display-sm text-ink">{title}</h1>
+          {icon && <Icon3D name={icon} className="size-9 max-sm:size-8" />}
+          {meta !== undefined && <span className="inline-flex h-7 min-w-8 shrink-0 items-center justify-center rounded-full bg-tint-peach px-2.5 text-label-md text-tint-ink tabular-nums">{meta}</span>}
+        </div>
+        {description && <p className="text-body-md text-ink-muted">{description}</p>}
+      </div>
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+    </header>
+    </>
+  );
   return (
     <>
     {sticky && <span ref={mark} aria-hidden="true" className="block h-0" />}
@@ -60,32 +86,35 @@ function PageBar({ title, description, meta, kicker, hero = false, actions, stic
   );
 }
 
-export function OwnerPage({ title, description, meta, kicker, hero, actions, breadcrumbs, fit = false, children }: {
+export function OwnerPage({ title, description, meta, icon, kicker, hero, actions, breadcrumbs, fit = false, children }: {
   title: React.ReactNode; description?: React.ReactNode; meta?: React.ReactNode;
   /** The small uppercase line above the title (the date on the dashboard). */ kicker?: React.ReactNode;
   /** The dashboard's greeting: the title as a huge display line. */ hero?: boolean;
-  /** Kept for older callers; this direction uses no icon beside the title. */ icon?: string; actions?: React.ReactNode;
+  /** Illustrated mark beside the title in the card layout. */ icon?: Icon3DName; actions?: React.ReactNode;
   breadcrumbs?: React.ReactNode; /** Fill the screen height (with OwnerShell fit): children share what's left. */ fit?: boolean; children: React.ReactNode;
 }) {
+  const brand = useLook() !== "swiss";
   if (fit) {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
-        <PageBar title={title} description={description} meta={meta} kicker={kicker} hero={hero} actions={actions} />
-        <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col gap-10">{children}</div>
+        <PageBar title={title} description={description} meta={meta} icon={icon} kicker={kicker} hero={hero} actions={actions} />
+        <div className={cx("mt-6 flex min-h-0 min-w-0 flex-1 flex-col", brand ? "gap-6" : "gap-10")}>{children}</div>
       </div>
     );
   }
   return (
     <>
       {breadcrumbs && <div className="mb-3">{breadcrumbs}</div>}
-      <PageBar sticky title={title} description={description} meta={meta} kicker={kicker} hero={hero} actions={actions} />
-      <div className="mt-8 grid min-w-0 grid-cols-1 gap-12">{children}</div>
+      <PageBar sticky title={title} description={description} meta={meta} icon={icon} kicker={kicker} hero={hero} actions={actions} />
+      <div className={brand ? "mt-6 grid min-w-0 grid-cols-1 gap-6" : "mt-8 grid min-w-0 grid-cols-1 gap-12"}>{children}</div>
     </>
   );
 }
 
 /** A count beside a section's heading: plain grey figures. */
 export function CountPill({ children, className }: { children: React.ReactNode; className?: string }) {
+  const brand = useLook() !== "swiss";
+  if (brand) return <span className={cx("inline-flex h-7 min-w-8 shrink-0 items-center justify-center rounded-full bg-tint-peach px-2.5 text-label-md text-tint-ink tabular-nums", className)}>{children}</span>;
   return <span className={cx("shrink-0 font-display text-heading-md text-ink-muted tabular-nums", className)}>{children}</span>;
 }
 
@@ -122,6 +151,30 @@ export function Panel({ title, id, number, count, aside, footer, flush = false, 
   };
   const num = number && <span aria-hidden="true" className="mr-3 align-middle text-label-md font-extrabold tracking-normal tabular-nums">{number}</span>;
   const countEl = count !== undefined && <CountPill className="ml-3">{count}</CountPill>;
+  const brand = useLook() !== "swiss";
+  if (brand) return (
+    <Tag aria-labelledby={title && landmark ? hid : undefined} className={cx("flex min-w-0 flex-col overflow-hidden rounded-xl bg-surface shadow-sm ring-1 ring-line/70", className)}>
+      {title && (
+        <header className={cx("flex min-h-16 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 pt-4 sm:px-6", open ? "pb-2" : "pb-4")}>
+          <div className="flex min-w-0 items-center gap-3">
+            {collapsible ? (
+              <h2 id={hid} className="font-display text-heading-lg text-ink">
+                <button type="button" onClick={toggle} aria-expanded={open} aria-controls={body}
+                  className="group -ml-2 inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 hover:bg-surface-hover">
+                  <ChevronRight aria-hidden="true" className={cx("size-5 text-ink-subtle transition-transform duration-fast", open && "rotate-90")} />
+                  {title}
+                </button>
+              </h2>
+            ) : <h2 id={hid} className="font-display text-heading-lg text-ink">{title}</h2>}
+            {count !== undefined && <CountPill>{count}</CountPill>}
+          </div>
+          {aside && open && <div className="flex min-w-0 flex-wrap items-center gap-3 text-body-sm text-ink-muted">{aside}</div>}
+        </header>
+      )}
+      <div id={body} hidden={!open} className={cx("min-w-0 flex-1", !flush && "px-5 pt-2 pb-5 sm:px-6 sm:pb-6", bodyClassName)}>{children}</div>
+      {footer && open && <footer className="mx-5 border-t-2 border-dashed border-line py-3 sm:mx-6">{footer}</footer>}
+    </Tag>
+  );
   return (
     <Tag aria-labelledby={title && landmark ? hid : undefined} className={cx("flex min-w-0 flex-col", !!title && "border-t-4 border-line-strong", className)}>
       {title && (
@@ -158,24 +211,41 @@ export function PanelLink({ href, children }: { href: string; children: React.Re
 }
 
 /** "15 days ago" and the like: plain figures, no pill. */
-export function AgoPill({ children, className }: { children: React.ReactNode; /** Ignored: kept for callers. */ tone?: Tint; className?: string }) {
+export function AgoPill({ children, tone = "peach", className }: { children: React.ReactNode; tone?: Tint; className?: string }) {
+  const brand = useLook() !== "swiss";
+  if (brand) return <span className={cx("inline-flex h-8 items-center justify-center rounded-full px-3", tintBg[tone], "text-label-md whitespace-nowrap text-tint-ink tabular-nums", className)}>{children}</span>;
   return <span className={cx("inline-flex items-center text-label-md whitespace-nowrap text-ink tabular-nums", className)}>{children}</span>;
 }
 
 /** A person's photo, square, or their initials on a grey square. */
 export function OwnerAvatar({ id, name, src, className, textClass = "text-label-md" }: { id: string; name: string; src?: string; className?: string; textClass?: string }) {
-  if (src || !name) return <PersonPhoto id={id} name={name || "?"} src={src} alt="" className={className} textClass={textClass} />;
+  const brand = useLook() !== "swiss";
+  if (src || !name) return <PersonPhoto id={id} name={name || "?"} src={src} alt="" className={cx(brand && "rounded-md", className)} textClass={textClass} />;
   return (
-    <span aria-hidden="true" className={cx("grid place-items-center bg-surface-sunken font-display font-extrabold text-ink select-none", textClass, className)}>
+    <span aria-hidden="true" className={cx("grid place-items-center font-display font-extrabold select-none", brand ? cx("rounded-md text-tint-ink", tintFor(id)) : "bg-surface-sunken text-ink", textClass, className)}>
       {initials(name)}
     </span>
   );
 }
 
 /** A headline number. The whole block is a link; `attention` makes it the screen's one mint block. */
-export function StatCard({ href, label, value, hint, icon, attention = false }: {
+export function StatCard({ href, label, value, hint, icon, attention = false, tone = "sand" }: {
   href: string; label: string; value: number | null; hint: string; icon?: React.ReactNode; attention?: boolean; tone?: Tint;
 }) {
+  const brand = useLook() !== "swiss";
+  if (brand) return (
+    <Link href={href} data-tilt=""
+      className={cx("lift group relative flex h-full min-w-0 flex-col gap-3 rounded-lg p-5 text-tint-ink", tintBg[tone], attention && "ring-2 ring-ink")}>
+      <span className="flex items-start justify-between gap-2">
+        <span className="min-w-0 truncate text-label-md">{label}</span>
+        <span className="shrink-0 [&_svg]:size-5">{icon}</span>
+      </span>
+      <span className="mt-auto grid gap-1">
+        <span className="font-display text-display-md tabular-nums">{value ?? "—"}</span>
+        <span className="truncate text-body-sm text-ink-muted max-sm:hidden">{hint}</span>
+      </span>
+    </Link>
+  );
   return (
     <Link href={href}
       className={cx("group relative flex h-full min-w-0 flex-col gap-3 transition-colors duration-fast",
@@ -203,7 +273,27 @@ export function Row({ href, onOpen, leading, title, subtitle, meta, badge, actio
   /** Fill the action box (the oldest in the queue). */ strong?: boolean; className?: string;
 }) {
   // min-h-6 (the globals.css escape from the 44px phone minimum): the whole row is the target (the ::after overlay).
-  const target = "min-h-6 min-w-0 truncate text-left font-display text-heading-sm font-extrabold text-ink after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-focus";
+  const brand = useLook() !== "swiss";
+  const target = cx("min-h-6 min-w-0 truncate text-left text-heading-sm text-ink after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-focus",
+    brand ? "after:rounded-lg" : "font-display font-extrabold");
+  if (brand) return (
+    <li data-fit="" className={cx("group @container relative mx-2 flex min-h-18 min-w-0 items-center gap-4 rounded-lg px-3 py-3 transition-colors duration-fast hover:bg-surface-hover sm:mx-3",
+      "before:absolute before:inset-x-3 before:top-0 before:border-t-2 before:border-dashed before:border-line first:before:hidden", className)}>
+      <span className="shrink-0">{leading}</span>
+      <span className="grid min-w-0 flex-1 gap-0.5">
+        <span className="flex min-w-0 items-center gap-2">
+          {onOpen ? <button type="button" onClick={onOpen} className={target}>{title}</button> : <Link href={href ?? "#"} className={target}>{title}</Link>}
+          {badge}
+        </span>
+        {subtitle && <span className="truncate text-body-sm text-ink-muted">{subtitle}</span>}
+      </span>
+      {/* By the row's own width, not the screen's: in a narrow panel the name keeps the room. */}
+      {meta && <span className="hidden shrink-0 items-center gap-4 text-body-sm whitespace-nowrap text-ink-subtle tabular-nums @md:flex">{meta}</span>}
+      <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-surface-selected text-ink transition-colors duration-fast group-hover:bg-highlight max-xs:size-8">
+        <ArrowRight className="size-4 transition-transform duration-fast group-hover:translate-x-0.5" />
+      </span>
+    </li>
+  );
   return (
     <li data-fit="" className={cx("group @container relative flex min-h-20 min-w-0 items-center gap-4 border-b border-line py-3 transition-colors duration-fast hover:bg-surface-hover", className)}>
       <span className="shrink-0">{leading}</span>
@@ -236,6 +326,8 @@ export function Row({ href, onOpen, leading, title, subtitle, meta, badge, actio
 export function RowHead({ first, cols, lead = "w-12 @md:w-16", action = true }: {
   first: string; cols: { label: string; className: string }[]; lead?: string; /** Rows with an action word ("Review"). */ action?: boolean;
 }) {
+  const swiss = useLook() === "swiss";
+  if (!swiss) return null;
   return (
     <div aria-hidden="true" className={cx("hidden items-center gap-4 border-b-2 border-line-strong pb-2 @lg:flex", eyebrow)}>
       <span className={cx("shrink-0", lead)} />
@@ -246,7 +338,7 @@ export function RowHead({ first, cols, lead = "w-12 @md:w-16", action = true }: 
   );
 }
 /** The rule a list of Rows starts on when its RowHead is hidden (narrow rows). */
-export const rowListRule = "@max-lg:border-t-2 @max-lg:border-line-strong";
+export const rowListRule = "swiss:@max-lg:border-t-2 swiss:@max-lg:border-line-strong";
 
 /**
  * The empty state (no results, nothing waiting, not found). Swiss: flush left on the grid, no box, no icon tile; a
@@ -273,6 +365,15 @@ export function EmptyNote({ title, children, action, icon, size = "lg", rule = f
 /** How far along a profile is: the percentage, big, over a thin bar. */
 export function Meter({ value, label }: { value: number; label: string }) {
   const v = Math.max(0, Math.min(100, Math.round(value)));
+  const brand = useLook() !== "swiss";
+  if (brand) return (
+    <span className="inline-flex items-center gap-2" title={label}>
+      <span aria-hidden="true" className="h-2 w-18 overflow-hidden rounded-full bg-surface-sunken">
+        <span className="block h-full rounded-full bg-mint-500" style={{ width: `${v}%` }} />
+      </span>
+      <span className="w-10 text-right text-label-md text-ink tabular-nums"><span className="sr-only">{label}: </span>{v}%</span>
+    </span>
+  );
   return (
     <span className="inline-grid w-24 gap-1.5" title={label}>
       <span className="font-display text-heading-md text-ink tabular-nums"><span className="sr-only">{label}: </span>{v}%</span>
@@ -287,6 +388,22 @@ export interface ChipOption { value: string; label: string; count?: number | nul
 
 /** Filter chips: "All" plus one per status, each with its count. Square, outlined; the chosen one is solid. Scrolls sideways on phones. */
 export function FilterChips({ label, options, value, onChange }: { label: string; options: ChipOption[]; value: string; onChange: (v: string) => void }) {
+  const brand = useLook() !== "swiss";
+  if (brand) return (
+    <div role="group" aria-label={label} className="-mx-4 no-scrollbar flex gap-2 overflow-x-auto px-4 pb-0.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+      {options.map((o) => {
+        const on = o.value === value;
+        return (
+          <button key={o.value} type="button" aria-pressed={on} onClick={() => onChange(on && o.value !== "all" ? "all" : o.value)}
+            className={cx("inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-label-md whitespace-nowrap transition-colors duration-fast",
+              on ? "border-ink bg-surface-selected text-ink" : "border-line bg-surface text-ink-muted hover:border-line-strong hover:text-ink")}>
+            {o.label}
+            {o.count !== undefined && <span className={cx("tabular-nums", on ? "text-ink" : "text-ink-subtle")}>{o.count ?? "–"}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
   return (
     <div role="group" aria-label={label} className="-mx-4 no-scrollbar flex gap-2 overflow-x-auto px-4 pb-0.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
       {options.map((o) => {
@@ -306,6 +423,17 @@ export function FilterChips({ label, options, value, onChange }: { label: string
 
 /** Loading rows with the final row's shape, so the list doesn't shift when it arrives. */
 export function RowSkeletons({ count = 4 }: { count?: number }) {
+  const brand = useLook() !== "swiss";
+  if (brand) return (
+    <ul aria-hidden="true">
+      {Array.from({ length: count }, (_, i) => (
+        <li key={i} className="mx-2 flex min-h-18 items-center gap-4 px-3 py-3 sm:mx-3">
+          <Skeleton shape="block" className="size-12 rounded-md" />
+          <span className="grid flex-1 gap-1.5"><Skeleton className="h-4 w-40" /><Skeleton className="h-3.5 w-56" /></span>
+        </li>
+      ))}
+    </ul>
+  );
   return (
     <ul aria-hidden="true">
       {Array.from({ length: count }, (_, i) => (
@@ -320,6 +448,10 @@ export function RowSkeletons({ count = 4 }: { count?: number }) {
 
 /** A greyed version of a page header, the same height as the real one. */
 export function HeaderSkeleton() {
+  const brand = useLook() !== "swiss";
+  if (brand) return (
+    <div aria-hidden="true" className="flex min-h-11 items-center"><Skeleton className="h-9 w-64" /></div>
+  );
   return (
     <div aria-hidden="true" className="grid min-h-16 content-end gap-2"><Skeleton className="h-3 w-32" /><Skeleton className="h-12 w-72" /></div>
   );
@@ -330,10 +462,39 @@ export function HeaderSkeleton() {
  * A giant number under a 4px rule, what it counts and a line of context under it. `attention` makes it the
  * screen's one mint block (the number that needs doing today); the selected tab gets a thick bar at its foot.
  */
-export function StatTab({ label, value, hint, selected, attention = false, onSelect, controls, suffix }: {
-  label: string; value: number | null; hint: string; /** Kept for callers; numbers carry no icon here. */ icon?: React.ReactNode; selected: boolean; attention?: boolean; onSelect: () => void; controls: string;
-  tone?: Tint; /** Small text after the number ("/500"). */ suffix?: string; /** Kept for callers. */ meter?: number;
+export function StatTab({ label, value, hint, icon, selected, attention = false, onSelect, controls, tone = "sand", suffix, meter }: {
+  label: string; value: number | null; hint: string; icon?: React.ReactNode; selected: boolean; attention?: boolean; onSelect: () => void; controls: string;
+  tone?: Tint; /** Small text after the number ("/500"). */ suffix?: string; meter?: number;
 }) {
+  const brand = useLook() !== "swiss";
+  if (brand) return (
+    <button type="button" role="tab" aria-selected={selected} aria-controls={controls} onClick={onSelect} data-tilt=""
+      aria-label={`${label}: ${value ?? "none"}, ${hint}${attention ? ", needs attention" : ""}`}
+      className={cx("lift group relative flex h-full min-h-32 min-w-0 flex-col gap-3 rounded-lg p-4 text-left text-tint-ink transition-shadow duration-fast sm:min-h-36 sm:p-5",
+        tintBg[tone], selected ? "ring-2 ring-ink" : "hover:shadow-md")}>
+      <span className="flex items-start justify-between gap-2">
+        <span className="grid min-w-0 gap-0.5">
+          <span className="flex min-w-0 items-center gap-2 text-label-md">
+            <span className="min-w-0 text-balance">{label}</span>
+            {attention && <span className="size-2.5 shrink-0 rounded-full bg-ink ring-4 ring-surface/70" aria-hidden="true" />}
+          </span>
+          {!suffix && <span className="truncate text-body-sm text-ink-muted max-sm:hidden">{hint}</span>}
+        </span>
+        <span className="-mt-1 -mr-1 shrink-0">{icon}</span>
+      </span>
+      <span className="mt-auto grid gap-2">
+        <span className="flex items-baseline gap-1.5">
+          <span className="font-display text-display-md tabular-nums">{value ?? "—"}</span>
+          {suffix && <span className="text-heading-sm">{suffix}</span>}
+        </span>
+        {meter !== undefined && (
+          <span aria-hidden="true" className="h-2 overflow-hidden rounded-full bg-surface/75">
+            <span className="block h-full rounded-full bg-ink" style={{ width: `${Math.max(0, Math.min(1, meter)) * 100}%` }} />
+          </span>
+        )}
+      </span>
+    </button>
+  );
   return (
     <button type="button" role="tab" aria-selected={selected} aria-controls={controls} onClick={onSelect}
       aria-label={`${label}: ${value ?? "none"}, ${hint}${attention ? ", needs attention" : ""}`}

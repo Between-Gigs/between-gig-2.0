@@ -133,6 +133,13 @@ try {
     await ownerPage.goto(`${hosted.url}/login/?next=${encodeURIComponent(`${basePath}/profile/`)}`);
     await ownerPage.waitForURL(new RegExp(`${basePath}/owners/$`));
     assert.equal(await ownerPage.evaluate(() => window.qaSignedInWidgetMounts ?? 0), 0);
+    // A preview choice is local to the sample, even when Clerk already has an authenticated owner.
+    await ownerPage.goto(`${hosted.url}/preview/profiles/`);
+    await ownerPage.getByRole("button", { name: "Edit Simone on the page" }).click();
+    await ownerPage.waitForURL(new RegExp(`${basePath}/profile/canvas/$`));
+    await ownerPage.getByRole("button", { name: /Account: Simone/ }).waitFor();
+    assert.equal(await ownerPage.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).session.personId), "simone");
+    assert.equal(await ownerPage.evaluate(() => JSON.parse(localStorage.getItem("qa-clerk-active")).id), "existing-owner-id");
     await ownerContext.close();
     console.log(`Mock SDK contract passed: ${password.length}-character signup, cold callback, profile creation, returning login, role gate, existing Google identity.`);
   }

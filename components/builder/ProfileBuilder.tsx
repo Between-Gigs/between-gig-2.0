@@ -6,9 +6,13 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
-import { basisLabel, insuranceLabel, laServiceAreas, modeLabel, monthStatusLabel, offSetServices, onSetSkills } from "@/lib/data/taxonomy";
+import { basisLabel, insuranceLabel, laServiceAreas, modeLabel, monthStatusLabel, serviceChoices, onSetSkills } from "@/lib/data/taxonomy";
 import { useRequireRole } from "@/lib/guard";
+import { useProfileTemplate } from "@/lib/profile/use-profile-template";
+import type { ProfileFieldRule } from "@/lib/profile/template";
 import { ABOUT_MAX, SECTIONS, STEPS, fieldLabel, pinnedCredits, sectionLabel, validateAll, type FieldErrors } from "@/lib/profile/validate";
+import { BookingFields } from "@/components/profile/BookingFields";
+import { publicBookingRows } from "@/lib/profile/stage-two";
 import { ChipPicker } from "@/components/profile/ChipPicker";
 import { PhotoPicker } from "@/components/profile/PhotoPicker";
 import { ProfilePreviewCard } from "@/components/profile/ProfilePreviewCard";
@@ -23,7 +27,7 @@ const HEADS: [string, string][] = [
   ["Meet your Gigster", "Start with the experience that makes you, you."],
   ["Your skills & services", "Pick everything that fits. Tap again to remove."],
   ["Where & when", "Where you work, and when you're free this month."],
-  ["A little more about you", "One About Me tells your story. A few optional details set expectations."],
+  ["A little more about you", "Tell people what it’s like to work with you and share your booking details."],
   ["Review your profile", "Check it top to bottom. You can jump back to any step."],
 ];
 
@@ -62,6 +66,8 @@ function BuilderSkeleton() {
 }
 
 function Builder({ personId }: { personId: string }) {
+  const template = useProfileTemplate();
+  const optional = (field: ProfileFieldRule) => !template.required.includes(field);
   const startAtReview = useSearchParams().get("step") === "review";
   const toast = useToast();
   const [person, setPerson] = React.useState<Person | null>(null);
@@ -227,11 +233,11 @@ function Builder({ personId }: { personId: string }) {
                     <div className="grid gap-5">
                       <PhotoPicker id="f-photo" value={d.photo} name={d.name} onChange={set("photo")} error={err("photo")} personId={personId} confirm={(go) => live.guard("photo", go)} />
                       <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
-                        <Field label="Full name" error={err("name")}><Input id="f-name" autoComplete="name" value={d.name} onChange={(e) => set("name")(e.target.value)} /></Field>
-                        <Field label="Years in the business" error={err("years")}><Input id="f-years" inputMode="numeric" value={d.years} placeholder="e.g. 6" onChange={(e) => set("years")(e.target.value.replace(/\D/g, "").slice(0, 2))} /></Field>
+                        <Field label="Full name" optional={optional("name")} error={err("name")}><Input id="f-name" autoComplete="name" value={d.name} onChange={(e) => set("name")(e.target.value)} /></Field>
+                        <Field label="Years in the business" optional={optional("years")} error={err("years")}><Input id="f-years" inputMode="numeric" value={d.years} placeholder="e.g. 6" onChange={(e) => set("years")(e.target.value.replace(/\D/g, "").slice(0, 2))} /></Field>
                       </div>
-                      <Field label="Industry position / department" error={err("position")}><Input id="f-position" value={d.position} start={<Film />} placeholder="e.g. Costume & wardrobe" onChange={(e) => set("position")(e.target.value)} /></Field>
-                      <Field label="IMDb profile link" optional error={err("imdb")} hint="Your IMDb name page, if you have one. It helps us confirm credits."><Input id="f-imdb" type="url" inputMode="url" value={d.imdb} start={<Link2 />} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} /></Field>
+                      <Field label="Industry position / department" optional={optional("position")} error={err("position")}><Input id="f-position" value={d.position} start={<Film />} placeholder="e.g. Costume & wardrobe" onChange={(e) => set("position")(e.target.value)} /></Field>
+                      <Field label="IMDb profile link" optional={optional("imdb")} error={err("imdb")} hint="Your IMDb name page helps us confirm credits."><Input id="f-imdb" type="url" inputMode="url" value={d.imdb} start={<Link2 />} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} /></Field>
                       <Credits credits={d.credits} pins={d.creditPins ?? []} error={err("credits")}
                         onChange={(credits, pins) => { set("credits")(credits); set("creditPins")(pins); }} />
                     </div>
@@ -240,13 +246,13 @@ function Builder({ personId }: { personId: string }) {
                   {step === 1 && (
                     <div className="grid gap-7">
                       <div className="grid gap-3">
-                        <p className="text-label-md text-ink">On-set skills <span className="font-normal text-ink-subtle">· your professional background</span></p>
+                        <p className="text-label-md text-ink">On-set skills {optional("skills") && <span className="font-normal text-ink-subtle">· optional </span>}<span className="font-normal text-ink-subtle">· your professional background</span></p>
                         <ChipPicker id="f-skills" label="On-set skills" options={onSetSkills} value={d.skills} onChange={set("skills")} invalid={!!err("skills")} describedBy={err("skills") ? "skills-error" : undefined} />
                         {err("skills") && <p id="skills-error" className="text-body-sm text-danger">{err("skills")}</p>}
                       </div>
                       <div className="grid gap-3">
-                        <p className="text-label-md text-ink">Off-set services <span className="font-normal text-ink-subtle">· what you'd offer between gigs</span></p>
-                        <ChipPicker id="f-services" label="Off-set services" options={offSetServices} value={d.services} onChange={set("services")} invalid={!!err("services")} describedBy={err("services") ? "services-error" : undefined} />
+                        <p className="text-label-md text-ink">Off-set services {optional("services") && <span className="font-normal text-ink-subtle">· optional </span>}<span className="font-normal text-ink-subtle">· what you'd offer between gigs</span></p>
+                        <ChipPicker id="f-services" label="Off-set services" options={serviceChoices(data.kind)} value={d.services} onChange={set("services")} invalid={!!err("services")} describedBy={err("services") ? "services-error" : undefined} />
                         {err("services") && <p id="services-error" className="text-body-sm text-danger">{err("services")}</p>}
                       </div>
                       <Field label="Something else?" optional hint="Other services go to a private review. They don't appear on your profile or become bookable automatically.">
@@ -260,29 +266,29 @@ function Builder({ personId }: { personId: string }) {
                     <div className="grid gap-5">
                       <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
                         <RadioGroup name="f-market" label="Home market" orientation="horizontal" value={d.market} onChange={(v) => set("market")(v as ProfileFields["market"])} options={[{ value: "la", label: "Los Angeles" }, { value: "other", label: "Another market" }]} />
-                        <Field label="Home ZIP code" error={err("zip")}><Input id="f-zip" inputMode="numeric" autoComplete="postal-code" value={d.zip} start={<MapPin />} placeholder="90026" onChange={(e) => set("zip")(e.target.value.replace(/\D/g, "").slice(0, 5))} /></Field>
+                        <Field label="Home ZIP code" optional={optional("zip")} error={err("zip")}><Input id="f-zip" inputMode="numeric" autoComplete="postal-code" value={d.zip} start={<MapPin />} placeholder="90026" onChange={(e) => set("zip")(e.target.value.replace(/\D/g, "").slice(0, 5))} /></Field>
                       </div>
                       {d.market === "other" ? (
                         <div className="grid gap-3">
-                          <Field label="City / region and country" error={err("otherCity")}><Input id="f-otherCity" value={d.otherCity} onChange={(e) => set("otherCity")(e.target.value)} /></Field>
+                          <Field label="City / region and country" optional={optional("location")} error={err("otherCity")}><Input id="f-otherCity" value={d.otherCity} onChange={(e) => set("otherCity")(e.target.value)} /></Field>
                           <Banner tone="info">Los Angeles is the launch market. Your profile would be held for a future market.</Banner>
                         </div>
                       ) : (
                         <div className="grid gap-3">
-                          <p className="text-label-md text-ink">Los Angeles service areas <span className="font-normal text-ink-subtle">· you'll only appear in these</span></p>
+                          <p className="text-label-md text-ink">Los Angeles service areas <span className="font-normal text-ink-subtle">{optional("location") ? "· optional" : "· you'll only appear in these"}</span></p>
                           <ChipPicker id="f-areas" label="Service areas" options={laServiceAreas} value={d.areas} onChange={set("areas")} invalid={!!err("areas")} describedBy={err("areas") ? "areas-error" : undefined} />
                           {err("areas") && <p id="areas-error" className="text-body-sm text-danger">{err("areas")}</p>}
                         </div>
                       )}
-                      <Field label="Travel notes" optional hint="Only a limit or exception. No need to repeat the areas above."><Input id="f-travel" value={d.travel} onChange={(e) => set("travel")(e.target.value)} /></Field>
+                      <Field label="Travel notes" optional={optional("travel")} error={err("travel")} hint="Only a limit or exception. No need to repeat the areas above."><Input id="f-travel" value={d.travel} onChange={(e) => set("travel")(e.target.value)} /></Field>
                       <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
                         <Field label="Availability month"><Input id="f-month" value={d.month} readOnly /></Field>
                         <RadioGroup name="f-monthStatus" label="This month" value={d.monthStatus} onChange={(v) => set("monthStatus")(v as ProfileFields["monthStatus"])} options={Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))} />
                       </div>
-                      <Field label="Dates or times this month" error={err("dates")} hint="Exact project dates are agreed with each client."><Input id="f-dates" value={d.dates} placeholder="e.g. Weekday mornings" onChange={(e) => set("dates")(e.target.value)} /></Field>
+                      <Field label="Dates or times this month" optional={optional("dates")} error={err("dates")} hint="Exact project dates are agreed with each client."><Input id="f-dates" value={d.dates} placeholder="e.g. Weekday mornings" onChange={(e) => set("dates")(e.target.value)} /></Field>
                       <Banner tone="success" title="Keep availability fresh">Confirm it each month. Production comes first: pause it when the call comes.</Banner>
                       <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
-                        <Field label="Rate" optional hint="Final scope and rate are agreed with the client."><Input id="f-rate" inputMode="numeric" value={d.rate} start={<span className="text-label-md">$</span>} end={<span className="text-label-sm text-ink-subtle">USD</span>} onChange={(e) => set("rate")(e.target.value.replace(/\D/g, "").slice(0, 4))} /></Field>
+                        <Field label="Rate" optional={optional("rate")} error={err("rate")} hint="Final scope and rate are agreed with the client."><Input id="f-rate" inputMode="numeric" value={d.rate} start={<span className="text-label-md">$</span>} end={<span className="text-label-sm text-ink-subtle">USD</span>} onChange={(e) => set("rate")(e.target.value.replace(/\D/g, "").slice(0, 4))} /></Field>
                         <RadioGroup name="f-basis" label="Rate basis" orientation="horizontal" value={d.basis} onChange={(v) => set("basis")(v as ProfileFields["basis"])} options={Object.entries(basisLabel).map(([value, label]) => ({ value, label }))} />
                       </div>
                     </div>
@@ -290,16 +296,17 @@ function Builder({ personId }: { personId: string }) {
 
                   {step === 3 && (
                     <div className="grid gap-5">
-                      <Field label="About me" error={err("about")} hint="In your own words: your experience, the help you offer and what it's like to work with you. Line breaks show on your profile.">
+                      <Field label="About me" optional={optional("about")} error={err("about")} hint="In your own words: your experience, the help you offer and what it's like to work with you. Line breaks show on your profile.">
                         <Textarea id="f-about" rows={6} showCount maxLength={ABOUT_MAX} value={d.about} onChange={(e) => set("about")(e.target.value)} />
                       </Field>
-                      <Field label="Languages" optional><Input id="f-languages" value={d.languages} placeholder="e.g. English, Spanish" onChange={(e) => set("languages")(e.target.value)} /></Field>
+                      <Field label="Languages" optional={optional("languages")} error={err("languages")}><Input id="f-languages" value={d.languages} placeholder="e.g. English, Spanish" onChange={(e) => set("languages")(e.target.value)} /></Field>
                       <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
                         <RadioGroup name="f-insurance" label={<>Insurance <span className="font-normal text-ink-subtle">· optional, self-reported</span></>} value={d.insurance} onChange={(v) => set("insurance")(v as ProfileFields["insurance"])} options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance" }]} />
                         <RadioGroup name="f-mode" label="Work mode" value={d.mode} onChange={(v) => set("mode")(v as ProfileFields["mode"])} options={[{ value: "on-site", label: "On site" }, { value: "studio", label: "At my studio" }, { value: "both", label: "Both" }]} />
                       </div>
-                      <Field label="Tools / equipment" optional><Input id="f-tools" value={d.tools} onChange={(e) => set("tools")(e.target.value)} /></Field>
-                      <Field label="Transport" optional><Input id="f-transport" value={d.transport} onChange={(e) => set("transport")(e.target.value)} /></Field>
+                      <Field label="Tools / equipment" optional={optional("tools")} error={err("tools")}><Input id="f-tools" value={d.tools} onChange={(e) => set("tools")(e.target.value)} /></Field>
+                      <Field label="Transport" optional={optional("transport")} error={err("transport")}><Input id="f-transport" value={d.transport} onChange={(e) => set("transport")(e.target.value)} /></Field>
+                      {data.kind === "sample" && <BookingFields fields={d} email={person?.email ?? ""} set={set} required={template.required} errors={errors} />}
                     </div>
                   )}
 
@@ -366,11 +373,12 @@ export function Credits({ credits, pins, error, onChange }: { credits: string[];
     setSaid(`Moved to position ${j + 1} of ${credits.length}.`);
     requestAnimationFrame(() => document.getElementById(`credit-grip-${j}`)?.focus());
   };
+  const { required } = useProfileTemplate();
   const filled = credits.filter((c) => c.trim()).length;
   const shown = credits.filter((c, i) => c.trim() && pinned(i)).length;
   return (
     <fieldset className="grid gap-2">
-      <legend className="mb-1 text-label-md text-ink">Notable credits <span className="font-normal text-ink-subtle">· at least one, up to five</span></legend>
+      <legend className="mb-1 text-label-md text-ink">Notable credits <span className="font-normal text-ink-subtle">{required.includes("credits") ? "· at least one, up to five" : "· optional, up to five"}</span></legend>
       <p id="credits-hint" className="mb-1 text-body-sm text-ink-muted">Put your best first: drag the grip to reorder. Only pinned credits show on your profile{filled > 1 ? ` (${shown} of ${filled} now)` : ""}.</p>
       <ol className="grid gap-2">
         {credits.map((c, i) => (
@@ -416,13 +424,21 @@ export function SaveIndicator({ state, onRetry }: { state: SaveState; onRetry: (
 }
 
 function Review({ d, notes, onEdit }: { d: ProfileFields; notes: { section: ProfileSection; note: string }[]; onEdit: (step: number, origin?: Element | null) => void }) {
-  const problems = validateAll(d);
+  const template = useProfileTemplate();
+  const problems = validateAll(d, template);
   const none = "Not supplied";
+  const bookingRows: [string, string][] = [];
+  if (data.kind === "sample") {
+    if (d.hireableJobs?.trim()) bookingRows.push(["Jobs people can hire me for", d.hireableJobs]);
+    bookingRows.push(...publicBookingRows(d));
+    if (d.bookingMobile?.trim()) bookingRows.push(["Private booking mobile", d.bookingMobile]);
+  }
   const rows: [string, string][][] = [
-    [["Photo", d.photo ? "Added" : none], ["Name", d.name], ["Position", d.position], ["Years", d.years || none], ["IMDb", d.imdb || "Not added (optional)"], ["Credits shown", pinnedCredits(d).join(" · ") || none]],
+    [["Photo", d.photo ? "Added" : none], ["Name", d.name], ["Position", d.position], ["Years", d.years || none], ["IMDb", d.imdb || (template.required.includes("imdb") ? none : "Not added (optional)")], ["Credits shown", pinnedCredits(d).join(" · ") || none]],
     [["On set", d.skills.join(" · ") || none], ["Off set", [...d.services, d.other && "Other · private review"].filter(Boolean).join(" · ") || none]],
     [["Market", d.market === "la" ? `Los Angeles · ${d.zip || "no ZIP"}` : `${d.otherCity || "Another market"} · ${d.zip}`], ["Areas", d.market === "la" ? d.areas.join(" · ") || none : "Held for a future market"], ["Availability", `${d.month} · ${monthStatusLabel[d.monthStatus]}${d.dates ? ` · ${d.dates}` : ""}`], ["Rate", d.rate ? `$${d.rate} USD · ${basisLabel[d.basis]}` : none]],
-    [["About me", d.about || none], ["Languages", d.languages || none], ["Insurance", insuranceLabel[d.insurance]], ["Work mode", modeLabel[d.mode]], ["Tools", d.tools || none], ["Transport", d.transport || none]],
+    [["About me", d.about || none], ["Languages", d.languages || none], ["Insurance", insuranceLabel[d.insurance]], ["Work mode", modeLabel[d.mode]], ["Tools", d.tools || none], ["Transport", d.transport || none],
+      ...bookingRows],
   ];
   const ready = Object.keys(problems).length === 0;
   // Each section folds away once checked. Sections that need something stay open.

@@ -39,6 +39,17 @@
   --color-tint-ink: var(--tint-ink);
 }
 :root {
+  --tint-mint: var(--color-mint-300);
+  --tint-mint-soft: var(--surface-selected);
+  --tint-peach: var(--surface-sunken);
+  --tint-butter: var(--surface-hover);
+  --tint-sky: var(--info-soft);
+  --tint-sage: var(--surface-selected);
+  --tint-sand: var(--surface-sunken);
+  --tint-ink: var(--ink);
+}
+
+:root[data-look=swiss] {
   --tint-mint: #1fdc8c;
   --tint-peach: #f1f1ee;
   --tint-butter: #f1f1ee;

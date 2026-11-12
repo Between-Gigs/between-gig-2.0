@@ -23,6 +23,9 @@
   function rest() { var p = location.pathname; return (p.indexOf(root) === 0 ? p.slice(root.length) : "/") || "/"; }
   function href(v) { return (v.current ? base : base + "/v/" + v.n) + rest() + location.search + location.hash; }
 
+  // A passive guide card already has navigation on its parent page.
+  if (window.frameElement && window.frameElement.hasAttribute("data-guide-thumbnail")) return;
+
   function mount() {
     if (document.getElementById("bg-version-pill")) return;
     var host = document.createElement("div");

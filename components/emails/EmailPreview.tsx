@@ -1,4 +1,5 @@
 "use client";
+import { useLook } from "@/components/site/LookSync";
 import { Badge, Banner, Breadcrumbs, Button, SegmentedControl, Tab, TabList, TabPanel, Tabs, useToast } from "@ds/components";
 import { Copy, Monitor, Moon, Smartphone, Sun } from "lucide-react";
 import { useSearchParams } from "next/navigation";
@@ -22,6 +23,7 @@ export function EmailPreview({ name }: { name: EmailTemplate }) {
 }
 
 function Preview({ name }: { name: EmailTemplate }) {
+  const brand = useLook() !== "swiss";
   const t = emailTemplates[name];
   const outboxId = useSearchParams().get("outbox");
   const toast = useToast();
@@ -64,10 +66,10 @@ function Preview({ name }: { name: EmailTemplate }) {
       {queued && <Banner tone="info" title="From the sample outbox">Showing the email queued for {queued.to}. Nothing was sent.</Banner>}
 
       <div className="grid gap-6 lg:grid-cols-12">
-        <aside className="grid content-start gap-10 lg:col-span-4">
-          <section aria-labelledby="env-h" className="border-t-4 border-line-strong pt-4">
+        <aside className={brand ? "grid content-start gap-4 lg:col-span-4" : "grid content-start gap-10 lg:col-span-4"}>
+          <section aria-labelledby="env-h" className={brand ? "rounded-lg border border-line bg-surface p-5" : "border-t-4 border-line-strong pt-4"}>
             <h2 id="env-h" className="font-display text-heading-md text-ink">In the inbox</h2>
-            <dl className="mt-4 grid gap-3 text-body-sm">
+            <dl className={brand ? "mt-3 grid gap-3 text-body-sm" : "mt-4 grid gap-3 text-body-sm"}>
               {[
                 ["When", t.when],
                 ["From", "Between Gigs <hello@between-gigs.com>"],
@@ -83,7 +85,7 @@ function Preview({ name }: { name: EmailTemplate }) {
             </dl>
             {!queued && <p className="mt-3 border-t border-line pt-3 text-body-sm text-ink-subtle">Shown with fictional sample details.</p>}
           </section>
-          <section aria-labelledby="view-h" className="grid gap-3 border-t-4 border-line-strong pt-4">
+          <section aria-labelledby="view-h" className={brand ? "grid gap-3 rounded-lg border border-line bg-surface p-5" : "grid gap-3 border-t-4 border-line-strong pt-4"}>
             <h2 id="view-h" className="font-display text-heading-md text-ink">View</h2>
             <SegmentedControl label="Mail client theme" value={scheme} onChange={(v) => setScheme(v as PreviewScheme)}
               options={[{ value: "light", label: "Light", icon: <Sun /> }, { value: "dark", label: "Dark", icon: <Moon /> }]} />
@@ -91,7 +93,7 @@ function Preview({ name }: { name: EmailTemplate }) {
               options={[{ value: "desktop", label: "Desktop", icon: <Monitor /> }, { value: "mobile", label: "Phone", icon: <Smartphone /> }]} />
             <p className="text-body-sm text-ink-subtle">Dark is what Apple Mail and Outlook.com show in dark mode. Gmail keeps the light version.</p>
           </section>
-          <section aria-labelledby="notes-h" className="border-t-4 border-line-strong pt-4">
+          <section aria-labelledby="notes-h" className={brand ? "rounded-lg border border-line bg-surface p-5" : "border-t-4 border-line-strong pt-4"}>
             <h2 id="notes-h" className="font-display text-heading-md text-ink">Built for every inbox</h2>
             <ul className="mt-2 grid gap-1.5 text-body-sm text-ink-muted">
               <li>Tables and inline styles, 600px wide</li>
@@ -111,15 +113,15 @@ function Preview({ name }: { name: EmailTemplate }) {
               <Tab value="text">Plain text</Tab>
             </TabList>
             <TabPanel value="html" className="pt-4">
-              <div className="grid justify-items-center bg-surface-sunken p-3 sm:p-6">
-                <div className={`${widths[width]} overflow-hidden border border-line bg-surface-embed transition-all duration-slow`}>
+              <div className={brand ? "grid justify-items-center rounded-lg border border-line bg-surface-sunken p-3 sm:p-6" : "grid justify-items-center bg-surface-sunken p-3 sm:p-6"}>
+                <div className={`${widths[width]} overflow-hidden border border-line bg-surface-embed transition-all duration-slow ${brand ? "rounded-lg shadow-md" : ""}`}>
                   {email && <iframe ref={frame} title={`${t.label} email, ${scheme} theme`} sandbox="allow-same-origin" srcDoc={email.html} onLoad={fit} className="block h-240 w-full" />}
                 </div>
               </div>
             </TabPanel>
             <TabPanel value="text" className="pt-4">
-              <div className="relative border-t-4 border-line-strong bg-surface pt-4">
-                <Button size="sm" variant="ghost" iconStart={<Copy />} className="absolute top-3 right-0" onClick={() => email && copy(email.text, "Plain text")}>Copy</Button>
+              <div className={brand ? "relative rounded-lg border border-line bg-surface p-5" : "relative border-t-4 border-line-strong bg-surface pt-4"}>
+                <Button size="sm" variant="ghost" iconStart={<Copy />} className={brand ? "absolute top-3 right-3" : "absolute top-3 right-0"} onClick={() => email && copy(email.text, "Plain text")}>Copy</Button>
                 <pre className="overflow-x-auto pt-8 font-mono text-data-sm whitespace-pre-wrap text-ink">{email?.text}</pre>
               </div>
             </TabPanel>

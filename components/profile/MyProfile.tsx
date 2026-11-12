@@ -1,7 +1,11 @@
 "use client";
-import { Badge, Button, Skeleton, useToast } from "@ds/components";
+import { Badge, Button, Skeleton, cx, useToast } from "@ds/components";
 import { ArrowRight, Copy, Eye, FilePen, Hourglass, MessageSquareWarning, PencilLine, Share2, Sparkles } from "lucide-react";
 import * as React from "react";
+import { useLook } from "@/components/site/LookSync";
+import { useProfileTemplate } from "@/lib/profile/use-profile-template";
+import { Icon3D } from "@/components/ui/Icon3D";
+import type { Icon3DName } from "@/lib/icons3d";
 import { data, type Person, type PersonSummary, type Profile } from "@/lib/data";
 import { blankFields } from "@/lib/data/fields";
 import { useRequireRole } from "@/lib/guard";
@@ -24,6 +28,8 @@ const when = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-US", 
  * card clients see in search. The full profile lives on its own page (public once approved) and in Edit.
  */
 export function MyProfile() {
+  const warm = useLook() !== "swiss";
+  const template = useProfileTemplate();
   const session = useRequireRole("gigster");
   const [s, setS] = React.useState<PersonSummary | null>(null);
   const [profile, setProfile] = React.useState<Profile | null>(null);
@@ -45,6 +51,31 @@ export function MyProfile() {
   const fields = profile?.fields ?? s.fields;
   const started = !!fields && s.completeness > 0;
   const state = !started || !fields ? "new" : person.status;
+
+  const nextStep = state === "approved" && fields
+    ? <Live person={person} warm={warm} />
+    : <Status person={person} state={state} parts={partsDone(fields, person.name, template)} first={first} warm={warm} />;
+  const card = <ProfilePreviewCard fields={fields ?? blankFields(person.name)} personId={person.id} badge={state === "approved" ? null : state === "new" ? "Fills in as you go" : "Preview"} />;
+
+  if (warm) return (
+    <Page>
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="flex items-center gap-3 font-display text-display-sm wrap-anywhere text-ink"><Icon3D name="waving_hand" className="size-10" />Hi, {first}</h1>
+        {state !== "new" && <PersonStatusBadge status={person.status} audience="gigster" />}
+      </div>
+      <p className="mt-2 text-body-lg text-ink-muted">Here&apos;s where your profile stands.</p>
+
+      <div className="mt-8 grid items-start gap-10 lg:grid-cols-12 lg:gap-16">
+        <div className="lg:col-span-7">
+          {nextStep}
+        </div>
+        <aside aria-label="Your card in search" className="grid gap-4 rounded-2xl bg-tint-sand p-5 text-tint-ink sm:p-6 lg:col-span-5">
+          <p className="flex items-center gap-2 text-label-md text-tint-ink"><Icon3D name="eyes" className="size-7" />Your card in search</p>
+          {card}
+        </aside>
+      </div>
+    </Page>
+  );
 
   return (
     <Page>
@@ -68,14 +99,14 @@ export function MyProfile() {
         <section aria-labelledby="stand-h" className="min-w-0 border-t-4 border-line-strong pt-4 md:col-span-7 lg:col-span-8">
           <SectionLabel n="01" id="stand-h">{state === "approved" ? "Your page" : "Next step"}</SectionLabel>
           <div className="mt-6">
-            {state === "approved" && fields ? <Live person={person} /> : <Status person={person} state={state} parts={partsDone(fields, person.name)} first={first} />}
+            {nextStep}
           </div>
         </section>
         <section aria-labelledby="card-h" className="min-w-0 border-t-4 border-line-strong pt-4 md:col-span-5 lg:col-span-4">
           <SectionLabel n="02" id="card-h">Your card in search</SectionLabel>
           <p className="mt-2 text-body-md text-ink-muted">What clients see when they browse.</p>
           <div className="mt-6">
-            <ProfilePreviewCard fields={fields ?? blankFields(person.name)} personId={person.id} badge={state === "approved" ? null : state === "new" ? "Fills in as you go" : "Preview"} />
+            {card}
           </div>
         </section>
       </div>
@@ -95,42 +126,47 @@ function SectionLabel({ n, id, children }: { n: string; id: string; children: Re
 const onMint = "justify-between! bg-forest-950! text-white! hover:bg-forest-800!";
 
 /** One card, one next step: not started, draft, with the team, or changes requested. */
-function Status({ person, state, parts, first }: { person: Person; state: string; parts: { done: number; total: number }; first: string }) {
+function Status({ person, state, parts, first, warm }: { warm: boolean; person: Person; state: string; parts: { done: number; total: number }; first: string }) {
   const notes = person.reviewNotes ?? [];
   const c = {
     new: { title: "Let's build your profile", body: "Fill it in right on the page clients will see. It takes about 10 minutes and saves as you go.", cta: "Start your profile" },
     registered: { title: "Let's build your profile", body: "Fill it in right on the page clients will see. It takes about 10 minutes and saves as you go.", cta: "Start your profile" },
     invited: { title: "Let's build your profile", body: "Fill it in right on the page clients will see. It takes about 10 minutes and saves as you go.", cta: "Start your profile" },
-    draft: { title: "Draft · not submitted yet", body: `Only you can see it. ${parts.done} of ${parts.total} parts done; send it to the Between Gigs team when it's ready.`, cta: "Continue your profile" },
+    draft: { title: "Draft · not submitted yet", body: `Only you can see it. ${parts.total ? `${parts.done} of ${parts.total} parts done` : "No required parts"}; send it to the Between Gigs team when it's ready.`, cta: "Continue your profile" },
     submitted: { title: "Submitted for review", body: `Thanks, ${first}. Our team is reviewing your profile${person.submittedAt ? ` (sent ${when(person.submittedAt)})` : ""}. We'll email you when it's approved or if we suggest a change.`, cta: null },
     changes_requested: { title: "Changes requested", body: "The Between Gigs team asked for a few changes. Update them, then send it again.", cta: "Make the changes" },
   }[state] ?? { title: "Your profile", body: "", cta: "Edit profile" };
   const Icon = { new: Sparkles, registered: Sparkles, invited: Sparkles, draft: FilePen, submitted: Hourglass, changes_requested: MessageSquareWarning }[state] ?? FilePen;
+  const art: Record<string, Icon3DName> = { new: "sparkles", registered: "sparkles", invited: "sparkles", draft: "memo", submitted: "hourglass_done", changes_requested: "memo" };
+  const tint = { draft: "bg-tint-butter", submitted: "bg-tint-sky", changes_requested: "bg-tint-peach" }[state] ?? "bg-tint-mint-soft";
+  const Heading = warm ? "h2" : "h3";
   return (
-    <div className="grid gap-6 bg-tint-mint p-6 text-forest-950 sm:p-8">
-      <div className="grid gap-3">
-        <Icon aria-hidden="true" className="size-8" strokeWidth={2.25} />
-        <h3 className="font-display text-heading-lg text-balance">{c.title}</h3>
-        <p className="max-w-prose text-body-lg wrap-anywhere">{c.body}</p>
+    <section aria-labelledby="status-h" className={cx("grid gap-6 p-6 sm:p-8", warm ? cx("rounded-2xl text-tint-ink", tint) : "bg-tint-mint text-forest-950")}>
+      <div className={warm ? "flex flex-col items-start gap-5 sm:flex-row" : "grid gap-3"}>
+        {warm ? <span aria-hidden="true" className="grid size-20 shrink-0 place-items-center rounded-full bg-surface shadow-sm"><Icon3D name={art[state] ?? "memo"} className="size-12" /></span> : <Icon aria-hidden="true" className="size-8" strokeWidth={2.25} />}
+        <div className="grid gap-1.5">
+        <Heading id="status-h" className="font-display text-heading-lg text-balance">{c.title}</Heading>
+        <p className={cx("max-w-prose wrap-anywhere", warm ? "text-body-md" : "text-body-lg")}>{c.body}</p>
+        </div>
       </div>
       {state === "changes_requested" && notes.length > 0 && (
-        <ul className="grid">
+        <ul className={warm ? "grid gap-2" : "grid"}>
           {notes.map((n) => (
-            <li key={n.note} className="grid gap-1 border-t-2 border-forest-950 py-3 text-body-md"><b className="text-eyebrow uppercase">{sectionLabel[n.section]}</b>{n.note}</li>
+            <li key={n.note} className={cx("grid gap-1 text-body-md", warm ? "rounded-lg bg-surface p-4 text-ink shadow-xs" : "border-t-2 border-forest-950 py-3")}><b className="text-eyebrow uppercase">{sectionLabel[n.section]}</b>{n.note}</li>
           ))}
         </ul>
       )}
       <div className="flex flex-wrap gap-3">
         {c.cta
-          ? <ButtonLink href="/profile/canvas/" variant="primary" size="lg" iconEnd={<ArrowRight />} className={`${onMint} min-w-64 swiss:h-14 swiss:px-6 swiss:font-display`}>{c.cta}</ButtonLink>
-          : <ButtonLink href="/profile/canvas/" size="lg" iconStart={<PencilLine />} className="border-2! border-forest-950! text-forest-950! hover:bg-forest-950/10 swiss:h-14 swiss:px-6 swiss:font-display">Edit profile</ButtonLink>}
+          ? <ButtonLink href="/profile/canvas/" variant="primary" size="lg" iconEnd={<ArrowRight />} className={warm ? undefined : `${onMint} min-w-64 swiss:h-14 swiss:px-6 swiss:font-display`}>{c.cta}</ButtonLink>
+          : <ButtonLink href="/profile/canvas/" size="lg" iconStart={<PencilLine />} className={warm ? undefined : "border-2! border-forest-950! text-forest-950! hover:bg-forest-950/10 swiss:h-14 swiss:px-6 swiss:font-display"}>Edit profile</ButtonLink>}
       </div>
-    </div>
+    </section>
   );
 }
 
 /** Approved: the public link, sharing, and this month's availability, in one light card. */
-function Live({ person }: { person: Person }) {
+function Live({ person, warm }: { person: Person; warm: boolean }) {
   const toast = useToast();
   const first = person.name.split(" ")[0] || "there";
   const url = absoluteUrl(`/p/${person.slug}/`);
@@ -144,19 +180,23 @@ function Live({ person }: { person: Person }) {
     try { await navigator.share({ title: `${person.name} on Between Gigs`, url }); } catch { /* dismissed */ }
   };
 
+  const Heading = warm ? "h2" : "h3";
   return (
-    <div data-theme="dark" className="relative isolate grid gap-8 overflow-hidden rounded-none bg-surface-brand phosphor-dots p-6 text-ink sm:p-10">
+    <section data-theme="dark" aria-labelledby="live-h" className={cx("relative isolate grid overflow-hidden bg-surface-brand phosphor-dots p-6 text-ink", warm ? "gap-6 rounded-2xl sm:p-8" : "gap-8 sm:p-10")}>
       <span aria-hidden="true" className="glow-horizon -z-10 opacity-50" />
-      <div className="grid gap-3">
-          <p className="text-eyebrow text-ink-brand uppercase">Live on Between Gigs</p>
-          <h3 className="font-display text-display-sm wrap-anywhere text-ink sm:text-display-md">You&apos;re live, {first}</h3>
-          <p className="max-w-prose text-body-lg text-ink">The Between Gigs team approved your profile{person.approvedAt && ` on ${when(person.approvedAt)}`}, and clients can find it now. Keep this month's availability current from Edit profile.</p>
+      <div className={warm ? "flex flex-col items-start gap-5 sm:flex-row" : "grid gap-3"}>
+        {warm && <span aria-hidden="true" className="grid size-20 shrink-0 place-items-center rounded-full bg-surface shadow-sm"><Icon3D name="party_popper" className="size-12" /></span>}
+        <div className="grid gap-1.5">
+          {!warm && <p className="text-eyebrow text-ink-brand uppercase">Live on Between Gigs</p>}
+          <Heading id="live-h" className={cx("font-display wrap-anywhere text-ink", warm ? "text-heading-lg" : "text-display-sm sm:text-display-md")}>You&apos;re live, {first}</Heading>
+          <p className={cx("max-w-prose text-ink", warm ? "text-body-md" : "text-body-lg")}>The Between Gigs team approved your profile{person.approvedAt && ` on ${when(person.approvedAt)}`}, and clients can find it now. Keep this month's availability current from Edit profile.</p>
+        </div>
       </div>
       <div className="grid gap-2">
         <label htmlFor="live-url" className="text-label-md text-ink">Your public link</label>
         <div className="flex flex-wrap gap-2">
           <input id="live-url" readOnly value={url} onFocus={(e) => e.currentTarget.select()}
-            className="h-12 min-w-0 flex-1 basis-56 rounded-none border-2 border-line-strong bg-surface px-4 text-body-md text-ink outline-none focus-visible:ring-2 focus-visible:ring-focus" />
+            className={cx("h-12 min-w-0 flex-1 basis-56 border-line-strong bg-surface text-body-md text-ink outline-none focus-visible:ring-2 focus-visible:ring-focus", warm ? "rounded-full border px-5" : "border-2 px-4")} />
           <Button size="lg" iconStart={<Copy />} onClick={copy}>Copy</Button>
           {canShare && <Button size="lg" iconStart={<Share2 />} onClick={share}>Share</Button>}
         </div>
@@ -165,6 +205,6 @@ function Live({ person }: { person: Person }) {
         <ButtonLink href={`/p/${person.slug}/`} variant="primary" size="lg" iconStart={<Eye />}>View your public page</ButtonLink>
         <ButtonLink href="/profile/canvas/" size="lg" iconStart={<PencilLine />}>Edit profile</ButtonLink>
       </div>
-    </div>
+    </section>
   );
 }

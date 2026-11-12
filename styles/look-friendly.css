@@ -16,8 +16,9 @@
   font-display: swap;
 }
 
-:root[data-look=friendly]:not([data-brand-page]) {
+:root[data-look=friendly] {
   --tint-mint: #d6f6e6;
+  --tint-mint-soft: #d6f6e6;
   --tint-peach: #ffe2cc;
   --tint-butter: #fff0bf;
   --tint-sky: #dcebf7;
@@ -26,16 +27,19 @@
   --tint-ink: #0f3d29;
 }
 @media (prefers-color-scheme: dark) {
-  :root[data-look=friendly]:not([data-brand-page]):not([data-theme=light]) {
+  :root[data-look=friendly]:not([data-theme=light]) {
     --tint-mint-soft: #16402e; --tint-mint: #a3e8c8; --tint-peach: #2c2f26; --tint-butter: #263322; --tint-sky: #16343a; --tint-sage: #1b3527; --tint-sand: #1f3127; --tint-ink: #eaf4ee;
   }
 }
-:root[data-look=friendly]:not([data-brand-page])[data-theme=dark] {
+:root[data-look=friendly][data-theme=dark] {
   --tint-mint-soft: #16402e; --tint-mint: #a3e8c8; --tint-peach: #2c2f26; --tint-butter: #263322; --tint-sky: #16343a; --tint-sage: #1b3527; --tint-sand: #1f3127; --tint-ink: #eaf4ee;
 }
 
 /* `friendly:` variant for the few shared components (site header) that differ on product screens. */
 @custom-variant friendly (&:where([data-look=friendly]:not([data-brand-page]), [data-look=friendly]:not([data-brand-page]) *));
+
+/* Warm and Classic keep the card-based presentation in the preview guide. */
+@custom-variant card-layout (&:where([data-look=friendly], [data-look=friendly] *, [data-look=classic], [data-look=classic] *, [data-look=call-sheet], [data-look=call-sheet] *, [data-look=modern], [data-look=modern] *));
 
 /* Shapes and type, both themes. */
 :root[data-look=friendly]:not([data-brand-page]) {

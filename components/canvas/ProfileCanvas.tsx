@@ -6,20 +6,28 @@ import Link from "next/link";
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
-import { basisLabel, laServiceAreas, monthStatusLabel, offSetServices, onSetSkills } from "@/lib/data/taxonomy";
+import { basisLabel, laServiceAreas, monthStatusLabel, serviceChoices, onSetSkills } from "@/lib/data/taxonomy";
 import { useRequireRole } from "@/lib/guard";
 import { absoluteUrl, asset } from "@/lib/site";
-import { ABOUT_MAX, DATES_MAX, DEPARTMENT_MAX, NAME_MAX, REQUIRED_PARTS, contentChanged, isPartFilled, pinnedCredits, readNotes, sectionLabel, validateAll, type FieldErrors } from "@/lib/profile/validate";
+import { ABOUT_MAX, DATES_MAX, DEPARTMENT_MAX, NAME_MAX, contentChanged, partComplete, pinnedCredits, readNotes, sectionLabel, validateAll, type FieldErrors } from "@/lib/profile/validate";
+import { readProfileTemplate, requiredProfileParts, type ProfileFieldRule } from "@/lib/profile/template";
+import { useProfileTemplate } from "@/lib/profile/use-profile-template";
 import { sendNow } from "@/lib/data/api";
 import { Credits, SaveIndicator, type SaveState } from "@/components/builder/ProfileBuilder";
+import { BookingFields } from "@/components/profile/BookingFields";
 import { ChipPicker } from "@/components/profile/ChipPicker";
 import { PhotoPicker } from "@/components/profile/PhotoPicker";
 import { ProfilePreviewCard } from "@/components/profile/ProfilePreviewCard";
 import { ProfileView, type PartKind, type ProfilePart } from "@/components/profile/ProfileView";
 import { useLiveEditWarning } from "@/components/profile/LiveEditWarning";
 import { Page } from "@/components/site/Page";
+import { useLook } from "@/components/site/LookSync";
+import { ModernCanvas } from "./ModernCanvas";
+import { ExampleReference } from "@/components/journey/ExampleReference";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { markArea } from "@/lib/split-area";
+
+import "@/styles/profile-editor.css";
 
 markArea("bg-split:dashboard");
 
@@ -35,17 +43,11 @@ type SpotId = ProfilePart;
 const AUTOSAVE_MS = 700;
 const thisMonth = () => new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
 
-/** The order the page leads them through. Required spots first; optional ones only when tapped or reached by Next. */
-// Quick wins first; the photo comes last, once the page around it has taken shape.
-const ORDER: SpotId[] = ["name", "position", "years", "services", "skills", "where", "availability", "rate", "about", "credits", "photo", "imdb", "languages", "details"];
-const REQUIRED: SpotId[] = REQUIRED_PARTS;
 const LABEL: Record<SpotId, string> = {
   photo: "Your photo", name: "Your name", position: "Your department", years: "Years in the business", services: "Services you offer",
   skills: "On-set skills", where: "Where you work", availability: "This month", rate: "Starting rate", about: "About me",
-  credits: "Notable credits", imdb: "IMDb link", languages: "Languages", details: "Work details",
+  credits: "Notable credits", imdb: "IMDb link", languages: "Languages", details: "Work and booking details",
 };
-/** The parts listed beside the page, in order: their place in this list is the number they carry ("02 Your department"). */
-const PARTS: SpotId[] = ORDER.filter((id) => REQUIRED.includes(id) || id === "rate" || id === "languages");
 /** The verb on the Next block's button: what the one tap does. */
 const VERB: Partial<Record<SpotId, string>> = {
   name: "Type", photo: "Add", position: "Choose", years: "Set", services: "Choose", skills: "Choose", where: "Choose",
@@ -55,7 +57,13 @@ const VERB: Partial<Record<SpotId, string>> = {
 const FIELD_SPOT: Partial<Record<keyof ProfileFields, SpotId>> = {
   photo: "photo", name: "name", years: "years", position: "position", imdb: "imdb", credits: "credits", skills: "skills",
   services: "services", other: "services", market: "where", otherCity: "where", zip: "where", areas: "where", dates: "availability", about: "about",
+  travel: "where", rate: "rate", languages: "languages", tools: "details", transport: "details",
+  bookingMobile: "details", earliestStart: "details", bookingMinimum: "details", personality: "details", hireableJobs: "details",
 };
+function firstInvalidPart(order: readonly SpotId[], errors: FieldErrors) {
+  const invalid = new Set(Object.keys(errors).map((k) => FIELD_SPOT[k as keyof ProfileFields]));
+  return order.find((id) => invalid.has(id));
+}
 /** The team's review notes are per questionnaire section; this is where each lands on the page. */
 const SECTION_SPOT: Record<ProfileSection, SpotId> = { about: "position", skills: "services", where: "where", story: "about", photo: "photo" };
 /** The sample keeps a draft beside the version the team (or the public) has; live keeps one record (N-09). */
@@ -63,11 +71,6 @@ const KEEPS_DRAFT = data.kind !== "live";
 /** "Oct 21": when it went to the team. */
 const dayOf = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "");
 const pick = (f: ProfileFields, keys: Iterable<keyof ProfileFields>) => Object.fromEntries([...keys].map((k) => [k, f[k]])) as Partial<ProfileFields>;
-
-const isFilled = isPartFilled;
-
-/** The first required part still empty, in the order the page leads them, other than `except`. */
-const firstEmpty = (d: ProfileFields, except?: SpotId): SpotId | null => ORDER.find((id) => id !== except && REQUIRED.includes(id) && !isFilled(id, d)) ?? null;
 
 /** A first About me written from their own answers, offered when the box is empty. They edit it from there. */
 function starterAbout(d: ProfileFields): string {
@@ -83,6 +86,10 @@ function starterAbout(d: ProfileFields): string {
 }
 
 interface Ctx {
+  order: readonly SpotId[];
+  required: readonly SpotId[];
+  filled: (id: SpotId) => boolean;
+  nextOf: (except?: SpotId) => SpotId | null;
   d: ProfileFields;
   editing: SpotId | null;
   next: SpotId | null;
@@ -157,6 +164,8 @@ function Canvas({ personId }: { personId: string }) {
   const [rise, setRise] = React.useState(false);
   const [portrait, setPortrait] = React.useState(false);
   const wide = useWide();
+  const modern = useLook() === "modern";
+  const [userOpened, setUserOpened] = React.useState(false);
   /** The version the team (or the public) has, to tell what's unsent. Null before the first Send. */
   const [sentVersion, setSentVersion] = React.useState<ProfileFields | null>(null);
   const stage = React.useRef<HTMLDivElement>(null);
@@ -180,7 +189,14 @@ function Canvas({ personId }: { personId: string }) {
       // Filled in here, not by the person: kept on this tab's side when merging with another tab's save.
       if (!draft.fields.name) touched.current.add("name");
       if (!draft.fields.month) touched.current.add("month");
-      setD({ ...draft.fields, name: draft.fields.name || s.person.name, month: draft.fields.month || thisMonth() });
+      const fields = { ...draft.fields, name: draft.fields.name || s.person.name, month: draft.fields.month || thisMonth() };
+      setD(fields);
+      // The desktop document opens with its next editable field selected, without stealing initial focus.
+      if (document.documentElement.dataset.look === "modern" && window.matchMedia("(min-width: 64rem)").matches) {
+        const template = readProfileTemplate();
+        const issues = Object.assign({}, ...Object.values(validateAll(fields, template))) as FieldErrors;
+        setEditing(firstInvalidPart(template.order, issues) ?? "position");
+      }
       if (draft.savedAt) setSave({ status: "saved", at: draft.savedAt });
     });
     return () => { live = false; };
@@ -272,8 +288,13 @@ function Canvas({ personId }: { personId: string }) {
     hadPhoto.current = has;
   }, [d, toast]);
 
-  const done = d ? REQUIRED.filter((id) => isFilled(id, d)).length : 0;
-  const ready = done === REQUIRED.length;
+  const template = useProfileTemplate();
+  const required = React.useMemo(() => requiredProfileParts(template), [template]);
+  const issues = React.useMemo(() => Object.assign({}, ...Object.values(d ? validateAll(d, template) : {})) as FieldErrors, [d, template]);
+  const invalidParts = new Set(Object.keys(issues).map((key) => FIELD_SPOT[key as keyof ProfileFields]));
+  const filled = (id: SpotId) => !!d && !invalidParts.has(id) && partComplete(id, d, template, issues);
+  const done = required.filter(filled).length;
+  const ready = d !== null && invalidParts.size === 0;
 
   // Milestones: a word of encouragement halfway, and a small celebration when every required spot is in.
   const lastDone = React.useRef<number | null>(null);
@@ -282,9 +303,9 @@ function Canvas({ personId }: { personId: string }) {
     const before = lastDone.current;
     lastDone.current = done;
     if (before === null || done <= before) return;
-    if (done === REQUIRED.length) { setParty((n) => n + 1); toast({ message: "Everything's in. Look at it as a client sees it, then send it.", tone: "success" }); } // eslint-disable-line react-hooks/set-state-in-effect
-    else if (before < REQUIRED.length / 2 && done >= REQUIRED.length / 2) toast({ message: "Halfway there. Your profile is taking shape.", tone: "success" });
-  }, [done, d, toast]);
+    if (ready) { setParty((n) => n + 1); toast({ message: "Everything's in. Look at it as a client sees it, then send it.", tone: "success" }); } // eslint-disable-line react-hooks/set-state-in-effect
+    else if (before < required.length / 2 && done >= required.length / 2) toast({ message: "Halfway there. Your profile is taking shape.", tone: "success" });
+  }, [done, d, toast, ready, required.length]);
 
   // The phone sheet's height: lower on short screens (landscape, 320px), so the part it edits stays in view above it.
   const [sheetMax, setSheetMax] = React.useState(0);
@@ -327,17 +348,26 @@ function Canvas({ personId }: { personId: string }) {
   });
 
   // Always the first required part still empty, so nothing earlier gets skipped.
-  const nextOf = (from?: SpotId): SpotId | null => firstEmpty(d, from);
+  const nextOf = (from?: SpotId): SpotId | null =>
+    required.find((id) => id !== from && !filled(id)) ?? template.order.find((id) => id !== from && invalidParts.has(id)) ?? null;
   const next = nextOf();
 
   // Bring the part into view. Wide screens: the anchored panel scrolls only as far as it needs to show the part and its
   // controls (see Anchored). Phones and tablets: just under the site's pinned header, so it sits above the sheet.
   const reveal = (id: SpotId) => {
-    if (wide) return;
+    if (wide && !modern) return;
     requestAnimationFrame(() => requestAnimationFrame(() => {
       const el = document.querySelector<HTMLElement>(`[data-spot="${id}"]`);
       if (!el) return;
       const header = document.querySelector<HTMLElement>("header")?.getBoundingClientRect().bottom ?? 0;
+      if (wide && modern) {
+        const panel = document.querySelector<HTMLElement>("[data-modern-canvas] [data-editor]");
+        const target = panel ?? el;
+        const top = target.getBoundingClientRect().top;
+        const toolbar = document.querySelector<HTMLElement>("[data-stage]")?.getBoundingClientRect().bottom ?? header;
+        if (top < toolbar + 8 || top > window.innerHeight * 0.65) target.scrollIntoView({ block: "start" });
+        return;
+      }
       const room = window.innerHeight - sheetMax - Math.max(0, header);
       const r = el.getBoundingClientRect();
       // Centred in the room above the sheet when it fits, else its top just under the header.
@@ -347,6 +377,7 @@ function Canvas({ personId }: { personId: string }) {
     }));
   };
   const open = (id: SpotId) => {
+    setUserOpened(true);
     if (view !== "edit") setView("edit");
     setEditing(id);
     reveal(id);
@@ -355,11 +386,11 @@ function Canvas({ personId }: { personId: string }) {
     const was = editing;
     setEditing(null);
     void flush();
-    if (was && isFilled(was, d)) setFresh(was);
+    if (was && filled(was)) setFresh(was);
     if (was) requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-spot="${was}"] [data-spot-edit]`)?.focus({ preventScroll: true }));
   };
   const advance = (from: SpotId) => {
-    if (isFilled(from, d)) setFresh(from);
+    if (filled(from)) setFresh(from);
     void flush();
     const to = nextOf(from);
     if (to) open(to); else { setEditing(null); toast({ message: "That's every spot. Look it over, then send it.", tone: "success" }); }
@@ -388,7 +419,7 @@ function Canvas({ personId }: { personId: string }) {
     const merged = Object.assign({}, ...Object.values(all)) as FieldErrors;
     if (Object.keys(merged).length) {
       setFieldErrors(merged);
-      const first = ORDER.find((id) => Object.entries(merged).some(([k]) => FIELD_SPOT[k as keyof ProfileFields] === id));
+      const first = firstInvalidPart(template.order, merged);
       const n = Object.keys(merged).length;
       // Said inside the part it opens, above its controls, so nothing covers the panel's buttons or the part's own error.
       if (first) open(first);
@@ -421,18 +452,31 @@ function Canvas({ personId }: { personId: string }) {
   const nothingToSend = sentAlready && (data.kind === "live" || !unsent);
   const reviewState: ReviewState | null = person.status === "approved" ? "live" : person.status === "submitted" ? "review" : null;
   const first = d.name.split(" ")[0] || "there";
-  const ctx: Ctx = { d, editing, next, fresh, errors, noted, open, close, advance, portrait, rise, missing: Object.keys(fieldErrors).length };
+  const ctx: Ctx = { order: template.order, required, filled, nextOf, d, editing, next, fresh, errors, noted, open, close, advance, portrait, rise, missing: Object.keys(fieldErrors).length };
   // The progress line: one segment per required part, in the order the page leads them; the next one is marked.
-  const segs = ORDER.filter((id) => REQUIRED.includes(id)).map((id) => (sent || isFilled(id, d) ? "done" : id === next ? "next" : "todo") as Seg);
+  const segs = required.map((id) => (sent || filled(id) ? "done" : id === next ? "next" : "todo") as Seg);
 
   return (
     <Page bare>
+      <ExampleReference />
       {live.dialog}
-      <EditorBar segs={segs} done={done} total={REQUIRED.length} ready={ready} missing={Object.keys(fieldErrors).length} save={save} view={view} editing={!!editing} sent={sent} submitting={submitting} resubmit={resubmit} canSend={!nothingToSend}
+      {modern ? <div data-stage="" className="mc-toolbar"><div className="mc-toolbar-inner">
+        <div className="mc-progress">
+          <strong>{required.length ? `${done} / ${required.length} parts done` : "No required parts"}</strong>
+          <span role="progressbar" aria-label="Profile progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={required.length ? Math.round(done / required.length * 100) : 100}>
+            {segs.length ? segs.map((s, i) => <i key={i} data-state={s} />) : <i data-state="done" />}
+          </span>
+        </div>
+        <ViewToggle value={view} onChange={switchView} />
+        <SaveIndicator state={save} onRetry={() => { dirty.current = true; void flush(); }} />
+        {!sent && !nothingToSend && <Button size="sm" variant={ready ? "primary" : "secondary"} loading={submitting} onClick={submit}>
+          {resubmit ? "Send again" : "Send for review"}</Button>}
+        {view === "edit" && next && <button className="mc-next" type="button" aria-label={`Next: ${LABEL[next]}`} onClick={() => open(next)}>Next: {LABEL[next]} <ArrowRight aria-hidden="true" /></button>}
+      </div></div> : <EditorBar segs={segs} done={done} total={required.length} ready={ready} missing={Object.keys(fieldErrors).length} save={save} view={view} editing={!!editing} sent={sent} submitting={submitting} resubmit={resubmit} canSend={!nothingToSend}
         state={reviewState} unsent={unsent} pinned={!editing || wide}
-        onRetry={() => { dirty.current = true; void flush(); }} onView={switchView} onSubmit={submit} />
+        onRetry={() => { dirty.current = true; void flush(); }} onView={switchView} onSubmit={submit} />}
 
-      <div ref={stage} className="vt-page relative mx-auto max-w-7xl px-4 pt-6 pb-40 sm:px-6 sm:pb-24">
+      <div ref={stage} data-profile-editor="" data-modern-canvas={modern || undefined} className="vt-page relative mx-auto max-w-7xl px-4 pt-6 pb-40 sm:px-6 sm:pb-24">
         {party > 0 && <Confetti key={party} />}
         {view === "client" ? (
           <div className="grid gap-8">
@@ -447,7 +491,7 @@ function Canvas({ personId }: { personId: string }) {
           </div>
         ) : (
           <CanvasCtx.Provider value={ctx}>
-            {done <= 1 && (
+            {!modern && done <= 1 && (
               <div className="mb-6 lg:hidden">
                 <h2 className="font-display text-heading-lg text-balance break-words text-ink">Welcome, {first}. This is your page.</h2>
                 <p className="mt-1 text-body-md text-pretty text-ink-muted">It&apos;s what clients will see. It saves as you go.</p>
@@ -476,7 +520,7 @@ function Canvas({ personId }: { personId: string }) {
               </section>
             ) : reviewState ? (
               <ReviewBlock state={reviewState} unsent={unsent} since={dayOf(person.submittedAt)} slug={person.slug} />
-            ) : next && (
+            ) : !modern && next && (
               // The one mint block on the screen: the part to fill next. Always near-black type on mint, in both themes.
               // It stays while a part is open, so the page under it doesn't move.
               <section aria-labelledby="next-h" className="mb-12 grid grid-cols-12 items-center gap-x-6 gap-y-2 bg-tint-mint px-5 py-5 text-forest-950 sm:px-6">
@@ -489,28 +533,29 @@ function Canvas({ personId }: { personId: string }) {
                 </button>
               </section>
             )}
-            <div className={cx(rise && "canvas-rise")}>
+            {modern ? <ModernCanvas person={person} fields={d} order={template.order} required={required} editing={editing} next={next} filled={filled} open={open} inline={wide}
+              panel={wide && editing && <EditorPanel id={editing} inline focusOnOpen={userOpened} body={editorFor(editing, d, set, template.required, personId, person.email, (go) => live.guard("photo", go), modern)} />} /> : <div className={cx(rise && "canvas-rise")}>
               <ProfileView person={person} fields={d} mode="own"
                 part={(id, p) => <Spot id={id} kind={p.kind} hint={p.hint}>{p.content}</Spot>}
                 aside={<Rail first={first} panel={null} />} />
-            </div>
-            {editing && wide && (
+            </div>}
+            {editing && wide && !modern && (
               <Anchored id={editing}>
-                <EditorPanel id={editing} body={editorFor(editing, d, set, personId, (go) => live.guard("photo", go))} />
+                <EditorPanel id={editing} body={editorFor(editing, d, set, template.required, personId, person.email, (go) => live.guard("photo", go), modern)} />
               </Anchored>
             )}
             {editing && !wide && (
               <div data-editor="" data-dock="" style={sheetMax ? { maxHeight: sheetMax } : undefined} className="fixed inset-x-0 bottom-0 z-overlay max-h-3/4 overflow-y-auto border-t-4 border-line-strong bg-surface-raised">
-                <EditorPanel id={editing} sheet body={editorFor(editing, d, set, personId, (go) => live.guard("photo", go))} />
+                <EditorPanel id={editing} sheet body={editorFor(editing, d, set, template.required, personId, person.email, (go) => live.guard("photo", go), modern)} />
               </div>
             )}
           </CanvasCtx.Provider>
         )}
       </div>
       {!sent && !editing && view === "edit" && (
-        <Dock done={done} total={REQUIRED.length} next={next} ready={ready} resubmit={resubmit} canSend={!nothingToSend} submitting={submitting} onNext={() => next && open(next)} onSubmit={submit}
+        <Dock done={done} total={required.length} next={next} ready={ready} resubmit={resubmit} canSend={!nothingToSend} submitting={submitting} onNext={() => next && open(next)} onSubmit={submit}
           idle={reviewState === "live" ? "Live" : reviewState === "review" ? `In review since ${dayOf(person.submittedAt)}` : ""}
-          left={ORDER.filter((id) => REQUIRED.includes(id) && !isFilled(id, d))} notes={notes.filter((n, i) => notes.findIndex((m) => SECTION_SPOT[m.section] === SECTION_SPOT[n.section]) === i).map((n) => ({ id: SECTION_SPOT[n.section], label: sectionLabel[n.section] }))} onOpen={open} />
+          left={template.order.filter((id) => invalidParts.has(id))} notes={notes.filter((n, i) => notes.findIndex((m) => SECTION_SPOT[m.section] === SECTION_SPOT[n.section]) === i).map((n) => ({ id: SECTION_SPOT[n.section], label: sectionLabel[n.section] }))} onOpen={open} />
       )}
     </Page>
   );
@@ -571,8 +616,8 @@ function Dock({ done, total, next, ready, resubmit, canSend, submitting, idle, l
               <ChevronUp className={cx("size-4 transition-transform duration-fast", sheet && "rotate-180")} aria-hidden="true" />
             </button>
           ) : (
-            <span role="img" aria-label={`${done} of ${total} required parts filled`} className="shrink-0 font-display text-heading-lg text-ink tabular-nums">
-              {done}<span className="text-heading-sm text-ink-muted">/{total}</span>
+            <span role="img" aria-label={total ? `${done} of ${total} required parts filled` : "No required parts"} className="shrink-0 font-display text-heading-lg text-ink tabular-nums">
+              {total ? <>{done}<span className="text-heading-sm text-ink-muted">/{total}</span></> : "Ready"}
             </span>
           )}
           <div className="min-w-0 flex-1 sm:ml-auto sm:max-w-sm">
@@ -668,7 +713,7 @@ function EditorBar({ segs, done, total, ready, missing, save, view, editing, sen
   pinned: boolean;
   onRetry: () => void; onView: (v: string) => void; onSubmit: () => void;
 }) {
-  const pct = Math.round((done / total) * 100);
+  const pct = total ? Math.round((done / total) * 100) : 100;
   const line = sent ? "Sent for review"
     : missing ? `${missing} ${missing === 1 ? "thing" : "things"} to finish`
     : unsent ? "Unsent changes"
@@ -681,11 +726,14 @@ function EditorBar({ segs, done, total, ready, missing, save, view, editing, sen
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="grid grid-cols-12 items-end gap-x-6 gap-y-4 border-b-4 border-line-strong pt-5 pb-4 lg:pt-7 lg:pb-5">
           <p className="col-span-12 flex items-end gap-3 sm:col-span-4 lg:col-span-3">
-            <span className="font-display text-display-sm text-ink tabular-nums lg:text-stat">{sent ? total : done}<span className="text-heading-lg text-ink-muted lg:text-display-sm">/{total}</span></span>
-            <span className="pb-1 font-display text-label-md font-bold text-ink">parts<br />done</span>
+            {total > 0 ? <>
+              <span className="font-display text-display-sm text-ink tabular-nums lg:text-stat">{sent ? total : done}<span className="text-heading-lg text-ink-muted lg:text-display-sm">/{total}</span></span>
+              <span className="pb-1 font-display text-label-md font-bold text-ink">parts<br />done</span>
+            </> : <span className="font-display text-heading-md text-ink">No required parts</span>}
           </p>
           <div className="col-span-12 sm:col-span-8 lg:col-span-5">
-            <span role="progressbar" aria-label="Profile progress" aria-valuenow={sent ? 100 : pct} aria-valuemin={0} aria-valuemax={100} className="grid grid-cols-10 gap-1">
+            <span role="progressbar" aria-label="Profile progress" aria-valuenow={sent ? 100 : pct} aria-valuemin={0} aria-valuemax={100} className="grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(1, segs.length)}, minmax(0, 1fr))` }}>
+              {!segs.length && <span className="h-3.5 bg-ink" />}
               {segs.map((s, i) => <span key={i} className={cx("h-3.5 transition-colors duration-slow", s === "done" ? "bg-ink" : s === "next" ? "bg-tint-mint" : "border-2 border-line bg-surface-sunken")} />)}
             </span>
             <div className="mt-2.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -713,18 +761,18 @@ function EditorBar({ segs, done, total, ready, missing, save, view, editing, sen
 
 /** The column beside the page while editing: the open part's controls, or the numbered list of every part to tap. */
 function Rail({ first, panel }: { first: string; panel: React.ReactNode }) {
-  const { d, next, editing, open } = useCanvas();
-  const done = REQUIRED.filter((id) => isFilled(id, d)).length;
+  const { order, required, filled: isFilled, next, editing, open } = useCanvas();
+  const done = required.filter(isFilled).length;
   if (panel) return <>{panel}</>;
   return (
     <section aria-labelledby="rail-h" className="border-t-4 border-line-strong pt-4 max-lg:hidden">
       <div className="flex items-baseline justify-between gap-3">
         <h2 id="rail-h" className="font-display text-heading-sm text-ink">{done <= 1 ? `Welcome, ${first}. This is your page.` : next ? "Keep going" : "Ready when you are"}</h2>
-        <span role="img" aria-label={`${done} of ${REQUIRED.length} required parts filled`} className="shrink-0 font-display text-label-md font-bold text-ink tabular-nums">{done}/{REQUIRED.length}</span>
+        <span role="img" aria-label={required.length ? `${done} of ${required.length} required parts filled` : "No required parts"} className="shrink-0 font-display text-label-md font-bold text-ink tabular-nums">{required.length ? `${done}/${required.length}` : "Ready"}</span>
       </div>
       <ul className="mt-3">
-        {PARTS.map((id) => {
-          const filled = isFilled(id, d);
+        {order.map((id) => {
+          const filled = isFilled(id);
           const isNext = id === next;
           return (
             <li key={id} className="border-t border-line">
@@ -735,7 +783,7 @@ function Rail({ first, panel }: { first: string; panel: React.ReactNode }) {
                 <span className={cx("min-w-0 flex-1", filled && !isNext && "text-ink-muted line-through")}>{LABEL[id]}<span className="sr-only">{filled ? " (done)" : " (to do)"}</span></span>
                 {isNext ? <span className="text-label-sm">Next</span>
                   : filled ? <span aria-hidden="true" className="inline-flex items-center gap-1 text-label-sm text-ink-muted"><Check className="size-3.5" strokeWidth={3} />Done</span>
-                  : !REQUIRED.includes(id) && <span className="text-label-sm text-ink-muted">Optional</span>}
+                  : !required.includes(id) && <span className="text-label-sm text-ink-muted">Optional</span>}
               </button>
             </li>
           );
@@ -803,19 +851,19 @@ function Anchored({ id, children }: { id: SpotId; children: React.ReactNode }) {
 }
 
 /** The controls for the open part: a square box under the part on wide screens, a sheet from the bottom on phones. */
-function EditorPanel({ id, body, sheet = false }: { id: SpotId; body: React.ReactNode; sheet?: boolean }) {
-  const { d, errors, noted, close, advance, missing } = useCanvas();
-  const after = firstEmpty(d, id);
+function EditorPanel({ id, body, sheet = false, inline = false, focusOnOpen = true }: { id: SpotId; body: React.ReactNode; sheet?: boolean; inline?: boolean; focusOnOpen?: boolean }) {
+  const { nextOf, errors, noted, close, advance, missing } = useCanvas();
+  const after = nextOf(id);
   const err = errors[id];
   const note = noted[id];
   const ref = React.useRef<HTMLDivElement>(null);
   // Focus the first control as the part opens, so typing starts right away.
   React.useEffect(() => {
     const el = ref.current?.querySelector<HTMLElement>("input:not([type=hidden]):not([type=file]), textarea, [role=radio], button[aria-pressed]");
-    el?.focus({ preventScroll: true });
-  }, [id]);
+    if (focusOnOpen) el?.focus({ preventScroll: true });
+  }, [id, focusOnOpen]);
   return (
-    <div ref={ref} data-editor="" role="group" aria-label={`Editing: ${LABEL[id]}`}
+    <div ref={ref} data-editor="" data-inline={inline || undefined} role="group" aria-label={`Editing: ${LABEL[id]}`}
       onKeyDown={(e) => {
         if (e.key === "Escape") { e.stopPropagation(); close(); return; }
         // Tab stays with the open part (the panel sits apart from it in the page): past the last control it goes back to
@@ -828,7 +876,7 @@ function EditorPanel({ id, body, sheet = false }: { id: SpotId; body: React.Reac
         if (e.shiftKey && at <= 0) { e.preventDefault(); all[all.length - 1].focus(); }
         else if (!e.shiftKey && at === all.length - 1) { e.preventDefault(); all[0].focus(); }
       }}
-      style={sheet ? undefined : { maxHeight: "var(--panel-max, calc(100dvh - 10rem))" }}
+      style={sheet || inline ? undefined : { maxHeight: "var(--panel-max, calc(100dvh - 10rem))" }}
       className={cx("grid gap-5", sheet ? "px-5 pt-5" : "overflow-y-auto border-3 border-line-strong bg-surface px-6 pt-6")}>
       <div className="flex items-baseline justify-between gap-3 border-b-2 border-line-strong pb-3.5">
         <p className="flex min-w-0 items-baseline gap-3 font-display text-heading-md text-ink">
@@ -859,39 +907,44 @@ function EditorPanel({ id, body, sheet = false }: { id: SpotId; body: React.Reac
 }
 
 /** The editor for each part. */
-function editorFor(id: SpotId, d: ProfileFields, set: <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K]) => void, personId: string, confirm: (go: () => void) => void): React.ReactNode {
+function editorFor(id: SpotId, d: ProfileFields, set: <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K]) => void, required: readonly ProfileFieldRule[], personId: string, email: string, confirm: (go: () => void) => void, compact: boolean): React.ReactNode {
   switch (id) {
     case "photo": return <PhotoEditor d={d} personId={personId} onChange={set("photo")} confirm={confirm} />;
-    case "name": return <Field label="Full name"><Input id="f-name" size="lg" autoComplete="name" maxLength={NAME_MAX} value={d.name} onChange={(e) => set("name")(e.target.value.slice(0, NAME_MAX))} /></Field>;
-    case "position": return <>
-      <Field label="Department" hint="Type your own, or tap one to start from."><Input id="f-position" maxLength={DEPARTMENT_MAX} value={d.position} placeholder="e.g. Costume & wardrobe" onChange={(e) => set("position")(e.target.value.slice(0, DEPARTMENT_MAX))} /></Field>
+    case "name": return <Field label="Full name" optional={!required.includes("name")}><Input id="f-name" size="lg" autoComplete="name" maxLength={NAME_MAX} value={d.name} onChange={(e) => set("name")(e.target.value.slice(0, NAME_MAX))} /></Field>;
+    case "position": return compact ? <>
+      <p className="text-body-sm text-ink-muted">Pick the department that fits best. It appears under your name and helps clients find you.</p>
+      <Quick options={onSetSkills} onPick={set("position")} current={d.position} />
+      <Field label="Department" optional={!required.includes("position")}><Input id="f-position" maxLength={DEPARTMENT_MAX} value={d.position} placeholder="Something else? Type your department" onChange={(e) => set("position")(e.target.value.slice(0, DEPARTMENT_MAX))} /></Field>
+    </> : <>
+      <Field label="Department" optional={!required.includes("position")} hint="Type your own, or tap one to start from."><Input id="f-position" maxLength={DEPARTMENT_MAX} value={d.position} placeholder="e.g. Costume & wardrobe" onChange={(e) => set("position")(e.target.value.slice(0, DEPARTMENT_MAX))} /></Field>
       <Quick options={onSetSkills} onPick={set("position")} current={d.position} />
     </>;
     case "years": return <YearsEditor value={d.years} onChange={set("years")} />;
     case "where": return <WhereEditor d={d} set={set} />;
     case "rate": return <div className="grid gap-4">
-      <Field label="Starting rate" optional hint="Leave it empty for “Rate on request”. Final scope and rate are agreed with each client."><Input id="f-rate" inputMode="numeric" value={d.rate} start={<span className="text-label-md">$</span>} end={<span className="text-label-sm text-ink-subtle">USD</span>} onChange={(e) => set("rate")(e.target.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 4))} /></Field>
+      <Field label="Starting rate" optional={!required.includes("rate")} hint={required.includes("rate") ? "Enter the starting price clients will see." : "Leave it empty for “Rate on request”. Final scope and rate are agreed with each client."}><Input id="f-rate" inputMode="numeric" value={d.rate} start={<span className="text-label-md">$</span>} end={<span className="text-label-sm text-ink-subtle">USD</span>} onChange={(e) => set("rate")(e.target.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 4))} /></Field>
       <RadioGroup name="f-basis" label="Rate basis" orientation="horizontal" value={d.basis} onChange={(v) => set("basis")(v as ProfileFields["basis"])} options={Object.entries(basisLabel).map(([value, label]) => ({ value, label }))} />
     </div>;
     case "availability": return <div className="grid gap-4">
       <RadioGroup name="f-monthStatus" label={`This month · ${d.month}`} value={d.monthStatus} onChange={(v) => set("monthStatus")(v as ProfileFields["monthStatus"])} options={Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))} />
-      <Field label="Dates or times this month" hint="Exact project dates are agreed with each client."><Input id="f-dates" maxLength={DATES_MAX} value={d.dates} placeholder="e.g. Weekday mornings" onChange={(e) => set("dates")(e.target.value.slice(0, DATES_MAX))} /></Field>
+      <Field label="Dates or times this month" optional={!required.includes("dates")} hint="Exact project dates are agreed with each client."><Input id="f-dates" maxLength={DATES_MAX} value={d.dates} placeholder="e.g. Weekday mornings" onChange={(e) => set("dates")(e.target.value.slice(0, DATES_MAX))} /></Field>
       <Quick options={["Weekday mornings", "Weekday evenings", "Weekends", "Most days", "Between shoots, ask me"]} onPick={set("dates")} current={d.dates} />
     </div>;
     case "about": return <AboutEditor d={d} onChange={set("about")} />;
-    case "languages": return <Field label="Languages" optional><Input id="f-languages" value={d.languages} placeholder="e.g. English, Spanish" onChange={(e) => set("languages")(e.target.value)} /></Field>;
+    case "languages": return <Field label="Languages" optional={!required.includes("languages")}><Input id="f-languages" value={d.languages} placeholder="e.g. English, Spanish" onChange={(e) => set("languages")(e.target.value)} /></Field>;
     case "services": return <>
-      <ChipPicker id="f-services" label="Off-set services" options={offSetServices} value={d.services} onChange={set("services")} />
+      <ChipPicker id="f-services" label="Off-set services" options={serviceChoices(data.kind)} value={d.services} onChange={set("services")} />
       <Field label="Something else?" optional hint="Other services go to a private review. They don't appear on your profile automatically."><Textarea id="f-other" rows={2} value={d.other} onChange={(e) => set("other")(e.target.value)} /></Field>
     </>;
     case "skills": return <ChipPicker id="f-skills" label="On-set skills" options={onSetSkills} value={d.skills} onChange={set("skills")} />;
     case "credits": return <Credits credits={d.credits} pins={d.creditPins ?? []} onChange={(c, p) => { set("credits")(c); set("creditPins")(p); }} />;
-    case "imdb": return <Field label="IMDb profile link" optional hint="Your IMDb name page. It helps us confirm credits; clients don't see it."><Input id="f-imdb" type="url" inputMode="url" value={d.imdb} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} /></Field>;
+    case "imdb": return <Field label="IMDb profile link" optional={!required.includes("imdb")} hint="Your IMDb name page. It helps us confirm credits; clients don't see it."><Input id="f-imdb" type="url" inputMode="url" value={d.imdb} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} /></Field>;
     case "details": return <div className="grid gap-4">
       <RadioGroup name="f-mode" label="Work mode" value={d.mode} onChange={(v) => set("mode")(v as ProfileFields["mode"])} options={[{ value: "on-site", label: "On site" }, { value: "studio", label: "At my studio" }, { value: "both", label: "Both" }]} />
       <RadioGroup name="f-insurance" label="Insurance · self-reported" value={d.insurance} onChange={(v) => set("insurance")(v as ProfileFields["insurance"])} options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance" }]} />
-      <Field label="Tools / equipment" optional><Input id="f-tools" value={d.tools} onChange={(e) => set("tools")(e.target.value)} /></Field>
-      <Field label="Transport" optional><Input id="f-transport" value={d.transport} onChange={(e) => set("transport")(e.target.value)} /></Field>
+      <Field label="Tools / equipment" optional={!required.includes("tools")}><Input id="f-tools" value={d.tools} onChange={(e) => set("tools")(e.target.value)} /></Field>
+      <Field label="Transport" optional={!required.includes("transport")}><Input id="f-transport" value={d.transport} onChange={(e) => set("transport")(e.target.value)} /></Field>
+      {data.kind === "sample" && <BookingFields fields={d} email={email} set={set} required={required} />}
     </div>;
   }
 }
@@ -901,16 +954,16 @@ function editorFor(id: SpotId, d: ProfileFields, set: <K extends keyof ProfileFi
  * that says what goes there, with "+ Add" (the next one marked). Open: outlined while its controls are in the panel.
  */
 function Spot({ id, kind, hint, children }: { id: SpotId; kind: PartKind; hint: string; children: React.ReactNode }) {
-  const { d, editing, next, fresh, errors, noted, open, portrait } = useCanvas();
-  const order = { "--i": ORDER.indexOf(id) } as React.CSSProperties;
-  const filled = isFilled(id, d);
+  const { order: partOrder, required, filled: isFilled, editing, next, fresh, errors, noted, open, portrait } = useCanvas();
+  const order = { "--i": partOrder.indexOf(id) } as React.CSSProperties;
+  const filled = isFilled(id);
   const err = errors[id];
   const note = noted[id];
   const active = editing === id;
   const glow = id === next && !editing;
   // Outlines, not rings: the Swiss look has no shadows.
   const ring = active ? "outline-3 outline-offset-2 outline-line-strong" : err ? "outline-2 outline-offset-2 outline-danger" : note ? "outline-2 outline-offset-2 outline-dashed outline-line-strong" : "";
-  const optional = !REQUIRED.includes(id);
+  const optional = !required.includes(id);
   const label = `${filled ? "Edit" : "Add"} ${LABEL[id].toLowerCase()}${optional ? " (optional)" : ""}`;
   const focus = "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
@@ -1028,19 +1081,20 @@ function YearsEditor({ value, onChange }: { value: string; onChange: (v: string)
 }
 
 function WhereEditor({ d, set }: { d: ProfileFields; set: <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K]) => void }) {
+  const { required } = useProfileTemplate();
   return (
     <div className="grid gap-4">
       <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
         <RadioGroup name="f-market" label="Home market" orientation="horizontal" value={d.market} onChange={(v) => set("market")(v as ProfileFields["market"])} options={[{ value: "la", label: "Los Angeles" }, { value: "other", label: "Another market" }]} />
-        <Field label="Home ZIP code"><Input id="f-zip" inputMode="numeric" autoComplete="postal-code" value={d.zip} start={<MapPin />} placeholder="90026" onChange={(e) => set("zip")(e.target.value.replace(/\D/g, "").slice(0, 5))} /></Field>
+        <Field label="Home ZIP code" optional={!required.includes("zip")}><Input id="f-zip" inputMode="numeric" autoComplete="postal-code" value={d.zip} start={<MapPin />} placeholder="90026" onChange={(e) => set("zip")(e.target.value.replace(/\D/g, "").slice(0, 5))} /></Field>
       </div>
       {d.market === "other"
-        ? <Field label="City / region and country" hint="Los Angeles is the launch market. Your profile would be held for a future market."><Input id="f-otherCity" value={d.otherCity} onChange={(e) => set("otherCity")(e.target.value)} /></Field>
+        ? <Field label="City / region and country" optional={!required.includes("location")} hint="Los Angeles is the launch market. Your profile would be held for a future market."><Input id="f-otherCity" value={d.otherCity} onChange={(e) => set("otherCity")(e.target.value)} /></Field>
         : <div className="grid gap-2">
-            <p className="text-label-md text-ink">Los Angeles service areas <span className="font-normal text-ink-subtle">· you'll only appear in these</span></p>
+            <p className="text-label-md text-ink">Los Angeles service areas <span className="font-normal text-ink-subtle">{required.includes("location") ? "· you’ll only appear in these" : "· optional"}</span></p>
             <ChipPicker id="f-areas" label="Service areas" options={laServiceAreas} value={d.areas} onChange={set("areas")} />
           </div>}
-      <Field label="Travel notes" optional hint="Only a limit or exception."><Input id="f-travel" value={d.travel} onChange={(e) => set("travel")(e.target.value)} /></Field>
+      <Field label="Travel notes" optional={!required.includes("travel")} hint="Only a limit or exception."><Input id="f-travel" value={d.travel} onChange={(e) => set("travel")(e.target.value)} /></Field>
     </div>
   );
 }

@@ -9,6 +9,11 @@ export const onSetSkills = ["Wardrobe & costume", "Props", "Set decoration", "Li
 
 export const offSetServices = ["Wardrobe & Personal Styling", "Wardrobe & Laundry Care", "Furniture & Creative Builds", "Beauty & Personal Styling", "Makeup Services", "Hair Styling", "Interior Styling", "Event Styling", "Photography & Portraits", "Lighting Design"];
 
+/** Two illustrated examples use service categories from the call sheet outside the live questionnaire taxonomy. */
+export function serviceChoices(source: "sample" | "live") {
+  return source === "sample" ? [...offSetServices, "Events & Organization", "Venue & Location Scouting"] : offSetServices;
+}
+
 export const laServiceAreas = ["Eastside", "Downtown", "Hollywood", "Westside", "The Valley", "Pasadena area", "South Bay"];
 
 export const waitlistCategories = [

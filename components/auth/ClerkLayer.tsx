@@ -2,6 +2,7 @@
 import { ClerkProvider, useClerk, useUser } from "@clerk/react";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
+import { isLocalSampleSession } from "@/lib/auth/sample-session";
 import { AuthContext, type AuthActions } from "@/lib/auth/context";
 import { clerkAppearance, clerkPublishableKey } from "@/lib/auth/clerk";
 import { data } from "@/lib/data";
@@ -43,6 +44,13 @@ function Bridge({ children }: { children: React.ReactNode }) {
     const sync = async () => {
       const current = await data.auth.session();
       if (cancelled) return;
+      // A demo role or locally registered sample account owns its own session. Passive Clerk
+      // events must not swap the selected Gigster for an external account in the preview.
+      if (isLocalSampleSession(data.kind, current)) {
+        setNeedsConsent(null);
+        setSyncedIdentity(identity);
+        return;
+      }
       if (!isLoaded) return;
       if (!isSignedIn || !email) {
         if (current?.via === "clerk") await data.auth.signOut();

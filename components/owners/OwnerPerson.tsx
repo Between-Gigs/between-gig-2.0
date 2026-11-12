@@ -81,6 +81,7 @@ function Person({ id }: { id: string }) {
           </div>
           <p className="flex min-w-0 flex-wrap gap-x-3 text-body-sm text-ink-muted">
             <a className="inline-flex min-h-6 min-w-0 items-center gap-1 hover:text-ink" href={`mailto:${p.email}`}><Mail className="size-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{p.email}</span></a>
+            {data.kind === "sample" && fields?.bookingMobile?.trim() && <span className="break-words">Private booking mobile · {fields.bookingMobile}</span>}
             <span className="inline-flex min-h-6 items-center tabular-nums">ZIP {p.waitlistZip}{p.waitlistCategory && ` · ${waitlistCategoryLabel(p.waitlistCategory)}`}</span>
             {fields && <span className="inline-flex min-h-6 items-center tabular-nums">{Math.round(completeness * 100)}% complete{fromDraft ? " (draft)" : ""}</span>}
           </p>

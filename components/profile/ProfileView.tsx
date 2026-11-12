@@ -9,6 +9,12 @@ import { locationLabel } from "@/lib/profile/location";
 import { absoluteUrl, asset } from "@/lib/site";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { hasRate, pinnedCredits } from "@/lib/profile/validate";
+import { useLook } from "@/components/site/LookSync";
+import type { ProfileSectionId } from "@/lib/profile/template";
+import { useProfileTemplate } from "@/lib/profile/use-profile-template";
+import { PublicBookingDetails } from "./PublicBookingDetails";
+import { ModernProfile } from "./ModernProfile";
+import { WarmProfile } from "./WarmProfile";
 import { craftHref } from "@/lib/profile/browse";
 
 export type ProfileMode = "public" | "own" | "owner";
@@ -43,57 +49,83 @@ const faqs = (first: string) => [
 /** "Production · Role" → the title and the role, as a film credit reads. */
 const splitCredit = (c: string) => { const [title, ...rest] = c.split("·").map((s) => s.trim()); return { title, role: rest.join(" · ") }; };
 
-/**
- * A Gigster's profile, in the Swiss look (direction G): a strict 12-column grid with the portrait hard-cropped into
- * the first four columns beside a huge name, the availability as one forest block and a short facts table; a row of
- * giant numbers under thick rules; then numbered sections (a label column on the left, the content on the right)
- * beside the mint booking block and what we've checked. One component for the public page, the Gigster's own
- * preview, the owner's view and the editor, so all four match. No reviews section: there are none yet, and we don't
- * invent them.
- */
-export function ProfileView({ person, fields: f, extras, mode, similar = [], draft = false, part, aside }: Props) {
-  const toast = useToast();
-  const first = f.name.split(" ")[0] || "this Gigster";
-  // On buttons ("Request …"): a long or double-barrelled first name keeps to its first part, so the button fits.
-  const callName = shortName(first);
-  // The editor's label over the name: the page is live once approved, private until then.
-  const pageLabel = person.status === "approved" ? "Live" : "Your page · private";
-  const services = f.services;
-  const helps = extras?.helps ?? [];
-  const portfolio = extras?.portfolio ?? [];
-  const sample = !!person.sample;
-  const editing = !!part;
-  const show = draft || editing;
-  const [lightbox, setLightbox] = React.useState<number | null>(null);
-  const [request, setRequest] = React.useState(false);
-  const [saved, setSaved] = React.useState(false);
-  // The owner view already has the person's name as its page title.
-  const Name = mode === "owner" ? "h2" : "h1";
-  // A rate of 0 (or none) reads "Rate on request", as everywhere.
-  const priced = hasRate(f.rate);
-  const rate = priced ? `$${f.rate}/${basisShort[f.basis]}` : null;
-  const where = f.market === "la" ? (f.areas.length ? locationLabel(f) : "") : locationLabel(f);
-  const credits = pinnedCredits(f);
-  // Live, the public page reads only what Company OS's public_reader may see: no insurance answer, so it's left out.
-  const unseen = mode === "public" && data.kind === "live";
-  const reviewed = !editing && (mode === "public" || person.status === "approved");
-  const craft = f.position || services[0] || "";
-  const ids = React.useId();
+/** Shared UI state, privacy rules, and content for all profile layouts and preview roles. */
+export type ProfileLayoutProps = Props & ReturnType<typeof profileContent> & {
+  sections: readonly ProfileSectionId[];
+  saved: boolean;
+  onSave: () => void;
+  onShare: () => void;
+  onPhoto: (index: number) => void;
+  onRequest: () => void;
+  ids: string;
+};
 
-  // Away from the editor and draft placeholders, a section with nothing in it is left out, as on the public page.
-  /** A part of the page: wrapped by the editor, else shown when filled (or as a quiet placeholder in a draft preview). */
+function profileContent({ person, fields: f, extras, mode, draft = false, part }: Props) {
+  const first = f.name.trim().split(/\s+/)[0] || "this Gigster";
+  const services = f.services, credits = pinnedCredits(f);
+  const editing = !!part, show = draft || editing;
+  const priced = hasRate(f.rate);
   const P = (id: ProfilePart, filled: boolean, content: React.ReactNode, hint: string, kind: PartKind = "line") =>
     part ? <React.Fragment key={id}>{part(id, { content, hint, kind })}</React.Fragment>
       : filled ? content : draft ? <Placeholder key={id} kind={kind}>{hint}</Placeholder> : null;
+  return {
+    first, callName: shortName(first), services, credits, editing, show, priced, P,
+    pageLabel: person.status === "approved" ? "Live" : "Your page · private",
+    reviewed: !editing && (mode === "public" || person.status === "approved"),
+    unseen: mode === "public" && data.kind === "live",
+    sample: !!person.sample, helps: extras?.helps ?? [], portfolio: extras?.portfolio ?? [],
+    rate: priced ? `$${f.rate}/${basisShort[f.basis]}` : null,
+    where: f.market === "la" ? (f.areas.length ? locationLabel(f) : "") : locationLabel(f),
+    creditRows: credits.map(splitCredit),
+    questions: faqs(first).map((item, i) => ({ id: `${person.id}-faq-${i}`, title: item.q, content: item.a })),
+  };
+}
 
+export function ProfileView(props: Props) {
+  const { person, fields, mode, part } = props;
+  const model = profileContent(props);
+  const look = useLook();
+  const { sections } = useProfileTemplate();
+  const ids = React.useId();
+  const toast = useToast();
+  const [lightbox, setLightbox] = React.useState<number | null>(null);
+  const [request, setRequest] = React.useState(false);
+  const [saved, setSaved] = React.useState(false);
   const share = async () => {
     const url = absoluteUrl(`/p/${person.slug}/`);
     try {
-      if (typeof navigator.share === "function") await navigator.share({ title: `${f.name} · Between Gigs`, url });
+      if (typeof navigator.share === "function") await navigator.share({ title: `${fields.name} · Between Gigs`, url });
       else { await navigator.clipboard.writeText(url); toast({ message: "Link copied", tone: "success" }); }
     } catch { /* closed the share sheet */ }
   };
+  const Layout = look === "modern" ? ModernProfile : look === "swiss" ? SwissProfile : WarmProfile;
+  const craft = fields.position || model.services[0];
+  return (
+    <div className="relative">
+      {mode === "public" && !part && (
+        <nav aria-label="Breadcrumb" className="mb-3 lg:mb-7">
+          <ol className="flex flex-wrap items-center gap-x-2 font-display text-label-md text-ink-muted">
+            <li><Link href="/p/" className="inline-flex min-h-11 items-center underline-offset-4 hover:text-ink hover:underline">Gigsters</Link></li>
+            {craft && <><li aria-hidden="true">/</li><li><Link href={craftHref(fields.position, fields.skills)} className="inline-flex min-h-11 items-center underline-offset-4 hover:text-ink hover:underline">{craft}</Link></li></>}
+            <li aria-hidden="true">/</li>
+            <li aria-current="page" className="min-w-0 break-words text-ink">{fields.name}</li>
+          </ol>
+        </nav>
+      )}
 
+      <Layout {...props} {...model} sections={sections} ids={ids} saved={saved} onSave={() => setSaved(!saved)}
+        onShare={share} onPhoto={setLightbox} onRequest={() => setRequest(true)} />
+      <Lightbox name={fields.name} items={model.portfolio} index={lightbox} onIndex={setLightbox} />
+      <RequestModal first={model.callName} open={request} onClose={() => setRequest(false)} />
+    </div>
+  );
+}
+
+function SwissProfile({ person, fields: f, mode, similar = [], draft = false, part, aside, first, callName, pageLabel,
+  services, helps, portfolio, sample, editing, show, priced, rate, where, credits, unseen, reviewed, P, creditRows,
+  questions, sections, saved, onSave, onShare, onPhoto, onRequest, ids }: ProfileLayoutProps) {
+  const Name = mode === "owner" ? "h2" : "h1";
+  const craft = f.position || services[0] || "";
   // How they work (mode and travel, transport, insurance when shared) and what they bring, as the facts table reads.
   const works = [
     `${modeLabel[f.mode]}${f.travel ? ` · ${f.travel}` : ""}`,
@@ -115,24 +147,17 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
     [priced ? `$${f.rate}` : "", `${basisLong[f.basis]}, from`, priced || editing],
   ] as [string, string, boolean][]).filter(([, , keep]) => keep);
 
-  // Sections are numbered in the order they appear, so a missing one leaves no gap.
-  // "What we've checked" is a numbered section only on phones (beside the story on wide screens), so the number
-  // after it differs by width.
-  let n = 0;
-  const num = () => pad(++n);
-  const checkedN = () => mode === "public" && !aside && !!num();
-
   const tick = <span aria-hidden="true" className="grid size-6 shrink-0 place-items-center bg-ink-brand text-bg"><Check className="size-3.5" strokeWidth={3.5} /></span>;
 
   const actions = mode === "public" && !editing && (
     <div className="grid grid-cols-2 gap-3">
-      <Button variant="secondary" size="lg" iconStart={<Share />} onClick={share}>Share</Button>
-      <Button variant="secondary" size="lg" iconStart={<Heart className={cx(saved && "fill-current text-danger")} />} aria-pressed={saved} onClick={() => setSaved(!saved)}>{saved ? "Saved" : "Save"}</Button>
+      <Button variant="secondary" size="lg" iconStart={<Share />} onClick={onShare}>Share</Button>
+      <Button variant="secondary" size="lg" iconStart={<Heart className={cx(saved && "fill-current text-danger")} />} aria-pressed={saved} onClick={onSave}>{saved ? "Saved" : "Save"}</Button>
     </div>
   );
 
   const facts = [
-    (f.languages || show) && <Row key="speaks" term="Speaks">{P("languages", !!f.languages.trim(), <span>{f.languages}</span>, "Languages (optional)")}</Row>,
+    (f.languages || show) && <Row key="speaks" term="Speaks">{P("languages", !!f.languages.trim(), <span>{f.languages}</span>, "Languages")}</Row>,
     works && <Row key="works" term="Works">{works}</Row>,
     brings && <Row key="brings" term="Brings">{brings}</Row>,
   ].filter(Boolean);
@@ -224,7 +249,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
             <span className="font-display text-heading-md whitespace-nowrap">/ {basisShort[f.basis]}</span>
           </span></p>
         : <p className="font-display text-heading-lg">Rate on request</p>}
-      <Button variant="primary" size="lg" fullWidth disabled={mode !== "public"} aria-describedby={`${person.id}-request-note`} onClick={() => setRequest(true)}
+      <Button variant="primary" size="lg" fullWidth disabled={mode !== "public"} aria-describedby={`${person.id}-request-note`} onClick={onRequest}
         iconEnd={<ArrowRight />} className={onMint}>
         <span className="min-w-0 text-left whitespace-normal">Request {callName}</span>
       </Button>
@@ -253,106 +278,118 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
   const shownPhotos = portfolio.slice(0, 4);
   const tile = ["col-span-6 aspect-4/3 sm:col-span-4 sm:row-span-2 sm:aspect-auto", "col-span-3 aspect-6/5 sm:col-span-2", "col-span-3 aspect-6/5 sm:col-span-2", "col-span-6 aspect-5/2"];
 
+  const body: Record<ProfileSectionId, false | { title: string; meta?: string; content: React.ReactNode }> = {
+    about: (show || !!f.about.trim()) && {
+      title: "About",
+      content: (
+        P("about", !!f.about.trim(), <p className="max-w-2xl font-display text-editorial-md font-medium whitespace-pre-line text-ink lg:text-editorial-lg">{f.about}</p>, "A few lines in your own words: your experience, the help you offer and what it's like to work with you.", "block")
+      ),
+    },
+    services: (show || helps.length > 0 || services.length > 0 || !!f.hireableJobs?.trim()) && {
+      title: "Services",
+      content: (
+        P("services", services.length > 0 || !!f.other.trim() || !!f.hireableJobs?.trim(), (
+          <div className="grid gap-4">
+            {data.kind === "sample" && f.hireableJobs?.trim() && <p className="max-w-2xl break-words text-body-lg text-ink">{f.hireableJobs}</p>}
+            <ol className="grid sm:grid-cols-2 sm:gap-x-6">
+              {(helps.length ? helps : services).map((s, i) => (
+                <li key={s} className="flex items-baseline gap-4 border-t border-line py-3 first:border-t-0 first:pt-0 sm:border-t-2 sm:border-line-strong sm:pb-5 sm:nth-2:border-t-0 sm:nth-2:pt-0">
+                  <span aria-hidden="true" className="w-6 shrink-0 text-label-sm text-ink-muted tabular-nums">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="grid"><span className="font-display text-editorial-lg font-bold tracking-tight text-ink">{s}</span>{rate && !helps.length && <span className="text-body-sm text-ink-muted">From {rate}</span>}</span>
+                </li>
+              ))}
+            </ol>
+            {editing && f.other.trim() && <p className="text-body-sm text-ink-muted">Something else, in private review: {f.other}</p>}
+          </div>
+        ), "The services you'd offer clients between gigs", "block")
+      ),
+    },
+    work: portfolio.length > 0 && {
+      title: "Work", meta: `${portfolio.length} photos`,
+      content: (
+        <>
+          <ul className="grid grid-cols-6 gap-3 sm:gap-6">
+            {shownPhotos.map((it, i) => (
+              <li key={it.src} className={cx("relative", shownPhotos.length === 1 ? "col-span-6 aspect-video" : tile[i])}>
+                <button type="button" onClick={() => onPhoto(i)} aria-label={`Open image: ${it.caption}`} className="group absolute inset-0 block overflow-hidden">
+                  <img src={asset(it.src)} alt="" loading="lazy" className="absolute inset-0 size-full object-cover transition duration-base group-hover:scale-105 motion-reduce:transition-none" />
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+            <Button variant="secondary" size="md" onClick={() => onPhoto(0)}>Show all {portfolio.length} photos</Button>
+            {sample && <p className="flex items-start gap-2.5 text-body-md text-ink-muted"><b className="font-display text-ink">Note</b>Concept images showing the kind of work to discuss, not completed client projects.</p>}
+          </div>
+        </>
+      ),
+    },
+    credits: (show || f.skills.length > 0 || credits.length > 0 || (mode === "owner" && !!f.imdb)) && {
+      title: "On set",
+      content: (
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div>{P("skills", f.skills.length > 0, (
+            <div>
+              <p className="text-eyebrow text-ink-muted uppercase">{f.skills.length === 1 ? "Skill" : "Skills"}</p>
+              <ul className="mt-2 grid gap-1">{f.skills.map((s) => <li key={s} className="font-display text-editorial-lg font-bold tracking-tight text-ink">{s}</li>)}</ul>
+            </div>
+          ), "Your on-set skills", "block")}</div>
+          <div>{P("credits", credits.length > 0, (
+            <div>
+              <p className="text-eyebrow text-ink-muted uppercase">{credits.length === 1 ? "Credit" : "Credits"}</p>
+              <ol className="mt-2 grid gap-3">
+                {creditRows.map(({ title, role }, i) => { return (
+                  <li key={credits[i]} className="grid gap-0.5"><span className="font-display text-editorial-lg font-bold tracking-tight text-ink">{title}</span>{role && <span className="text-body-md text-ink-muted">{role}</span>}</li>
+                ); })}
+              </ol>
+            </div>
+          ), "Your notable credits, best first", "block")}</div>
+          {(mode === "owner" || editing || draft) && <div className="sm:col-span-2">{P("imdb", !!f.imdb, (
+            <p className="text-body-sm text-ink-muted"><a className="inline-flex min-h-11 items-center text-link underline underline-offset-2" href={f.imdb} target="_blank" rel="noreferrer">IMDb page<span className="sr-only"> (opens in a new tab)</span></a> · only the Between Gigs team sees this</p>
+          ), "Your IMDb link. Only the team sees it.", "block")}</div>}
+        </div>
+      ),
+    },
+    details: {
+      title: "Details",
+      content: (
+        <>
+          <dl className="text-body-md">
+            {(where || show) && <Row term="Works in" wide>{P("where", !!where, <span>{where}</span>, "Where you work", "block")}</Row>}
+            {!editing && <Row term="Availability" wide>{monthStatusLabel[f.monthStatus]}{f.dates && <span className="text-ink-muted"> · {f.dates}</span>}</Row>}
+            {(rate || show) && <Row term="Rate" wide>{P("rate", !!rate, <span>From {rate}</span>, "Your starting rate", "block")}</Row>}
+            {!editing && f.languages && <Row term="Languages" wide>{f.languages}</Row>}
+            {!editing && works && <Row term={`How ${first} works`} wide>{works}</Row>}
+            {!editing && brings && <Row term="Brings" wide>{brings}</Row>}
+            {editing && <Row term="How you work" wide>{P("details", !!(f.tools.trim() || f.transport.trim()), (
+              <span>{[modeLabel[f.mode], f.transport, f.tools, insuranceLabel[f.insurance]].filter(Boolean).join(" · ")}</span>
+            ), "Tools, transport, insurance and how you work", "block")}</Row>}
+          </dl>
+          {data.kind === "sample" && <PublicBookingDetails earliestStart={f.earliestStart} bookingMinimum={f.bookingMinimum} personality={f.personality} />}
+        </>
+      ),
+    },
+    questions: !editing && {
+      title: "Questions",
+      content: (
+        <Accordion variant="flush" items={questions} />
+      ),
+    },
+  };
+  const visible = sections.flatMap((id) => body[id] ? [{ id, ...body[id] }] : []);
+  const hasMobileChecks = mode === "public" && !aside;
+
   return (
     <div className="relative">
-      {mode === "public" && !editing && (
-        <nav aria-label="Breadcrumb" className="mb-3 lg:mb-7">
-          <ol className="flex flex-wrap items-center gap-x-2 font-display text-label-md text-ink-muted">
-            <li><Link href="/p/" className="inline-flex min-h-11 items-center underline-offset-4 hover:text-ink hover:underline">Gigsters</Link></li>
-            {craft && <><li aria-hidden="true">/</li><li><Link href={craftHref(f.position, f.skills)} className="inline-flex min-h-11 items-center underline-offset-4 hover:text-ink hover:underline">{craft}</Link></li></>}
-            <li aria-hidden="true">/</li>
-            <li aria-current="page" className="min-w-0 break-words text-ink">{f.name}</li>
-          </ol>
-        </nav>
-      )}
-
       {identity}
       {statRow}
 
       <div className="mt-14 grid grid-cols-12 items-start gap-x-6 gap-y-14 lg:mt-20">
         <div className="col-span-12 grid min-w-0 gap-14 lg:col-span-9 lg:gap-16">
-          {(show || !!f.about.trim()) && <Section n={num()} title="About">
-            {P("about", !!f.about.trim(), <p className="max-w-2xl font-display text-editorial-md font-medium whitespace-pre-line text-ink lg:text-editorial-lg">{f.about}</p>, "A few lines in your own words: your experience, the help you offer and what it's like to work with you.", "block")}
-          </Section>}
-
-          {(show || helps.length > 0 || services.length > 0) && <Section n={num()} title="Services">
-            {P("services", services.length > 0 || !!f.other.trim(), (
-              <div className="grid gap-4">
-                <ol className="grid sm:grid-cols-2 sm:gap-x-6">
-                  {(helps.length ? helps : services).map((s, i) => (
-                    <li key={s} className="flex items-baseline gap-4 border-t border-line py-3 first:border-t-0 first:pt-0 sm:border-t-2 sm:border-line-strong sm:pb-5 sm:nth-2:border-t-0 sm:nth-2:pt-0">
-                      <span aria-hidden="true" className="w-6 shrink-0 text-label-sm text-ink-muted tabular-nums">{String(i + 1).padStart(2, "0")}</span>
-                      <span className="grid"><span className="font-display text-editorial-lg font-bold tracking-tight text-ink">{s}</span>{rate && !helps.length && <span className="text-body-sm text-ink-muted">From {rate}</span>}</span>
-                    </li>
-                  ))}
-                </ol>
-                {editing && f.other.trim() && <p className="text-body-sm text-ink-muted">Something else, in private review: {f.other}</p>}
-              </div>
-            ), "The services you'd offer clients between gigs", "block")}
-          </Section>}
-
-          {portfolio.length > 0 && (
-            <Section n={num()} title="Work" meta={`${portfolio.length} photos`}>
-              <ul className="grid grid-cols-6 gap-3 sm:gap-6">
-                {shownPhotos.map((it, i) => (
-                  <li key={it.src} className={cx("relative", shownPhotos.length === 1 ? "col-span-6 aspect-video" : tile[i])}>
-                    <button type="button" onClick={() => setLightbox(i)} aria-label={`Open image: ${it.caption}`} className="group absolute inset-0 block overflow-hidden">
-                      <img src={asset(it.src)} alt="" loading="lazy" className="absolute inset-0 size-full object-cover transition duration-base group-hover:scale-105 motion-reduce:transition-none" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
-                <Button variant="secondary" size="md" onClick={() => setLightbox(0)}>Show all {portfolio.length} photos</Button>
-                {sample && <p className="flex items-start gap-2.5 text-body-md text-ink-muted"><b className="font-display text-ink">Note</b>Concept images showing the kind of work to discuss, not completed client projects.</p>}
-              </div>
-            </Section>
-          )}
-
-          {(show || f.skills.length > 0 || credits.length > 0 || (mode === "owner" && !!f.imdb)) && <Section n={num()} title="On set">
-            <div className="grid gap-6 sm:grid-cols-2">
-              <div>{P("skills", f.skills.length > 0, (
-                <div>
-                  <p className="text-eyebrow text-ink-muted uppercase">{f.skills.length === 1 ? "Skill" : "Skills"}</p>
-                  <ul className="mt-2 grid gap-1">{f.skills.map((s) => <li key={s} className="font-display text-editorial-lg font-bold tracking-tight text-ink">{s}</li>)}</ul>
-                </div>
-              ), "Your on-set skills", "block")}</div>
-              <div>{P("credits", credits.length > 0, (
-                <div>
-                  <p className="text-eyebrow text-ink-muted uppercase">{credits.length === 1 ? "Credit" : "Credits"}</p>
-                  <ol className="mt-2 grid gap-3">
-                    {credits.map((c) => { const { title, role } = splitCredit(c); return (
-                      <li key={c} className="grid gap-0.5"><span className="font-display text-editorial-lg font-bold tracking-tight text-ink">{title}</span>{role && <span className="text-body-md text-ink-muted">{role}</span>}</li>
-                    ); })}
-                  </ol>
-                </div>
-              ), "Your notable credits, best first", "block")}</div>
-              {(mode === "owner" || editing || draft) && <div className="sm:col-span-2">{P("imdb", !!f.imdb, (
-                <p className="text-body-sm text-ink-muted"><a className="inline-flex min-h-11 items-center text-link underline underline-offset-2" href={f.imdb} target="_blank" rel="noreferrer">IMDb page<span className="sr-only"> (opens in a new tab)</span></a> · only the Between Gigs team sees this</p>
-              ), "Your IMDb link. Only the team sees it.", "block")}</div>}
-            </div>
-          </Section>}
-
-          <Section n={num()} title="Details">
-            <dl className="text-body-md">
-              {(where || show) && <Row term="Works in" wide>{P("where", !!where, <span>{where}</span>, "Where you work", "block")}</Row>}
-              {!editing && <Row term="Availability" wide>{monthStatusLabel[f.monthStatus]}{f.dates && <span className="text-ink-muted"> · {f.dates}</span>}</Row>}
-              {(rate || show) && <Row term="Rate" wide>{P("rate", !!rate, <span>From {rate}</span>, "Your starting rate", "block")}</Row>}
-              {!editing && f.languages && <Row term="Languages" wide>{f.languages}</Row>}
-              {!editing && works && <Row term={`How ${first} works`} wide>{works}</Row>}
-              {!editing && brings && <Row term="Brings" wide>{brings}</Row>}
-              {editing && <Row term="How you work" wide>{P("details", !!(f.tools.trim() || f.transport.trim()), (
-                <span>{[modeLabel[f.mode], f.transport, f.tools, insuranceLabel[f.insurance]].filter(Boolean).join(" · ")}</span>
-              ), "Tools, transport, insurance and how you work", "block")}</Row>}
-            </dl>
-          </Section>
-
-          {!editing && (
-            <Section n={num()} title="Questions">
-              <Accordion variant="flush" items={faqs(first).map((x, i) => ({ id: `${person.id}-faq-${i}`, title: x.q, content: x.a }))} />
-            </Section>
-          )}
-          {checkedN() && <div className="lg:hidden"><Section n={pad(n)} title="What we've checked">{checkedList}</Section></div>}
+          {visible.map(({ id, title, meta, content }, i) => (
+            <Section key={id} sectionId={id} n={pad(i + 1)} title={title} meta={meta}>{content}</Section>
+          ))}
+          {hasMobileChecks && <div className="lg:hidden"><Section n={pad(visible.length + 1)} title="What we've checked">{checkedList}</Section></div>}
           {mode !== "public" && !aside && <div className="grid gap-8 lg:hidden">{booking}{checked}</div>}
           {sample && !editing && <p className="text-body-sm text-ink-subtle">This is a fictional sample profile: the person, biography and credits are made up for the preview.</p>}
         </div>
@@ -367,7 +404,7 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
       {similar.length > 0 && (
         <section aria-labelledby={`${ids}-similar`} className="mt-20 grid grid-cols-12 gap-x-6 gap-y-4 lg:mt-28">
           <div className="col-span-12 border-t-4 border-line-strong pt-3 lg:col-span-3">
-            <p aria-hidden="true" className="text-label-sm text-ink tabular-nums"><span className="lg:hidden">{pad(n + 1)}</span><span className="max-lg:hidden">{pad(mode === "public" && !aside ? n : n + 1)}</span></p>
+            <p aria-hidden="true" className="text-label-sm text-ink tabular-nums"><span className="lg:hidden">{pad(visible.length + (hasMobileChecks ? 2 : 1))}</span><span className="max-lg:hidden">{pad(visible.length + 1)}</span></p>
             <h2 id={`${ids}-similar`} className="mt-1 font-display text-heading-lg text-balance break-words text-ink lg:text-display-sm">More Gigsters like {first}</h2>
             <Link href="/p/" className="mt-2 inline-flex min-h-11 items-center gap-2 font-display text-label-md font-bold text-ink underline underline-offset-4 hover:no-underline lg:mt-4">
               Browse all Gigsters<ArrowRight aria-hidden="true" className="size-4" />
@@ -399,14 +436,12 @@ export function ProfileView({ person, fields: f, extras, mode, similar = [], dra
             <p className="grid shrink-0">
               {rate ? <><b className={cx("font-display tabular-nums", f.rate.length >= 4 ? "text-heading-md" : "text-heading-lg")}>${f.rate}</b><span className="text-label-sm whitespace-nowrap">/ {basisShort[f.basis]} · from</span></> : <b className="font-display text-heading-md">Rate on request</b>}
             </p>
-            <Button variant="primary" size="lg" iconEnd={<ArrowRight />} className={cx(onMint, "min-w-0 flex-1 sm:w-80 sm:flex-none")} onClick={() => setRequest(true)}><span className="min-w-0 truncate">Request {callName}</span></Button>
+            <Button variant="primary" size="lg" iconEnd={<ArrowRight />} className={cx(onMint, "min-w-0 flex-1 sm:w-80 sm:flex-none")} onClick={onRequest}><span className="min-w-0 truncate">Request {callName}</span></Button>
           </div>
         </div>
       )}
       {mode === "public" && !aside && <div aria-hidden="true" className="h-24 lg:hidden" />}
 
-      <Lightbox name={f.name} items={portfolio} index={lightbox} onIndex={setLightbox} />
-      <RequestModal first={callName} open={request} onClose={() => setRequest(false)} />
     </div>
   );
 }
@@ -450,10 +485,10 @@ function Placeholder({ children, kind }: { children: React.ReactNode; kind: Part
 }
 
 /** A numbered section: the number and title in the label column, the content beside it (stacked on phones). */
-function Section({ n, title, meta, children }: { n: string; title: string; meta?: string; children: React.ReactNode }) {
+function Section({ n, title, meta, children, sectionId }: { sectionId?: ProfileSectionId; n: string; title: string; meta?: string; children: React.ReactNode }) {
   const id = React.useId();
   return (
-    <section aria-labelledby={id} className="grid gap-x-6 gap-y-4 border-t-4 border-line-strong pt-3 lg:grid-cols-9 lg:pt-4">
+    <section data-profile-section={sectionId} aria-labelledby={id} className="grid gap-x-6 gap-y-4 border-t-4 border-line-strong pt-3 lg:grid-cols-9 lg:pt-4">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 lg:col-span-3 lg:block">
         <span aria-hidden="true" className="text-label-sm text-ink tabular-nums">{n}</span>
         <h2 id={id} className="font-display text-heading-lg text-ink lg:mt-1">{title}</h2>

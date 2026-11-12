@@ -2,6 +2,7 @@
 import { Button, Modal, Slider } from "@ds/components";
 import { Check, Crop as CropIcon, ImagePlus, Trash2 } from "lucide-react";
 import * as React from "react";
+import { useProfileTemplate } from "@/lib/profile/use-profile-template";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { data } from "@/lib/data";
 import { useSession } from "@/lib/session";
@@ -126,6 +127,7 @@ export function PhotoPicker({ value, name, onChange, error, id, personId: forPer
   /** Runs `go` once a change is allowed (the live-edit warning on an approved profile), before anything is uploaded. */
   confirm?: (go: () => void) => void;
 }) {
+  const { required } = useProfileTemplate();
   const input = React.useRef<HTMLInputElement>(null);
   const [problem, setProblem] = React.useState<string>();
   // The photo being cropped: a new upload, or the current photo to re-crop.
@@ -155,7 +157,7 @@ export function PhotoPicker({ value, name, onChange, error, id, personId: forPer
         ? <PersonPhoto id="self" name={name} src={value} alt="Your profile photo" className="size-24 shrink-0" />
         : <span className="grid size-24 shrink-0 place-items-center border-2 border-line bg-bg text-ink-muted"><ImagePlus aria-hidden="true" /></span>}
       <div className="grid min-w-0 gap-2">
-        <p id={`${id}-label`} className="font-display text-label-md font-bold text-ink">Profile photo</p>
+        <p id={`${id}-label`} className="font-display text-label-md font-bold text-ink">Profile photo{required.includes("photo") ? "" : " · optional"}</p>
         <p className="text-body-sm text-ink-muted">A clear, friendly photo of you, face to camera. Clients see it first.</p>
         {message && <p id={`${id}-error`} className="text-body-sm text-danger">{message}</p>}
         <div className="flex flex-wrap gap-2">

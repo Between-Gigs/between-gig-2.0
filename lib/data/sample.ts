@@ -4,10 +4,11 @@
  * Nothing leaves the browser: "sent" emails land in a local outbox you can open at /emails.
  */
 import { renderEmail } from "@/emails";
+import { featuredPeople } from "./featured-people";
 import { craftOf } from "@/lib/profile/department";
 import { LIVE_FIELDS, NAME_MAX, completeness, contentChanged, pinnedCredits, validateAll } from "@/lib/profile/validate";
 import { absoluteUrl } from "@/lib/site";
-import { blankFields, buildActivity, buildSeed, buildWaitlist, DEMO_TOKENS, SAMPLE_OWNER, type SeedState } from "./seed";
+import { blankFields, buildActivity, buildSeed, buildWaitlist, DEMO_TOKENS, SAMPLE_OWNER, seedPeople, type SeedState } from "./seed";
 import type { DataSource } from "./source";
 import type {
   EmailTemplate, Invite, InviteLookup, OutboxEmail, PeopleQuery, Person, PersonStatus, PersonSummary, Profile,
@@ -43,7 +44,7 @@ const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 const latency = (ms = 60) => new Promise((r) => setTimeout(r, ms));
 
 function fresh(): State {
-  const seed = buildSeed();
+  const seed = buildSeed([...seedPeople, ...featuredPeople]);
   return { ...seed, outbox: [], session: null, challenges: [], waitlist: buildWaitlist(seed.people), activity: buildActivity(seed.people) };
 }
 
@@ -78,11 +79,48 @@ function previewSession(state: State): Session | null {
   return person ? sessionFor(person) : null;
 }
 
+/** Older browser samples get the new examples without a reset. Never overwrite a draft, session, invite or public handle. */
+function addFeaturedExamples(state: State) {
+  // Some demonstration browsers already have the four examples from before the extra questions.
+  // Fill only absent properties, so an explicitly cleared answer stays cleared.
+  for (const record of [...state.drafts, ...state.profiles]) {
+    const defaults = featuredPeople.find((p) => p.id === record.personId)?.fields;
+    if (!defaults) continue;
+    for (const key of ["bookingMobile", "earliestStart", "bookingMinimum", "personality", "hireableJobs"] as const) {
+      if (record.fields[key] === undefined) record.fields[key] = defaults[key];
+    }
+  }
+  const missing = featuredPeople.filter((sample) => !state.people.some((p) => p.id === sample.id));
+  if (!missing.length) return state;
+  const additions = buildSeed(missing);
+  for (const person of additions.people) {
+    person.slug = uniqueSlug(state, person.slug, person.id);
+    // A visitor may already have registered with the example's ordinary name or address.
+    const stem = person.email.split("@")[0];
+    for (let n = 1; state.people.some((p) => p.email === person.email) || state.waitlist?.some((w) => w.email === person.email); n++) {
+      person.email = `${stem}.example${n}@example.com`;
+    }
+    const invite = additions.invites.find((i) => i.personId === person.id)!;
+    invite.email = person.email;
+    state.people.push(person);
+  }
+  state.invites.push(...additions.invites);
+  state.drafts.push(...additions.drafts);
+  state.profiles.push(...additions.profiles);
+  state.activity = state.activity ? [...state.activity, ...buildActivity(additions.people)].sort((a, b) => b.at.localeCompare(a.at)) : buildActivity(state.people);
+  state.waitlist ??= [];
+  for (const p of additions.people) state.waitlist.push({
+    id: `wl-featured-${p.id}`, email: p.email, zip: p.waitlistZip, category: p.waitlistCategory, details: "",
+    placement: "profiles", createdAt: p.invitedAt,
+  });
+  return state;
+}
+
 function load(): State {
   if (memory) return memory;
   try {
     const raw = typeof localStorage !== "undefined" ? localStorage.getItem(KEY) : null;
-    memory = raw ? (JSON.parse(raw) as State) : fresh();
+    memory = raw ? addFeaturedExamples(JSON.parse(raw) as State) : fresh();
   } catch {
     memory = fresh();
   }
@@ -134,7 +172,8 @@ const withAvailability = (to: ProfileFields, from: ProfileFields): ProfileFields
  * hidden credits left out.
  */
 function publicOf(person: Person, profile: Profile): { person: Person; profile: Profile } {
-  const f = profile.fields;
+  const f = { ...profile.fields };
+  delete f.bookingMobile;
   const credits = pinnedCredits(f);
   return {
     person: { id: person.id, email: "", name: person.name, slug: person.slug, status: "approved", waitlistZip: "", waitlistCategory: "", invitedAt: "", updatedAt: person.updatedAt, ...(person.sample ? { sample: true } : {}) },
@@ -668,6 +707,14 @@ export const sampleSource: DataSource = {
   },
 
   demo: {
+    async publicExamples() {
+      const state = load();
+      return featuredPeople.flatMap(({ id }) => {
+        const person = state.people.find((p) => p.id === id && p.sample && p.status === "approved");
+        const profile = person && state.profiles.find((p) => p.personId === id);
+        return person && profile ? [publicOf(person, profile)] : [];
+      });
+    },
     async rearmInvite() {
       const state = load();
       rearmInvite(state);

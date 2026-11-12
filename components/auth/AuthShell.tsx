@@ -4,6 +4,7 @@ import { asset } from "@/lib/site";
 import { Icon3D } from "@/components/ui/Icon3D";
 import { cx } from "@ds/components";
 import { Page } from "@/components/site/Page";
+import { ModernWelcome } from "./ModernWelcome";
 
 const steps = [
   { title: "Open your link", body: "Set up your account with this email address." },
@@ -22,12 +23,15 @@ export function AuthShell({ header, lead, children, className, eyebrow, steps: s
   /** Sign up only: the three-step row. Off when there is nothing to start (an invite already used, invite-only). */
   steps?: boolean;
 }) {
-  const warm = useLook() === "friendly";
+  const look = useLook();
+  const warm = look === "friendly" || look === "call-sheet";
+  const classic = look === "classic";
+  const modern = look === "modern";
   const login = header === "Log in";
   return (
-    <Page className={warm ? "max-w-6xl" : undefined}>
-      <div className={warm ? "grid gap-6 sm:my-2 lg:grid-cols-2" : "grid grid-cols-1 gap-x-6 gap-y-10 sm:pt-6 md:grid-cols-12 lg:pt-10"}>
-        {warm ? <WarmWelcome login={login} eyebrow={eyebrow} showSteps={showSteps} /> : (
+    <Page bare={modern} className={modern ? "modern-auth-stage" : look === "swiss" ? undefined : "max-w-6xl"}>
+      <div className={modern ? "modern-auth-grid" : classic ? "mx-auto w-full max-w-xl overflow-hidden rounded-lg border border-line bg-surface shadow-md sm:my-8" : warm ? "grid gap-6 sm:my-2 lg:grid-cols-2" : "grid grid-cols-1 gap-x-6 gap-y-10 sm:pt-6 md:grid-cols-12 lg:pt-10"}>
+        {modern ? <ModernWelcome login={login} eyebrow={eyebrow} showSteps={showSteps} /> : classic ? <p className="border-b border-line px-6 py-5 text-center text-label-md text-ink">{eyebrow ?? header}</p> : warm ? <WarmWelcome login={login} eyebrow={eyebrow} showSteps={showSteps} /> : (
           <aside aria-label="Welcome to Between Gigs" className="md:col-span-6 lg:col-span-7 xl:col-span-8">
             <p className="flex flex-wrap gap-x-5 gap-y-1 text-eyebrow text-ink uppercase">
               <span>{eyebrow ?? (login ? "Welcome back" : "Welcome")}</span>
@@ -42,7 +46,7 @@ export function AuthShell({ header, lead, children, className, eyebrow, steps: s
           </aside>
         )}
 
-        <div className={warm ? "rounded-2xl bg-surface p-6 shadow-md sm:p-10 lg:p-14" : "self-start rounded-2xl border border-line bg-surface-raised p-5 shadow-sm sm:p-6 swiss:border-0 swiss:border-t-8 swiss:border-line-strong swiss:bg-transparent swiss:p-0 swiss:pt-6 md:col-span-6 lg:col-span-5 xl:col-span-4"}>
+        <div className={modern ? "modern-auth-form" : classic ? "p-6 sm:p-8" : warm ? "rounded-2xl bg-surface p-6 shadow-md sm:p-10 lg:p-14" : "self-start rounded-2xl border border-line bg-surface-raised p-5 shadow-sm sm:p-6 swiss:border-0 swiss:border-t-8 swiss:border-line-strong swiss:bg-transparent swiss:p-0 swiss:pt-6 md:col-span-6 lg:col-span-5 xl:col-span-4"}>
           {warm && <span aria-hidden="true" className="grid size-16 place-items-center rounded-xl bg-tint-mint-soft"><Icon3D name={login ? "waving_hand" : "key"} className="size-9" /></span>}
           <div className={cx(warm && "mt-6", className)}>
             {children}
@@ -50,7 +54,7 @@ export function AuthShell({ header, lead, children, className, eyebrow, steps: s
           </div>
         </div>
 
-        {!warm && !login && showSteps && (
+        {look === "swiss" && !login && showSteps && (
           <ol aria-label="Three steps" className="grid gap-x-6 gap-y-4 md:col-span-12 md:grid-cols-3 lg:mt-8">
             {steps.map((s, i) => (
               <li key={s.title} aria-current={i === 0 ? "step" : undefined}
@@ -72,7 +76,7 @@ export function AuthShell({ header, lead, children, className, eyebrow, steps: s
 
 function WarmWelcome({ login, eyebrow, showSteps }: { login: boolean; eyebrow?: string; showSteps: boolean }) {
   return (
-    <aside aria-label="Welcome to Between Gigs" className="relative isolate hidden flex-col overflow-hidden rounded-2xl bg-tint-peach text-tint-ink lg:flex">
+    <aside data-call-sheet-stage="welcome" aria-label="Welcome to Between Gigs" className="relative isolate hidden flex-col overflow-hidden rounded-2xl bg-tint-peach text-tint-ink lg:flex">
       <div className="px-12 pt-12">
         <span className="inline-flex items-center gap-2 rounded-full bg-surface px-3.5 py-1.5 text-label-md text-ink">
           <Icon3D name="waving_hand" className="size-5" />{eyebrow ?? (login ? "Welcome back" : "Welcome")}

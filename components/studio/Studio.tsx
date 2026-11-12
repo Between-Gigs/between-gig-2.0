@@ -1,4 +1,5 @@
 "use client";
+import { LookSwitcher } from "@/components/site/LookSwitcher";
 /*
  * Studio: a no-code site designer and content manager for Between Gigs, built to become its own service. The frame
  * follows Webflow so it feels familiar: a left tool bar (Add, Navigator, Pages, CMS, Assets, Settings) with flyout
@@ -275,7 +276,7 @@ function Shell() {
       <DesignContext.Provider value={design}>
         <div className="flex h-dvh flex-col overflow-hidden bg-bg text-ink">
           {/* Top bar: project and page on the left, breakpoints in the middle, history, preview and Publish on the right. */}
-          <header className="flex h-11 shrink-0 items-center gap-1 border-b border-line bg-surface px-1.5 sm:gap-1.5 sm:px-2">
+          <header data-call-sheet-stage="toolbar" className="flex h-11 shrink-0 items-center gap-1 border-b border-line bg-surface px-1.5 sm:gap-1.5 sm:px-2">
             <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-1.5">
               <IconButton size="sm" variant="ghost" label="Open panels" icon={<MenuIcon />} className="lg:hidden" onClick={() => setNavOpen(true)} />
               <Menu align="start" trigger={
@@ -358,7 +359,7 @@ function Shell() {
               </span>
               <Divider className="hidden sm:block" />
               <span className="inline-flex items-center gap-0.5">
-                <span className="hidden lg:inline-flex"><ThemeButton /></span>
+                <span className="hidden items-center gap-1 lg:inline-flex"><LookSwitcher compact /><ThemeButton /></span>
                 {area === "design" && <IconButton size="sm" variant="ghost" label={preview ? "Exit preview" : "Preview"} title={preview ? "Exit preview" : "Preview the page"} icon={preview ? <EyeOff /> : <Eye />} pressed={preview} onClick={() => { setPreview(!preview); setEditingId(null); }} />}
                 {/* Below 1280px the panel is a drawer that's closed until asked for, so the button only looks pressed where the panel is really on screen. */}
                 {area !== "code" && <IconButton size="sm" variant="ghost" label={rightShown && wide ? "Hide the right panel" : "Show the right panel"} title={rightShown && wide ? "Hide the right panel" : "Show the right panel"} icon={<PanelRight />} pressed={wide ? rightShown : inspectorOpen}

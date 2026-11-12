@@ -1,0 +1,124 @@
+/* The public launch and Professionals pages already carry this design. Product pages
+   borrow their dark stage, luminous horizon, compact type and sage-colored paper. */
+:root[data-look="call-sheet"]:not([data-brand-page]) {
+  --tint-mint: var(--color-mint-300);
+  --tint-mint-soft: color-mix(in oklab, var(--surface) 82%, var(--color-mint-500));
+  --tint-peach: color-mix(in oklab, var(--surface) 85%, var(--color-forest-400));
+  --tint-butter: color-mix(in oklab, var(--surface) 80%, var(--color-forest-300));
+  --tint-sky: color-mix(in oklab, var(--surface) 84%, var(--color-mint-700));
+  --tint-sage: color-mix(in oklab, var(--surface) 80%, var(--color-sage-400));
+  --tint-sand: var(--surface-sunken);
+  --tint-ink: var(--ink);
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+
+  /* Like the launch masthead, these are dark islands in either appearance. Local
+     tokens keep fields, action labels, badges and the brand mark readable in Day. */
+  [data-call-sheet-stage] {
+    --bg: var(--color-forest-950);
+    --surface: var(--color-forest-900);
+    --surface-raised: var(--color-forest-800);
+    --surface-sunken: var(--color-forest-950);
+    --surface-hover: #6ff2b91c;
+    --surface-selected: #1c4d37;
+    --line: #48765c;
+    --line-strong: var(--color-forest-300);
+    --focus: var(--color-mint-300);
+    --ink: #eaf4ee;
+    --ink-muted: #c0d2c8;
+    --ink-subtle: #b2c9be;
+    --ink-brand: var(--color-mint-300);
+    --ink-disabled: #a7b8ae;
+    --link: var(--color-mint-300);
+    --logo-mark: var(--color-mint-300);
+    --logo-ink: #eaf4ee;
+    --logo-rule: var(--color-forest-400);
+    --info: var(--color-mint-300);
+    --info-soft: var(--surface-selected);
+    --success: var(--color-mint-300);
+    --success-soft: #19432e;
+    --tint-ink: var(--ink);
+    --color-tint-ink: var(--ink);
+    --color-tint-peach: var(--surface-selected);
+    --tint-butter: var(--surface-selected);
+    --action-strong: #eaf4ee;
+    --action-strong-hover: var(--color-mint-100);
+    --on-action-strong: var(--color-forest-950);
+    color: var(--ink);
+    background-color: var(--color-forest-950);
+    /* An illuminated ellipse along the lower edge; the dotted field is the launch artwork's pitch. */
+    background-image:
+      radial-gradient(108% 150% at 82% 233%, transparent 87%, #1fdc8c16 92%, #6ff2b96b 93%, #3deba00a 94%, transparent 100%),
+      radial-gradient(#6ff2b929 .7px, transparent 1.2px),
+      linear-gradient(105deg, var(--color-forest-950), var(--color-forest-900) 52%, var(--color-forest-800));
+    background-size: auto, 10px 10px, auto;
+    color-scheme: dark;
+  }
+
+  [data-call-sheet-stage="intro"], [data-call-sheet-stage="owner"] {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+  }
+  [data-call-sheet-stage="intro"] { padding: clamp(1.25rem, 3.5vw, 2.75rem); }
+  [data-call-sheet-stage="owner"] { margin-inline: 0; padding: 0.875rem 1.25rem; }
+
+  [data-call-sheet-stage="toolbar"] {
+    /* Fixed-height bars use the stage's dots and an edge of light without adding any height. */
+    border-bottom-color: var(--color-forest-500);
+    box-shadow: inset 0 -1px #6ff2b92b;
+    background-size: auto, 10px 10px, auto;
+  }
+  [aria-label="Selected element path"] {
+    --info: var(--ink-brand);
+  }
+  [aria-label="Selected element path"] .text-info\/70 {
+    color: var(--ink-brand);
+  }
+  [data-call-sheet-stage="profile"] { border: 1px solid var(--line); }
+  [data-call-sheet-stage="profile"] > span[aria-hidden] { display: none; }
+  [data-call-sheet-stage="profile"] dl > div { border: 1px solid var(--line); }
+  [data-call-sheet-stage="profile"] [data-spot-edit][aria-pressed="true"] { outline-color: var(--focus); }
+  [data-call-sheet-stage="welcome"] p.font-display span {
+    color: var(--color-mint-300);
+    background-image: none;
+    padding-inline: 0;
+  }
+  [data-call-sheet-stage="welcome"] .bg-mint-500 { color: var(--color-forest-950); }
+
+  [data-call-sheet-card] {
+    border-color: var(--line);
+    box-shadow: var(--elev-sm);
+  }
+  [data-call-sheet-card] > div:first-child { margin: 0; border-radius: 0; }
+  [data-call-sheet-card] > div:nth-child(2) { border-top: 3px solid var(--color-mint-500); }
+
+  [aria-label="Owner workspace"] [aria-current="page"] {
+    background: var(--surface-selected);
+    box-shadow: inset 3px 0 var(--ink-brand);
+  }
+  [aria-label="Template settings"] [role="radio"][aria-checked="true"],
+  [data-profile-editor] [role="tab"][aria-selected="true"] {
+    background-color: var(--action-strong);
+    color: var(--on-action-strong);
+  }
+  [data-profile-editor] section[aria-labelledby="next-h"],
+  [aria-label="Sample preview"], [aria-label="Find a sample Gigster"] {
+    border-inline-start: 3px solid var(--ink-brand);
+  }
+
+  @media (width < 64rem) {
+    [data-call-sheet-stage="welcome"] { display: block; }
+    [data-call-sheet-stage="welcome"] > div:first-child { padding: 1.25rem 1.5rem; }
+    [data-call-sheet-stage="welcome"] > div:last-child,
+    [data-call-sheet-stage="welcome"] ol,
+    [data-call-sheet-stage="welcome"] p:not(.font-display) { display: none; }
+    [data-call-sheet-stage="welcome"] p.font-display {
+      margin-top: 0.65rem;
+      font-size: var(--text-heading-lg);
+      line-height: var(--text-heading-lg--line-height);
+    }
+    [data-call-sheet-stage="welcome"] p.font-display br { display: none; }
+    [data-call-sheet-stage="welcome"] p.font-display span { margin-left: 0.2em; }
+  }
+}

@@ -1,4 +1,7 @@
 "use client";
+import { Badge } from "@ds/components";
+import { Icon3D } from "@/components/ui/Icon3D";
+import { useLook } from "@/components/site/LookSync";
 import { ArrowRight, CircleCheck, MessageSquareWarning, PartyPopper, PencilLine, Users } from "lucide-react";
 import * as React from "react";
 import { data, type ActivityEvent, type PersonSummary, type ProfileFields } from "@/lib/data";
@@ -23,6 +26,7 @@ export function ReviewQueue() {
 }
 
 function Queue() {
+  const brand = useLook() !== "swiss";
   const [rows, setRows] = React.useState<PersonSummary[] | null>(null);
   const [decided, setDecided] = React.useState<ActivityEvent[]>([]);
   React.useEffect(() => {
@@ -51,9 +55,9 @@ function Queue() {
 
   return (
     <OwnerShell>
-      <OwnerPage title="Review queue" kicker="Oldest first" meta={rows.length}
+      <OwnerPage title="Review queue" icon="eyes" kicker="Oldest first" meta={rows.length}
         description="Submitted profiles, oldest first. Open one to approve it or suggest edits, then move straight to the next."
-        actions={rows.length > 0 && <ButtonLink href={reviewHref(rows[0].person.id)} variant="strong" size="lg" className={forestButton} iconEnd={<ArrowRight />}>Start with the oldest</ButtonLink>}>
+        actions={rows.length > 0 && <ButtonLink href={reviewHref(rows[0].person.id)} variant={brand ? "primary" : "strong"} size={brand ? "md" : "lg"} className={brand ? undefined : forestButton} iconEnd={<ArrowRight />}>Start with the oldest</ButtonLink>}>
         {rows.length === 0 ? <Wrap today={decided.filter((e) => isToday(e.at))} /> : (
           <Panel number="01" title="Waiting for review" count={rows.length} flush collapsible="queue-waiting"
             aside={common && <span className="inline-flex items-center gap-1.5"><MessageSquareWarning className="size-4 text-warning" aria-hidden="true" /><span className="tabular-nums">{common[1]} of {rows.length}</span> missing {common[0].toLowerCase()}</span>}>
@@ -62,9 +66,9 @@ function Queue() {
             <ol className={rowListRule}>
               {rows.map(({ person: p, fields, completeness }, i) => (
                 <Row key={p.id} href={reviewHref(p.id)} title={p.name}
-                  leading={<OwnerAvatar id={p.id} name={p.name} src={fields?.photo || undefined} className="size-12 @md:size-16" textClass="text-heading-sm" />}
+                  leading={<OwnerAvatar id={p.id} name={p.name} src={fields?.photo || undefined} className="size-12 swiss:@md:size-16" textClass="text-heading-sm" />}
                   action="Review" strong={i === 0}
-                  badge={i === 0 ? <span className="inline-flex h-6 shrink-0 items-center border-2 border-ink px-1.5 text-label-sm font-bold tracking-widest text-ink uppercase">Oldest</span> : undefined}
+                  badge={i === 0 && (brand ? <Badge tone="warning" size="sm">Oldest</Badge> : <span className="inline-flex h-6 shrink-0 items-center border-2 border-ink px-1.5 text-label-sm font-bold tracking-widest text-ink uppercase">Oldest</span>)}
                   subtitle={[fields?.position, fields?.services.join(", ")].filter(Boolean).join(" · ")}
                   meta={<><Meter value={completeness * 100} label="Profile complete" /><AgoPill className="min-w-32">Sent {p.submittedAt ? ago(p.submittedAt).toLowerCase() : ""}</AgoPill></>} />
               ))}
@@ -80,8 +84,8 @@ function Queue() {
                 const approved = e.kind === "approved";
                 return (
                   <Row key={e.id} href={e.personId ? `/owners/people/${e.personId}/` : "/owners/people/"} title={e.who}
-                    leading={<span className="grid size-12 place-items-center bg-surface-sunken text-ink @md:size-16">
-                      {approved ? <CircleCheck aria-hidden="true" className="size-5" strokeWidth={1.75} /> : <PencilLine aria-hidden="true" className="size-5" strokeWidth={1.75} />}
+                    leading={<span className={brand ? `grid size-12 place-items-center rounded-md ${approved ? "bg-tint-mint-soft" : "bg-tint-peach"}` : "grid size-12 place-items-center bg-surface-sunken text-ink @md:size-16"}>
+                      {brand ? <Icon3D name={approved ? "check_mark_button" : "memo"} className="size-7" /> : approved ? <CircleCheck aria-hidden="true" className="size-5" strokeWidth={1.75} /> : <PencilLine aria-hidden="true" className="size-5" strokeWidth={1.75} />}
                     </span>}
                     subtitle={approved ? "Approved · live on the site" : "Sent suggested edits"}
                     meta={<AgoPill className="min-w-28">{ago(e.at)}</AgoPill>} />

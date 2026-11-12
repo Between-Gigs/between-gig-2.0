@@ -85,10 +85,10 @@ export function CallSheetHome({ curtain = HOME_CURTAIN }: {
 
         <main id="main" className="relative flex flex-1 flex-col items-center justify-center py-12 text-center swiss:items-stretch swiss:justify-start swiss:gap-8 swiss:py-8 swiss:text-left swiss:lg:grid swiss:lg:grid-cols-12 swiss:lg:content-center swiss:lg:gap-x-6 swiss:lg:py-12">
           <div className="flex min-w-0 flex-col swiss:lg:col-span-7">
-            <Reveal effect="fade-up"><p className="text-eyebrow text-ink-brand swiss:text-ink">Extraordinary talent. Everyday solutions.</p></Reveal>
+            <Reveal effect="fade-up"><p className="text-eyebrow text-ink-brand uppercase swiss:text-ink">Extraordinary talent. Everyday solutions.</p></Reveal>
             <Reveal effect="fade-up" delay={80}>
-              <h1 className="mt-4 font-display text-display-md text-ink sm:text-display-lg xl:text-display-xl">
-                Coming <br className="hidden swiss:block" /><span className="text-ink-brand">soon.</span>
+              <h1 className="mt-4 max-w-3xl font-display text-display-lg text-balance text-ink sm:text-display-xl swiss:max-w-none swiss:text-display-md swiss:sm:text-display-lg swiss:xl:text-display-xl">
+                Coming <br className="hidden swiss:block" /><span className={swiss ? "text-ink-brand" : "glow-text text-ink-brand"}>soon.</span>
               </h1>
             </Reveal>
             <Reveal effect="fade-up" delay={160} className="mt-8 swiss:lg:mt-auto swiss:lg:pt-10">

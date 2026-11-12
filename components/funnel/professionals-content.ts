@@ -13,12 +13,7 @@ export const services = [
   { icon: Film, cat: "archives", from: "Editors, producers & camera professionals", to: "Family films & digital archives", text: "Transform family footage, photographs and recordings into polished legacy films and organized digital archives.", ideas: ["Family and legacy films", "Editing archival footage and recordings", "Organizing photographs and digital media"] },
 ];
 
-export const profiles = [
-  { id: "simone", name: "Simone", title: "Art Director → Interior Styling", category: "interiors", img: "simone", credits: "Independent shorts and branded shoots", services: "Room styling, mood boards and sourcing", pricing: "Styling consultations: $95-$140 / hour", availability: "Weekday afternoons between shoots", portfolio: "A warm living-room styling concept" },
-  { id: "luis", name: "Luis", title: "Set Carpenter → Custom Builds", category: "builds", img: "luis", credits: "Television sets and music videos", services: "Custom furniture and creative builds", pricing: "Design consultations from $450. Fabrication quoted by project.", availability: "Weekends; 2-3 weeks' lead time", portfolio: "A sculpted walnut sideboard" },
-  { id: "renee", name: "Renee", title: "Production Coordinator → Events", category: "events", img: "renee", credits: "Commercial shoots and indie-film logistics", services: "Event timelines and vendor coordination", pricing: "Coordination: $75-$110 / hour", availability: "Weekday planning and event-day coverage by arrangement", portfolio: "An intimate garden event" },
-  { id: "devon", name: "Devon", title: "Location Scout → Commercial Locations & Venues", category: "venues", img: "devon", credits: "Independent films and commercial shoots", services: "Restaurant and retail location research, corporate-event venues, and hotel and restaurant scouting for travel companies", pricing: "Scouting packages from $350", availability: "Select weekdays between productions", portfolio: "A garden courtyard event setting" },
-];
+export { professionalExamples as profiles } from "@/lib/professional-examples";
 
 export const faqs: [string, string][] = [
   ["What does it cost?", "It's free to join. You'll always see any applicable marketplace fees or commissions upfront before choosing to offer services."],

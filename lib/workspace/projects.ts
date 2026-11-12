@@ -99,6 +99,10 @@ export const projects: Project[] = [
     summary: "Try every role in the sample, plus the pointer effects and page-curtain experiments.",
     pages: [
       { id: "preview-guide", title: "Preview guide", path: "/preview/" },
+      { id: "preview-profiles", title: "Sample Gigster profiles", path: "/preview/profiles/" },
+      { id: "preview-profile-editor", title: "Gigster profile editor", path: "/preview/profile-editor/" },
+      { id: "preview-journey", title: "Stage 2 invitation journey", path: "/preview/gigster-journey/" },
+      { id: "preview-wallpapers", title: "Wallpapers & background art", path: "/preview/wallpapers/" },
       { id: "preview-cursors", title: "Mouse effects", path: "/preview/cursors/" },
       { id: "preview-curtain", title: "Page curtain", path: "/preview/curtain/" },
     ],

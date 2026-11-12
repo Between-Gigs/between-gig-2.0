@@ -1,5 +1,7 @@
 import { lookKey } from "./look";
 
+export const guideReadyEvent = "bg-guide-preview-ready";
+
 /** Before the app boots, give passive sample frames temporary storage so Studio autosave, sample roles and
  * invite-open events stay inside the thumbnail. The parent shares only its appearance settings. */
 export const prepareGuideThumbnail = process.env.BG_BUILD === "server" || process.env.NEXT_PUBLIC_DATA_SOURCE === "api" ? "" : `

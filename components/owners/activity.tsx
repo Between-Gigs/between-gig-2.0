@@ -1,21 +1,24 @@
+import { useLook } from "@/components/site/LookSync";
 import { cx } from "@ds/components";
 import Link from "next/link";
 import type { ActivityEvent, ActivityKind } from "@/lib/data";
 import { markArea } from "@/lib/split-area";
 import { CircleCheck, Eye, Mail, PencilLine, Send, Ticket, UserPlus, type LucideIcon } from "lucide-react";
+import { Icon3D } from "@/components/ui/Icon3D";
+import type { Icon3DName } from "@/lib/icons3d";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 
 markArea("bg-split:dashboard");
 
 /** Each kind of event has its own line icon (shown when the person has no photo yet). Never the icon alone: the verb says it. */
-const meta: Record<ActivityKind, { verb: string; icon: LucideIcon }> = {
-  joined_waitlist: { verb: "joined the call sheet", icon: Ticket },
-  invited: { verb: "was invited", icon: Mail },
-  opened: { verb: "opened their invite", icon: Eye },
-  registered: { verb: "created their account", icon: UserPlus },
-  submitted: { verb: "submitted their profile", icon: Send },
-  approved: { verb: "was approved", icon: CircleCheck },
-  changes_requested: { verb: "was sent suggested edits", icon: PencilLine },
+const meta: Record<ActivityKind, { verb: string; icon: LucideIcon; art: Icon3DName; tone: string }> = {
+  joined_waitlist: { verb: "joined the call sheet", icon: Ticket, art: "admission_tickets", tone: "bg-tint-sand" },
+  invited: { verb: "was invited", icon: Mail, art: "envelope", tone: "bg-tint-sage" },
+  opened: { verb: "opened their invite", icon: Eye, art: "eyes", tone: "bg-tint-sky" },
+  registered: { verb: "created their account", icon: UserPlus, art: "waving_hand", tone: "bg-tint-sky" },
+  submitted: { verb: "submitted their profile", icon: Send, art: "envelope", tone: "bg-tint-peach" },
+  approved: { verb: "was approved", icon: CircleCheck, art: "check_mark_button", tone: "bg-tint-mint-soft" },
+  changes_requested: { verb: "was sent suggested edits", icon: PencilLine, art: "memo", tone: "bg-tint-butter" },
 };
 
 export const ago = (iso: string) => {
@@ -44,6 +47,8 @@ export function ActivityList({ events, className, onOpen, photoFor, phoneLimit }
   /** The person's photo, shown square beside the line; without one, the event's line icon. */ photoFor?: (personId: string) => string | undefined;
   /** Below lg, show only this many events (the caller offers "Show all"), so the phone page stays short. */ phoneLimit?: number;
 }) {
+  const look = useLook();
+  const brand = look !== "swiss";
   if (!events.length) return <p className="py-4 text-body-sm text-ink-muted">Nothing yet. Invites, sign-ups and reviews show up here.</p>;
   const days: [string, ActivityEvent[]][] = [];
   for (const e of events) {
@@ -53,6 +58,33 @@ export function ActivityList({ events, className, onOpen, photoFor, phoneLimit }
   }
   let n = 0;
   const cut = (i: number) => phoneLimit !== undefined && i >= phoneLimit && "max-lg:hidden";
+  if (brand) return (
+    <div className={cx("grid gap-1 px-2 pb-2 sm:px-3", className)}>
+      {days.map(([label, list]) => (
+        <section key={label} aria-label={label} data-fit-group="" className={cx(cut(n) || undefined)}>
+          <h3 className="px-3 pt-2 pb-1 text-label-sm text-ink-subtle">{label}</h3>
+          <ol>
+            {list.map((e) => {
+              const m = meta[e.kind];
+              const i = n++;
+              return (
+                <li key={e.id} data-fit="" className={cx("relative flex min-h-16 items-start gap-3 px-3 py-2.5 before:absolute before:inset-x-3 before:top-0 before:border-t-2 before:border-dashed before:border-line first:before:hidden", cut(i))}>
+                  {look === "modern" ? <PersonPhoto id={e.personId ?? e.id} name={e.who} src={e.personId ? photoFor?.(e.personId) : undefined} className="size-9 shrink-0 rounded-full" /> :
+                    <span className={cx("grid size-11 shrink-0 place-items-center rounded-md", m.tone)}><Icon3D name={m.art} className="size-7" /></span>}
+                  <p className="min-w-0 flex-1 text-body-md text-ink-muted">
+                    {e.personId && onOpen ? <button type="button" onClick={() => onOpen(e.personId!)} className="inline-flex min-h-6 items-center font-bold text-ink hover:text-ink-brand hover:underline">{e.who}</button>
+                      : e.personId ? <Link href={`/owners/people/${e.personId}/`} className="font-bold text-ink hover:text-ink-brand hover:underline">{e.who}</Link> : <b className="font-bold text-ink">{e.who}</b>}{" "}
+                    {m.verb}{e.by && <span className="text-ink-subtle"> · {e.by.replace(/\s*\(sample\)$/, "")}</span>}
+                    <time dateTime={e.at} className="block text-body-sm font-semibold text-ink-subtle tabular-nums">{clock(e.at)}</time>
+                  </p>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      ))}
+    </div>
+  );
   return (
     <div className={cx("grid gap-1 pb-2", className)}>
       {days.map(([label, list]) => (

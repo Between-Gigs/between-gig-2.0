@@ -97,6 +97,13 @@ export interface ProfileFields {
   tools: string;
   transport: string;
   mode: WorkMode;
+  /** Stage 2 sample answers. Earlier profiles and the production adapter can omit them. */
+  hireableJobs?: string;
+  earliestStart?: string;
+  bookingMinimum?: string;
+  personality?: string;
+  /** Private to the Gigster and booking team. Excluded from public profiles and browse results. */
+  bookingMobile?: string;
 }
 
 /** The person's working copy: what the builder autosaves. */

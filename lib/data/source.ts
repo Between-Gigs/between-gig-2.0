@@ -105,6 +105,8 @@ export interface DataSource {
 
   /** Sample-only controls for the Preview guide and QA. The live implementation omits them. */
   demo?: {
+    /** Published Professionals examples, with the same public field projection as their expanded pages. */
+    publicExamples(): Promise<{ person: Person; profile: Profile }[]>;
     reset(): Promise<void>;
     signInAs(role: Role | "invited", personId?: string): Promise<{ inviteToken?: string }>;
     /** Makes the demo invite usable again without touching who is signed in (Studio's Live site preview). */

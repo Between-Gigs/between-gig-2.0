@@ -4,6 +4,7 @@ import { Clapperboard, MapPin } from "lucide-react";
 import * as React from "react";
 import type { ProfileFields } from "@/lib/data";
 import { basisShort, monthStatusLabel } from "@/lib/data/taxonomy";
+import { useLook } from "@/components/site/LookSync";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { hasRate, pinnedCredits } from "@/lib/profile/validate";
 
@@ -43,6 +44,7 @@ export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview"
   /** Beside the builder: the step being filled in. Its parts of the card get a marker bar; empty parts say which step fills them. */
   step?: number;
 }) {
+  const warm = useLook() !== "swiss";
   const credits = pinnedCredits(d);
   const shown = d.services.slice(0, 3);
   const live = step !== undefined;
@@ -50,8 +52,8 @@ export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview"
   const ring = (n: number) => cx(live && "-mx-2.5 rounded-l-none! rounded-r-md border-l-2 pr-2.5 pl-2 transition-colors", live && (step === n ? "border-ink-brand bg-surface-selected" : "border-transparent"));
   const later = (n: number, what: string) => <span className="text-body-sm text-ink-subtle italic">{what} · added in step {n + 1}</span>;
   return (
-    <article aria-label={badge ? `${badge} of your profile card` : `${d.name || "Profile"} card`} className={cx("overflow-hidden bg-surface", className)}>
-      <div className="relative aspect-square overflow-hidden">
+    <article data-call-sheet-card="" aria-label={badge ? `${badge} of your profile card` : `${d.name || "Profile"} card`} className={cx("overflow-hidden bg-surface", warm && "rounded-xl border border-line shadow-md", className)}>
+      <div className={cx("relative overflow-hidden", warm ? "m-2 mb-0 aspect-video rounded-lg" : "aspect-square")}>
         <PersonPhoto id={personId} name={d.name} src={d.photo || undefined} alt={d.photo ? `Profile photo of ${d.name || "you"}` : "No photo yet"}
           fallback="brand" department={d.position} skills={d.skills} iconClass="size-10" textClass="text-heading-lg" className="size-full" />
         <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
@@ -59,7 +61,7 @@ export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview"
           <Live value={d.monthStatus}><Badge tone={availabilityTone[d.monthStatus]} size="sm">{monthStatusLabel[d.monthStatus]}</Badge></Live>
         </div>
       </div>
-      <div className="grid gap-3 py-4">
+      <div className={cx("grid gap-3", warm ? "p-5" : "py-4")}>
         <div className="flex items-start justify-between gap-3">
           <div className={cx("min-w-0", ring(0))}>
             <h3 className="font-display text-heading-lg break-words text-ink">

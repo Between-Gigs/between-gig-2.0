@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
  */
 export const INTERNAL = [
   "app/workspace", "app/studio", "app/preview", "app/emails", "app/crew-call", "app/proposals",
-  "app/versions", "public/artifacts", "public/studio-source", "public/thumbs", "public/workspace", "public/versions",
+  "app/versions", "public/art/wallpapers", "public/artifacts", "public/studio-source", "public/thumbs", "public/workspace", "public/versions",
 ];
 
 /**
@@ -36,7 +36,7 @@ export const LIVE_ROUTES = [
 ];
 
 /** Top-level public/ folders the live pages and the emails use. Any other must be in INTERNAL. */
-export const PUBLIC_LIVE = ["art", "cursors", "email", "img", "og"];
+export const PUBLIC_LIVE = ["art", "cursors", "email", "fonts", "img", "og"];
 
 
 /** node_modules into the copy: a copy-on-write clone (macOS) or hard links (Linux), else a plain copy. */

@@ -12,7 +12,7 @@ const IMDB_SAMPLE = "https://www.imdb.com/name/nm0000000/";
 export { blankFields, DEMO_TOKENS, SAMPLE_OWNER } from "./fields";
 import { blankFields, DEMO_TOKENS, SAMPLE_OWNER } from "./fields";
 
-interface SeedPerson {
+export interface SeedPerson {
   id: string;
   name: string;
   status: PersonStatus;
@@ -178,13 +178,13 @@ export interface SeedState {
   profiles: Profile[];
 }
 
-export function buildSeed(): SeedState {
+export function buildSeed(records: SeedPerson[] = seedPeople): SeedState {
   const people: Person[] = [];
   const invites: Invite[] = [];
   const drafts: ProfileDraft[] = [];
   const profiles: Profile[] = [];
 
-  for (const s of seedPeople) {
+  for (const s of records) {
     const invited = s.status === "invited";
     const updated = dayIso(s.days);
     const person: Person = {

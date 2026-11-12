@@ -1,9 +1,11 @@
 "use client";
+import { useLook } from "@/components/site/LookSync";
 import { Button, SegmentedControl, Select, cx } from "@ds/components";
 import { startPageTransition } from "@ds/motion";
 import { Briefcase, Compass, Lightbulb, User } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
+import { professionalExamples } from "@/lib/professional-examples";
 import { useSession } from "@/lib/session";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
@@ -16,6 +18,7 @@ type View = "visitor" | "gigster" | "owner";
 const views: View[] = ["visitor", "gigster", "owner"];
 
 const gigsters = [
+  ...professionalExamples.map(({ id, name }) => ({ value: id, label: `${name} · Approved` })),
   { value: "maya", label: "Maya · Approved" },
   { value: "elena-petrova", label: "Elena · Draft" },
   { value: "imani-carter", label: "Imani · Submitted" },
@@ -44,6 +47,7 @@ const notesFor: Record<View, Note[]> = { visitor: visitorNotes, gigster: gigster
  * Not live: "/" stays the call sheet.
  */
 export function HomeProposals() {
+  const brand = useLook() !== "swiss";
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -52,7 +56,7 @@ export function HomeProposals() {
   const [view, setView] = React.useState<View>(initial);
   const [notes, setNotes] = React.useState(false);
   const [drawer, setDrawer] = React.useState<{ open: boolean; focus: number | null }>({ open: false, focus: null });
-  const [gigster, setGigster] = React.useState(session?.role === "gigster" && session.personId ? session.personId : "maya");
+  const [gigster, setGigster] = React.useState(session?.role === "gigster" && session.personId ? session.personId : professionalExamples[0].id);
   const stage = React.useRef<HTMLDivElement>(null);
 
   const choose = (v: string) => {
@@ -62,33 +66,53 @@ export function HomeProposals() {
   };
   const ctx = React.useMemo(() => ({ on: notes, notes: notesFor[view], open: (n: number) => setDrawer({ open: true, focus: n }) }), [notes, view]);
 
+  const controls = (
+    <>
+      <SegmentedControl label="View the home page as" size="sm" value={view} onChange={choose}
+        options={[{ value: "visitor", label: "Signed out", icon: <Compass /> }, { value: "gigster", label: "Gigster", icon: <User /> }, { value: "owner", label: "Owner", icon: <Briefcase /> }]} />
+      {view === "gigster" && <Select aria-label="Sample Gigster" size="sm" className="w-56" value={gigster} onValueChange={setGigster} options={gigsters} />}
+      {/* Pressed reads as selected (ink rule, tinted fill), not as a second primary beside the page's own. */}
+      <Button size="sm" variant="secondary" aria-pressed={notes} iconStart={<Lightbulb />} onClick={() => setNotes((x) => !x)}
+        className={cx(notes && "border-line-strong bg-surface-selected text-ink")}>
+        {notes ? "Hide design notes" : "Show design notes"}
+      </Button>
+      {notes && <Button size="sm" variant="ghost" onClick={() => setDrawer({ open: true, focus: null })}>All {notesFor[view].length} notes</Button>}
+      <span className="hidden md:contents"><ButtonLink href="/" size="sm" variant="ghost" className={brand ? undefined : "underline decoration-2 underline-offset-4"}>See today's home</ButtonLink></span>
+    </>
+  );
+
   return (
     <Page bare>
-      <div className="z-sticky bg-bg sm:sticky sm:top-16 lg:top-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-line py-3">
-            <div className="grid min-w-0 gap-0.5">
-              <span className="text-label-sm font-bold tracking-widest text-ink-brand uppercase">Proposal · not live</span>
-              <h1 id="proposal-h" className="truncate font-display text-heading-sm text-ink">Home page, once we open: {about[view].title}</h1>
+      {brand ? (
+        <div className="z-sticky border-b border-line bg-bg/90 backdrop-blur-md sm:sticky sm:top-16">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6">
+            <div className="grid min-w-0">
+              <span className="text-label-sm text-ink-brand">Proposal · not live</span>
+              <h1 id="proposal-h" className="truncate text-label-md text-ink">Home page, once we open: {about[view].title}</h1>
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-              <SegmentedControl label="View the home page as" size="sm" value={view} onChange={choose}
-                options={[{ value: "visitor", label: "Signed out", icon: <Compass /> }, { value: "gigster", label: "Gigster", icon: <User /> }, { value: "owner", label: "Owner", icon: <Briefcase /> }]} />
-              {view === "gigster" && <Select aria-label="Sample Gigster" size="sm" className="w-56" value={gigster} onValueChange={setGigster} options={gigsters} />}
-              {/* Pressed reads as selected (ink rule, tinted fill), not as a second primary beside the page's own. */}
-              <Button size="sm" variant="secondary" aria-pressed={notes} iconStart={<Lightbulb />} onClick={() => setNotes((x) => !x)}
-                className={cx(notes && "border-line-strong bg-surface-selected text-ink")}>
-                {notes ? "Hide design notes" : "Show design notes"}
-              </Button>
-              {notes && <Button size="sm" variant="ghost" onClick={() => setDrawer({ open: true, focus: null })}>All {notesFor[view].length} notes</Button>}
-              <span className="hidden md:contents"><ButtonLink href="/" size="sm" variant="ghost" className="underline decoration-2 underline-offset-4">See today's home</ButtonLink></span>
+              {controls}
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="z-sticky bg-bg sm:sticky sm:top-16 lg:top-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-line py-3">
+              <div className="grid min-w-0 gap-0.5">
+                <span className="text-label-sm font-bold tracking-widest text-ink-brand uppercase">Proposal · not live</span>
+                <h1 id="proposal-h" className="truncate font-display text-heading-sm text-ink">Home page, once we open: {about[view].title}</h1>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+                {controls}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <NotesContext.Provider value={ctx}>
-        <div ref={stage} className="vt-page mx-auto w-full max-w-7xl px-4 pt-8 pb-20 sm:px-6 lg:pt-12">
+        <div ref={stage} className={cx("vt-page mx-auto w-full max-w-7xl px-4 pb-20 sm:px-6", brand ? "pt-6 sm:pt-8" : "pt-8 lg:pt-12")}>
           {view === "visitor" && <VisitorHome />}
           {view === "gigster" && <GigsterHome key={gigster} personId={gigster} />}
           {view === "owner" && <OwnerHome />}

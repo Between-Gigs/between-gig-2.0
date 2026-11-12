@@ -131,7 +131,7 @@ export function startGravityField(host: HTMLElement): () => void {
   ro.observe(host);
   // Day/Night flips the ink colour.
   const mo = new MutationObserver(() => { readInk(); draw(); });
-  mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "data-look"] });
   host.addEventListener("pointermove", move, { passive: true });
   host.addEventListener("pointerleave", leave);
   return () => {

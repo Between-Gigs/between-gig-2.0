@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { data, personStatuses, type PeopleQuery, type PeopleSort, type PersonStatus, type PersonSummary, type ProfileFilter } from "@/lib/data";
 import { crafts } from "@/lib/profile/department";
-import { laServiceAreas, monthStatusLabel, offSetServices } from "@/lib/data/taxonomy";
+import { laServiceAreas, monthStatusLabel, serviceChoices } from "@/lib/data/taxonomy";
 import { PersonStatusBadge, personStatusMeta } from "@/components/people/PersonStatusBadge";
 import { AgoPill, EmptyNote, Meter, OwnerAvatar, OwnerPage, Panel, Row, RowSkeletons } from "./kit";
 import { OwnerShell } from "./OwnerShell";
@@ -87,7 +87,7 @@ function People() {
         <Select aria-label="Craft" size={inline ? "sm" : undefined} className={w} value={query.craft} onValueChange={set("craft")}
           options={[{ value: "all", label: "Any craft" }, ...crafts.map((c) => ({ value: c.label, label: c.label }))]} />
         <Select aria-label="Service" size={inline ? "sm" : undefined} className={w} value={query.service} onValueChange={set("service")}
-          options={[{ value: "all", label: "Any service" }, ...offSetServices.map((x) => ({ value: x, label: x }))]} />
+          options={[{ value: "all", label: "Any service" }, ...serviceChoices(data.kind).map((x) => ({ value: x, label: x }))]} />
         <Select aria-label="Area" size={inline ? "sm" : undefined} className={w} value={query.area} onValueChange={set("area")}
           options={[{ value: "all", label: "Any area" }, ...laServiceAreas.map((x) => ({ value: x, label: x }))]} />
         <Select aria-label="Availability" size={inline ? "sm" : undefined} className={w} value={query.availability} onValueChange={set("availability")}
@@ -103,7 +103,7 @@ function People() {
 
   return (
     <OwnerShell>
-      <OwnerPage title="People" kicker="Everyone invited" meta={counts ? total : "–"}
+      <OwnerPage title="People" icon="handshake" kicker="Everyone invited" meta={counts ? total : "–"}
         description="Everyone from the waitlist on: who has joined, how far along their profile is, and who is waiting for review.">
         {/* Search and status on one line; from md the other filters sit in a row beneath, on phones behind Filters. */}
         <div className="grid gap-3">
@@ -187,7 +187,7 @@ function PersonRow({ row }: { row: PersonSummary }) {
   const { person: p, fields: f } = row;
   return (
     <Row href={`/owners/people/${p.id}/`} title={p.name || p.email}
-      leading={<Avatar row={row} className="size-12 @md:size-16" />}
+      leading={<Avatar row={row} className="size-12 swiss:@md:size-16" />}
       badge={<PersonStatusBadge status={p.status} size="sm" />}
       subtitle={f?.position ? [f.position, f.areas.join(" · ")].filter(Boolean).join(" · ") : p.name ? p.email : `Waitlist · ZIP ${p.waitlistZip}`}
       meta={<>{progress(row)}<AgoPill className="min-w-36">Active {ago(p.updatedAt).toLowerCase()}</AgoPill></>} />
