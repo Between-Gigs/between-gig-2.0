@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 // @ts-expect-error plain .mjs script
@@ -26,6 +27,18 @@ describe("checkAppUrl", () => {
     ["a Railway generated domain", "https://web-test-9432.up.railway.app"],
     ["a Railway generated domain in capitals", "https://Web-Test.UP.Railway.App"],
     ["the placeholder", "https://placeholder.invalid"],
+    ["an empty label", "https://test."],
+    ["an empty middle label", "https://test..x.com"],
+    ["a trailing dot", "https://test.between-gigs.com."],
+    ["a trailing dot on a Railway address", "https://test.x.up.railway.app."],
+    ["userinfo", "https://user@test.between-gigs.com"],
+    ["a non-ASCII label", "https://tést.between-gigs.com"],
+    ["an invalid TLD", "https://test.foo.invalid"],
+    ["localhost", "https://test.localhost"],
+    ["bare localhost", "https://localhost"],
+    ["a label starting with a hyphen", "https://test.-x.com"],
+    ["a label ending with a hyphen", "https://test.x-.com"],
+    ["a single label", "https://test"],
   ])("refuses %s, without echoing the value", (_n, value) => {
     const msg = check(value, { test: true });
     expect(msg).toEqual(expect.any(String));
@@ -36,8 +49,13 @@ describe("checkAppUrl", () => {
     expect(check("https://between-gigs.com", { test: true })).toEqual(expect.any(String));
   });
 
+  it("in test mode the first label must be exactly test", () => {
+    expect(check("https://testing.between-gigs.com", { test: true })).toEqual(expect.any(String));
+    expect(check("https://test-x.between-gigs.com", { test: true })).toEqual(expect.any(String));
+  });
+
   it("the CLI exits 1 with an ::error:: that does not echo the value, and 0 when fine", () => {
-    const run = (url: string) => spawnSync("node", ["scripts/check-app-url.mjs", "--test"], { env: { ...process.env, APP_URL: url }, encoding: "utf8" });
+    const run = (url: string) => spawnSync("node", [fileURLToPath(new URL("./check-app-url.mjs", import.meta.url)), "--test"], { env: { ...process.env, APP_URL: url }, encoding: "utf8" });
     const bad = run("https://secret-host.up.railway.app");
     expect(bad.status).toBe(1);
     expect(bad.stderr + bad.stdout).toContain("::error::");

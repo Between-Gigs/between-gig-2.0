@@ -13,9 +13,12 @@ export function checkAppUrl(value, { test = false } = {}) {
   const m = /^https:\/\/([a-zA-Z0-9.-]+)$/.exec(value);
   if (!m) return shape;
   const host = m[1].toLowerCase();
+  const labels = host.split(".");
+  if (labels.length < 2 || !labels.every((l) => /^[a-z0-9-]+$/.test(l) && !l.startsWith("-") && !l.endsWith("-"))) return shape;
+  if (host === "localhost" || host.endsWith(".localhost")) return "APP_URL is a local address: use the real domain";
   if (host.endsWith(".up.railway.app")) return "APP_URL is a Railway-generated address: use the custom domain attached to the web service";
   if (host === "placeholder.invalid" || host.endsWith(".invalid")) return "APP_URL is a placeholder: set the real domain";
-  if (test && !host.startsWith("test.")) return "APP_URL on test must be a test. host (for example https://test.between-gigs.com)";
+  if (test && labels[0] !== "test") return "APP_URL on test must be a test. host (for example https://test.between-gigs.com)";
   return null;
 }
 

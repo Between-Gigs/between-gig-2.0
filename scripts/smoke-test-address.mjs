@@ -1,7 +1,8 @@
 // After a test deploy (deploy-test.yml, last step): from outside, through Railway's edge, the address in APP_URL serves
 // the passphrase-gated site. `/` must answer 401 with the gate's form, and `/healthz/` must answer 200 `ok` (it needs no
 // cookie). It sends no passphrase. Fails the run with a workflow error naming what is wrong; the usual one is Railway's
-// "Application not found" 404, which means the custom domain is not attached to `web` or not verified yet.
+// "Application not found" 404, which means the custom domain is not attached to `web` or not verified yet (retried for
+// 90 s first: right after a first deploy it may just not be live).
 // Known limit: `/healthz/` reports no commit, so this cannot prove the live build is this commit; on a re-run it can pass
 // against the previous instance while the new one is still coming up.
 // Run: APP_URL=https://test.<domain> node scripts/smoke-test-address.mjs
@@ -19,19 +20,24 @@ export function fetchFailure(what, err) {
   return `${what} did not answer (${code})`;
 }
 
-/** One look at the address: null when it is right, else what is wrong. */
+const NOT_FOUND = "GET / answered Railway's 404 (Application not found): domain not attached or not verified in Railway (check its CNAME and _railway-verify TXT records)";
+
+/** One look at the address: null when it is right, else what is wrong. A 404 "Application not found" is `notFound`: fatal
+ *  only once the grace period (from the start) is over, since right after a first deploy it may just not be live yet. */
 async function look(base, requestMs) {
-  let page;
+  let status;
+  let body;
   try {
-    page = await ask(`${base}/`, requestMs);
+    const page = await ask(`${base}/`, requestMs);
+    status = page.status;
+    body = await page.text();
   } catch (err) {
     return { retry: true, why: fetchFailure("GET /", err) };
   }
-  const body = await page.text();
-  if (page.status === 404 && /Application not found/i.test(body)) return { fatal: true, why: "GET / answered Railway's 404 (Application not found): domain not attached or not verified in Railway (check its CNAME and _railway-verify TXT records)" };
-  if (page.status === 200) return { fatal: true, why: "GET / answered 200: the gate is off, the test site is open to everyone" };
-  if (page.status >= 300 && page.status < 400) return { fatal: true, why: `GET / answered a redirect (${page.status}): the address should serve the gate page itself` };
-  if (page.status !== 401 || !body.includes('action="/test-gate/"')) return { retry: true, why: `GET / answered ${page.status}, expected 401 with the passphrase form` };
+  if (status === 404 && /Application not found/i.test(body)) return { retry: true, notFound: true, why: NOT_FOUND };
+  if (status === 200) return { fatal: true, why: "GET / answered 200: the gate is off, the test site is open to everyone" };
+  if (status >= 300 && status < 400) return { fatal: true, why: `GET / answered a redirect (${status}): the address should serve the gate page itself` };
+  if (status !== 401 || !body.includes('action="/test-gate/"')) return { retry: true, why: `GET / answered ${status}, expected 401 with the passphrase form` };
   try {
     const health = await ask(`${base}/healthz/`, requestMs);
     const text = (await health.text()).trim();
@@ -43,17 +49,18 @@ async function look(base, requestMs) {
 }
 
 /** Resolves when the address passes; rejects with what is wrong. */
-export async function smokeTestAddress(base, { timeoutMs = 300_000, intervalMs = 5_000, requestMs = 10_000 } = {}) {
-  const end = Date.now() + timeoutMs;
+export async function smokeTestAddress(base, { timeoutMs = 300_000, intervalMs = 5_000, requestMs = 10_000, notFoundGraceMs = 90_000 } = {}) {
+  const start = Date.now();
+  const end = start + timeoutMs;
   let last;
   for (;;) {
     last = await look(base, requestMs);
     if (!last) return;
-    if (last.fatal) throw new Error(last.why);
+    if (last.fatal || (last.notFound && Date.now() - start >= notFoundGraceMs)) throw new Error(last.why);
     if (Date.now() + intervalMs >= end) break;
     await new Promise((r) => setTimeout(r, intervalMs));
   }
-  throw new Error(`${base}/healthz/ did not pass within ${Math.round(timeoutMs / 1000)} s (last: ${last.why})`);
+  throw new Error(`${base} did not pass the smoke check within ${Math.round(timeoutMs / 1000)} s (last: ${last.why})`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

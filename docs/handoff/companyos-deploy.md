@@ -150,8 +150,8 @@ one-time import below.
    `APP_URL` (`https://test.between-gigs.com`) in the `test` environments of both repos. Then Company OS *Deploy API
    (test)* → this repo's *Deploy web (test)* (it ends with a check from outside that the address serves the gated
    site) → test the flows → Company OS *Deploy API (prod)* → *Cut release* here (bump `package.json`'s version first)
-   → *Deploy web (prod)* from that tag. Rollback: deploy the previous tag. Then remove the generated
-   `*.up.railway.app` domain from `web`.
+   → *Deploy web (prod)* from that tag. Rollback: deploy the previous tag.
+   Last, remove the generated `*.up.railway.app` domain from `web`.
 
    On test, Company OS's `APP_URL` starts as the placeholder `https://placeholder.invalid` (its runbook
    `customer-environments.md` §8 step 3). Until the API is deployed with the real address, every
@@ -253,9 +253,12 @@ The export holds real people's data: never commit it, attach it to an issue or k
   any branch, and a run uses that branch's workflow file with the `test` environment's secrets in scope. The guard is
   GitHub's, not the workflow's: the owner must restrict the `test` environment's *Deployment branches* to `main` and
   `companyos` (step 3 of the setup above). Until then, anyone who can push a branch can read the test secrets.
-- **The test deploy's last check cannot prove the live build is this commit.** `scripts/smoke-test-address.mjs` shows
-  that `APP_URL` serves the gated site (401 gate page, `/healthz/` 200) from outside, but `/healthz/` reports no
-  commit, so on a re-run it can pass against the previous instance while the new one is still starting.
+- **The test deploy's last check cannot prove the live build is this commit, or this customer's site.**
+  `scripts/smoke-test-address.mjs` shows that *a* site behind this gate form answers at `APP_URL` (401 gate page,
+  `/healthz/` 200) from outside, but `/healthz/` reports no commit or marker, so it cannot show that it is this build or
+  this customer's site, and on a re-run it can pass against the previous instance while the new one is still starting.
+  On a first deploy the check may also wait up to 90 s (the grace for Railway's 404 "Application not found") before it
+  reports the domain as not attached or not verified.
 - **IPv6 callers each get their own rate-limit bucket.** The public-form limit keys on the full `X-Real-IP`, and one
   IPv6 client controls a whole /64, so it can rotate addresses and never hit the limit. To do: key IPv6 by its /64, add
   a global ceiling for the form routes, and evict past 10,000 keys (the map's current cap). Company OS's submit

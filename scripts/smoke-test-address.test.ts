@@ -19,12 +19,13 @@ async function start(handler: Handler): Promise<string> {
   await new Promise<void>((ok) => server!.listen(0, "127.0.0.1", ok));
   return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 }
-const fast = { timeoutMs: 1500, intervalMs: 50, requestMs: 300 };
+const fast = { timeoutMs: 3000, intervalMs: 50, requestMs: 400, notFoundGraceMs: 200 };
 const run = (base: string, o = fast) => (smokeTestAddress as (b: string, o?: object) => Promise<void>)(base, o);
 const good: Handler = (u) => (u === "/" ? [401, '<form action="/test-gate/">'] : u === "/healthz/" ? [200, "ok"] : [404, ""]);
 
 afterEach(async () => {
   for (const k of Object.keys(seen)) delete seen[k];
+  server?.closeAllConnections?.();
   await new Promise((ok) => (server ? server.close(ok) : ok(null)));
   server = undefined;
 });
@@ -39,6 +40,27 @@ describe("smokeTestAddress", () => {
     await expect(run(base)).rejects.toThrow(/Application not found.*domain not attached or not verified in Railway/);
   });
 
+  it("retries Railway's 404 within the grace period and passes once the gate page appears", async () => {
+    const base = await start((u, n) => (u === "/" && n <= 2 ? [404, '{"message":"Application not found"}'] : good(u, n)));
+    await expect(run(base, { ...fast, notFoundGraceMs: 2000 })).resolves.toBeUndefined();
+  });
+
+  it("fails a permanent 404 with the domain message after the grace", async () => {
+    const base = await start(() => [404, "Application not found"]);
+    await expect(run(base, { ...fast, notFoundGraceMs: 150 })).rejects.toThrow(/domain not attached or not verified in Railway/);
+  });
+
+  it("retries a body read that stalls", async () => {
+    let first = true;
+    server = createServer((req, res) => {
+      if (req.url === "/" && first) { first = false; res.writeHead(401, { "content-type": "text/html" }); res.write("<for"); return; } // never ends
+      const r = good(req.url ?? "", 1)!;
+      res.writeHead(r[0], { "content-type": "text/html" }).end(r[1]);
+    });
+    await new Promise<void>((ok) => server!.listen(0, "127.0.0.1", ok));
+    await expect(run(`http://127.0.0.1:${(server.address() as AddressInfo).port}`)).resolves.toBeUndefined();
+  });
+
   it("fails when the gate is off (200)", async () => {
     const base = await start((u) => (u === "/" ? [200, "<html>site</html>"] : [200, "ok"]));
     await expect(run(base)).rejects.toThrow(/gate is off/);
@@ -51,7 +73,7 @@ describe("smokeTestAddress", () => {
 
   it("fails with a timeout message when /healthz/ never answers 200", async () => {
     const base = await start((u) => (u === "/" ? [401, '<form action="/test-gate/">'] : null));
-    await expect(run(base, { timeoutMs: 600, intervalMs: 50, requestMs: 100 })).rejects.toThrow(/healthz.*within/);
+    await expect(run(base, { timeoutMs: 1200, intervalMs: 50, requestMs: 200 })).rejects.toThrow(/did not pass the smoke check within.*healthz/i);
   });
 
   it("names a certificate that does not cover the address (Railway has not verified the domain yet)", () => {
