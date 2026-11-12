@@ -41,6 +41,11 @@ export interface DataSource {
      * Optional invites are attributed only when valid and matched to the verified email.
      */
     syncExternal(identity: ExternalIdentity): Promise<SyncExternalResult>;
+    /**
+     * Live only: open sign-up. Registers the signed-in Clerk account as a Gigster (after syncExternal answered
+     * "needs-signup") with the name and the agreed terms, and answers like syncExternal.
+     */
+    signUp?(input: { name: string; acceptedTerms: true }): Promise<SyncExternalResult>;
     signOut(): Promise<void>;
     /** Subscribes to session changes (sign in / out, demo role switches). Returns an unsubscribe. */
     onChange(listener: () => void): () => void;

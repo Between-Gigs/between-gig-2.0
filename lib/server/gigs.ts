@@ -195,16 +195,36 @@ export async function session(ctx: Ctx): Promise<Session | null> {
   return { personId: person?.id ?? null, email: me.user.email, role: "gigster", name: name === me.user.email ? "" : name, startedAt, via: "clerk" };
 }
 
-/** After Clerk signs someone in. Invite-only (N-05): an account Company OS doesn't know is "unknown-email". */
+/** After Clerk signs someone in. An account Company OS doesn't know yet is "needs-signup" when open sign-up is on, else "unknown-email". */
 export async function syncExternal(ctx: Ctx): Promise<SyncExternalResult> {
   try {
     await ctx.cos.me(ctx.cred);
   } catch (e) {
-    if (e instanceof CompanyOsError && (e.status === 401 || e.status === 403)) return { ok: false, error: "unknown-email" };
+    if (e instanceof CompanyOsError && (e.status === 401 || e.status === 403)) {
+      try {
+        if ((await ctx.cos.signupInfo(ctx.cred)).enabled === true) return { ok: false, error: "needs-signup" };
+      } catch (e2) {
+        if (!(e2 instanceof CompanyOsError && e2.status < 500)) throw e2;
+      }
+      return { ok: false, error: "unknown-email" };
+    }
     throw e;
   }
   const s = await session(ctx);
   return s ? { ok: true, session: s, created: false } : { ok: false, error: "unknown-email" };
+}
+
+/** Open sign-up: registers the signed-in Clerk account as a Gigster with every document Company OS lists, then answers like syncExternal. */
+export async function signUp(ctx: Ctx, name: string): Promise<SyncExternalResult> {
+  const info = await ctx.cos.signupInfo(ctx.cred);
+  if (info.enabled !== true) throw new CompanyOsError(403, "signup_disabled");
+  try {
+    await ctx.cos.signUp(ctx.cred, { name: name.trim(), consents: info.consents ?? [] });
+  } catch (e) {
+    if (!(e instanceof CompanyOsError && e.status === 409 && e.code === "already_registered")) throw e;
+  }
+  const r = await syncExternal(ctx);
+  return r.ok ? { ...r, created: true } : r;
 }
 
 /** Owner routes: a Super Admin, or Company OS's own refusal for that route (403 super-admin only). */

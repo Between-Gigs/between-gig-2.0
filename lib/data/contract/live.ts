@@ -20,7 +20,7 @@ function loadEnv() {
 
 export async function liveHarness(): Promise<Harness> {
   loadEnv();
-  const { handle, handleUpload } = await import("@/lib/server/routes");
+  const { handle, handleSignup, handleUpload } = await import("@/lib/server/routes");
   const { media } = await import("@/lib/server/media");
   const cosUrl = process.env.COMPANY_OS_URL!;
   const tenant = process.env.COMPANY_OS_TENANT || "between-gigs";
@@ -36,6 +36,7 @@ export async function liveHarness(): Promise<Harness> {
     headers.set("x-real-ip", `198.18.${Math.floor(ip / 250) % 250}.${ip++ % 250}`);
     const req = new Request(url, { ...init, headers });
     if (url.pathname.replace(/\/$/, "") === "/api/profiles/uploadPhoto") return handleUpload(req);
+    if (url.pathname.replace(/\/$/, "") === "/api/auth/signup") return handleSignup(req);
     const [, , group, method] = url.pathname.split("/");
     return handle(`${group}.${method}` as Parameters<typeof handle>[0], req);
   }) as typeof globalThis.fetch;
@@ -55,7 +56,10 @@ export async function liveHarness(): Promise<Harness> {
     async reset() { token = null; await source.auth.signOut(); },
     async signIn(email, name) {
       await devLogin(email);
-      return source.auth.syncExternal({ email, name, acceptedTerms: true });
+      const r = await source.auth.syncExternal({ email, name, acceptedTerms: true });
+      // An account nobody invited finishes as the app does: the name and the terms to open sign-up.
+      if (!r.ok && r.error === "needs-signup") return source.auth.signUp!({ name: name || email, acceptedTerms: true });
+      return r;
     },
     async signInOwner() {
       await devLogin(ownerEmail);
