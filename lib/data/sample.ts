@@ -187,12 +187,13 @@ function summarize(state: State, person: Person): PersonSummary {
   // Owners see the submitted version while a review is pending; the draft only before first submit.
   const fields = profile?.fields ?? draft?.fields ?? null;
   const unsent = !!profile && !!draft && contentChanged(draft.fields, profile.fields);
-  return { person: clone(person), fields: fields ? clone(fields) : null, fromDraft: !profile && !!draft, completeness: completeness(fields), unsent };
+  return { person: { ...clone(person), source: person.source ?? "invited" }, fields: fields ? clone(fields) : null, fromDraft: !profile && !!draft, completeness: completeness(fields), unsent };
 }
 
 function matches(s: PersonSummary, q: PeopleQuery) {
   const f = s.fields;
   if (q.status && q.status !== "all" && s.person.status !== q.status) return false;
+  if (q.source && q.source !== "all" && s.person.source !== q.source) return false;
   if (q.service && q.service !== "all" && !f?.services.includes(q.service)) return false;
   if (q.area && q.area !== "all" && !f?.areas.includes(q.area)) return false;
   if (q.availability && q.availability !== "all" && f?.monthStatus !== q.availability) return false;
@@ -586,7 +587,8 @@ export const sampleSource: DataSource = {
       // Open signup records remain in the global counts/review queue, but cannot inflate this funnel.
       const waitlistEmails = new Set((state.waitlist ?? []).map((w) => w.email.toLowerCase()));
       const invitedIds = new Set(state.invites.map((i) => i.personId));
-      const invited = state.people.filter((p) => waitlistEmails.has(p.email.toLowerCase()) && invitedIds.has(p.id));
+      const invited = state.people.filter((p) => waitlistEmails.has(p.email.toLowerCase()) && invitedIds.has(p.id) && p.source !== "self");
+      const selfSignedUp = state.people.filter((p) => p.source === "self");
       const invitedCounts = Object.fromEntries(personStatuses.map((st) => [st, invited.filter((p) => p.status === st).length])) as Record<PersonStatus, number>;
       const openedIds = new Set(state.invites.filter((i) => i.openedAt).map((i) => i.personId));
       const sent = ["submitted", "changes_requested", "approved"];
@@ -597,8 +599,9 @@ export const sampleSource: DataSource = {
         accounts: invited.filter((p) => p.status !== "invited").length,
         submitted: invited.filter((p) => p.status !== "invited" && (sent.includes(p.status) || !!p.submittedAt)).length,
         approved: invitedCounts.approved,
+        signedUp: selfSignedUp.length,
       };
-      return { counts, invitedCounts, invitedPersonIds: invited.map((p) => p.id), funnel, waitlist, reviewQueue: await sampleSource.owners.reviewQueue(), activity: clone((state.activity ?? []).slice(0, 12)) };
+      return { counts, invitedCounts, invitedPersonIds: invited.map((p) => p.id), signedUpPersonIds: selfSignedUp.map((p) => p.id), funnel, waitlist, reviewQueue: await sampleSource.owners.reviewQueue(), activity: clone((state.activity ?? []).slice(0, 12)) };
     },
     async activity(limit = 50) {
       await latency(0);
@@ -671,7 +674,8 @@ export const sampleSource: DataSource = {
       const text = query.text?.trim().toLowerCase();
       const rows: WaitlistRow[] = (state.waitlist ?? []).map((signup) => {
         const s = inviteStatusOf(state, signup.email);
-        return { signup: clone(signup), inviteStatus: s.status, personId: s.personId, invitedAt: s.invitedAt };
+        const who = s.personId ? state.people.find((p) => p.id === s.personId) : undefined;
+        return { signup: clone(signup), inviteStatus: s.status, personId: s.personId, invitedAt: s.invitedAt, ...(who ? { source: who.source ?? "invited" } : {}) } as WaitlistRow;
       }).filter((r) =>
         (!query.inviteStatus || query.inviteStatus === "all" || r.inviteStatus === query.inviteStatus)
         && (!query.category || query.category === "all" || r.signup.category === query.category)

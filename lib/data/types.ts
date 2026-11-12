@@ -11,6 +11,9 @@ export const personStatuses: PersonStatus[] = ["invited", "registered", "draft",
 
 export type Role = "gigster" | "owner";
 
+/** How a person came in: an owner invited them from the call sheet, or they signed up by themselves. */
+export type PersonSource = "invited" | "self";
+
 /** A person from the waitlist, from the moment they are invited. */
 export interface Person {
   id: string;
@@ -20,6 +23,8 @@ export interface Person {
   /** Public URL handle, /p/[slug]. Set at registration, from the name. */
   slug: string;
   status: PersonStatus;
+  /** "self" when they signed up by themselves. Unset reads as invited. */
+  source?: PersonSource;
   /** ZIP from the waitlist sign-up ("Get on the call sheet"). */
   waitlistZip: string;
   /** Service category picked at sign-up (lib/data/taxonomy.ts → waitlistCategories), if any. */
@@ -207,6 +212,8 @@ export interface PeopleQuery {
   /** How far the profile has got: every required answer in, something missing, or no photo yet. */
   profile?: ProfileFilter;
   sort?: PeopleSort;
+  /** Invited by an owner, or signed up by themselves. */
+  source?: PersonSource | "all";
 }
 
 export type ProfileFilter = "all" | "complete" | "missing" | "no-photo";
@@ -276,6 +283,8 @@ export interface WaitlistRow {
   /** Set once invited. */
   personId?: string;
   invitedAt?: string;
+  /** "self" when this call-sheet person then signed up by themselves. */
+  source?: PersonSource;
 }
 
 export interface WaitlistQuery {
@@ -315,6 +324,8 @@ export interface FunnelCounts {
   /** Submitted a profile at least once (submitted, changes requested or approved). */
   submitted: number;
   approved: number;
+  /** People who signed up by themselves (a separate source, not part of the invited cohort above). */
+  signedUp: number;
 }
 
 export interface DashboardSummary {
@@ -324,6 +335,8 @@ export interface DashboardSummary {
   invitedCounts: Record<PersonStatus, number>;
   /** Membership for invitation-funnel drill-downs; headline lists remain global. */
   invitedPersonIds: string[];
+  /** Everyone who signed up by themselves. */
+  signedUpPersonIds: string[];
   /** Cumulative stages for that same invited waitlist cohort. */
   funnel: FunnelCounts;
   waitlist: Record<InviteStatus, number> & { total: number };
