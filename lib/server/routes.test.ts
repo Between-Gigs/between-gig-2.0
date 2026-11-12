@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { companyOs } from "./companyos";
 import { media } from "./media";
-import { FUNNEL_LIMIT, ROUTES, handle, handleUpload, resetRateLimit, type RouteName } from "./routes";
+import { FUNNEL_LIMIT, ROUTES, handle, handleSignup, handleUpload, resetRateLimit, type RouteName } from "./routes";
 
 // 2.0's server routes against a fake Company OS: which credential each route sends, what it refuses before calling,
 // and that no token or Company OS address ever leaves in a response.
@@ -117,12 +117,26 @@ describe("signed in or not", () => {
     expect(body).toEqual({ error: "forbidden", message: "not your profile" });
   });
 
-  it("an expired session reads as signed out; an account nobody invited is unknown-email (invite-only, N-05)", async () => {
+  it("an expired session reads as signed out; an account nobody invited is unknown-email when sign-up is off", async () => {
     const expired = fake((c) => (c.path === "/me" ? { status: 401, body: { error: "unauthorized" } } : undefined));
     expect((await call("auth.session", [], undefined, expired)).body).toEqual({ result: null });
-    const stranger = fake((c) => (c.path === "/me" ? { status: 403, body: { error: "account_not_invited" } } : undefined));
+    const stranger = fake((c) => (c.path === "/me" ? { status: 403, body: { error: "account_not_invited" } } : c.path === "/signup" ? { body: { enabled: false } } : undefined));
     expect((await call("auth.syncExternal", [{ email: "eve@example.org" }], undefined, stranger)).body).toEqual({ result: { ok: false, error: "unknown-email" } });
     expect((await call("auth.syncExternal", [{ email: "eve@example.org" }], { token: null })).body).toEqual({ result: { ok: false, error: "unknown-email" } });
+  });
+
+  it("an unknown account with sign-up on is needs-signup (open sign-up, replaces N-05)", async () => {
+    const stranger = fake((c) => (c.path === "/me" ? { status: 403, body: { error: "account_not_invited" } }
+      : c.path === "/signup" ? { body: { enabled: true, consents: [{ document: "terms", version: "2026-11" }], registered: false } } : undefined));
+    const { body, calls } = await call("auth.syncExternal", [{ email: "eve@example.org" }], undefined, stranger);
+    expect(body).toEqual({ result: { ok: false, error: "needs-signup" } });
+    expect(calls.map((c) => `${c.method} ${c.path}`)).toEqual(["GET /me", "GET /signup"]);
+    expect(calls.every((c) => c.auth === `Bearer ${SESSION}`)).toBe(true);
+  });
+
+  it("a 401 on /me does not ask about sign-up for a dead session twice: sign-up refused too stays unknown-email", async () => {
+    const dead = fake((c) => (c.path === "/me" || c.path === "/signup" ? { status: 401, body: { error: "unauthorized" } } : undefined));
+    expect((await call("auth.syncExternal", [{ email: "eve@example.org" }], undefined, dead)).body).toEqual({ result: { ok: false, error: "unknown-email" } });
   });
 
   it("the role comes from Company OS (Super Admin = owner), never from what the browser says", async () => {
@@ -515,5 +529,83 @@ describe("round 2: nothing about stored data reaches a visitor", () => {
     const { res, body } = await call("profiles.saveDraft", [PERSON, {}], undefined, f);
     expect(res.status).toBe(403);
     expect(body).toEqual({ error: "forbidden", message: "not your profile" });
+  });
+});
+
+
+describe("open sign-up: POST /api/auth/signup", () => {
+  const CONSENTS = [{ document: "terms", version: "2026-11" }, { document: "privacy", version: "2026-10" }];
+  const respond = (extra: (c: Call) => Reply | undefined = () => undefined) => (c: Call): Reply | undefined =>
+    extra(c) ?? (c.path === "/signup" && c.method === "GET" ? { body: { enabled: true, consents: CONSENTS, personFields: ["name"], facetFields: [], registered: false } }
+      : c.path === "/signup" && c.method === "POST" ? { status: 201, body: { userId: "u1", personId: PERSON, facetId: "f1" } }
+      : undefined);
+  const post = async (body: unknown, opts?: Parameters<typeof req>[1], f = fake(respond(), { superAdmin: false })) => {
+    const res = await handleSignup(req(body, opts), { cos: f.cos, appUrl: "http://localhost:3000" });
+    return { res, body: await res.json() as Record<string, unknown>, calls: f.calls };
+  };
+
+  it("sends the trimmed name and every consent Company OS lists, as the signed-in person", async () => {
+    const { res, body, calls } = await post({ name: "  Maya Rios  ", acceptedTerms: true });
+    expect(res.status).toBe(200);
+    expect(body.result).toMatchObject({ ok: true, session: { role: "gigster" } });
+    const sent = calls.find((c) => c.method === "POST" && c.path === "/signup")!;
+    expect(sent.auth).toBe(`Bearer ${SESSION}`);
+    expect(sent.body).toEqual({ person: { name: "Maya Rios" }, facet: {}, consents: CONSENTS });
+    expect(calls.map((c) => `${c.method} ${c.path}`).slice(0, 2)).toEqual(["GET /signup", "POST /signup"]);
+  });
+
+  it("already_registered counts as success", async () => {
+    const f = fake(respond((c) => (c.method === "POST" && c.path === "/signup" ? { status: 409, body: { error: "already_registered" } } : undefined)), { superAdmin: false });
+    const { res, body } = await post({ name: "Maya Rios", acceptedTerms: true }, undefined, f);
+    expect(res.status).toBe(200);
+    expect(body.result).toMatchObject({ ok: true, session: { role: "gigster" } });
+  });
+
+  it("sign-up turned off is refused with signup_disabled and nothing is posted", async () => {
+    const f = fake((c) => (c.path === "/signup" ? { body: { enabled: false } } : undefined), { superAdmin: false });
+    const { res, body, calls } = await post({ name: "Maya Rios", acceptedTerms: true }, undefined, f);
+    expect(res.status).toBe(403);
+    expect(body).toEqual({ error: "signup_disabled" });
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+  });
+
+  it("Company OS's refusals pass through (email_not_verified, email_linked_to_other_login, consent_required)", async () => {
+    for (const [status, error] of [[403, "email_not_verified"], [409, "email_linked_to_other_login"], [422, "consent_required"]] as const) {
+      const f = fake(respond((c) => (c.method === "POST" && c.path === "/signup" ? { status, body: { error } } : undefined)), { superAdmin: false });
+      const { res, body } = await post({ name: "Maya Rios", acceptedTerms: true }, undefined, f);
+      expect(res.status).toBe(status);
+      expect(body).toEqual({ error });
+    }
+  });
+
+  it("no session is 401 before anything is called", async () => {
+    const f = fake(respond(), { superAdmin: false });
+    const { res, body, calls } = await post({ name: "Maya Rios", acceptedTerms: true }, { token: null }, f);
+    expect(res.status).toBe(401);
+    expect(body).toEqual({ error: "unauthorized" });
+    expect(calls).toEqual([]);
+  });
+
+  it("anything but exactly { name, acceptedTerms: true } is 400, and nothing is called", async () => {
+    const bad: unknown[] = [
+      {}, { name: "Maya" }, { acceptedTerms: true }, { name: "Maya", acceptedTerms: false }, { name: "Maya", acceptedTerms: "true" },
+      { name: "   ", acceptedTerms: true }, { name: 7, acceptedTerms: true }, { name: "x".repeat(300), acceptedTerms: true },
+      { name: "Maya", acceptedTerms: true, role: "owner" }, { name: "Maya", acceptedTerms: true, consents: [] },
+      [], "nope", null, { args: [{ name: "Maya", acceptedTerms: true }] },
+    ];
+    for (const b of bad) {
+      const f = fake(respond(), { superAdmin: false });
+      const { res, body, calls } = await post(b, undefined, f);
+      expect(res.status, JSON.stringify(b)).toBe(400);
+      expect(body).toEqual({ error: "invalid body" });
+      expect(calls, JSON.stringify(b)).toEqual([]);
+    }
+    expect((await post("{not json")).res.status).toBe(400);
+  });
+
+  it("non-JSON content type is 415 and GET is 405", async () => {
+    expect((await post({ name: "Maya", acceptedTerms: true }, { type: "text/plain" })).res.status).toBe(415);
+    const res = await handleSignup(new Request("http://localhost:3000/api/auth/signup", { method: "GET" }), { cos: fake().cos });
+    expect(res.status).toBe(405);
   });
 });

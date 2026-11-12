@@ -36,10 +36,11 @@ describe("agreed differences", () => {
     expect((await h.source.owners.undoReview!(who.personId)).status).toBe("submitted");
   });
 
-  // Live, Company OS refuses a Clerk account nobody invited (account_not_invited → "unknown-email"); the route tests
-  // cover that answer (lib/server/routes.test.ts), since a dev login can't be made for an address that has no login.
-  sampleOnly("decision N-05: the sample allows open sign-up; live is invite-only", async () => {
-    const r = await h.signIn(freshEmail("sample-open"), "Open Contract");
+  // Open sign-up (replaces N-05's invite-only): a verified Clerk account nobody invited becomes a Gigster. Live, the
+  // harness runs the app's own steps (syncExternal answers needs-signup, then auth.signUp with the name and terms);
+  // the route tests cover each refusal (lib/server/routes.test.ts).
+  it("live allows open sign-up for Gigsters (the sample always did)", async () => {
+    const r = await h.signIn(freshEmail("open-signup"), "Open Contract");
     expect(r).toMatchObject({ ok: true, created: true, session: { role: "gigster" } });
   });
 });
