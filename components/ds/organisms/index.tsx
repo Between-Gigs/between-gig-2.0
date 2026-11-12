@@ -30,8 +30,8 @@ export function AuthCard({ title, children, className }: { title: React.ReactNod
 }
 
 /** One Gigster in results: photo, serif name, main service, a line, area and availability, rate and View profile. */
-export function ProfileResultCard({ href, name, service, line, area, availability, rate, minimum, photo, onSave, saved }: {
-  href: string; name: string; service: string; line?: string; area?: string; availability?: string; rate?: string; minimum?: string; photo?: string; onSave?: () => void; saved?: boolean;
+export function ProfileResultCard({ href, name, service, line, area, availability, rate, minimum, photo, onSave, saved, headingAs = "h3" }: {
+  headingAs?: "h2" | "h3"; href: string; name: string; service: string; line?: string; area?: string; availability?: string; rate?: string; minimum?: string; photo?: string; onSave?: () => void; saved?: boolean;
 }) {
   return (
     <article className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-3 shadow-sm sm:flex-row sm:items-center">
@@ -41,7 +41,7 @@ export function ProfileResultCard({ href, name, service, line, area, availabilit
         )}
       </div>
       <div className="grid min-w-0 flex-1 gap-1">
-        <Heading level="h3" as="h3">{name}</Heading>
+        <Heading level="h3" as={headingAs}>{name}</Heading>
         <p className="text-label-md font-semibold text-ink">{service}</p>
         {line && <Text size="sm" muted>{line}</Text>}
         <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-ink-muted">

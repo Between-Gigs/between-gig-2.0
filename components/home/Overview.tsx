@@ -120,7 +120,7 @@ function SectionHead({ id, icon, title, body, tint, children }: { id: string; ic
 /** A numbered Swiss section: the label column (number, heading, one line, any controls) on the left, content on the right. */
 function Section({ n, id, title, body, aside, art, children }: { art?: SectionArt; n: string; id: string; title: string; body: string; aside?: React.ReactNode; children: React.ReactNode }) {
   const cards = useLook() !== "swiss";
-  if (cards && !art) return <section aria-label={title}>{children}</section>;
+  if (cards && !art) return <section aria-labelledby={id}><h2 id={id} className="sr-only">{title}</h2>{children}</section>;
   if (cards && art) {
     return (
       <section aria-labelledby={id} className={cx("rounded-2xl border border-line bg-surface p-6 sm:p-8", id === "roles-h" ? "mt-14" : "mt-6")}>

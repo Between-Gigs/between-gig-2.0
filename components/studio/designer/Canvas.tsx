@@ -235,7 +235,7 @@ export function Canvas() {
             <button type="button" onClick={() => d.select(el.id)} onMouseEnter={() => d.setHover(el.id)} onMouseLeave={() => d.setHover(null)}
               className={cx("inline-flex h-6 shrink-0 items-center gap-1 rounded-xs px-1.5 text-caption whitespace-nowrap", el.id === d.selectedId ? "bg-info/15 text-info" : "text-ink-muted hover:bg-surface-hover hover:text-ink")}>
               {/* The element first, its class quieter after it, as in the Navigator. */}
-              {elementName(el)}{el.cls && <span className={el.id === d.selectedId ? "text-info/70" : "text-ink-subtle"}>.{el.cls}</span>}
+              {elementName(el)}{el.cls && <span className={el.id === d.selectedId ? "text-info" : "text-ink-subtle"}>.{el.cls}</span>}
             </button>
           </React.Fragment>
         )) : <span className="truncate px-1.5 text-caption text-ink-subtle">{coarse ? "Tap anything to select it. Double-tap text to edit it." : "Click anything on the canvas to select it. Double-click text to edit it."}</span>}

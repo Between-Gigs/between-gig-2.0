@@ -88,7 +88,7 @@ export function SearchTemplate({ total, query, onQuery, onSubmit, filters, chips
           <ul className="grid gap-4">
             {results.map(({ id, sample, ...card }) => (
               <li key={id}>
-                <ProfileResultCard {...card} />
+                <ProfileResultCard {...card} headingAs="h2" />
                 {sample && <span className="sr-only">(fictional sample)</span>}
               </li>
             ))}

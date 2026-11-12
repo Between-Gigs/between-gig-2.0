@@ -13,7 +13,8 @@
 :root[data-theme="dark"] .simple-profile { --sp-ink: #eee; --sp-muted: #aaa; --sp-line: #444; --sp-bg: #111; --sp-error: #ff6b81; --sp-link: #8ab4f8; color-scheme: dark; }
 html:has(.simple-profile), body:has(.simple-profile) { background: var(--sp-bg, #fff); }
 .simple-profile * { box-sizing: border-box; border-radius: 0; font-family: inherit; letter-spacing: normal; text-transform: none; }
-.simple-profile h1 { font-size: 2rem; line-height: 1.2; margin: .75rem 0 .25rem; font-weight: 700; }
+.simple-profile .profile-name { font-size: 2rem; line-height: 1.2; margin: .75rem 0 .25rem; font-weight: 700; }
+.simple-profile .topbar .page-title { font-size: inherit; line-height: inherit; margin: 0; font-weight: inherit; }
 .simple-profile h2 { font-size: 1.25rem; line-height: 1.3; margin: 0 0 .75rem; font-weight: 700; }
 .simple-profile h3 { font-size: 1rem; margin: 1rem 0 .25rem; font-weight: 700; }
 .simple-profile p { margin: 0 0 .5rem; }

@@ -116,7 +116,7 @@ export function SimpleProfile() {
     <main className="simple-profile" id="main">
       <nav aria-label="Profile pages" className="topbar">
         <Link href="/profile/">My profile</Link>
-        <span>Simple editor (test)</span>
+        <h1 className="page-title">Simple editor (test)</h1>
         <Link href="/profile/canvas/">Current editor</Link>
       </nav>
 
@@ -162,7 +162,7 @@ export function SimpleProfile() {
           </div>
         </> : <>
           {f.photo ? <img src={asset(f.photo)} alt={`Portrait of ${f.name}`} className="photo" /> : <p className="empty">No photo yet.</p>}
-          <h1>{f.name || "Your name"}</h1>
+          <p className="profile-name">{f.name || "Your name"}</p>
           <p>{[f.position, f.years && `${f.years} years in the business`].filter(Boolean).join(" · ") || <span className="empty">No department yet.</span>}</p>
           {f.imdb && <p><a href={f.imdb}>IMDb</a></p>}
           <h3>Credits</h3>
