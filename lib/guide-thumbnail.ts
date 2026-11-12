@@ -23,6 +23,8 @@ export const prepareGuideThumbnail = process.env.BG_BUILD === "server" || proces
     if (appearance.theme) local.setItem("bg-theme", appearance.theme);
     Object.defineProperty(window, "localStorage", {value: local});
     Object.defineProperty(window, "sessionStorage", {value: memoryStorage()});
+    // Autofocus inside a child document can scroll its parent guide to a different card.
+    document.documentElement.inert = true;
     document.documentElement.dataset.guideThumbnail = "";
   } catch (_) {}
 })();`;

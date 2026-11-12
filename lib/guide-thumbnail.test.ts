@@ -18,6 +18,7 @@ describe("passive guide frames", () => {
   it("inherits appearance and isolates both storage areas from the viewing account", () => {
     const { window, document, outer } = boot(true);
     expect(document.documentElement.dataset).toHaveProperty("guideThumbnail");
+    expect(document.documentElement).toHaveProperty("inert", true);
     expect(window.localStorage.getItem("bg2-site-look")).toBe("swiss");
     expect(window.localStorage.getItem("bg-theme")).toBe("dark");
     expect(window.localStorage.getItem("bg2-sample-v2")).toBeNull();
