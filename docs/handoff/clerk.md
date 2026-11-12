@@ -40,12 +40,16 @@ Clerk's hosted widget enforces the instance's password policy; the custom detail
 
 ## The server build (Company OS)
 
-With `NEXT_PUBLIC_DATA_SOURCE=api` the data is Company OS's, behind 2.0's server routes. Sign-up is invite-only
-(decision N-05): `/join` takes Clerk's invitation ticket from the invitation email (`components/auth/InviteJoin.tsx`),
-and a Clerk account nobody invited gets `unknown-email` and is signed out. Owners are Company OS Super Admins
-(`/t/:t/me`), not `publicMetadata.role`. Company OS verifies the Clerk session token on every call, so the role
-switcher and the sample's rules below don't apply there. Terms consent is collected in the UI and Clerk's
-`unsafeMetadata`; Company OS keeps no record of it yet (an open item).
+With `NEXT_PUBLIC_DATA_SOURCE=api` the data is Company OS's, behind 2.0's server routes. Sign-up is open to
+Gigsters from the 13 Nov launch (decision N-19, 2026-11-12; it superseded the invite-only N-05). Invitations still
+work: `/join` takes Clerk's invitation ticket from the invitation email (`components/auth/InviteJoin.tsx`). Without an
+invitation, `/join/` shows name and terms, then Clerk's public sign-up; the server then calls Company OS
+`POST /signup` with every consent `GET /signup` lists. An uninvited Clerk login that reaches the app is sent to
+`/join/` to finish, not signed out, and "Create an account" on the login page goes to `/join/`. Clerk's instance
+(test and production) needs sign-up mode Public, email verification and bot protection on. Owners are Company OS
+Super Admins (`/t/:t/me`), not `publicMetadata.role`. Company OS verifies the Clerk session token on every call, so
+the role switcher and the sample's rules below don't apply there. Terms consent is recorded in Company OS through
+`/signup` (not only in Clerk's `unsafeMetadata`).
 
 ## The sample (Pages): until the Worker API exists
 
