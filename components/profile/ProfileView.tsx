@@ -15,6 +15,7 @@ import { useProfileTemplate } from "@/lib/profile/use-profile-template";
 import { PublicBookingDetails } from "./PublicBookingDetails";
 import { ModernProfile } from "./ModernProfile";
 import { WarmProfile } from "./WarmProfile";
+import { ProfileTemplate } from "@/components/ds/templates/ProfileTemplate";
 import { craftHref } from "@/lib/profile/browse";
 
 export type ProfileMode = "public" | "own" | "owner";
@@ -100,7 +101,7 @@ export function ProfileView(props: Props) {
       else { await navigator.clipboard.writeText(url); toast({ message: "Link copied", tone: "success" }); }
     } catch { /* closed the share sheet */ }
   };
-  const Layout = look === "modern" ? ModernProfile : look === "swiss" ? SwissProfile : WarmProfile;
+  const Layout = look === "modern" ? ModernProfile : look === "swiss" ? SwissProfile : look === "editorial" ? ProfileTemplate : WarmProfile;
   const craft = fields.position || model.services[0];
   return (
     <div className="relative">

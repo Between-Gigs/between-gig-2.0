@@ -1,4 +1,4 @@
-import { lookKey } from "./look";
+import { lookKey, unstyledKey } from "./look";
 
 export const guideReadyEvent = "bg-guide-preview-ready";
 
@@ -23,6 +23,7 @@ export const prepareGuideThumbnail = process.env.BG_BUILD === "server" || proces
     var local = memoryStorage(), appearance = window.parent.document.documentElement.dataset;
     if (appearance.look) local.setItem(${JSON.stringify(lookKey)}, appearance.look);
     if (appearance.theme) local.setItem("bg-theme", appearance.theme);
+    local.setItem(${JSON.stringify(unstyledKey)}, "unstyled" in appearance ? "1" : "0");
     Object.defineProperty(window, "localStorage", {value: local});
     Object.defineProperty(window, "sessionStorage", {value: memoryStorage()});
     // Autofocus inside a child document can scroll its parent guide to a different card.

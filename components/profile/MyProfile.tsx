@@ -16,6 +16,7 @@ import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { ProfileView } from "./ProfileView";
 import { ProfilePreviewCard } from "./ProfilePreviewCard";
+import { ConfirmationTemplate } from "@/components/ds/templates/ConfirmationTemplate";
 import { markArea } from "@/lib/split-area";
 
 markArea("bg-split:dashboard");
@@ -29,7 +30,8 @@ const when = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-US", 
  * card clients see in search. The search card can open a full-width, read-only preview below both columns.
  */
 export function MyProfile() {
-  const warm = useLook() !== "swiss";
+  const look = useLook();
+  const warm = look !== "swiss";
   const template = useProfileTemplate();
   const session = useRequireRole("gigster");
   const [s, setS] = React.useState<PersonSummary | null>(null);
@@ -83,6 +85,21 @@ export function MyProfile() {
         <Button variant="secondary" iconStart={<ChevronUp />} onClick={() => { setExpandedId(""); toggleRef.current?.focus(); }}>Collapse profile preview</Button>
       </>}
     </section>
+  );
+
+  // Cream & forest: once it's with the team, the page is the confirmation (same Edit link as the status card).
+  if (look === "editorial" && state === "submitted") return (
+    <Page bare>
+      <ConfirmationTemplate title="Your profile is in review" eyebrow={person.submittedAt ? `Sent ${when(person.submittedAt)}` : "Sent for review"}
+        lead={`Thanks, ${first}. The Between Gigs team has your profile.`}
+        steps={[
+          { title: "We review it", body: "Our team reads every profile before it goes live." },
+          { title: "We email you when it's approved", body: "Or if we suggest a change." },
+          { title: "You can still edit", body: "Your page is right where you left it." },
+        ]}
+        action={<ButtonLink href="/profile/canvas/" variant="primary" size="lg" iconStart={<Eye />}>View my profile</ButtonLink>}
+        back={{ href: "/", label: "Back to Between Gigs" }} />
+    </Page>
   );
 
   if (warm) return (

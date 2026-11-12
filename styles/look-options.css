@@ -13,3 +13,9 @@
 .look-option[data-option="swiss"] { --swatch-surface: #fff; --swatch-ink: #101210; --swatch-accent: #1fdc8c; --swatch-line: #101210; --swatch-radius: 0; }
 .look-option[data-option="call-sheet"] { --swatch-surface: #09261b; --swatch-ink: #c6f7de; --swatch-accent: #40e499; --swatch-line: #376c51; }
 .look-option[data-option="modern"] { --swatch-surface: #f7f8f7; --swatch-ink: #15231c; --swatch-accent: #99edc9; --swatch-line: #c7d2ca; --swatch-radius: 4px; }
+.look-option[data-option="editorial"] { --swatch-surface: #fbf8f2; --swatch-ink: #0f3d29; --swatch-accent: #c9a24a; --swatch-line: #cfc5b3; --swatch-radius: 6px; }
+.look-option[data-option="unstyled"] { --swatch-surface: #fff; --swatch-ink: #1a1a1a; --swatch-accent: #c9c9c9; --swatch-line: #9a9a9a; --swatch-radius: 0; }
+/* The design system page shows each swatch large. */
+.look-option.look-option-lg { width: 100%; height: 6rem; padding: 14px; gap: 8px; }
+.look-option.look-option-lg::before { height: 10px; }
+.look-option.look-option-lg::after { height: 16px; }

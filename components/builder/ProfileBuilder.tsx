@@ -10,7 +10,9 @@ import { basisLabel, insuranceLabel, laServiceAreas, modeLabel, monthStatusLabel
 import { useRequireRole } from "@/lib/guard";
 import { useProfileTemplate } from "@/lib/profile/use-profile-template";
 import type { ProfileFieldRule } from "@/lib/profile/template";
-import { ABOUT_MAX, SECTIONS, STEPS, fieldLabel, pinnedCredits, sectionLabel, validateAll, type FieldErrors } from "@/lib/profile/validate";
+import { ABOUT_MAX, SECTIONS, STEPS, completeness, fieldLabel, pinnedCredits, sectionLabel, validateAll, type FieldErrors } from "@/lib/profile/validate";
+import { Completeness, StepNavItem } from "@/components/ds/molecules";
+import { useLook } from "@/components/site/LookSync";
 import { BookingFields } from "@/components/profile/BookingFields";
 import { publicBookingRows } from "@/lib/profile/stage-two";
 import { ChipPicker } from "@/components/profile/ChipPicker";
@@ -67,6 +69,7 @@ function BuilderSkeleton() {
 
 function Builder({ personId }: { personId: string }) {
   const template = useProfileTemplate();
+  const editorial = useLook() === "editorial";
   const optional = (field: ProfileFieldRule) => !template.required.includes(field);
   const startAtReview = useSearchParams().get("step") === "review";
   const toast = useToast();
@@ -196,7 +199,9 @@ function Builder({ personId }: { personId: string }) {
           <div className="rounded-2xl border border-line bg-surface shadow-lg">
             {!done && (
               <div className="border-b border-line px-5 pt-5 pb-4 sm:px-8">
-                <Stepper steps={[...STEPS]} current={step} onStepClick={(i) => i !== step && go(i)} />
+                {editorial
+                  ? <EditorialSteps d={d} step={step} onStep={(i, origin) => i !== step && go(i, origin)} />
+                  : <Stepper steps={[...STEPS]} current={step} onStepClick={(i) => i !== step && go(i)} />}
                 <div className="mt-4 flex min-h-8 items-center justify-between gap-4">
                   <SaveIndicator state={save} onRetry={() => { dirty.current = true; void flush(); }} />
                   <Button size="sm" variant="secondary" iconStart={<Eye />} className="lg:hidden" onClick={() => setPreview(true)}>Preview</Button>
@@ -338,6 +343,36 @@ function Builder({ personId }: { personId: string }) {
         </div>
       </Drawer>
     </Page>
+  );
+}
+
+/**
+ * Cream & forest only: the step list as DS StepNavItems and the overall completeness bar. Same steps, same jumps as
+ * the Stepper (steps never block, so nothing is locked); a section reads "done" once nothing required is missing,
+ * the same rule the Review step's "Complete" badge uses.
+ */
+function EditorialSteps({ d, step, onStep }: { d: ProfileFields; step: number; onStep: (i: number, origin?: Element | null) => void }) {
+  const template = useProfileTemplate();
+  const problems = validateAll(d, template);
+  return (
+    <div className="grid gap-4">
+      <nav aria-label="Profile steps">
+        <ol className="flex flex-wrap gap-1">
+          {STEPS.map((label, i) => {
+            const state = i === step ? "current" : i < SECTIONS.length && !problems[i] ? "done" : "default";
+            return (
+              <li key={label} className="max-w-full">
+                <StepNavItem state={state} onClick={() => onStep(i, document.activeElement)}>
+                  <span className="whitespace-nowrap"><span className="tabular-nums">{i + 1}.</span> {label}</span>
+                  {state === "done" && <span className="sr-only"> (complete)</span>}
+                </StepNavItem>
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
+      <Completeness value={completeness(d, template) * 100} />
+    </div>
   );
 }
 

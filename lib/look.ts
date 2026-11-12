@@ -8,6 +8,7 @@ export const isBrandPage = (pathname: string) => new RegExp(BRAND_PATHS).test(pa
 
 const TOOL_PATHS = `^(?:${base})?/(studio|workspace)(/|$)`;
 export const looks = {
+  editorial: { name: "Green Room", detail: "Design system v1 · cream, forest, serif" },
   "call-sheet": { name: "Call Sheet", detail: "Coming Soon & Professionals · forest and mint" },
   modern: { name: "Crisp modern app", detail: "Geist type, compact panels and a soft mint glow" },
   friendly: { name: "Warm & friendly", detail: "Soft cards and forest tones" },
@@ -16,8 +17,10 @@ export const looks = {
 } as const;
 export type Look = keyof typeof looks;
 export const lookIds = Object.keys(looks) as Look[];
-export const defaultLook: Look = "friendly";
+export const defaultLook: Look = "editorial";
 export const lookKey = "bg2-site-look";
+/** Styled or Unstyled (wireframe) mode, independent of the look. `?unstyled=1` or `?unstyled=0` in a link sets it. */
+export const unstyledKey = "bg2-unstyled";
 export const isLook = (value: string | null): value is Look => lookIds.some((look) => look === value);
 const toolLooks: readonly Look[] = ["call-sheet", "modern"];
 export function hasSiteLook(pathname: string, look: Look = defaultLook) {
@@ -39,4 +42,10 @@ export const firstPaintLook = `(function () {
       !(${JSON.stringify(toolLooks)}.includes(look) && new RegExp(${JSON.stringify(TOOL_PATHS)}).test(location.pathname))) return;
   if (new RegExp(${JSON.stringify(BRAND_PATHS)}).test(location.pathname)) root.dataset.brandPage = "";
   root.dataset.look = look;
+  var plain = location.search ? new URLSearchParams(location.search).get("unstyled") : null, bare;
+  try {
+    if (plain === "1" || plain === "0") localStorage.setItem(${JSON.stringify(unstyledKey)}, plain);
+    bare = localStorage.getItem(${JSON.stringify(unstyledKey)}) === "1";
+  } catch (_) { bare = plain === "1"; }
+  if (bare) root.dataset.unstyled = ""; else delete root.dataset.unstyled;
 })();`;

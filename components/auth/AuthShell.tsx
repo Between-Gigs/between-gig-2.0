@@ -5,6 +5,7 @@ import { Icon3D } from "@/components/ui/Icon3D";
 import { cx } from "@ds/components";
 import { Page } from "@/components/site/Page";
 import { ModernWelcome } from "./ModernWelcome";
+import { AuthTemplate } from "@/components/ds/templates/AuthTemplate";
 
 const steps = [
   { title: "Open your link", body: "Set up your account with this email address." },
@@ -28,6 +29,18 @@ export function AuthShell({ header, lead, children, className, eyebrow, steps: s
   const classic = look === "classic";
   const modern = look === "modern";
   const login = header === "Log in";
+  if (look === "editorial") {
+    return (
+      <Page bare>
+        <AuthTemplate login={login} eyebrow={eyebrow} showSteps={showSteps}>
+          <div className={className}>
+            {children}
+            {lead && <div className="mt-8 border-t border-line pt-5 text-body-sm text-ink-muted">{lead}</div>}
+          </div>
+        </AuthTemplate>
+      </Page>
+    );
+  }
   return (
     <Page bare={modern} className={modern ? "modern-auth-stage" : look === "swiss" ? undefined : "max-w-6xl"}>
       <div className={modern ? "modern-auth-grid" : classic ? "mx-auto w-full max-w-xl overflow-hidden rounded-lg border border-line bg-surface shadow-md sm:my-8" : warm ? "grid gap-6 sm:my-2 lg:grid-cols-2" : "grid grid-cols-1 gap-x-6 gap-y-10 sm:pt-6 md:grid-cols-12 lg:pt-10"}>

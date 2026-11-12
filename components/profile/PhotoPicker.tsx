@@ -4,6 +4,8 @@ import { Check, Crop as CropIcon, ImagePlus, Trash2 } from "lucide-react";
 import * as React from "react";
 import { useProfileTemplate } from "@/lib/profile/use-profile-template";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
+import { AddTile } from "@/components/ds/molecules";
+import { useLook } from "@/components/site/LookSync";
 import { data } from "@/lib/data";
 import { useSession } from "@/lib/session";
 import { markArea } from "@/lib/split-area";
@@ -133,6 +135,8 @@ export function PhotoPicker({ value, name, onChange, error, id, personId: forPer
   // The photo being cropped: a new upload, or the current photo to re-crop.
   const [cropping, setCropping] = React.useState<string | null>(null);
   const { session } = useSession();
+  // Cream & forest: an empty photo slot is the DS "add" tile, and the tile is the upload button.
+  const addTile = useLook() === "editorial" && !value;
   const use = (photo: string) => {
     setCropping(null);
     // The sample keeps the data URL. Live, the photo is uploaded to the person's profile and the field keeps its
@@ -153,7 +157,9 @@ export function PhotoPicker({ value, name, onChange, error, id, personId: forPer
   const message = problem ?? error;
   return (
     <div className="flex flex-col items-start gap-4 border-2 border-line bg-surface-sunken p-4 sm:flex-row sm:items-center">
-      {value
+      {addTile
+        ? <AddTile label="Upload a photo" hint="JPG, PNG or HEIC" onClick={() => input.current?.click()} className="shrink-0 sm:w-44" />
+        : value
         ? <PersonPhoto id="self" name={name} src={value} alt="Your profile photo" className="size-24 shrink-0" />
         : <span className="grid size-24 shrink-0 place-items-center border-2 border-line bg-bg text-ink-muted"><ImagePlus aria-hidden="true" /></span>}
       <div className="grid min-w-0 gap-2">
@@ -163,9 +169,9 @@ export function PhotoPicker({ value, name, onChange, error, id, personId: forPer
         <div className="flex flex-wrap gap-2">
           <input ref={input} id={id} type="file" accept="image/*" className="sr-only" tabIndex={-1} aria-labelledby={`${id}-label`}
             onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = ""; }} />
-          <Button variant="secondary" className="min-h-11 border-2 font-display font-bold" iconStart={<ImagePlus />} aria-describedby={message ? `${id}-error` : undefined} onClick={() => input.current?.click()}>
+          {!addTile && <Button variant="secondary" className="min-h-11 border-2 font-display font-bold" iconStart={<ImagePlus />} aria-describedby={message ? `${id}-error` : undefined} onClick={() => input.current?.click()}>
             {value ? "Replace photo" : "Upload a photo"}
-          </Button>
+          </Button>}
           {value && <Button variant="ghost" className="min-h-11" iconStart={<CropIcon />} onClick={() => (confirm ? confirm(() => setCropping(value)) : setCropping(value))}>Crop</Button>}
           {value && <Button variant="ghost" className="min-h-11" iconStart={<Trash2 />} onClick={() => onChange("")}>Remove</Button>}
         </div>

@@ -10,14 +10,32 @@ function beforePaint(pathname: string, read: () => string | null, search = "") {
   return dataset.look;
 }
 
+function plainBeforePaint(pathname: string, saved: string | null, search = "") {
+  const dataset: { look?: string; unstyled?: string } = {};
+  runInNewContext(firstPaintLook, {
+    document: { documentElement: { dataset } }, location: { pathname, search }, URLSearchParams,
+    localStorage: { getItem: (k: string) => (k === "bg2-unstyled" ? saved : null), setItem: () => {} },
+  });
+  return "unstyled" in dataset;
+}
+
+describe("styled and unstyled mode", () => {
+  it("restores Unstyled before paint, and a link can turn it on for one visit", () => {
+    expect(plainBeforePaint("/p/maya/", "1")).toBe(true);
+    expect(plainBeforePaint("/p/maya/", "0")).toBe(false);
+    expect(plainBeforePaint("/p/maya/", null)).toBe(false);
+    expect(plainBeforePaint("/studio/", "1")).toBe(false);
+  });
+});
+
 describe("initial site appearance", () => {
-  it("restores the chosen design on deep links, with a friendly fallback", () => {
-    for (const saved of ["swiss", "classic", "friendly", "call-sheet", "modern"]) {
+  it("restores the chosen design on deep links, with the Green Room fallback", () => {
+    for (const saved of ["swiss", "classic", "friendly", "call-sheet", "modern", "editorial"]) {
       expect(beforePaint("/p/maya/", () => saved)).toBe(saved);
     }
-    expect(beforePaint("/", () => null)).toBe("friendly");
-    expect(beforePaint("/preview/", () => "retired")).toBe("friendly");
-    expect(beforePaint("/join/", () => { throw new Error("Storage unavailable"); })).toBe("friendly");
+    expect(beforePaint("/", () => null)).toBe("editorial");
+    expect(beforePaint("/preview/", () => "retired")).toBe("editorial");
+    expect(beforePaint("/join/", () => { throw new Error("Storage unavailable"); })).toBe("editorial");
   });
 
   it("opens a named theme link on the site and in tool previews", () => {

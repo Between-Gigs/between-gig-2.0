@@ -4,7 +4,8 @@
  * will use"), built faithfully: a flat-lay of the tools of the trade frames a cream card with the logo, "You're
  * invited", the serif headline, one dark-green button and the tagline. It stays this design even though the site's
  * product screens moved to direction B; the email is its own approved piece. Below the frame, on the same warm
- * paper: the three steps, the founders' note and the plain link.
+ * paper: what they'll need, what happens after they submit, the founders' note and the plain text link.
+ * One button only (the client, Nov 2026: one clear primary "Create Your Gigster Profile"); anything else is a text link.
  * Responsive: on wide screens the photo frames the card (a background image, with a sand colour where a client hides
  * backgrounds, e.g. Outlook on Windows); on phones the frame's padding drops and a strip of the same photo sits above
  * the card instead, so the photo is never just a sliver.
@@ -30,17 +31,20 @@ const k = { canvas: "#efe9df", sand: "#e9e1d3", cream: "#fbf8f2", paper: "#f7f3e
 /** The locked text. */
 export const INVITE_COPY = {
   subject: "You're invited to Between Gigs",
-  preheader: "Your craft. More possibilities. Create your profile: it takes about 10 minutes.",
+  preheader: "Your craft. More possibilities. Create your Gigster profile: about 10 minutes, and it saves as you go.",
   eyebrow: "You're invited",
   title: ["Your craft.", "More possibilities."],
   lead: ["Bring the work you already have.", "Show what your skills can offer—", "on set and beyond."],
-  cta: "Create your profile",
+  cta: "Create Your Gigster Profile",
   tagline: "A place for your work, skills and next chapter.",
-  howTitle: "Three steps, about 10 minutes",
-  how: [
-    ["Open your link", "Set up your account with this email address."],
-    ["Fill in your page", "Your photo, what you do on set, the services you'd offer, and where and when you work, right on the page clients will see. It saves as you go."],
-    ["Send it for review", "We review every profile before it goes live, and email you when it's approved."],
+  needTitle: "What you'll need",
+  need: ["A photo of yourself", "The services you offer", "Your rate", "The area you work in and when you're available"],
+  needNote: "It takes about 10 minutes and saves as you go, so you can finish later.",
+  nextTitle: "After you submit",
+  next: [
+    ["We review it", "Our team reviews every profile."],
+    ["We email you", "You'll hear from us when yours is approved."],
+    ["It goes live", "Then your profile is published on Between Gigs."],
   ] as [string, string][],
   production: "Production comes first. Pause your availability when the call comes, and come back when you're ready.",
 } as const;
@@ -73,18 +77,25 @@ function hero(inviteUrl: string, email: string, ctx: EmailContext) {
 </td></tr></table>`;
 }
 
-/** Below the frame: the three steps with serif numerals, the founders' note and the plain link. */
+/** Below the frame: what they'll need, what happens after they submit (serif numerals), the founders' note and the plain link. */
 function details(inviteUrl: string) {
   const c = INVITE_COPY;
-  const steps = c.how.map(([t, d], i) => `<tr>
+  const need = c.need.map((t) => `<tr>
+<td valign="top" width="22" style="padding:7px 0 0"><div style="width:6px;height:6px;line-height:6px;font-size:1px;border-radius:3px;background-color:${k.ink}">&nbsp;</div></td>
+<td valign="top" style="font-family:${SANS};font-size:15px;line-height:23px;color:${k.ink}">${esc(t)}</td>
+</tr>`).join("");
+  const steps = c.next.map(([t, d], i) => `<tr>
 <td valign="top" width="52" style="padding:18px 0;border-top:1px solid ${k.line};font-family:${SERIF};font-size:26px;line-height:28px;color:${k.ink}">0${i + 1}</td>
 <td valign="top" style="padding:18px 0;border-top:1px solid ${k.line};font-family:${SANS}"><p style="margin:0;font-size:16px;line-height:22px;font-weight:600;color:${k.ink}">${esc(t)}</p><p style="margin:4px 0 0;font-size:15px;line-height:23px;color:${k.muted}">${esc(d)}</p></td>
 </tr>`).join("");
   return `<table ${T} width="100%" bgcolor="${k.paper}" style="background-color:${k.paper}">
 <tr><td class="e-k-pad" style="padding:40px 56px 36px;font-family:${SANS}">
-<h2 class="e-k-h2" style="margin:0 0 14px;font-family:${SERIF};font-size:26px;line-height:32px;font-weight:500;color:${k.ink}">${esc(c.howTitle)}</h2>
+<h2 class="e-k-h2" style="margin:0 0 14px;font-family:${SERIF};font-size:26px;line-height:32px;font-weight:500;color:${k.ink}">${esc(c.needTitle)}</h2>
+<table ${T} width="100%">${need}</table>
+<p style="margin:12px 0 0;font-size:15px;line-height:23px;color:${k.muted}">${esc(c.needNote)}</p>
+<h2 class="e-k-h2" style="margin:34px 0 14px;font-family:${SERIF};font-size:26px;line-height:32px;font-weight:500;color:${k.ink}">${esc(c.nextTitle)}</h2>
 <table ${T} width="100%">${steps}</table>
-<p style="margin:20px 0 0;padding-top:20px;border-top:1px solid ${k.line};font-size:15px;line-height:23px;color:${k.muted}">${esc(c.production)}</p>
+<p style="margin:0;padding-top:20px;border-top:1px solid ${k.line};font-size:15px;line-height:23px;color:${k.muted}">${esc(c.production)}</p>
 <p style="margin:22px 0 0;font-family:${SERIF};font-size:20px;line-height:26px;font-style:italic;color:${k.ink}">Patti &amp; Peter</p>
 <p style="margin:2px 0 0;font-size:13px;line-height:20px;color:${k.muted}">Founders, Between Gigs</p>
 <p style="margin:28px 0 0;font-size:12px;line-height:19px;color:${k.muted}">Button not working? Paste this link into your browser:<br><a href="${esc(inviteUrl)}" style="color:${k.ink};text-decoration:underline;word-break:break-all">${esc(inviteUrl)}</a></p>
@@ -108,8 +119,12 @@ ${inviteUrl}
 ${c.tagline}
 This link is just for you (${email}) and works for 30 days.
 
-${c.howTitle.toUpperCase()}
-${c.how.map(([t, d], i) => `0${i + 1} ${t}: ${d}`).join("\n")}
+${c.needTitle.toUpperCase()}
+${c.need.map((t) => `- ${t}`).join("\n")}
+${c.needNote}
+
+${c.nextTitle.toUpperCase()}
+${c.next.map(([t, d], i) => `0${i + 1} ${t}: ${d}`).join("\n")}
 
 ${c.production}
 

@@ -17,10 +17,10 @@ export function GuidePreviews({ children }: { children: React.ReactNode }) {
   const [appearance, setAppearance] = React.useState("");
   React.useEffect(() => {
     const root = document.documentElement;
-    const sync = () => setAppearance([root.dataset.look, root.dataset.theme].join("/"));
+    const sync = () => setAppearance([root.dataset.look, root.dataset.theme, root.hasAttribute("data-unstyled") ? "unstyled" : "styled"].join("/"));
     sync();
     const observer = new MutationObserver(sync);
-    observer.observe(root, { attributes: true, attributeFilter: ["data-look", "data-theme"] });
+    observer.observe(root, { attributes: true, attributeFilter: ["data-look", "data-theme", "data-unstyled"] });
     return () => observer.disconnect();
   }, []);
   return (

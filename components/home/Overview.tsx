@@ -8,8 +8,10 @@ import * as React from "react";
 import { data } from "@/lib/data";
 import { professionalExamples as profiles } from "@/lib/professional-examples";
 import { BrandBand, Page } from "@/components/site/Page";
+import { ThemeBadge } from "@/components/site/ThemeBadge";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { DEMO_TOKENS } from "@/lib/data/fields";
+import { DesignSystemBlock } from "./DesignSystemBlock";
 import { GuidePreviews, LivePagePreview } from "./LivePagePreview";
 import { useLook } from "@/components/site/LookSync";
 import { Icon3D } from "@/components/ui/Icon3D";
@@ -45,6 +47,7 @@ const groups: { id: string; art: SectionArt; title: string; body: string; pages:
     { href: "/proposals/home/", title: "Home once we open", body: "Three proposals: visitor, Gigster, owner." },
   ] },
   { id: "tools", art: { icon: "toolbox", tint: "bg-tint-butter" }, title: "Studio and design tools", body: "For the team: the workspace, the page designer and the effects.", pages: [
+    { href: "/preview/design-system/", title: "Design system", body: "Every theme side by side, Styled or Unstyled, and each atom, molecule, organism and template live." },
     { href: "/preview/profile-editor/", title: "Gigster profile editor", body: "Choose required fields, arrange the form and adjust the profile page." },
     { href: "/preview/wallpapers/", title: "Wallpapers & background art", body: "Download the invitation artwork and Call Sheet backgrounds." },
     { href: "/workspace/", title: "Workspace", body: "Every project in one shell: switcher, ⌘K, folders, and each page inside it." },
@@ -189,9 +192,11 @@ function Guide() {
             </span>
             Sample profiles
           </Link>
+          <Link href="/preview/design-system/" className={shortcut}>Design system</Link>
           <Link href="/preview/gigster-journey/" className={shortcut}>Stage 2 journey</Link>
           <Link href="/preview/profile-editor/" className={shortcut}>Profile editor</Link>
           <Link href="/preview/wallpapers/" className={shortcut}>Wallpapers</Link>
+          <ThemeBadge />
         </nav>
       </BrandBand>
       <div className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 card-layout:relative card-layout:z-raised card-layout:-mt-12">
@@ -222,7 +227,11 @@ function Guide() {
             })}
           </ol>
         </Section>
-        <Section art={{ icon: "briefcase", tint: "bg-tint-sage" }} n="02" id="sample-profiles-h" title="Completed Gigster profiles"
+        <Section art={{ icon: "artist_palette", tint: "bg-tint-butter" }} n="02" id="design-system-h" title="Design system"
+          body="The theme in use, live. Switch themes or Unstyled here and every preview on this page follows.">
+          <DesignSystemBlock />
+        </Section>
+        <Section art={{ icon: "briefcase", tint: "bg-tint-sage" }} n="03" id="sample-profiles-h" title="Completed Gigster profiles"
           body="See how four entertainment professionals turn their craft into services you can hire them for."
           aside={<ButtonLink size="sm" href="/preview/profiles/" iconEnd={<ArrowRight />}>Compare all four</ButtonLink>}>
           <ul className={listClass(view, 4)}>
@@ -232,7 +241,7 @@ function Guide() {
           </ul>
         </Section>
         {data.demo && (
-          <Section art={{ icon: "admission_tickets", tint: "bg-tint-sky" }} n="03" id="roles-h" title="Try every role" body="Step into the sample as anyone. No sign-in needed: it uses the fictional sample accounts, kept in this browser."
+          <Section art={{ icon: "admission_tickets", tint: "bg-tint-sky" }} n="04" id="roles-h" title="Try every role" body="Step into the sample as anyone. No sign-in needed: it uses the fictional sample accounts, kept in this browser."
             aside={<div className="flex flex-wrap items-center gap-2 pt-2">{viewSwitch}<Button size="sm" variant="ghost" iconStart={<RotateCcw />} onClick={reset}>Reset sample data</Button></div>}>
             <h3 className="text-eyebrow text-ink-muted uppercase">Team and start</h3>
             <ul className={cx("mt-4", listClass(view, 3))}>
@@ -249,7 +258,7 @@ function Guide() {
           </Section>
         )}
         {groups.map((gr, gi) => (
-          <Section key={gr.id} art={gr.art} n={String(gi + (data.demo ? 4 : 3)).padStart(2, "0")} id={`${gr.id}-h`} title={gr.title} body={gr.body}
+          <Section key={gr.id} art={gr.art} n={String(gi + (data.demo ? 5 : 4)).padStart(2, "0")} id={`${gr.id}-h`} title={gr.title} body={gr.body}
             aside={!data.demo && gi === 0 ? <div className="pt-2">{viewSwitch}</div> : undefined}>
             <ul className={listClass(view, gr.pages.length)}>
               {gr.pages.map((pg) => <li key={pg.href}><GuideCard view={view} title={pg.title} body={pg.body} href={pg.href} /></li>)}

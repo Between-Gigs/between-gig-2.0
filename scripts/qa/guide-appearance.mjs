@@ -25,7 +25,7 @@ async function appearance(page) {
 }
 
 try {
-  for (const [look, mode] of [["friendly", "dark"], ["classic", "light"], ["swiss", "dark"], ["call-sheet", "dark"], ["modern", "light"]]) {
+  for (const [look, mode] of [["editorial", "light"], ["friendly", "dark"], ["classic", "light"], ["swiss", "dark"], ["call-sheet", "dark"], ["modern", "light"]]) {
     // Guide frames are scaled from a 1280px viewport; compare the normal page at the same breakpoint.
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, colorScheme: mode, reducedMotion: "reduce" });
     await context.addInitScript(({ look, mode }) => {
@@ -41,7 +41,7 @@ try {
     await guide.goto(`${url}/preview/`);
     await guide.waitForFunction(() => Boolean(window.bgSample));
     for (const [title, route, bodyFamily] of [
-      ["Simone", "/p/simone/", look === "modern" ? "Geist" : look === "friendly" ? "Plus Jakarta Sans" : (look === "classic" || look === "call-sheet") ? "Figtree" : "Inter"],
+      ["Simone", "/p/simone/", look === "modern" ? "Geist" : (look === "friendly" || look === "editorial") ? "Plus Jakarta Sans" : (look === "classic" || look === "call-sheet") ? "Figtree" : "Inter"],
       ["For professionals", "/professionals/", look === "modern" ? "Geist" : look === "swiss" ? "Inter" : "Figtree"],
     ]) {
       const link = guide.locator("main li a").filter({ hasText: title }).first();

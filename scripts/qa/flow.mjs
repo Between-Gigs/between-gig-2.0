@@ -36,7 +36,7 @@ export async function flow({ browser, base, outDir }) {
       await page.getByRole("link", { name: "You're invited to Between Gigs" }).click();
       await page.waitForURL(/\/emails\/invite\/\?outbox=/);
       await page.locator("iframe").waitFor();
-      const href = await page.frameLocator("iframe").getByRole("link", { name: /Create your profile/ }).getAttribute("href");
+      const href = await page.frameLocator("iframe").getByRole("link", { name: /Create your Gigster profile/i }).getAttribute("href");
       if (!href?.includes("/join/?invite=")) throw new Error(`invite link looks wrong: ${href}`);
       await page.goto(href);
     })

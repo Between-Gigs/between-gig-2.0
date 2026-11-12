@@ -1,0 +1,105 @@
+/*
+ * Cream & forest (design system v1, Figma "Between Gigs Flow" → DS pages). Atoms first: these are the foundation
+ * tokens every atom, molecule and organism reads (components/ds). The values and names mirror the Figma variables
+ * (Color: Light/Dark, Spacing, Radius) so a change in one can be copied to the other one-for-one.
+ * Type: Newsreader (serif) for display, headings, prices and quotes; Plus Jakarta Sans for UI and body.
+ * Brand pages (Coming soon, For professionals, Storyboard…) keep their approved designs: everything below skips
+ * [data-brand-page], like the Warm & friendly look does.
+ */
+@font-face {
+  font-family: "Newsreader";
+  src: url("../app/fonts/Newsreader-Variable.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Newsreader";
+  src: url("../app/fonts/Newsreader-Italic-Variable.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* `editorial:` variant for the few places whose layout differs in this look. */
+@custom-variant editorial (&:where([data-look=editorial]:not([data-brand-page]), [data-look=editorial]:not([data-brand-page]) *));
+
+:root[data-look=editorial]:not([data-brand-page]) {
+  --font-sans: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+  /* Radius (Figma Radius: sm 4, md 8, lg 12, xl 16, pill). */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  /* Serif headings sit tight and semibold (Figma Display/Heading styles). */
+  --text-display-xl--font-weight: 600;
+  --text-display-lg--font-weight: 600;
+  --text-display-md--font-weight: 600;
+  --text-display-sm--font-weight: 600;
+  --text-stat--font-weight: 600;
+  --text-heading-lg--font-weight: 600;
+  --text-heading-md--font-weight: 600;
+  --text-heading-sm--font-weight: 600;
+  --text-display-xl--letter-spacing: -0.02em;
+  --text-display-lg--letter-spacing: -0.02em;
+  --text-display-md--letter-spacing: -0.015em;
+  --text-display-sm--letter-spacing: -0.01em;
+  --text-heading-lg--letter-spacing: -0.01em;
+  /* Soft, forest-tinted shadows (Figma Shadow/Card, Raised, Dialog). */
+  --elev-xs: 0 1px 2px rgb(15 61 41 / 0.05);
+  --elev-sm: 0 1px 2px rgb(15 61 41 / 0.05), 0 8px 24px rgb(15 61 41 / 0.06);
+  --elev-md: 0 2px 4px rgb(15 61 41 / 0.06), 0 16px 40px rgb(15 61 41 / 0.12);
+  --elev-lg: 0 24px 64px rgb(15 61 41 / 0.22);
+}
+
+/* Light (Figma Color · Light). Explicit light, or the system's light with no saved choice. */
+:root[data-look=editorial]:not([data-brand-page])[data-theme=light] {
+  --bg: #fbf8f2; --surface: #fffdf9; --surface-raised: #fffdf9; --surface-sunken: #f6efe4; --surface-hover: #efe6d8;
+  --surface-selected: #d6f6e6; --surface-brand: #0f3d29; --line: #e7e0d4; --line-strong: #0f3d29; --line-dashed: #cfc5b3;
+  --ink: #0f3d29; --ink-muted: #4b6357; --ink-subtle: #5a6d62; --ink-brand: #17633f; --ink-on-brand: #ffffff; --link: #17633f;
+  --action: #0f3d29; --action-hover: #175a3d; --on-action: #ffffff; --neutral-soft: #f6efe4;
+  --focus: #2e8b5e; --border-focus: #2e8b5e;
+  --success: #17633f; --success-soft: #d6f6e6; --warning: #7a5600; --warning-soft: #fff0bf; --danger: #9f1d16; --danger-soft: #f9dedc;
+  --logo-ink: #0f3d29; --logo-mark: #0f3d29;
+}
+@media (prefers-color-scheme: light) {
+  :root[data-look=editorial]:not([data-brand-page]):not([data-theme=dark]) {
+    --bg: #fbf8f2; --surface: #fffdf9; --surface-raised: #fffdf9; --surface-sunken: #f6efe4; --surface-hover: #efe6d8;
+    --surface-selected: #d6f6e6; --surface-brand: #0f3d29; --line: #e7e0d4; --line-strong: #0f3d29; --line-dashed: #cfc5b3;
+    --ink: #0f3d29; --ink-muted: #4b6357; --ink-subtle: #5a6d62; --ink-brand: #17633f; --ink-on-brand: #ffffff; --link: #17633f;
+    --action: #0f3d29; --action-hover: #175a3d; --on-action: #ffffff; --neutral-soft: #f6efe4;
+    --focus: #2e8b5e; --border-focus: #2e8b5e;
+    --success: #17633f; --success-soft: #d6f6e6; --warning: #7a5600; --warning-soft: #fff0bf; --danger: #9f1d16; --danger-soft: #f9dedc;
+    --logo-ink: #0f3d29; --logo-mark: #0f3d29;
+  }
+}
+
+/* Dark (Figma Color · Dark): forest backgrounds, cream text, mint action. */
+:root[data-look=editorial]:not([data-brand-page])[data-theme=dark] {
+  --bg: #0b2e1f; --surface: #133a28; --surface-raised: #133a28; --surface-sunken: #0f3d29; --surface-hover: #0f3d29;
+  --surface-selected: #175a3d; --surface-brand: #17633f; --line: #2c5a43; --line-strong: #fbf8f2; --line-dashed: #48765c;
+  --ink: #fbf8f2; --ink-muted: #c0d2c8; --ink-subtle: #9db3a7; --ink-brand: #bfe3cf; --ink-on-brand: #ffffff; --link: #bfe3cf;
+  --action: #bfe3cf; --action-hover: #d6f6e6; --on-action: #0b2e1f; --neutral-soft: #0f3d29;
+  --focus: #7cc4a0; --border-focus: #7cc4a0;
+  --success: #bfe3cf; --success-soft: #175a3d; --warning: #fff0bf; --warning-soft: #3a3214; --danger: #f2b8b5; --danger-soft: #3b1a17;
+  --logo-ink: #fbf8f2; --logo-mark: #fbf8f2;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-look=editorial]:not([data-brand-page]):not([data-theme=light]) {
+    --bg: #0b2e1f; --surface: #133a28; --surface-raised: #133a28; --surface-sunken: #0f3d29; --surface-hover: #0f3d29;
+    --surface-selected: #175a3d; --surface-brand: #17633f; --line: #2c5a43; --line-strong: #fbf8f2; --line-dashed: #48765c;
+    --ink: #fbf8f2; --ink-muted: #c0d2c8; --ink-subtle: #9db3a7; --ink-brand: #bfe3cf; --ink-on-brand: #ffffff; --link: #bfe3cf;
+    --action: #bfe3cf; --action-hover: #d6f6e6; --on-action: #0b2e1f; --neutral-soft: #0f3d29;
+    --focus: #7cc4a0; --border-focus: #7cc4a0;
+    --success: #bfe3cf; --success-soft: #175a3d; --warning: #fff0bf; --warning-soft: #3a3214; --danger: #f2b8b5; --danger-soft: #3b1a17;
+    --logo-ink: #fbf8f2; --logo-mark: #fbf8f2;
+  }
+}
+
+/* Accents from the references (Figma accent/gold, accent/clay): service-icon rings and "Coming soon" seals. */
+:root[data-look=editorial] { --accent-gold: #c9a24a; --accent-gold-soft: #f6e9c6; --accent-clay: #c8553d; }
+:root[data-look=editorial][data-theme=dark] { --accent-gold-soft: #3a3214; }
+@theme { --color-accent-gold: var(--accent-gold, #c9a24a); --color-accent-gold-soft: var(--accent-gold-soft, #f6e9c6); --color-accent-clay: var(--accent-clay, #c8553d); }

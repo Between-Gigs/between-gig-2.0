@@ -1,0 +1,38 @@
+/*
+ * Unstyled mode (Theme menu → Mode → Unstyled, or ?unstyled=1). A wireframe view of any page in any look: system type,
+ * greys, square corners, no shadows, decorative art hidden, photos in grey. It shows the structure and the flow without
+ * the brand, for reviewing content and layout. Real photos stay visible as grey boxes so the layout keeps its shape.
+ */
+:root[data-unstyled], :root[data-unstyled] * {
+  --bg: #ffffff !important; --surface: #ffffff !important; --surface-raised: #ffffff !important; --surface-sunken: #f3f3f3 !important; --surface-hover: #ececec !important;
+  --surface-selected: #e4e4e4 !important; --surface-brand: #f3f3f3 !important; --line: #c9c9c9 !important; --line-strong: #1a1a1a !important; --line-dashed: #9a9a9a !important;
+  --ink: #1a1a1a !important; --ink-muted: #555555 !important; --ink-subtle: #6b6b6b !important; --ink-brand: #1a1a1a !important; --ink-on-brand: #1a1a1a !important; --link: #1a1a1a !important;
+  --action: #1a1a1a !important; --action-hover: #333333 !important; --on-action: #ffffff !important; --neutral-soft: #f3f3f3 !important;
+  --focus: #1a1a1a !important; --border-focus: #1a1a1a !important;
+  --success: #1a1a1a !important; --success-soft: #ececec !important; --warning: #1a1a1a !important; --warning-soft: #ececec !important; --danger: #1a1a1a !important; --danger-soft: #ececec !important;
+  --logo-ink: #1a1a1a !important; --logo-mark: #1a1a1a !important;
+  --accent-gold: #9a9a9a !important; --accent-gold-soft: #ececec !important; --accent-clay: #9a9a9a !important;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif !important;
+  --font-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif !important;
+  color-scheme: light;
+}
+:root[data-unstyled] *, :root[data-unstyled] *::before, :root[data-unstyled] *::after {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  background-image: none !important;
+  font-family: var(--font-sans) !important;
+  letter-spacing: normal !important;
+  animation: none !important;
+  transition: none !important;
+}
+:root[data-unstyled] body { background: var(--bg) !important; color: var(--ink) !important; }
+:root[data-unstyled] img, :root[data-unstyled] video, :root[data-unstyled] picture { filter: grayscale(1) contrast(0.85) opacity(0.6); }
+:root[data-unstyled] svg:not([class*="lucide"]) { filter: grayscale(1); }
+:root[data-unstyled] canvas { visibility: hidden; }
+/* Bands and chips painted with fixed palette colours (forest, mint, tints) go grey with dark text. */
+:root[data-unstyled] :is([class*="bg-forest-"], [class*="bg-mint-"], [class*="bg-tint-"], [class*="bg-brand"], [class*="bg-surface-brand"]) {
+  background-color: var(--surface-sunken) !important;
+  color: var(--ink) !important;
+}
+:root[data-unstyled] :is([class*="bg-forest-"], [class*="bg-tint-"], [class*="bg-surface-brand"]) :is([class*="text-"]) { color: var(--ink) !important; }

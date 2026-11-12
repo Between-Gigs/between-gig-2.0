@@ -13,6 +13,8 @@ import {
 } from "@/lib/profile/browse";
 import { useSettleWhen } from "@/lib/motion";
 import { Page } from "@/components/site/Page";
+import { useLook } from "@/components/site/LookSync";
+import { SearchTemplate, type SearchResult } from "@/components/ds/templates/SearchTemplate";
 import { PersonPhoto } from "./PersonPhoto";
 
 /** As many as the public list can hold: the sample returns every approved Gigster; live caps the call itself. */
@@ -20,9 +22,10 @@ const ALL = 1000;
 
 /** /p/: every approved (public) Gigster, filtered by craft, area and availability; filters live in the query string. */
 export function GigsterBrowse() {
+  const editorial = useLook() === "editorial";
   return (
     <Page>
-      <React.Suspense fallback={<Header count={null} />}>
+      <React.Suspense fallback={editorial ? null : <Header count={null} />}>
         <Browse />
       </React.Suspense>
     </Page>
@@ -47,6 +50,7 @@ function Header({ count }: { count: number | null }) {
 }
 
 function Browse() {
+  const editorial = useLook() === "editorial";
   const params = useSearchParams();
   const router = useRouter();
   const filters = React.useMemo(() => parseBrowse(params), [params]);
@@ -96,6 +100,27 @@ function Browse() {
   ];
   const active = chips.filter((x): x is [keyof BrowseFilters, string] => !!x[1]);
   const clear = () => { setText(""); go(noFilters); };
+  const removeChip = (k: keyof BrowseFilters) => { if (k === "q") setText(""); go({ ...filters, [k]: "" }); };
+
+  if (editorial) {
+    return (
+      <SearchTemplate total={total} query={text} onQuery={setText} onSubmit={() => go({ ...filters, q: text })} onClear={clear}
+        filters={[
+          { label: "Craft", value: filters.craft || "all", onChange: set("craft"), options: [{ value: "all", label: "Any craft" }, ...crafts] },
+          { label: "Area", value: filters.area || "all", onChange: set("area"), options: [{ value: "all", label: "Any area" }, ...areaOptions] },
+          { label: "Availability", value: filters.availability || "all", onChange: set("availability"), options: [{ value: "all", label: "Any availability" }, ...availabilityOptions] },
+        ]}
+        chips={active.map(([k, label]) => ({ key: k, label, onRemove: () => removeChip(k) }))}
+        results={rows && rows.map(resultOf)}
+        empty={emptyCraft && craftLabel ? {
+          title: `No ${craftLabel} Gigsters yet`,
+          body: <>Work in {craftLabel.toLowerCase()}? <Link href="/professionals/" className="font-semibold text-ink underline underline-offset-4">Get on the call sheet</Link>.
+            Looking for this kind of help? Tell us on <Link href="/crew-call/" className="font-semibold text-ink underline underline-offset-4">Crew Call</Link>.</>,
+          action: active.length > 1 ? "Clear filters" : "See every Gigster",
+        } : { title: "No Gigsters match all of that", body: "Try fewer filters, or search for part of a name or craft.", action: "Clear filters" }}
+        note={data.kind === "sample" ? "These are fictional sample profiles: the people, biographies and credits are made up for the preview." : undefined} />
+    );
+  }
 
   return (
     <>
@@ -122,7 +147,7 @@ function Browse() {
           <ul aria-label="Active filters" className="flex flex-wrap gap-2">
             {active.map(([k, label]) => (
               <li key={k}>
-                <button type="button" aria-label={`Remove filter: ${label}`} onClick={() => { if (k === "q") setText(""); go({ ...filters, [k]: "" }); }}
+                <button type="button" aria-label={`Remove filter: ${label}`} onClick={() => removeChip(k)}
                   className="inline-flex min-h-11 items-center gap-1.5 border-2 border-line-strong pr-2 pl-3 text-label-sm font-bold text-ink hover:bg-surface-hover">
                   {label}<X className="size-3.5" aria-hidden="true" />
                 </button>
@@ -176,6 +201,18 @@ function Browse() {
 /** Two up on phones, three on tablets, four on desktop, on the 12-column grid. */
 const grid = "grid grid-cols-12 gap-x-3 gap-y-10 sm:gap-x-6 sm:gap-y-12";
 const cell = "col-span-6 min-w-0 md:col-span-4 lg:col-span-3";
+
+/** One row for the Cream & forest results list (ProfileResultCard), from the same fields the grid card reads. */
+function resultOf({ person, profile }: Listed): SearchResult {
+  const f = profile.fields;
+  const department = craftOf(f.position, f.skills) ?? (f.position || f.services[0] || "");
+  const line = profile.extras?.tagline || f.about.split(/(?<=[.!?])\s/)[0] || undefined;
+  return {
+    id: person.id, sample: person.sample, href: `/p/${person.slug}/`, name: f.name || person.name, service: department,
+    line, area: f.market === "la" ? f.areas.join(" · ") || "Los Angeles" : "Another market", availability: monthStatusLabel[f.monthStatus],
+    rate: f.rate ? `From $${f.rate}/${basisShort[f.basis]}` : "Rate on request", minimum: f.bookingMinimum || undefined, photo: f.photo || undefined,
+  };
+}
 
 function GigsterCard({ row: { person, profile } }: { row: Listed }) {
   const f = profile.fields;

@@ -1,7 +1,7 @@
 "use client";
 import { usePathname } from "next/navigation";
 import { useLayoutEffect, useSyncExternalStore } from "react";
-import { defaultLook, hasSiteLook, isBrandPage, isLook, lookKey, type Look } from "@/lib/look";
+import { defaultLook, hasSiteLook, isBrandPage, isLook, lookKey, unstyledKey, type Look } from "@/lib/look";
 
 const changeEvent = "bg2-look-change";
 let unsaved: Look | undefined;
@@ -18,8 +18,9 @@ function readLook(): Look {
 
 function subscribe(onChange: () => void) {
   const onStorage = (event: StorageEvent) => {
-    if (event.key === lookKey || event.key === null) {
+    if (event.key === lookKey || event.key === unstyledKey || event.key === null) {
       unsaved = undefined;
+      unsavedPlain = undefined;
       onChange();
     }
   };
@@ -50,15 +51,43 @@ export function selectLook(look: Look) {
   window.dispatchEvent(new Event(changeEvent));
 }
 
+let unsavedPlain: boolean | undefined;
+function readUnstyled() {
+  if (unsavedPlain !== undefined) return unsavedPlain;
+  try { return localStorage.getItem(unstyledKey) === "1"; } catch { return false; }
+}
+
+/** Styled or Unstyled (wireframe) mode. Works with every look and the Day/Night switch. */
+export function useUnstyled() {
+  return useSyncExternalStore(subscribe, readUnstyled, () => false);
+}
+
+export function setUnstyled(on: boolean) {
+  const url = new URL(window.location.href);
+  if (url.searchParams.has("unstyled")) {
+    url.searchParams.delete("unstyled");
+    window.history.replaceState(window.history.state, "", url);
+  }
+  try {
+    localStorage.setItem(unstyledKey, on ? "1" : "0");
+    unsavedPlain = undefined;
+  } catch { unsavedPlain = on; }
+  window.dispatchEvent(new Event(changeEvent));
+}
+
 export function LookSync() {
   const pathname = usePathname();
   const look = useLook();
+  const plain = useUnstyled();
   useLayoutEffect(() => {
     // During hydration the server snapshot is the default. Keep the pre-paint choice until React catches up.
     document.documentElement.toggleAttribute("data-brand-page", isBrandPage(pathname));
     const active = readLook();
     if (hasSiteLook(pathname, active)) document.documentElement.dataset.look = active;
     else delete document.documentElement.dataset.look;
-  }, [pathname, look]);
+    // Before hydration finishes the server snapshot is false; keep what the pre-paint script set.
+    const bare = readUnstyled() && hasSiteLook(pathname, active);
+    document.documentElement.toggleAttribute("data-unstyled", bare);
+  }, [pathname, look, plain]);
   return null;
 }
