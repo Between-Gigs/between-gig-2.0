@@ -109,6 +109,6 @@ function Bridge({ children }: { children: React.ReactNode }) {
       if (isLoaded) await clerk.signOut({ redirectUrl: `${basePath}/login/?signedOut=1` });
       else router.replace("/login/?signedOut=1");
     },
-  }), [clerk, isLoaded, syncedIdentity, identity, needsConsent, isSignedIn, email, user, role, router]);
+  }), [clerk, isLoaded, syncedIdentity, identity, needsConsent, isSignedIn, email, user, role, router, live]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

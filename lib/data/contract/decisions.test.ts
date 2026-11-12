@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { harness, only } from "./harness";
 import { freshEmail, registered, submitted } from "./fixtures";
 
