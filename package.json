@@ -1,6 +1,6 @@
 {
   "name": "between-gigs-2",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Between Gigs 2.0: the client-facing product on the Between Gigs Design System.",
   "type": "module",
