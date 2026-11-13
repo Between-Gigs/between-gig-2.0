@@ -311,3 +311,14 @@
   .canvas-rise [data-spot], .portrait-reveal { animation: none; }
 }
 
+
+/*
+ * A pinned bar inside a centred column (the owner kit's page bar on public pages): its background and rule reach the
+ * window's edges instead of stopping at the column, so it reads as one band under the site header.
+ */
+@utility bar-bleed {
+  /* Shadows never add scroll width, unlike a 100vw box: the band spreads sideways and is clipped top and bottom. */
+  background-color: var(--bg);
+  box-shadow: 0 0 0 100vmax var(--bg), 0 1px 0 100vmax var(--line);
+  clip-path: inset(0 -100vmax -1px);
+}

@@ -50,9 +50,10 @@ function PageBar({ title, description, meta, icon, kicker, hero = false, actions
     <>
     {sticky && <span ref={mark} aria-hidden="true" className="block h-0" />}
     <header data-call-sheet-stage="owner" className={cx("flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-3",
-      sticky && (framed ? "top-0" : "top-16"),
+      sticky && (framed ? "top-0" : "top-16 lg:top-20"),
       sticky && "sticky z-sticky -mx-4 px-4 py-2 transition-[background-color,box-shadow] duration-fast sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10",
-      sticky && past && "bg-bg shadow-sm")}>
+      // In the owner frame the bar fills its own column; on a public page it is one band from edge to edge.
+      sticky && past && (framed ? "bg-bg shadow-sm" : "bar-bleed"))}>
       <div className="grid min-w-0 gap-1">
         <div className="flex min-w-0 items-center gap-3">
           <h1 className="truncate font-display text-display-sm text-ink">{title}</h1>
@@ -69,9 +70,9 @@ function PageBar({ title, description, meta, icon, kicker, hero = false, actions
     <>
     {sticky && <span ref={mark} aria-hidden="true" className="block h-0" />}
     <header className={cx("grid shrink-0 grid-cols-12 items-end gap-x-6 gap-y-4",
-      sticky && (framed ? "top-0" : "top-16"),
+      sticky && (framed ? "top-0" : "top-16 lg:top-20"),
       sticky && "sticky z-sticky -mx-4 border-b border-transparent px-4 py-2 transition-colors duration-fast sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10",
-      sticky && past && "border-line-strong bg-bg")}>
+      sticky && past && (framed ? "border-line-strong bg-bg" : "bar-bleed"))}>
       <div className={cx("col-span-12 grid min-w-0 gap-2", !!actions && (hero ? "lg:col-span-9" : "lg:col-span-8"))}>
         {kicker && <p className={eyebrow}>{kicker}</p>}
         <div className="flex min-w-0 items-baseline gap-4">
