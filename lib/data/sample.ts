@@ -416,7 +416,7 @@ export const sampleSource: DataSource = {
     async signUp({ name, acceptedTerms }): Promise<SyncExternalResult> {
       const state = load();
       const current = state.session;
-      if (!current || current.role !== "owner") return { ok: false, error: "unknown-email" };
+      if (!current) return { ok: false, error: "unknown-email" };
       if (acceptedTerms !== true || !name.trim()) return { ok: false, error: "terms" };
       const address = current.email.trim().toLowerCase();
       let person = state.people.find((p) => p.email.toLowerCase() === address);

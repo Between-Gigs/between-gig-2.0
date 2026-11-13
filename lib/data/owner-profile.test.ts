@@ -34,4 +34,12 @@ describe("an owner can have their own Gigster profile", () => {
     await expect(source.auth.signUp!({ name: "Owner", acceptedTerms: false as true })).resolves.toMatchObject({ ok: false, error: "terms" });
     expect(await source.auth.session()).toEqual(before);
   });
+  it("keeps a Gigster's existing identity and does not grant owner authority", async () => {
+    await source.demo!.signInAs("gigster", "maya");
+    const before = (await source.auth.session())!;
+    const result = await source.auth.signUp!({ name: "Maya", acceptedTerms: true });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.session).toMatchObject({ role: "gigster", personId: before.personId });
+  });
+
 });

@@ -15,7 +15,7 @@ export function GigsterAccess({ children }: { children: React.ReactNode }) {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
   if (loading) return <Page><Skeleton shape="block" className="h-40" /></Page>;
-  if (session?.role !== "owner" || session.personId) return <>{children}</>;
+  if (!session || session.personId) return <>{children}</>;
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     const fullName = name === null ? session.name.trim() : name.trim();
@@ -27,14 +27,14 @@ export function GigsterAccess({ children }: { children: React.ReactNode }) {
       const result = await data.auth.signUp({ name: fullName, acceptedTerms: true });
       if (!result.ok || !result.session.personId) throw new Error("Profile setup could not be completed.");
       await refresh();
-    } catch { setError("We couldn't create your profile. Your dashboard access is unchanged. Try again."); }
+    } catch { setError("We couldn't create your profile. Your existing access is unchanged. Try again."); }
     finally { setBusy(false); }
   };
   return <Page>
     <div className="mx-auto grid max-w-xl gap-6 py-8">
       <div><p className="text-eyebrow text-ink-muted uppercase">Gigster Experience</p>
         <h1 className="mt-2 font-display text-display-sm text-ink">Build your own Gigster profile</h1>
-        <p className="mt-3 text-body-lg text-ink-muted">Use your current account to experience the same profile builder as every Gigster. Your owner access stays available.</p></div>
+        <p className="mt-3 text-body-lg text-ink-muted">Use your current account to experience the same profile builder as every Gigster. Your existing access stays available.</p></div>
       <form onSubmit={submit} className="grid gap-5 rounded-2xl border border-line bg-surface p-6">
         <p className="text-body-md text-ink-muted">Signed in as <strong className="text-ink">{session.email}</strong></p>
         {error && <Banner tone="danger" title="Profile setup">{error}</Banner>}
