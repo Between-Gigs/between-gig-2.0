@@ -35,6 +35,10 @@ try {
     await page.setViewportSize({ width, height: 900 });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth) <= 1, "Hub overflow at " + width);
   }
+  // The live owner email-preview link crosses into this public, sample-only build.
+  assert.equal((await page.goto(base + "/hub/emails/")).status(), 200);
+  await page.getByText("Nothing here sends email.", { exact: false }).waitFor();
+  assert.equal((await page.reload()).status(), 200);
   assert.equal((await page.goto(base + "/owners/staff/")).status(), 401);
   assert.equal((await fetch(base + "/api/staff/snapshot/", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })).status, 401);
   assert.deepEqual(errors, []);

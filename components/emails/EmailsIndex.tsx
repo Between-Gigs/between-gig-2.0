@@ -29,7 +29,7 @@ export function EmailsIndex() {
   return (
     <AppPage>
       <OwnerPage title="Emails" meta={tab === "templates" ? emailNames.length : outbox?.length}
-        description="Every email Between Gigs sends, from the invite to the welcome, and the sample outbox. Open one to see it in light and dark mail apps, on desktop and phone."
+        description="Email template previews and a fictional sample outbox, not live delivery history. Nothing here sends email. Open a template to review it on desktop and phone."
         actions={
           // In the pinned bar, so switching never needs a scroll back up.
           <SegmentedControl label="Show" value={tab} onChange={setTab}
