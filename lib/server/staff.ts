@@ -69,6 +69,7 @@ export async function handleStaff(action: string, request: Request, deps: StaffD
         const existing = (await users()).users.find(user => user.email.toLowerCase() === email);
         const held = new Set(existing?.memberships.map(member => member.roleKey) ?? []);
         let invitation: { url?: string; roleAdded?: boolean } = {};
+        if (!existing?.signedUp && new Set(existing?.memberships.filter(member => member.roleKey !== "provider").map(member => member.roleKey) ?? []).size > 1) throw new CompanyOsError(409, "pending_multi_role_invitation", "This pending account already has several staff roles. Use its existing invitation link; creating a replacement link requires backend support.");
         if (!existing?.signedUp) {
           let origin: URL;
           try { origin = new URL(deps.appUrl ?? process.env.APP_URL ?? ""); } catch { throw new CompanyOsError(503, "app_url_not_configured"); }
@@ -79,16 +80,21 @@ export async function handleStaff(action: string, request: Request, deps: StaffD
             await cos.call(cred, "POST", "/admin/users", { email, name, roleKey: primary });
             held.add(primary);
           }
-          invitation = await cos.call(cred, "POST", "/invitations", { email, roleKey: primary, redirectUrl: origin.origin + "/join/" });
+          try { invitation = await cos.call(cred, "POST", "/invitations", { email, roleKey: primary, redirectUrl: origin.origin + "/join/" }); } catch (error) {
+            if (!(error instanceof CompanyOsError && error.status === 409 && error.code === "already_signed_up")) throw error;
+            invitation = { roleAdded: true };
+          }
           held.add(primary);
         }
+        let warning: string | undefined;
         try {
           for (const roleKey of roleKeys) if (!held.has(roleKey)) { await cos.call(cred, "POST", "/admin/users", { email, ...(name ? { name } : {}), roleKey }); held.add(roleKey); }
         } catch (error) {
-          if (error instanceof CompanyOsError) throw new CompanyOsError(error.status, error.code, "Some roles may already be assigned. Refresh the staff list to check before trying again.");
-          throw error;
+          if (invitation.url) warning = "The invitation link is ready, but not all requested roles could be assigned. Check the current role badges and add any missing roles with Manage roles.";
+          else if (error instanceof CompanyOsError) throw new CompanyOsError(error.status, error.code, "Some roles may already be assigned. Refresh the staff list to check before trying again.");
+          else throw error;
         }
-        result = { ...invitation, roleAdded: true, emailSent: false } satisfies StaffInviteResult;
+        result = { ...invitation, roleAdded: true, emailSent: false, ...(warning ? { warning } : {}) } satisfies StaffInviteResult;
       }
     } else return json(404, { error: "not_found" });
     return json(200, { result: result ?? { ok: true } });

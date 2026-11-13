@@ -1,6 +1,6 @@
 // The preview for the server builds (owner, 2026-11-02): the GitHub Pages build of the whole site, every route on the
-// sample data, with base path /preview, into .next/standalone/preview-site/, where lib/server/preview.ts serves it to
-// super admins at /preview/. Built from a temporary copy of the working tree (as server-build.mjs does), with no Clerk
+// sample data, with base path /hub, into .next/standalone/preview-site/, where lib/server/preview.ts serves it to
+// the public Hub at /hub/. Built from a temporary copy of the working tree (as server-build.mjs does), with no Clerk
 // key and no data source, so it never signs anyone in or calls Company OS. Run after `pnpm build:server`.
 //   node scripts/preview-build.mjs
 import { execFileSync, spawn } from "node:child_process";

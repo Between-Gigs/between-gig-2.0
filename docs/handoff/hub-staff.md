@@ -23,5 +23,22 @@ Role permissions use none / own / all scopes. Row policies further constrain acc
 
 ## Integration status
 
-In progress: route alias, navigation/self-profile path, Staff page and API adapter.
-Verification and deployed commit will be recorded here after integration.
+Implemented in [PR #11](https://github.com/Between-Gigs/between-gig-2.0/pull/11): canonical Hub and legacy redirects, three-way experience navigation, own-profile setup retaining owner authority, Staff UI and protected Company OS adapter.
+
+Verified locally: static and live server builds; TypeScript and lint; unit tests; existing signup/product journeys; new Hub/Staff/profile browser journeys; 390, 420, 768 and 1440px layouts. Server smoke checked 21 live routes, 31 server handlers and the test passphrase gate. Browser testing through the standalone server confirmed Hub access without cookies, nested navigation/reload and protected real Staff routes. The live bundle scan confirmed no sample-data chunks on live app pages.
+
+The authenticated Company OS operations were exercised with mocked backend responses. Actual Clerk sign-in and writes to real staff/profile records require a signed-in test account and remain unverified here. No real staff invitation was created.
+
+## Invitation behavior
+
+Creating an invitation provides a private sign-in link to copy and share. This flow does not queue an email. If additional role assignment fails after link creation, the link is preserved with a warning and actual memberships are refreshed. An already signed-in global account is treated as access established.
+
+Existing Company OS limitation: a pending account with more than one non-provider staff role cannot be re-invited through its current role-matching rule. The UI reports that existing-link/backend-support requirement without altering memberships. The common Gigster + Super admin combination has one non-provider role and is supported.
+
+## Screenshots
+
+Actual built sample interfaces are under screenshots/hub-staff-v8/: Hub, staff roles, access matrix, mobile, personal profile setup and editor. They contain fictional sample people only.
+
+## Release / rollback
+
+Main updates publish Pages and trigger the existing full Railway test-deploy pipeline. Production remains manual. Railway test baseline deployment: a6399485-5d3f-4374-b5fd-f7b67463f69b; original frontend main: 326c7558550edbdee4ad81f425a621d69fafc10d. Use the Actions deployment run for the exact deployed source SHA; health alone is not version evidence.

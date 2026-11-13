@@ -49,7 +49,7 @@ jobs:
         run: |
           node scripts/qa/clerk-contract.mjs
       - name: Server build (no internal routes) and its checks
-        run: pnpm build:server && pnpm build:preview && pnpm check:server
+        run: pnpm build:server && pnpm build:preview && pnpm check:server && node scripts/qa/server-hub.mjs
       # The deployed builds are live (api): there, no page may ship the sample data. Caught here, not at deploy.
       - name: Live server build, code-split check
         env:

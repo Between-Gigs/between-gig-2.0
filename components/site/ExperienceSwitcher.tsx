@@ -2,6 +2,7 @@
 import { Menu, cx } from "@ds/components";
 import { BriefcaseBusiness, ChevronDown, LayoutDashboard, LayoutGrid, type LucideIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import { data } from "@/lib/data";
 import { basePath } from "@/lib/site";
 import { useSession } from "@/lib/session";
 
@@ -20,7 +21,7 @@ export function ExperienceSwitcher({ className }: { className?: string }) {
   const selected = pathname.startsWith("/profile") ? 0 : pathname.startsWith("/hub") || pathname.startsWith("/preview") || (basePath === "/hub" && pathname === "/") ? 2 : 1;
   const CurrentIcon = experiences[selected].icon;
   return <Menu align="end" className={className}
-    items={experiences.map((item, i) => ({ label: item.label, icon: <item.icon />, checked: i === selected || undefined, onSelect: () => router.push(basePath === "/hub" && item.href === "/hub/" ? "/" : item.href) }))}
+    items={experiences.map((item, i) => ({ label: item.label, icon: <item.icon />, checked: i === selected || undefined, onSelect: () => { if (data.kind === "live" && item.href === "/hub/") window.location.assign(item.href); else router.push(basePath === "/hub" && item.href === "/hub/" ? "/" : item.href); } }))}
     trigger={<button type="button" aria-label="Switch experience" className={cx("inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg border border-line bg-surface px-3 text-label-md text-ink hover:bg-surface-hover")}>
       <CurrentIcon aria-hidden="true" className="size-4" /><span>{experiences[selected].short}</span><ChevronDown aria-hidden="true" className="size-4" />
     </button>} />;

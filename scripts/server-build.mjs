@@ -41,6 +41,27 @@ export const PUBLIC_LIVE = ["art", "cursors", "email", "fonts", "img", "og"];
 
 /** node_modules into the copy: a copy-on-write clone (macOS) or hard links (Linux), else a plain copy. */
 function cloneNodeModules(from, to) {
+  if (process.platform === "win32") {
+    // pnpm uses absolute directory junctions on Windows. Recreate them inside the staged copy,
+    // and hard-link package files so Turbopack never resolves dependencies outside its project.
+    const walk = (source, target) => {
+      const stat = fs.lstatSync(source);
+      if (stat.isSymbolicLink()) {
+        const resolved = path.resolve(path.dirname(source), fs.readlinkSync(source));
+        const rel = path.relative(from, resolved);
+        if (rel.startsWith("..") || path.isAbsolute(rel)) throw new Error("server-build: dependency link leaves node_modules");
+        const destination = path.join(to, rel);
+        fs.symlinkSync(path.relative(path.dirname(target), destination), target, fs.statSync(source).isDirectory() ? "junction" : "file");
+      } else if (stat.isDirectory()) {
+        fs.mkdirSync(target, { recursive: true });
+        for (const name of fs.readdirSync(source)) walk(path.join(source, name), path.join(target, name));
+      } else {
+        try { fs.linkSync(source, target); } catch { fs.copyFileSync(source, target); }
+      }
+    };
+    walk(from, to);
+    return;
+  }
   const tries = process.platform === "darwin" ? [["-cR"], ["-R"]] : [["-al"], ["-R"]];
   for (const flags of tries) if (spawnSync("cp", [...flags, from, to], { stdio: "ignore" }).status === 0) return;
   throw new Error("server-build: could not copy node_modules");

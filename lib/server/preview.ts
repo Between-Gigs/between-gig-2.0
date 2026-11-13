@@ -6,6 +6,7 @@ import { createHash, createHmac } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { CompanyOsError, companyOs, configFromEnv, type CompanyOs } from "./companyos";
+import { hubTarget } from "@/lib/hub-target";
 import { sessionToken } from "./media";
 
 export const PREVIEW_COOKIE = "bg_preview";
@@ -110,7 +111,7 @@ function fileHeaders(file: string, root: string, body: Uint8Array) {
 
 /** Public sample sandbox during Clerk testing. Real app routes and APIs remain session protected. */
 export async function servePreview(req: Request, deps: { root?: string; secret?: string; now?: number } = {}): Promise<Response> {
-  const root = path.resolve(deps.root ?? path.join(process.cwd(), PREVIEW_ROOT));
+  const root = deps.root ? path.resolve(/* turbopackIgnore: true */ deps.root) : path.join(process.cwd(), PREVIEW_ROOT);
   if (req.method !== "GET" && req.method !== "HEAD") return plain(405);
   const url = new URL(req.url);
   const old = url.pathname === "/preview" || url.pathname.startsWith("/preview/");
@@ -118,9 +119,8 @@ export async function servePreview(req: Request, deps: { root?: string; secret?:
     const rest = url.pathname.slice("/preview".length);
     const invalid = resolveInside(root, "/hub/" + rest.replace(/^\//, "")) === null;
     if (invalid) return plain(404, "Not found");
-    const tools = /^\/(?:cursors|curtain|design-system|gigster-journey|profile-editor|profiles|wallpapers)(?:\/|$)/;
-    const target = !rest || rest === "/" || /^\/preview\/?$/.test(rest) ? "/hub/" : tools.test(rest) ? "/hub/preview" + rest : "/hub" + rest;
-    return new Response(null, { status: 307, headers: { ...NO_STORE, location: target + url.search } });
+    const target = hubTarget(url.pathname + url.search);
+    return new Response(null, { status: 307, headers: { ...NO_STORE, location: target } });
   }
   if (url.pathname !== "/hub" && !url.pathname.startsWith("/hub/")) return plain(404, "Not found");
   if (url.pathname === "/hub" || url.pathname === "/hub/hub/" || url.pathname === "/hub/preview/") return new Response(null, { status: 307, headers: { ...NO_STORE, location: "/hub/" + url.search } });

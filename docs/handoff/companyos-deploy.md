@@ -6,24 +6,24 @@ stays as it is: a static export on the sample data, every route.
 
 ## Three builds
 
-| | GitHub Pages preview | Server (test and production) | The server's /preview/ |
+| | GitHub Pages preview | Server (test and production) | The server's /hub/ |
 | --- | --- | --- | --- |
 | Command | `pnpm build` | `pnpm build:server` (sets `BG_BUILD=server`) | `pnpm build:preview`, after the server build |
-| Output | `out/` (static export, base path `/between-gig-2.0`) | `.next/standalone/` (Next server) | `.next/standalone/preview-site/` (static export, base path `/preview`) |
-| Routes | every route | the ship list's 18 "Make live" routes, plus `/preview-access/` | every route, on the sample data |
+| Output | `out/` (static export, base path `/between-gig-2.0`) | `.next/standalone/` (Next server) | `.next/standalone/preview-site/` (static export, base path `/hub`) |
+| Routes | every route | 21 live app routes, including Staff and the legacy Hub entry | every route, on the sample data |
 | Data | sample | `NEXT_PUBLIC_DATA_SOURCE=api` on test and production: the sample is not in the bundle (`lib/data/selected.ts`) | sample only: no Clerk key, no data source, never calls Company OS |
 | Headers | none (Pages can't set them) | CSP with a per-request nonce, HSTS, nosniff, … | its own CSP (inline scripts, `frame-ancestors 'self'`), `X-Frame-Options: SAMEORIGIN`, noindex |
 | Workflow | `pages.yml` (unchanged) | `deploy-test.yml`, `deploy-prod.yml` | the same, in the same step |
 
-### /preview/ on test and production (super admins only)
+### Public Hub during Clerk testing (owner, 12 Nov 2026)
 
-The server serves the sample export at `/preview/` (`lib/server/preview.ts`, `app/(served)/preview/[[...path]]/route.server.ts`),
-so test and production each preview exactly the frontend they run, without touching real data. Without a preview
-cookie, `/preview/…` redirects to `/preview-access/`. That page signs the visitor in if needed, and a super admin
-(Company OS `me().isSuperAdmin`, checked by `POST /api/preview/grant/`) gets a signed, 1-hour `bg_preview` cookie (bound to the site, so test's never opens production's; renewed without a click while signed in)
-scoped to `/preview` and goes on to the page they asked for. Anyone else sees "not found". Nothing in the live app
-links to it (owner's decision, 2026-11-02): it is opened only by its address, `/preview/`. The footer's "Preview
-build…" note shows only on the sample data.
+The canonical Hub is /hub/. The old /preview/ entry and its descendants redirect into that namespace; /preview-access forwards safely to the Hub without requiring a session. This supersedes the earlier superadmin-cookie gate during testing. The legacy grant endpoint remains protected, but its cookie is not required to read the Hub.
+
+The server mounts a separate static sample build under /hub (lib/server/preview.ts). Its root page is the Hub; the original sample home remains at /hub/home/. The temporary build copy changes those routes without altering the Pages export or the real app. Nested sample tools use the same mount, CSP hashes and filesystem-containment checks. No Clerk key, Company OS URL or service credential reaches this sandbox.
+
+The Hub is publicly accessible for testing, while real /owners/* and /api/staff/* remain protected by the existing test gate and verified Company OS superadmin session. Navigation between the live app and this separate static build uses full-page navigation. See [Hub, experiences and staff](hub-staff.md).
+
+Pages and Railway test both follow main through their existing checked workflows. Production is still manually released.
 
 ### Code splitting
 
@@ -31,7 +31,7 @@ build…" note shows only on the sample data.
 `/storyboard`, the legal pages, `/p/[slug]`, `/join`, `/login`, `/preview-access`) loads dashboard code
 (`components/owners`, `builder`, `canvas`, the profile editor's parts), or, on a live build, if any page ships the
 sample data. A live build swaps `@/lib/data/selected` for `selected.live.ts` (`next.config.ts`), so the sample store
-is never bundled.
+is never bundled. Staff uses the equivalent live-only alias for `@/lib/staff/selected`.
 
 ### The test gate (test only)
 
@@ -43,7 +43,7 @@ The test site is on the public internet, so `proxy.server.ts` puts a passphrase 
   A new passphrase signs everyone out.
 - 5 wrong tries in 15 minutes from one address get 429.
 - Exempt: `/webhooks/resend/` (signed by Resend), `/email/*` (mail clients fetch the images without a cookie), and
-  `/healthz/` (Railway's healthcheck).
+  `/healthz/` (Railway's healthcheck), plus GET/HEAD reads of `/hub/*`, `/preview/*`, and `/preview-access/` while Hub testing remains public.
 - Everything behind it is `noindex`. Without `COOKIE_SIGNING_SECRET` it answers 503 (fail closed).
 
 `deploy-test.yml` refuses to run without both secrets; `deploy-prod.yml` refuses a `TEST_GATE_PASSPHRASE`, and the
@@ -56,7 +56,7 @@ Testers need the passphrase before an email link opens for them.
 
 `scripts/server-build.mjs` builds in a temporary copy of the working tree (what `git ls-files` lists, so committed,
 changed and new files but no ignored ones such as `.env*`) without the internal and waiting folders (`INTERNAL`:
-`app/workspace`, `app/studio`, `app/preview`, `app/emails`, `app/crew-call`, `app/proposals`, `public/artifacts`,
+`app/workspace`, `app/studio`, `app/preview`, `app/hub`, `app/emails`, `app/crew-call`, `app/proposals`, `public/artifacts`,
 `public/studio-source`, `public/thumbs`, `public/workspace`), so they 404 and are not in the output. The real tree is
 never touched; only `.next` comes back. It fails closed: `pnpm test` fails on a page that is in neither `LIVE_PAGES`
 nor `INTERNAL`, or a `public/` folder in neither `PUBLIC_LIVE` nor `INTERNAL`, and `check-server.mjs` fails on anything
@@ -71,7 +71,7 @@ of them.
 - `scripts/check-bundle.mjs`: no `cos_svc_`, `sk_live`, `sk_test`, `CLERK_SECRET` or `*.railway.internal` in what
   browsers download, the preview export included. In its Studio source copy, only real secret values count.
 - `scripts/check-server.mjs`: starts the server. Live routes 200, internal ones 404, headers and nonces on every page,
-  `/healthz/` 200, `/preview/` behind its cookie. A second start with a passphrase checks the test gate.
+  `/healthz/` 200 and the public Hub/legacy aliases, with real app/API gates preserved. A second start with a passphrase checks the test gate.
 - `scripts/check-split.mjs`: the code-splitting rules above.
 
 ### Security headers

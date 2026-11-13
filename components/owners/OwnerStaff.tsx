@@ -60,6 +60,7 @@ function Staff() {
     try {
       const result = await gateway.invite({ email: email.trim(), name: name.trim(), roleKeys: inviteRoles });
       await refresh();
+      if (result.warning) setError(result.warning);
       if (result.url) {
         setInviteUrl(result.url);
         setNotice("Invitation link created. Copy it and share it with this staff member. No email was sent.");
@@ -161,7 +162,7 @@ function RoleAccess({ snapshot, busy, save }: { snapshot: StaffSnapshot; busy: b
     <div className="grid gap-5">
       <label className="grid max-w-md gap-2"><span className={small}>Choose a role</span><select className={control} disabled={busy || dirty} value={roleKey} onChange={(e) => { setRoleKey(e.target.value); setDirty(false); setPolicies(null); }}>{snapshot.roles.map((r) => <option key={r.key} value={r.key}>{r.name}</option>)}</select></label>
       <p className="max-w-3xl text-body-md text-ink-muted">Roles combine their access. Removing a grant from one role does not remove access supplied by another role. Existing row rules can narrow which records each person can use.</p>
-      {role?.isSystem ? <p className="rounded-lg border border-line bg-surface-selected p-4 text-body-sm text-ink">Super admin has full platform access. This system role cannot be narrowed here.</p> : <p className="text-body-sm text-ink-muted">“Own records” follows Company OS ownership and row rules. Module-managed grants can be restored on deployment; use row rules for lasting restrictions.</p>}
+      {role?.isSystem ? <p className="rounded-lg border border-line bg-surface-selected p-4 text-body-sm text-ink">Super admin has full platform access. This system role cannot be narrowed here.</p> : <p className="text-body-sm text-ink-muted">“Own records” follows the ownership and row restrictions shown below. Some default permissions are managed by the platform and can return after an update.</p>}
       <div className="overflow-x-auto rounded-lg border border-line">
         <table className="w-full min-w-xl text-left text-body-sm"><caption className="sr-only">Data access for {role?.name ?? "the selected role"}</caption><thead className="bg-surface"><tr><th scope="col" className="p-3 text-label-sm text-ink-muted">Record type</th>{actions.map((action) => <th key={action} scope="col" className="p-3 text-label-sm text-ink-muted">{nameOf(action)}</th>)}</tr></thead><tbody>{entities.map((entity) => <tr key={entity} className="border-t border-line"><th scope="row" className="p-3 font-normal text-ink">{nameOf(entity)}</th>{actions.map((action) => <td key={action} className="p-2"><select className={cx(control, "min-w-30 px-2 text-body-sm")} aria-label={nameOf(action) + " " + nameOf(entity)} disabled={busy || role?.isSystem} value={current.find((p) => p.entity === entity && p.action === action)?.scope ?? "none"} onChange={(e) => setPermission(entity, action, e.target.value as StaffScope)}>{scopes.map((scope) => <option key={scope.value} value={scope.value}>{scope.label}</option>)}</select></td>)}</tr>)}</tbody></table>
       </div>
