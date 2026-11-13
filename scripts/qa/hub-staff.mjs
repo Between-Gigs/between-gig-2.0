@@ -11,7 +11,7 @@ const base = process.env.QA_BASE_URL ?? local.url;
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? (process.platform === "win32" ? "C:/Program Files/Google/Chrome/Application/chrome.exe" : "/opt/pw-browsers/chromium") });
 const screenshots = process.env.QA_SCREENSHOT_DIR;
 const failures = [];
-const shot = async (page, name) => { if (screenshots) { await fs.mkdir(screenshots, { recursive: true }); await page.screenshot({ path: path.join(screenshots, name + ".png") }); } };
+const shot = async (page, name) => { if (screenshots) { await fs.mkdir(screenshots, { recursive: true }); await page.evaluate(() => document.fonts.ready); await page.screenshot({ path: path.join(screenshots, name + ".png") }); } };
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
   await context.addInitScript(() => localStorage.setItem("bg-theme", "dark"));

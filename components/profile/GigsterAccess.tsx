@@ -6,7 +6,6 @@ import { data } from "@/lib/data";
 import { useSession } from "@/lib/session";
 import { NAME_MAX } from "@/lib/profile/validate";
 import { Page } from "@/components/site/Page";
-import { ExperienceSwitcher } from "@/components/site/ExperienceSwitcher";
 
 /** Admins explicitly create their own profile; no impersonation and no automatic policy acceptance. */
 export function GigsterAccess({ children }: { children: React.ReactNode }) {
@@ -33,9 +32,8 @@ export function GigsterAccess({ children }: { children: React.ReactNode }) {
   };
   return <Page>
     <div className="mx-auto grid max-w-xl gap-6 py-8">
-      <ExperienceSwitcher />
       <div><p className="text-eyebrow text-ink-muted uppercase">Gigster Experience</p>
-        <h1 className="mt-2 font-display text-heading-xl text-ink">Build your own Gigster profile</h1>
+        <h1 className="mt-2 font-display text-display-sm text-ink">Build your own Gigster profile</h1>
         <p className="mt-3 text-body-lg text-ink-muted">Use your current account to experience the same profile builder as every Gigster. Your owner access stays available.</p></div>
       <form onSubmit={submit} className="grid gap-5 rounded-2xl border border-line bg-surface p-6">
         <p className="text-body-md text-ink-muted">Signed in as <strong className="text-ink">{session.email}</strong></p>

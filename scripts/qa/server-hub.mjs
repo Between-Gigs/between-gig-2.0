@@ -30,7 +30,7 @@ try {
   await page.locator("h1").waitFor();
   assert.equal((await page.reload()).status(), 200);
   await page.goto(base + "/hub/");
-  if (process.env.QA_SCREENSHOT_DIR) { await fs.mkdir(process.env.QA_SCREENSHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(process.env.QA_SCREENSHOT_DIR, "hub.png") }); }
+  if (process.env.QA_SCREENSHOT_DIR) { await fs.mkdir(process.env.QA_SCREENSHOT_DIR, { recursive: true }); await page.evaluate(() => document.fonts.ready); await page.screenshot({ path: path.join(process.env.QA_SCREENSHOT_DIR, "hub.png") }); }
   for (const width of [390, 420]) {
     await page.setViewportSize({ width, height: 900 });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth) <= 1, "Hub overflow at " + width);

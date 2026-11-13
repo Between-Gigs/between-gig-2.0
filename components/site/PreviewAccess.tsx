@@ -15,5 +15,5 @@ export function PreviewAccess() {
     if (data.kind === "sample" && basePath !== "/hub" && target !== "/hub/") target = target.replace(/^\/hub(?=\/)/, "");
     window.location.replace(basePath === "/hub" ? target : basePath + target);
   }, []);
-  return <Page><div className="mx-auto grid max-w-xl gap-4 py-20 text-center"><h1 className="font-display text-heading-xl text-ink">Opening the Hub</h1><p className="text-body-md text-ink-muted">The Hub is open for testing. No sign-in is needed.</p><ButtonLink href={basePath === "/hub" ? "/" : "/hub/"}>Open Hub</ButtonLink></div></Page>;
+  return <Page><div className="mx-auto grid max-w-xl gap-4 py-20 text-center"><h1 className="font-display text-display-sm text-ink">Opening the Hub</h1><p className="text-body-md text-ink-muted">The Hub is open for testing. No sign-in is needed.</p><ButtonLink href={basePath === "/hub" ? "/" : "/hub/"}>Open Hub</ButtonLink></div></Page>;
 }
