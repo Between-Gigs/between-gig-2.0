@@ -45,10 +45,17 @@ const crewCall: Artwork[] = [
   },
 ];
 
-/** Night grades of the two photographic sets, for the dark theme (made from the originals, not new scenes). */
-const night = (items: Artwork[]): Artwork[] => items.map((a) => ({
-  ...a, file: a.file.replace(/\.jpg$/, "-night.jpg"), title: `${a.title} · Night`, alt: `${a.alt} Graded for night: deep shadows, warm lights.`,
-}));
+/** The four dark artwork variants selected by Justin. Earlier night grades remain archived. */
+const dark = (items: Artwork[]): Artwork[] => items.map((art) => {
+  const portrait = art.file.includes("portrait");
+  const craft = art.file.startsWith("craft-");
+  return {
+    ...art, file: art.file.replace(/\.jpg$/, "-dark.png"), title: `${art.title} · Dark`,
+    alt: `${craft ? "Craft tools and wedding photographs" : "A film set with a director’s chair and equipment"} framing a quiet dark forest-green center, in ${portrait ? "portrait" : "desktop"} format.`,
+    width: portrait ? (craft ? 1097 : 941) : 1672,
+    height: portrait ? (craft ? 1434 : 1672) : 941,
+  };
+});
 
 function ArtPrint({ art, collection }: { art: Artwork; collection: string }) {
   const directory = "art/wallpapers/";
@@ -68,7 +75,7 @@ function ArtPrint({ art, collection }: { art: Artwork; collection: string }) {
       <figcaption className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <div>
           <h3 className="font-display text-heading-sm text-ink">{art.title}</h3>
-          <p className="text-body-sm tabular-nums text-ink-muted">{art.width} × {art.height} · JPG</p>
+          <p className="text-body-sm tabular-nums text-ink-muted">{art.width} × {art.height} · {art.file.endsWith(".png") ? "PNG" : "JPG"}</p>
         </div>
         <a href={url} download={`between-gigs-${art.file}`} aria-label={`Download ${name}`}
           className="inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-label-md text-ink-brand underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-focus">
@@ -100,15 +107,15 @@ export default function WallpapersPage() {
         </header>
         <section aria-labelledby="invitation-art">
           <h2 id="invitation-art" className="font-display text-heading-lg text-ink">The craft invitation</h2>
-          <p className="mt-2 max-w-2xl text-body-md text-ink-muted">The invitation’s original portrait composition and a widescreen companion, both with a clear center, in day and night.</p>
+          <p className="mt-2 max-w-2xl text-body-md text-ink-muted">The invitation’s original portrait composition and a widescreen companion, both with a clear center, in light and dark.</p>
           <FormatPair items={invitation} collection="The craft invitation" />
-          <FormatPair items={night(invitation)} collection="The craft invitation" />
+          <FormatPair items={dark(invitation)} collection="The craft invitation" />
         </section>
         <section aria-labelledby="crew-call-art" className="mt-14 border-t border-line pt-8 sm:mt-16 swiss:border-t-4 swiss:border-line-strong">
           <h2 id="crew-call-art" className="font-display text-heading-lg text-ink">Crew Call film set</h2>
-          <p className="mt-2 max-w-2xl text-body-md text-ink-muted">The sunlit film set from Crew Call, in a widescreen crop and a portrait adaptation, in day and night.</p>
+          <p className="mt-2 max-w-2xl text-body-md text-ink-muted">The sunlit film set from Crew Call, in a widescreen crop and a portrait adaptation, in light and dark.</p>
           <FormatPair items={crewCall} collection="Crew Call film set" />
-          <FormatPair items={night(crewCall)} collection="Crew Call film set" />
+          <FormatPair items={dark(crewCall)} collection="Crew Call film set" />
         </section>
 
       </div>
