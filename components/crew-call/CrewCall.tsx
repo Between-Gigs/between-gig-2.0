@@ -2,7 +2,7 @@
 import { useLook } from "@/components/site/LookSync";
 import { Button, IconButton, cx } from "@ds/components";
 import {
-  Armchair, ArrowRight, Brush, Camera, Car, ChefHat, ChevronLeft, ChevronRight, ClipboardList, Clapperboard, FilePen, Hammer,
+  Armchair, ArrowRight, ArrowUpRight, Brush, Camera, Car, ChefHat, ChevronLeft, ChevronRight, ClipboardList, Clapperboard, FilePen, Hammer,
   Laptop, Lightbulb, MapPinned, Music, PackageOpen, PaintRoller, PartyPopper, ShieldCheck, Shirt, Sofa, Star, X, type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -31,6 +31,26 @@ const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matc
  * filters the crew as you type; every service, live or coming soon, opens the Storyboard's "Find talent" form with that
  * service filled in.
  */
+/** One Crew Call service, as in Justin's design: the patch and serif title, one line, "View service", and the
+ * still-life object fading in at the right edge. The whole tile opens the request form. */
+function CrewTile({ title, line, badge, object, onOpen }: { title: string; line: string; badge: string; object: string; onOpen: () => void }) {
+  return (
+    <button type="button" onClick={onOpen}
+      className="group relative flex h-full min-h-32 w-full overflow-hidden rounded-md border border-line-strong bg-surface text-left shadow-xs transition-shadow duration-fast hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
+      <img src={asset(object)} alt="" width={180} height={165} loading="lazy" decoding="async"
+        className="absolute inset-y-0 right-0 h-full w-2/5 object-cover object-right mask-l-from-60% mask-l-to-100%" />
+      <span className="relative grid w-3/5 min-w-0 content-start gap-2 p-3 pr-1">
+        <span className="flex items-center gap-2.5">
+          <img src={asset(badge)} alt="" width={96} height={96} className="size-12 shrink-0" />
+          <span className="font-serif text-heading-lg leading-none font-bold text-balance text-ink-deep">{title}</span>
+        </span>
+        <span className="text-body-sm text-ink">{line}</span>
+        <span className="mt-auto inline-flex w-fit items-center gap-1 text-label-md font-semibold text-ink underline underline-offset-4 group-hover:text-ink-brand">View service<ArrowUpRight aria-hidden="true" className="size-4" /></span>
+      </span>
+    </button>
+  );
+}
+
 export function CrewCall() {
   const brand = useLook() !== "swiss";
   const router = useRouter();
@@ -56,28 +76,28 @@ export function CrewCall() {
             {/* A wash in the page colour behind the words: barely there on light, a dusk scrim on dark. */}
             <span aria-hidden="true" className="absolute inset-0 -z-10 bg-radial from-bg/70 via-bg/30 to-transparent" />
             <div className="mx-auto grid max-w-3xl justify-items-center gap-5 px-4 pt-12 pb-14 text-center sm:px-6 sm:pt-16 sm:pb-16">
-              <p className="text-label-md tracking-widest text-ink-deep uppercase">{hero.eyebrow}</p>
               <h1 id="cc-h" className="font-serif text-display-md font-bold text-balance text-ink-deep sm:text-display-lg lg:text-display-xl">
                 {hero.title[0]}<br />{hero.title[1]}
               </h1>
-              <p className="max-w-xl text-body-lg font-medium text-ink">{hero.lead}</p>
+              <p className="max-w-md text-body-lg font-medium text-balance text-ink">{hero.lead}</p>
               <form role="search" onSubmit={(e) => { e.preventDefault(); if (q.trim() && !shown.length && !soon.length) open(q.trim()); else toCrew(); }}
-                className="flex w-full max-w-xl items-center gap-2 rounded-full bg-surface p-1.5 pl-6 shadow-lg focus-within:ring-2 focus-within:ring-ink-brand">
+                className="flex w-full max-w-xl items-center gap-2 rounded-lg border border-line-strong bg-surface/95 p-1.5 pl-5 shadow-lg focus-within:ring-2 focus-within:ring-ink-brand">
                 <label htmlFor="cc-search" className="sr-only">Search the crew</label>
                 <input id="cc-search" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={hero.search}
-                  className="min-w-0 flex-1 bg-transparent py-2 text-body-lg tracking-wider text-ink uppercase outline-none placeholder:text-ink-muted" />
-                <IconButton type="submit" label="Find the crew" icon={<ArrowRight />} className="rounded-full bg-ink-deep text-bg hover:bg-ink-deep-hover" />
+                  className="min-w-0 flex-1 bg-transparent py-2 text-body-lg text-ink outline-none placeholder:text-ink-muted" />
+                <button type="submit" aria-label="Find the crew" title="Find the crew"
+                  className="grid size-10 shrink-0 place-items-center rounded-md bg-ink-deep text-bg transition-colors duration-fast hover:bg-ink-deep-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"><ArrowRight aria-hidden="true" className="size-5" /></button>
               </form>
             </div>
           </section>
 
           {/* Sample testimonials, with arrows to page through them. */}
           <section aria-labelledby="cc-reviews-h" className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
-            <h2 id="cc-reviews-h" className="text-center text-body-sm text-ink-muted">Illustrative testimonial layout · Not customer reviews</h2>
+            <h2 id="cc-reviews-h" className="flex items-center gap-4 text-body-md text-ink before:h-px before:flex-1 before:bg-line-strong after:h-px after:flex-1 after:bg-line-strong">Illustrative testimonials · Sample content</h2>
             <Strip label="Sample testimonials" className="mt-3" itemClass="w-11/12 sm:w-2/3 lg:w-auto lg:min-w-0 lg:flex-1 lg:shrink">
               {testimonials.map((t) => (
-                <figure key={t.name} className="flex h-full w-full gap-3 rounded-md border border-line bg-surface p-2">
-                  <img src={asset(t.image)} alt="" width={512} height={512} loading="lazy" decoding="async" className="w-2/5 shrink-0 rounded-sm object-cover" />
+                <figure key={t.name} className="flex h-full w-full gap-4 rounded-md border border-line-strong bg-surface p-2.5">
+                  <img src={asset(t.image)} alt="" width={512} height={512} loading="lazy" decoding="async" className="w-2/5 shrink-0 rounded-md object-cover" />
                   <div className="flex min-w-0 flex-1 flex-col gap-2 py-1 pr-1">
                     <div className="flex items-center justify-between gap-2">
                       <span className="flex gap-0.5 text-warning" role="img" aria-label="Five stars (sample)">
@@ -85,11 +105,8 @@ export function CrewCall() {
                       </span>
                       <span className="text-label-sm tracking-wider text-warning uppercase">Sample</span>
                     </div>
-                    <blockquote className="text-body-sm font-semibold text-ink">&ldquo;{t.quote}&rdquo;</blockquote>
-                    <figcaption className="mt-auto flex items-center gap-2">
-                      <img src={asset(t.avatar)} alt="" width={128} height={128} loading="lazy" className="size-8 rounded-full object-cover" />
-                      <span className="grid"><span className="text-label-sm tracking-wide text-ink uppercase">{t.name}</span><span className="text-body-sm text-ink-muted">{t.kind}</span></span>
-                    </figcaption>
+                    <figcaption className="font-serif text-heading-lg leading-tight font-bold text-balance text-ink-deep">{t.title}</figcaption>
+                    <blockquote className="text-body-md text-ink">{t.short}</blockquote>
                   </div>
                 </figure>
               ))}
@@ -98,7 +115,7 @@ export function CrewCall() {
 
           {/* Crew Call */}
           <section ref={crew} id="crew" aria-labelledby="cc-crew-h" className="mx-auto max-w-7xl scroll-mt-20 px-4 pt-8 pb-16 sm:px-6">
-            <h2 id="cc-crew-h" className="text-center font-serif text-display-md font-bold text-ink-deep uppercase sm:text-display-lg">Crew Call</h2>
+            <h2 id="cc-crew-h" className="flex items-center gap-6 font-serif text-display-md font-bold text-ink-deep before:h-px before:flex-1 before:bg-line-strong after:h-px after:flex-1 after:bg-line-strong sm:text-display-lg lg:text-display-xl">Crew Call</h2>
             {q && (
               <p aria-live="polite" className="mt-3 flex flex-wrap items-center justify-center gap-2 text-body-md text-ink-muted">
                 {shown.length + soon.length ? <>Showing <b className="text-ink tabular-nums">{shown.length + soon.length}</b> for &ldquo;{q}&rdquo;</> : <>Nothing listed for &ldquo;{q}&rdquo; yet.</>}
@@ -107,10 +124,10 @@ export function CrewCall() {
             )}
 
             {shown.length > 0 && (
-              <ul className="mt-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              <ul className="mt-8 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                 {shown.map((s) => (
                   <li key={s.id} className="flex">
-                    <ServiceCard title={s.title} line={s.line} badge={s.badge} icon={icons[s.icon]} image={s.image} onOpen={() => pick(s.title, <img src={asset(s.badge)} alt="" width={192} height={192} className="size-14" />, false)} />
+                    <CrewTile title={s.title} line={s.short} badge={s.badge} object={s.object} onOpen={() => pick(s.title, <img src={asset(s.badge)} alt="" width={192} height={192} className="size-14" />, false)} />
                   </li>
                 ))}
               </ul>
@@ -124,37 +141,36 @@ export function CrewCall() {
 
             <div className="mt-6 flex justify-center">
               {(!q || shown.length + soon.length > 0) && <Link href="/storyboard/#plates"
-                className="inline-flex min-h-12 items-center gap-3 rounded-full bg-ink-deep px-16 text-label-md tracking-widest text-bg uppercase shadow-md transition-colors duration-fast hover:bg-ink-deep-hover">
+                className="inline-flex min-h-14 items-center gap-3 rounded-full bg-ink-deep px-20 text-heading-md text-bg shadow-md transition-colors duration-fast hover:bg-ink-deep-hover">
                 Explore all services<ArrowRight className="size-5" aria-hidden="true" />
               </Link>}
             </div>
 
             {soon.length > 0 && (
-              <div className="mt-6 border-t border-line pt-6">
-                              <div className="flex flex-wrap items-end justify-between gap-2">
-                  <h3 className="font-serif text-heading-lg text-ink">Coming soon</h3>
-                  <p className="text-body-sm text-ink-muted">Need one now? Tap it and tell us. We&apos;ll find someone.</p>
+              <div className="mt-8 border-t-2 border-line-strong pt-6">
+                <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-2">
+                  <h3 className="font-serif text-display-sm font-bold text-ink-deep sm:text-display-md">Coming soon</h3>
+                  <p className="text-heading-md text-ink sm:border-l sm:border-line-strong sm:pl-8">Need one now? Tell us what you have in mind.</p>
                 </div>
-                <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-5">
+                <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 md:grid-cols-5">
                   {soon.map((s) => (
                     <li key={s.id}>
                       <button type="button" onClick={() => pick(s.title, <SoonPatch icon={icons[s.icon]} small />, true)} aria-label={`${s.title}, coming soon. Tell us you need it.`}
                         className="group grid w-full justify-items-center gap-4 rounded-xl px-2 pt-3 pb-3 text-center transition-colors duration-fast hover:bg-surface-hover">
                         <span className="relative grid justify-items-center">
                           <SoonPatch icon={icons[s.icon]} />
-                          <span aria-hidden="true" data-theme="dark" className="absolute -bottom-3 w-28 bg-surface-brand py-0.5 text-center text-label-sm tracking-wide text-ink uppercase shadow-sm"
+                          <span aria-hidden="true" data-theme="dark" className="absolute -bottom-3 w-32 bg-surface-brand py-0.5 text-center text-label-sm tracking-wide text-ink uppercase shadow-sm"
                             style={{ clipPath: "polygon(0 0, 100% 0, 93% 50%, 100% 100%, 0 100%, 7% 50%)" }}>Coming soon</span>
                         </span>
-                        <span className="font-serif text-body-md text-ink group-hover:text-ink-brand">{s.title}</span>
+                        <span className="text-body-lg text-ink group-hover:text-ink-brand">{s.title}</span>
                       </button>
                     </li>
                   ))}
                 </ul>
               </div>
             )}
-            <p className="mt-10 text-center text-body-sm text-ink-muted">Private design preview · Featured services are provisional until Gigster profiles are reviewed.</p>
+            <p className="mt-10 text-center text-body-md text-ink italic">Design preview. Featured services are provisional.</p>
           </section>
-          <p className="border-t border-line px-4 py-6 text-body-sm text-ink-muted sm:text-center">Sample quotes, generated photos, names, ratings and production-credit claims are unverified mockup content. Real testimonials require review before publication.</p>
         </div>
       ) : (
         <div data-client-locked="" className="bg-bg text-ink">
@@ -335,10 +351,11 @@ function Strip({ label, children, className, itemClass, progress = false }: { la
 /** Coming-soon patch until the client's own art arrives: a duotone icon on cream inside the patches' gold ring. */
 function SoonPatch({ icon: Icon, small = false }: { icon: LucideIcon; small?: boolean }) {
   return (
-    <span aria-hidden="true" className={cx("grid place-items-center rounded-full border-4 border-amber-700 bg-amber-100 shadow-md transition-transform duration-fast group-hover:-translate-y-1",
-      small ? "size-14" : "size-24")}>
-      <span className={cx("grid place-items-center rounded-full border-2 border-dashed border-amber-700/40 bg-forest-50", small ? "size-10" : "size-18")}>
-        <Icon className={cx("fill-amber-300/70 text-forest-800", small ? "size-6" : "size-10")} strokeWidth={1.6} />
+    // Justin's medallion: a polished gold ring around a cream face with the service's line icon.
+    <span aria-hidden="true" className={cx("grid place-items-center rounded-full bg-linear-to-b from-amber-300 via-amber-700 to-amber-300 shadow-md transition-transform duration-fast group-hover:-translate-y-1",
+      small ? "size-14 p-1" : "size-28 p-1.5")}>
+      <span className="grid size-full place-items-center rounded-full bg-radial from-surface to-amber-100 ring-1 ring-amber-900/20 ring-inset">
+        <Icon className={cx("text-forest-900", small ? "size-6" : "size-12")} strokeWidth={1.4} />
       </span>
     </span>
   );
