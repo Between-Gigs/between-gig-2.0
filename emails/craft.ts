@@ -5,9 +5,9 @@
  * Responsive: on wide screens the photo frames the card (a background image, with a sand colour where a client hides
  * backgrounds, e.g. Outlook on Windows); on phones the frame's padding drops and a strip of the same photo sits above
  * the card instead, so the photo is never just a sliver. The e-k-* classes live in ./layout's stylesheet.
- * The photo is generated concept art matching the approved concept, not a photograph: Figma AI (gpt-image-2.5-flare),
- * 4 Nov 2026; public/email/craft-border.jpg (frame) and craft-top.jpg (phone strip), source file
- * figma.com/design/LhX02bL5JSOZ3xrKngyfaQ. Swap them for the original photograph when it's available.
+ * Uses the Craft Invitation gallery artwork in both formats, replacing the retired Email Template Frame.
+ * Copies stay in public/email because live server builds omit the wallpaper gallery's asset directory.
+ * Artwork is illustrative; it is not documentary photography. Original alternate frame files remain archived.
  */
 import { esc, layout, type EmailContext } from "./layout";
 
@@ -46,8 +46,8 @@ export const craftSignOff = (text: string, mt = 22) =>
 
 /** The photo frame around the cream card, with logo, eyebrow and rule; `inner` follows the rule. */
 export function craftHero({ eyebrow, inner, ctx }: { eyebrow: string; inner: string; ctx: EmailContext }) {
-  const frame = `${ctx.assetBase}/email/craft-border.jpg`;
-  const strip = `${ctx.assetBase}/email/craft-top.jpg`;
+  const frame = `${ctx.assetBase}/email/craft-invitation-portrait.jpg`;
+  const strip = `${ctx.assetBase}/email/craft-invitation-desktop.jpg`;
   const logo = `${ctx.assetBase}/email/between-gigs-wide-on-light.png`;
   return `<!--[if !mso]><!--><div class="e-k-strip" style="display:none;max-height:0;overflow:hidden;mso-hide:all"><img src="${esc(strip)}" width="600" alt="" style="display:block;width:100%;height:auto;border:0"></div><!--<![endif]-->
 <table ${T} width="100%" bgcolor="${k.sand}" background="${esc(frame)}" style="background-color:${k.sand};background-image:url('${esc(frame)}');background-size:cover;background-position:center">
