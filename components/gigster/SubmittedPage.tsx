@@ -9,6 +9,7 @@ import { Check } from "lucide-react";
 import * as React from "react";
 import { data, type Person, type ProfileFields } from "@/lib/data";
 import { useRequireRole } from "@/lib/guard";
+import { selectedDarkWallpaper } from "@/lib/wallpaper-theme";
 import { asset } from "@/lib/site";
 import { Heading, Text, TextLink } from "@/components/ds/atoms";
 import { Page } from "@/components/site/Page";
@@ -24,8 +25,8 @@ function Stage({ children }: { children: React.ReactNode }) {
     <section className="relative isolate flex flex-1 items-center overflow-hidden bg-bg">
       {[false, true].map((night) => (
         <picture key={String(night)}>
-          <source media="(min-width: 48rem)" srcSet={asset(night ? "/art/stage/still-life-desktop-night.jpg" : "/art/stage/still-life-desktop.jpg")} />
-          <img src={asset(night ? "/art/stage/still-life-portrait-night.jpg" : "/art/stage/still-life-portrait.jpg")} alt="" aria-hidden="true" loading="lazy"
+          <source media="(min-width: 48rem)" srcSet={asset(night ? selectedDarkWallpaper("/art/stage/still-life-desktop.jpg")! : "/art/stage/still-life-desktop.jpg")} />
+          <img src={asset(night ? selectedDarkWallpaper("/art/stage/still-life-portrait.jpg")! : "/art/stage/still-life-portrait.jpg")} alt="" aria-hidden="true" loading="lazy"
             className={cx("absolute inset-0 -z-10 size-full object-cover object-center", night ? "hidden dark:block" : "dark:hidden")} />
         </picture>
       ))}

@@ -7,6 +7,7 @@
  */
 import { cx } from "@ds/components/cx";
 import type * as React from "react";
+import { selectedDarkWallpaper } from "@/lib/wallpaper-theme";
 import { asset } from "@/lib/site";
 import { Eyebrow, Heading, Text } from "../atoms";
 
@@ -25,11 +26,13 @@ export function AuthStageTemplate({ eyebrow, title, lead, children, className }:
     <section className="relative isolate overflow-hidden bg-bg">
       {/* lg and up: the landscape still life covers the stage. Below lg: the portrait one frames the top of the page
           (scissors, flowers, lens, photos) and fades into the paper, so the card's lower half sits on plain paper. */}
-      <picture>
-        <source media="(min-width: 64rem)" srcSet={asset("/art/stage/still-life-desktop.jpg")} />
-        <img src={asset("/art/stage/still-life-portrait.jpg")} alt="" aria-hidden="true"
-          className="absolute inset-x-0 top-0 -z-10 aspect-3/4 w-full object-cover mask-b-from-30% mask-b-to-75% sm:mask-b-from-45% sm:mask-b-to-100% lg:inset-y-0 lg:aspect-auto lg:h-full lg:mask-none dark:opacity-20" />
-      </picture>
+      {[false, true].map((dark) => (
+        <picture key={String(dark)}>
+          <source media="(min-width: 64rem)" srcSet={asset(dark ? selectedDarkWallpaper("/art/stage/still-life-desktop.jpg")! : "/art/stage/still-life-desktop.jpg")} />
+          <img src={asset(dark ? selectedDarkWallpaper("/art/stage/still-life-portrait.jpg")! : "/art/stage/still-life-portrait.jpg")} alt="" aria-hidden="true"
+            className={cx("absolute inset-x-0 top-0 -z-10 aspect-3/4 w-full object-cover mask-b-from-30% mask-b-to-75% sm:mask-b-from-45% sm:mask-b-to-100% lg:inset-y-0 lg:aspect-auto lg:h-full lg:mask-none", dark ? "hidden dark:block" : "dark:hidden")} />
+        </picture>
+      ))}
       <div className="grid w-full gap-10 px-4 pt-40 pb-12 sm:px-6 sm:pt-72 sm:pb-16 lg:min-h-180 lg:grid-cols-20 lg:items-center lg:gap-0 lg:px-0 lg:py-20">
         <aside aria-label="Welcome to Between Gigs" className="mx-auto grid w-full max-w-sm content-start gap-5 sm:max-w-lg sm:gap-6 lg:col-span-9 lg:col-start-3 lg:mx-0 lg:max-w-none lg:gap-7 lg:pr-10 xl:col-span-8 xl:col-start-4">
           <Eyebrow rule className="gap-4">{eyebrow}</Eyebrow>

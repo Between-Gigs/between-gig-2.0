@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { comingSoon, hero, services, testimonials, type CrewIcon } from "@/lib/crew-call";
 import { asset } from "@/lib/site";
+import { crewCallDark } from "@/lib/wallpaper-theme";
 import { ThemedImg } from "@/components/ui/ThemedImg";
 import { Planner, type PlannerTopic } from "@/components/funnel/Storyboard";
 import { Page } from "@/components/site/Page";
@@ -73,9 +74,13 @@ export function CrewCall() {
         <div data-client-locked="" className="bg-bg text-ink">
           {/* Hero: the client's film-set photo, the promise in the forest serif, one search. */}
           <section aria-labelledby="cc-h" className="relative isolate mx-auto max-w-7xl overflow-hidden">
-            <ThemedImg src={hero.image} width={1600} height={800} loading="eager" className="absolute inset-0 -z-20 size-full object-cover" />
-            {/* A wash in the page colour behind the words: barely there on light, a dusk scrim on dark. */}
-            <span aria-hidden="true" className="absolute inset-0 -z-10 bg-radial from-bg/70 via-bg/30 to-transparent" />
+            <img src={asset(hero.image)} alt="" width={1600} height={800} loading="eager" className="absolute inset-0 -z-20 size-full object-cover dark:hidden" />
+            <picture>
+              <source media="(orientation: portrait)" srcSet={asset(crewCallDark.portrait)} />
+              <img src={asset(crewCallDark.desktop)} alt="" width={1672} height={941} loading="eager" decoding="async" className="absolute inset-0 -z-20 hidden size-full object-cover dark:block" />
+            </picture>
+            {/* Keep the light composition’s readability wash; the selected dark art provides its own quiet center. */}
+            <span aria-hidden="true" className="absolute inset-0 -z-10 bg-radial from-bg/70 via-bg/30 to-transparent dark:hidden" />
             <div className="mx-auto grid max-w-3xl justify-items-center gap-5 px-4 pt-12 pb-14 text-center sm:px-6 sm:pt-16 sm:pb-16">
               <h1 id="cc-h" className="font-serif text-display-md font-bold text-balance text-ink-deep sm:text-display-lg lg:text-display-xl">
                 {hero.title[0]}<br />{hero.title[1]}
