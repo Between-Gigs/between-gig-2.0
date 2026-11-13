@@ -1,4 +1,3 @@
-import { cx } from "@ds/components/cx";
 import { Logo } from "@ds/components/Logo";
 import Link from "next/link";
 import { data } from "@/lib/data";
