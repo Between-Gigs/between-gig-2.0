@@ -114,6 +114,8 @@ export async function testGate(req: Request, env: GateEnv = gateEnv(), now = Dat
   if (!env.passphrase) return null;
   const url = new URL(req.url);
   const read = req.method === "GET" || req.method === "HEAD";
+  // Public sample namespaces contain no live API or data credentials. Only reads bypass the test gate.
+  if (read && /^(?:\/(?:hub|preview)(?:\/|$)|\/preview-access\/?$)/.test(url.pathname)) return null;
   if (WEBHOOK.test(url.pathname) || (read && EMAIL_IMAGE.test(url.pathname))) return null;
   // Half configured: everything answers 503, the healthcheck included, so Railway doesn't call a closed site healthy.
   if (!env.secret) return text(503, "This test site is not configured yet.");

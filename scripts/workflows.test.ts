@@ -28,6 +28,10 @@ function steps(yml: string): string[] {
 }
 
 describe("the workflows", () => {
+  it("keeps Railway test on approved main commits while production remains manually released", () => {
+    expect(read("deploy-test.yml")).toMatch(/push:\n\s+branches: \[main\]/);
+    expect(read("deploy-prod.yml")).not.toMatch(/^  push:/m);
+  });
   it("every step starts at a job's step indent (6 spaces), so none hides inside the previous step's run: | block", () => {
     for (const name of workflows) {
       read(name).split("\n").forEach((line, i) => {

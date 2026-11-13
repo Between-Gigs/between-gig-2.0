@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
  * thumbnails and the workspace's covers) and waiting on the client (Crew Call, proposals).
  */
 export const INTERNAL = [
-  "app/workspace", "app/studio", "app/preview", "app/emails", "app/crew-call", "app/proposals", "app/profile/simple",
+  "app/workspace", "app/studio", "app/preview", "app/hub", "app/emails", "app/crew-call", "app/proposals", "app/profile/simple",
   "app/versions", "public/art/wallpapers", "public/artifacts", "public/studio-source", "public/thumbs", "public/workspace", "public/versions",
 ];
 
@@ -24,7 +24,7 @@ export const INTERNAL = [
  */
 export const LIVE_PAGES = [
   "/", "/join", "/licensing-insurance", "/login", "/owners", "/owners/people", "/owners/people/[id]", "/owners/review",
-  "/owners/waitlist", "/p", "/p/[slug]", "/preview-access", "/privacy", "/professionals", "/profile", "/profile/canvas", "/profile/edit",
+  "/owners/waitlist", "/owners/staff", "/p", "/p/[slug]", "/preview-access", "/privacy", "/professionals", "/profile", "/profile/canvas", "/profile/edit",
   "/provider-standards", "/storyboard", "/terms",
 ];
 
@@ -32,7 +32,7 @@ export const LIVE_PAGES = [
 export const LIVE_ROUTES = [
   "/", "/professionals/", "/storyboard/", "/privacy/", "/terms/", "/licensing-insurance/", "/provider-standards/",
   "/join/", "/login/", "/profile/canvas/", "/profile/edit/", "/profile/", "/p/", "/p/maya/",
-  "/owners/", "/owners/review/", "/owners/people/", "/owners/people/maya/", "/owners/waitlist/", "/preview-access/",
+  "/owners/", "/owners/review/", "/owners/people/", "/owners/people/maya/", "/owners/waitlist/", "/owners/staff/", "/preview-access/",
 ];
 
 /** Top-level public/ folders the live pages and the emails use. Any other must be in INTERNAL. */

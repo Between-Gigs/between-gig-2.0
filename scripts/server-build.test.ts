@@ -17,7 +17,7 @@ const git = (cwd: string, ...args: string[]) => execFileSync("git", args, { cwd,
 function fakeRepo() {
   const root = temp();
   const file = (rel: string, text = "x") => { mkdirSync(path.dirname(path.join(root, rel)), { recursive: true }); writeFileSync(path.join(root, rel), text); };
-  for (const f of ["app/page.tsx", "app/workspace/page.tsx", "app/studio/site/page.tsx", "app/preview/page.tsx", "app/emails/page.tsx",
+  for (const f of ["app/page.tsx", "app/workspace/page.tsx", "app/studio/site/page.tsx", "app/preview/page.tsx", "app/hub/page.tsx", "app/emails/page.tsx",
     "app/crew-call/page.tsx", "app/proposals/home/page.tsx", "app/versions/page.tsx", "app/profile/simple/page.tsx", "public/artifacts/ship-list/index.html", "public/thumbs/home.jpg",
     "public/versions/v1.jpg", "public/art/wallpapers/call-sheet-night.jpg",
     "public/workspace/covers/a.jpg", "public/img/logo.svg", "lib/x.ts"]) file(f);
@@ -35,7 +35,7 @@ function fakeRepo() {
 describe("the route lists", () => {
   it("INTERNAL is the ship list's internal tools and the pages waiting on the client", () => {
     expect([...INTERNAL].sort()).toEqual([
-      "app/crew-call", "app/emails", "app/preview", "app/profile/simple", "app/proposals", "app/studio", "app/versions", "app/workspace",
+      "app/crew-call", "app/emails", "app/hub", "app/preview", "app/profile/simple", "app/proposals", "app/studio", "app/versions", "app/workspace",
       "public/art/wallpapers", "public/artifacts", "public/studio-source", "public/thumbs", "public/versions", "public/workspace",
     ]);
   });
@@ -45,8 +45,8 @@ describe("the route lists", () => {
     const internal = INTERNAL.filter((d: string) => d.startsWith("app/")).map((d: string) => `/${d.slice(4)}`);
     const unclassified = pages.filter((p: string) => !LIVE_PAGES.includes(p) && !internal.some((i: string) => p === i || p.startsWith(`${i}/`)));
     expect(unclassified).toEqual([]);
-    expect(LIVE_PAGES).toHaveLength(20);
-    expect(LIVE_ROUTES).toHaveLength(20);
+    expect(LIVE_PAGES).toHaveLength(21);
+    expect(LIVE_ROUTES).toHaveLength(21);
     // The preview's door (owner, 2026-11-02): the panel itself is the sample export at /preview/, not a live page.
     expect(LIVE_PAGES).toContain("/preview-access");
     expect(LIVE_ROUTES).toContain("/preview-access/");

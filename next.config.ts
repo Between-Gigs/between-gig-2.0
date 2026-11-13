@@ -25,7 +25,7 @@ const config: NextConfig = {
   trailingSlash: true,
   images: { unoptimized: true },
   reactStrictMode: true,
-  ...(live && { turbopack: { resolveAlias: { "@/lib/data/selected": "./lib/data/selected.live.ts" } } }),
+  ...(live && { turbopack: { resolveAlias: { "@/lib/data/selected": "./lib/data/selected.live.ts", "@/lib/staff/selected": "./lib/staff/selected.live.ts" } } }),
   ...(server && {
     // *.server.ts(x) files exist only in this build (proxy.server.ts, F1's route handlers): the export never sees them.
     pageExtensions: ["tsx", "ts", "jsx", "js", "server.tsx", "server.ts"],
@@ -35,7 +35,8 @@ const config: NextConfig = {
     productionBrowserSourceMaps: false,
     // /preview/ is the sample export and sets its own framing (SAMEORIGIN: its workspace frames its own pages).
     headers: async () => [
-      { source: "/:path((?!preview(?:/|$)).*)", headers: securityHeaders() },
+      { source: "/:path((?!(?:hub|preview)(?:/|$)).*)", headers: securityHeaders() },
+      { source: "/hub/:path*", headers: securityHeaders().filter((h) => h.key !== "X-Frame-Options") },
       { source: "/preview/:path*", headers: securityHeaders().filter((h) => h.key !== "X-Frame-Options") },
     ],
   }),

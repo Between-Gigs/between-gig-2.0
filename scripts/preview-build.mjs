@@ -10,7 +10,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { stageCopy } from "./server-build.mjs";
 
-export const PREVIEW_BASE = "/preview";
+export const PREVIEW_BASE = "/hub";
 
 /** The export's environment: the caller's, without anything that would make it live. */
 export function previewEnv(env, sha) {
@@ -29,6 +29,10 @@ export async function buildPreview(root, { tmp = os.tmpdir() } = {}) {
   const src = path.join(dir, "src");
   try {
     stageCopy(root, src, []);
+    // Correct route trees: the sandbox root is the Hub; the original public home remains at /hub/home/.
+    fs.mkdirSync(path.join(src, "app/home"), { recursive: true });
+    fs.copyFileSync(path.join(src, "app/page.tsx"), path.join(src, "app/home/page.tsx"));
+    fs.writeFileSync(path.join(src, "app/page.tsx"), 'export { default, metadata } from "./preview/page";\n');
     let sha = process.env.GITHUB_SHA ?? "";
     if (!sha) { try { sha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim(); } catch { /* not a checkout */ } }
     const env = previewEnv(process.env, sha);

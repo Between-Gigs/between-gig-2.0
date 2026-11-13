@@ -183,7 +183,7 @@ async function everyone(ctx: Ctx) {
 
 /* ---------------------------------------------------------------- sessions ---------------------------------------------------------------- */
 
-/** The signed-in person: Super Admins are owners (N-04); anyone else is a Gigster with their linked person. */
+/** Admin authority and a personal Gigster profile coexist: resolve only the signed-in user’s linked person. */
 export async function session(ctx: Ctx): Promise<Session | null> {
   let me;
   try { me = await ctx.cos.me(ctx.cred); } catch (e) {
@@ -191,11 +191,10 @@ export async function session(ctx: Ctx): Promise<Session | null> {
     throw e;
   }
   const startedAt = nowIso();
-  if (me.isSuperAdmin) return { personId: null, email: me.user.email, role: "owner", name: me.user.name || me.user.email, startedAt, via: "clerk" };
   const [person] = await ctx.cos.query(ctx.cred, { entity: "person", filter: eq("user", { $me: true }), limit: 1 });
   const [profile] = person ? await ctx.cos.query(ctx.cred, { entity: "profile", filter: eq("person", person.id), limit: 1 }) : [];
   const name = str(profile?.data.display_name) || str(person?.data.name);
-  return { personId: person?.id ?? null, email: me.user.email, role: "gigster", name: name === me.user.email ? "" : name, startedAt, via: "clerk" };
+  return { personId: person?.id ?? null, email: me.user.email, role: me.isSuperAdmin ? "owner" : "gigster", name: me.isSuperAdmin ? me.user.name || me.user.email : name === me.user.email ? "" : name, startedAt, via: "clerk" };
 }
 
 /** After Clerk signs someone in. An account Company OS doesn't know yet is "needs-signup" when open sign-up is on, else "unknown-email". */

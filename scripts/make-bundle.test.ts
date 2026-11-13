@@ -35,7 +35,7 @@ describe("makeBundle", () => {
     const unpacked = temp();
     execFileSync("tar", ["-xf", path.join(out, "node_modules.tar"), "-C", unpacked]);
     expect(lstatSync(path.join(unpacked, "node_modules/next")).isSymbolicLink()).toBe(true);
-    expect(readlinkSync(path.join(unpacked, "node_modules/next"))).toBe(".pnpm/next@1/node_modules/next");
+    expect(readlinkSync(path.join(unpacked, "node_modules/next")).split(path.sep).join("/")).toBe(".pnpm/next@1/node_modules/next");
     expect(readFileSync(path.join(unpacked, "node_modules/next/index.js"), "utf8")).toBe("next");
     // The one-time importer runs in this container (the only place that reaches the private API).
     expect(readFileSync(path.join(out, "tools/import-waitlist.mjs"), "utf8")).toContain("runImport");

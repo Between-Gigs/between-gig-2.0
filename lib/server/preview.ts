@@ -1,12 +1,8 @@
-/*
- * /preview/ on the server builds (owner, 2026-11-02): the GitHub Pages build of the whole site on its sample data,
- * built with base path /preview (scripts/preview-build.mjs) into preview-site/ next to server.js, and served from
- * there by app/(served)/preview/[[...path]]/route.server.ts. It never calls Company OS, so it shows what this
- * environment's frontend looks like without touching real data. Super admins only:
- * /preview-access/ checks the signed-in person with Company OS (POST /api/preview/grant/), which sets a signed 1-hour
- * cookie scoped to /preview. Without COOKIE_SIGNING_SECRET both answer 503.
+/* The public /hub sample export, with /preview compatibility redirects.
+ * Built without Clerk or Company OS credentials; all actual app data stays behind its existing auth.
+ * The old grant endpoint remains protected for compatibility, but Hub files no longer require its cookie.
  */
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { CompanyOsError, companyOs, configFromEnv, type CompanyOs } from "./companyos";
@@ -25,14 +21,6 @@ const sign = (secret: string, userId: string, exp: number, site = process.env.AP
 export const previewCookieValue = (secret: string, userId: string, exp: number, site?: string) =>
   `${exp}.${Buffer.from(userId, "utf8").toString("base64url")}.${sign(secret, userId, exp, site)}`;
 
-function validCookie(req: Request, secret: string, now: number) {
-  const m = new RegExp(`(?:^|;\\s*)${PREVIEW_COOKIE}=(\\d{1,15})\\.([A-Za-z0-9_-]{1,200})\\.([0-9a-f]{64})(?:;|$)`).exec(req.headers.get("cookie") ?? "");
-  if (!m) return false;
-  const exp = Number(m[1]);
-  if (!(exp > now)) return false;
-  const userId = Buffer.from(m[2]!, "base64url").toString("utf8");
-  return timingSafeEqual(Buffer.from(sign(secret, userId, exp), "hex"), Buffer.from(m[3]!, "hex"));
-}
 
 const NO_STORE = { "cache-control": "no-store" };
 const plain = (status: number, body = "") => new Response(body || null, { status, headers: { ...NO_STORE, "content-type": "text/plain; charset=utf-8", "x-content-type-options": "nosniff" } });
@@ -70,8 +58,8 @@ const TYPES: Record<string, string> = {
 
 /** The file a /preview/… path names inside root, or null when it would leave it or isn't a plain path. */
 export function resolveInside(root: string, rawPath: string): string | null {
-  if (!rawPath.startsWith("/preview/")) return null;
-  const rest = rawPath.slice("/preview/".length);
+  if (!rawPath.startsWith("/hub/")) return null;
+  const rest = rawPath.slice("/hub/".length);
   // Encoded separators and NUL never mean anything in a URL the export makes.
   if (/%2f|%5c|%00|\\/i.test(rest)) return null;
   const segments: string[] = [];
@@ -120,22 +108,22 @@ function fileHeaders(file: string, root: string, body: Uint8Array) {
   };
 }
 
+/** Public sample sandbox during Clerk testing. Real app routes and APIs remain session protected. */
 export async function servePreview(req: Request, deps: { root?: string; secret?: string; now?: number } = {}): Promise<Response> {
   const root = path.resolve(deps.root ?? path.join(process.cwd(), PREVIEW_ROOT));
-  const secret = "secret" in deps ? deps.secret : process.env.COOKIE_SIGNING_SECRET || undefined;
-  const now = deps.now ?? Date.now();
   if (req.method !== "GET" && req.method !== "HEAD") return plain(405);
   const url = new URL(req.url);
-  // Only /preview and below; the raw path, before anything decodes it.
-  if (url.pathname !== "/preview" && !url.pathname.startsWith("/preview/")) return plain(404, "Not found");
-  if (!secret) return plain(503, "The preview is not configured.");
-  if (!validCookie(req, secret, now)) {
-    const next = url.pathname === "/preview" || url.pathname === "/preview/" ? "/preview/preview/" : url.pathname;
-    return new Response(null, { status: 302, headers: { ...NO_STORE, location: `/preview-access/?next=${encodeURIComponent(next)}` } });
+  const old = url.pathname === "/preview" || url.pathname.startsWith("/preview/");
+  if (old) {
+    const rest = url.pathname.slice("/preview".length);
+    const invalid = resolveInside(root, "/hub/" + rest.replace(/^\//, "")) === null;
+    if (invalid) return plain(404, "Not found");
+    const tools = /^\/(?:cursors|curtain|design-system|gigster-journey|profile-editor|profiles|wallpapers)(?:\/|$)/;
+    const target = !rest || rest === "/" || /^\/preview\/?$/.test(rest) ? "/hub/" : tools.test(rest) ? "/hub/preview" + rest : "/hub" + rest;
+    return new Response(null, { status: 307, headers: { ...NO_STORE, location: target + url.search } });
   }
-  // /preview/ is the sample site's home page (its logo links there); the guide is /preview/preview/.
-  if (url.pathname === "/preview") return new Response(null, { status: 308, headers: { ...NO_STORE, location: "/preview/" } });
-
+  if (url.pathname !== "/hub" && !url.pathname.startsWith("/hub/")) return plain(404, "Not found");
+  if (url.pathname === "/hub" || url.pathname === "/hub/hub/" || url.pathname === "/hub/preview/") return new Response(null, { status: 307, headers: { ...NO_STORE, location: "/hub/" + url.search } });
   const full = resolveInside(root, url.pathname);
   const file = full ? await fileOf(root, full) : null;
   if (!file) {

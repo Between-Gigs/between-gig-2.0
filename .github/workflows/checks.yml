@@ -34,6 +34,7 @@ jobs:
       - name: Test signup and existing product flow (sample mode, no real accounts)
         run: |
           node scripts/qa/auth-flow.mjs
+          node scripts/qa/hub-staff.mjs
           pnpm qa:flow
           node scripts/qa/funnel-cohort.mjs
       - name: Build Pages configuration with Clerk

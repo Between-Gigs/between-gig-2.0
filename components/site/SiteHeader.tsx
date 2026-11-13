@@ -4,9 +4,11 @@ import { LogOut, Menu as MenuIcon, PencilLine, UserRound, Users } from "lucide-r
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthActions } from "@/lib/auth/context";
+import { basePath } from "@/lib/site";
 import { useSession } from "@/lib/session";
 
 import { LookSwitcher } from "./LookSwitcher";
+import { ExperienceSwitcher } from "./ExperienceSwitcher";
 
 interface NavLink { href: string; label: string }
 
@@ -21,11 +23,11 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
   const { session, loading } = useSession();
   const auth = useAuthActions();
 
-  const links: NavLink[] = app ? [] : session?.role === "owner"
-    ? [{ href: "/owners/", label: "Dashboard" }, { href: "/owners/review/", label: "Review" }, { href: "/owners/people/", label: "People" }, { href: "/owners/waitlist/", label: "Waitlist" }, { href: "/emails/", label: "Emails" }]
+  const links: NavLink[] = (app ? [] : session?.role === "owner"
+    ? [{ href: "/profile/canvas/", label: "Gigster Experience" }, { href: "/owners/", label: "Owner Experience" }, { href: "/hub/", label: "Hub" }]
     : session?.role === "gigster"
       ? [{ href: "/profile/", label: "My profile" }, { href: "/profile/canvas/", label: "Edit profile" }]
-      : [{ href: "/professionals/", label: "For professionals" }, { href: "/storyboard/", label: "Storyboard" }];
+      : [{ href: "/professionals/", label: "For professionals" }, { href: "/storyboard/", label: "Storyboard" }, { href: "/hub/", label: "Hub" }]).map(link => ({ ...link, href: basePath === "/hub" && link.href === "/hub/" ? "/" : link.href }));
 
   // Only the most specific matching link is current: on /profile/canvas/ that's "Edit profile", not "My profile";
   // on /owners/review/ it's "Review", not "Dashboard".
@@ -58,7 +60,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
       <div className={cx("flex h-16 items-center gap-4 lg:h-20", app ? "h-16! gap-2" : "swiss:border-b-4 swiss:border-line-strong swiss:md:grid swiss:md:grid-cols-12 swiss:md:gap-x-6")}>
         {onOpenNav && <IconButton label="Open owner menu" variant="ghost" icon={<MenuIcon />} onClick={onOpenNav} className="lg:hidden" />}
         <div className="flex flex-1 items-center swiss:md:col-span-3">
-          <Link href="/" aria-label="Between Gigs home" className="inline-flex min-h-11 shrink-0 items-center rounded-md"><Logo height={28} className="hidden xs:block" /><Logo layout="mark" height={28} className="xs:hidden" /></Link>
+          <Link href="/" aria-label="Between Gigs home" className="inline-flex min-h-11 shrink-0 items-center rounded-md"><Logo height={28} className="hidden sm:block" /><Logo layout="mark" height={28} className="sm:hidden" /></Link>
         </div>
         {/* Airbnb-style: the page links sit in the middle, the current one underlined. */}
         {links.length > 0 && (
@@ -74,7 +76,8 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
           </nav>
         )}
         <div className={cx("flex flex-1 items-center justify-end gap-1 sm:gap-2", links.length > 3 ? "swiss:md:col-span-9 swiss:lg:col-span-3" : "swiss:md:col-span-4")}>
-          <LookSwitcher />
+          <ExperienceSwitcher className={app ? undefined : "md:hidden"} />
+          <span className="hidden sm:contents"><LookSwitcher /></span><span className="sm:hidden"><LookSwitcher compact /></span>
           <ThemeToggle size="sm" showLabel={false} className="pr-0.5!" />
           {app ? null : loading ? <span className="h-11 w-20" aria-hidden="true" /> : session ? (
             <Menu align="end" items={menu}

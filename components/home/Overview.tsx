@@ -16,7 +16,7 @@ import { GuidePreviews, LivePagePreview } from "./LivePagePreview";
 import { useLook } from "@/components/site/LookSync";
 import { Icon3D } from "@/components/ui/Icon3D";
 import type { Icon3DName } from "@/lib/icons3d";
-import { asset } from "@/lib/site";
+import { asset, basePath } from "@/lib/site";
 
 const invitePage = `/join/?invite=${DEMO_TOKENS.valid}`;
 
@@ -40,7 +40,7 @@ const groups: { id: string; art: SectionArt; title: string; body: string; pages:
     { href: "/emails/", title: "Every email", body: "All the emails, and the sample outbox." },
   ] },
   { id: "public", art: { icon: "clapper_board", tint: "bg-tint-mint-soft" }, title: "The public site", body: "What visitors and clients see today, and once we open.", pages: [
-    { href: "/", title: "Home today", body: "The Los Angeles call sheet: coming soon." },
+    { href: basePath === "/hub" ? "/home/" : "/", title: "Home today", body: "The Los Angeles call sheet: coming soon." },
     { href: "/professionals/", title: "For professionals", body: "Why join, and get on the call sheet." },
     { href: "/storyboard/", title: "The Storyboard", body: "The interactive sketchbook and its forms." },
     { href: "/crew-call/", title: "Crew Call", body: "Hollywood talent at your service: the client-side call sheet." },
@@ -51,6 +51,7 @@ const groups: { id: string; art: SectionArt; title: string; body: string; pages:
     { href: "/preview/profile-editor/", title: "Gigster profile editor", body: "Choose required fields, arrange the form and adjust the profile page." },
     { href: "/preview/wallpapers/", title: "Wallpapers & background art", body: "Download the invitation artwork and Call Sheet backgrounds." },
     { href: "/workspace/", title: "Workspace", body: "Every project in one shell: switcher, ⌘K, folders, and each page inside it." },
+    { href: "/owners/staff/", title: "Staff & access", body: "Manage invitations, multiple roles and access rules in the sample dashboard." },
     { href: "/studio/", title: "Studio", body: "A page designer with a CMS: tables, galleries, kanban, lists and calendars." },
     { href: "/preview/curtain/", title: "Curtain tuner", body: "Tune the home page curtain live and copy your favourite settings." },
     { href: "/preview/cursors/", title: "Mouse effects", body: "Try five mouse effects and pick one for the site." },
@@ -163,7 +164,7 @@ function Guide() {
   );
   const toast = useToast();
   const asGigster = async (id: string, go: string) => { await data.demo?.signInAs("gigster", id); router.push(go); };
-  const asVisitor = async () => { await data.auth.signOut(); router.push("/"); };
+  const asVisitor = async () => { await data.auth.signOut(); router.push(basePath === "/hub" ? "/home/" : "/"); };
   const reset = async () => { await data.demo?.reset(); toast({ message: "Sample data reset", tone: "success" }); };
   const startInvite = async () => {
     const r = await data.demo?.signInAs("invited");
@@ -183,9 +184,9 @@ function Guide() {
 
   return (
     <Page bare>
-      <BrandBand eyebrow="Between Gigs 2.0 · Preview guide" title="Extraordinary talent." accent="Everyday solutions.">
-        <p className="mt-4 max-w-xl text-body-lg text-ink-muted">A clickable preview of the Gigster journey, from the invite email to a profile owners can find. Everyone in it is a fictional sample, and nothing leaves your browser.</p>
-        <nav aria-label="Preview shortcuts" className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2">
+      <BrandBand eyebrow="Between Gigs 2.0 · Hub" title="Extraordinary talent." accent="Everyday solutions.">
+        <p className="mt-4 max-w-xl text-body-lg text-ink-muted">Your profile, the owner dashboard, and everything we’re building. Explore the guided demos below with fictional sample data.</p>
+        <nav aria-label="Hub shortcuts" className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2">
           <Link href="/preview/profiles/" className="inline-flex min-h-11 items-center gap-3 rounded-md text-label-md text-ink hover:underline">
             <span aria-hidden="true" className="flex -space-x-2">
               {profiles.map((p) => <img key={p.id} src={asset(`art/samples/cards/${p.img}-portrait.jpg`)} alt="" className="size-9 rounded-full border-2 border-surface-brand object-cover" />)}
@@ -200,6 +201,14 @@ function Guide() {
         </nav>
       </BrandBand>
       <div className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 card-layout:relative card-layout:z-raised card-layout:-mt-12">
+        <section aria-labelledby="experience-h" className="mb-8 grid gap-4 rounded-2xl border border-line bg-surface p-5 sm:p-7">
+          <div><h2 id="experience-h" className="font-display text-heading-lg text-ink">Choose your experience</h2><p className="mt-1 text-body-md text-ink-muted">One account can be both a Gigster and part of the team.</p></div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {basePath === "/hub" ? <a href="/profile/canvas/" className="grid gap-2 rounded-xl border border-line p-5 text-ink hover:bg-surface-hover"><span className="text-label-sm text-ink-muted">01 · YOUR ACCOUNT</span><strong className="font-display text-heading-md">Gigster experience ↗</strong><span className="text-body-sm text-ink-muted">Create or edit your own profile.</span></a> : <Link href="/profile/canvas/" className="grid gap-2 rounded-xl border border-line p-5 text-ink hover:bg-surface-hover"><span className="text-label-sm text-ink-muted">01 · SAMPLE ACCOUNT</span><strong className="font-display text-heading-md">Gigster experience ↗</strong><span className="text-body-sm text-ink-muted">Try creating and editing a profile.</span></Link>}
+            {basePath === "/hub" ? <a href="/owners/" className="grid gap-2 rounded-xl border border-line p-5 text-ink hover:bg-surface-hover"><span className="text-label-sm text-ink-muted">02 · YOUR ACCOUNT</span><strong className="font-display text-heading-md">Owner experience ↗</strong><span className="text-body-sm text-ink-muted">Dashboard, reviews and staff access.</span></a> : <button type="button" onClick={() => void startOwner()} className="grid gap-2 rounded-xl border border-line p-5 text-left text-ink hover:bg-surface-hover"><span className="text-label-sm text-ink-muted">02 · SAMPLE ACCOUNT</span><strong className="font-display text-heading-md">Owner experience ↗</strong><span className="text-body-sm text-ink-muted">Try the dashboard, reviews and staff access.</span></button>}
+            <a href="#tools-h" className="grid gap-2 rounded-xl border border-line p-5 text-ink hover:bg-surface-hover"><span className="text-label-sm text-ink-muted">03 · PUBLIC TESTING</span><strong className="font-display text-heading-md">Hub directory ↓</strong><span className="text-body-sm text-ink-muted">Browse tools, artwork and work in progress.</span></a>
+          </div>
+        </section>
         <Section n="01" id="journey-steps-h" title="Start here" body="The whole Gigster journey in three steps, from the invite to the owner's review.">
           <ol className="grid gap-x-6 gap-y-8 md:grid-cols-3">
             {steps.map((s, i) => {

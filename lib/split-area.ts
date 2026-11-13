@@ -5,6 +5,6 @@
  */
 const areas = new Set<string>();
 
-export function markArea(area: "bg-split:dashboard") {
+export function markArea(area: "bg-split:dashboard" | "bg-split:sample") {
   areas.add(area);
 }

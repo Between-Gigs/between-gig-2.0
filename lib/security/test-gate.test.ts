@@ -163,3 +163,13 @@ describe("half configured", () => {
     expect(await testGate(req("/webhooks/resend/", { method: "POST" }), env, NOW)).toBeNull();
   });
 });
+
+describe("public sample Hub exemption", () => {
+  it.each(["/hub", "/hub/", "/hub/_next/static/app.js", "/preview/", "/preview/wallpapers/", "/preview-access/"])("allows a read of %s without opening real data", async path => {
+    expect(await testGate(req(path), ENV, NOW)).toBeNull();
+    expect((await testGate(req(path, { method: "POST" }), ENV, NOW))?.status).toBe(401);
+  });
+  it.each(["/hubby/", "/preview-admin/", "/owners/staff/", "/api/staff/snapshot/"])("still protects %s", async path => {
+    expect((await testGate(req(path), ENV, NOW))?.status).toBe(401);
+  });
+});
