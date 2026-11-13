@@ -13,7 +13,7 @@ try {
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto(`${url}/join/`);
     await page.getByLabel("Email", { exact: true }).fill("bad");
-    await page.getByRole("button", { name: "Create my profile" }).click();
+    await page.getByRole("button", { name: "Create account", exact: true }).click();
     await page.getByText("Enter your email address, like name@example.com.", { exact: true }).waitFor();
     await page.getByLabel("Email", { exact: true }).fill(`open-${width}@example.com`);
     await page.getByLabel("Full name").fill("Open Signup");
@@ -21,7 +21,7 @@ try {
     fs.mkdirSync("qa/output/auth", { recursive: true });
     await page.screenshot({ path: `qa/output/auth/open-signup-${width}.png`, fullPage: true });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-    await page.getByRole("button", { name: "Create my profile" }).click();
+    await page.getByRole("button", { name: "Create account", exact: true }).click();
     await page.waitForURL(/\/profile\/canvas\/$/);
     const state = await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")));
     assert.equal(state.session.role, "gigster");
@@ -41,7 +41,7 @@ try {
     await email.fill(`edited-${width}@example.com`);
     await page.getByLabel("Full name").fill("Edited Email");
     await page.getByRole("checkbox").check();
-    await page.getByRole("button", { name: "Create my profile" }).click();
+    await page.getByRole("button", { name: "Create account", exact: true }).click();
     await page.waitForURL(/\/profile\/canvas\/$/);
     const changed = await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")));
     assert.equal(changed.invites.find((i) => i.token === "riley-7q2m").usedAt, undefined);

@@ -15,6 +15,7 @@ import { AuthShell } from "./AuthShell";
 import { InviteJoin } from "./InviteJoin";
 import { GoogleSignup } from "./GoogleSignup";
 import { ClerkSlot } from "./ClerkSlot";
+import { authSubtitle, authTitle, useAuthV2 } from "./authDesign";
 import { displayName, GateSkeleton, homeFor, SignedInPanel, useLeave, useSignedInGate } from "./SignedIn";
 
 /** Open signup, with an optional invite to prefill the email and retain its attribution. Live: InviteJoin (open sign-up for Gigsters, or an invitation ticket). */
@@ -90,6 +91,7 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
   const [errors, setErrors] = React.useState<{ email?: string; name?: string; terms?: string; form?: string }>({});
   const [busy, setBusy] = React.useState(false);
   const [verify, setVerify] = React.useState(false);
+  const v2 = useAuthV2();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,7 +99,7 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) next.email = "Enter your email address, like name@example.com.";
     if (!name.trim()) next.name = "Enter your full name, as you'd like clients to see it.";
     else if (name.trim().length > NAME_MAX) next.name = `Keep your name to ${NAME_MAX} characters or fewer.`;
-    if (!terms) next.terms = "Agree to the Terms of Use and Privacy Policy to continue.";
+    if (!terms) next.terms = "Agree to the Terms and Privacy Policy to continue.";
     setErrors(next);
     if (Object.keys(next).length) return;
     if (authenticated && auth.onboarding) {
@@ -122,35 +124,49 @@ function JoinForm({ token, initialEmail = "", initialName = "", authenticated = 
 
   if (verify) return <ClerkAccount token={matchingToken} email={email.trim().toLowerCase()} name={name.trim()} />;
 
+  const emailField = (
+    <Field key="email" label="Email" error={errors.email} hint={authenticated ? "You're logged in with this email." : token ? "From your invitation. You can change it." : v2 ? undefined : "Use the email you want to log in with."}>
+      <Input type="email" value={email} readOnly={authenticated} autoComplete="email" start={v2 ? undefined : <Mail />} placeholder={v2 ? "maya.chen@example.com" : undefined} onChange={(e) => { setEmail(e.target.value); setErrors((x) => ({ ...x, email: undefined })); }} />
+    </Field>
+  );
+  const nameField = (
+    <Field key="name" label="Full name" error={errors.name}>
+      <Input value={name} autoComplete="name" autoFocus={authenticated || !clerkEnabled} maxLength={NAME_MAX} placeholder={v2 ? "Maya Chen" : undefined} onChange={(e) => { setName(e.target.value); setErrors((x) => ({ ...x, name: undefined })); }} />
+    </Field>
+  );
+  const termsLink = (href: string, text: string) => <a className="text-link underline underline-offset-2" href={href} target="_blank" rel="noreferrer">{text}</a>;
+  const termsField = (
+    <div className="grid gap-1.5">
+      <Checkbox checked={terms} aria-invalid={!!errors.terms || undefined} aria-describedby={errors.terms ? "terms-error" : undefined}
+        onChange={(e) => { setTerms(e.target.checked); setErrors((x) => ({ ...x, terms: undefined })); }}
+        label={v2
+          ? <>I agree to the {termsLink("https://between-gigs.com/terms", "Terms")} and {termsLink("https://between-gigs.com/privacy", "Privacy Policy")}</>
+          : <>I agree to the {termsLink("https://between-gigs.com/terms", "Terms of Use")} and {termsLink("https://between-gigs.com/privacy", "Privacy Policy")}.</>}
+        description={v2 ? undefined : "You can ask us to delete your account at any time."} />
+      {errors.terms && <p id="terms-error" className="pl-7.5 text-body-sm text-danger">{errors.terms}</p>}
+    </div>
+  );
+  const subtitle = authenticated ? "You're logged in. Confirm your details and agree to the terms to create your profile." : token ? "Your invitation is here. Add your name to get started." : v2 ? undefined : "No invite needed. Enter your details to get started.";
+
   return (
     <AuthShell header="Sign up" eyebrow={token ? "You're invited" : undefined}
-      lead={token ? <p className="flex items-center gap-2"><ShieldCheck aria-hidden="true" className="size-5 shrink-0 text-ink-brand" />Your page stays private until our team approves it.</p> : <p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
-      <h1 className="font-display text-heading-lg text-balance text-ink">{authenticated ? "Finish your account setup" : "Create your account"}</h1>
-      <p className="mt-2 text-body-md text-pretty text-ink-muted">{authenticated ? "You're logged in. Confirm your details and agree to the terms to create your profile." : token ? "Your invitation is here. Add your name to get started." : "No invite needed. Enter your details to get started."}</p>
+      lead={token ? <p className="flex items-center gap-2"><ShieldCheck aria-hidden="true" className="size-5 shrink-0 text-ink-brand" />Your page stays private until our team approves it.</p> : v2 ? undefined : <p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
+      <h1 className={authTitle(v2, true)}>{authenticated ? "Finish your account setup" : "Create your account"}</h1>
+      {subtitle && <p className={authSubtitle(v2, true)}>{subtitle}</p>}
       {clerkEnabled && !authenticated && <GoogleSignup token={token} />}
-      <form noValidate onSubmit={submit} className="mt-6 grid gap-5">
+      <form noValidate onSubmit={submit} className={v2 && clerkEnabled && !authenticated ? "mt-5 grid gap-5" : "mt-6 grid gap-5"}>
         {errors.form && <Banner tone="danger" title="We couldn't create your account">{errors.form}</Banner>}
-        <Field label="Email" error={errors.email} hint={authenticated ? "You're logged in with this email." : token ? "From your invitation. You can change it." : "Use the email you want to log in with."}>
-          <Input type="email" value={email} readOnly={authenticated} autoComplete="email" start={<Mail />} onChange={(e) => { setEmail(e.target.value); setErrors((x) => ({ ...x, email: undefined })); }} />
-        </Field>
-        <Field label="Full name" error={errors.name}>
-          <Input value={name} autoComplete="name" autoFocus={authenticated || !clerkEnabled} maxLength={NAME_MAX} onChange={(e) => { setName(e.target.value); setErrors((x) => ({ ...x, name: undefined })); }} />
-        </Field>
-        <div className="grid gap-1.5">
-          <Checkbox checked={terms} aria-invalid={!!errors.terms || undefined} aria-describedby={errors.terms ? "terms-error" : undefined}
-            onChange={(e) => { setTerms(e.target.checked); setErrors((x) => ({ ...x, terms: undefined })); }}
-            label={<>I agree to the <a className="text-link underline underline-offset-2" href="https://between-gigs.com/terms" target="_blank" rel="noreferrer">Terms of Use</a> and <a className="text-link underline underline-offset-2" href="https://between-gigs.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.</>}
-            description="You can ask us to delete your account at any time." />
-          {errors.terms && <p id="terms-error" className="pl-7.5 text-body-sm text-danger">{errors.terms}</p>}
-        </div>
+        {/* The launch card asks for the name first (Flow p2); v1 led with the email. */}
+        {v2 ? [nameField, emailField] : [emailField, nameField]}
+        {termsField}
         {clerkEnabled && !authenticated && <p className="text-body-sm text-ink-muted">Next, create your password (at least 8 characters). Clerk may then ask for a code to verify your email.</p>}
-        <Button type="submit" variant="primary" size="lg" fullWidth className="glow-hover swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm" loading={busy} iconEnd={<ArrowRight />}>{authenticated ? "Finish setup" : clerkEnabled ? "Continue to password" : "Create my profile"}</Button>
+        <Button type="submit" variant="primary" size="lg" fullWidth className="glow-hover swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm" loading={busy} iconEnd={<ArrowRight />}>{authenticated ? "Finish setup" : clerkEnabled ? "Continue to password" : v2 ? "Create account" : "Create my profile"}</Button>
         {authenticated
           ? <Button variant="ghost" disabled={busy} onClick={() => {
             setBusy(true);
             void auth.signOut().catch(() => { setBusy(false); setErrors({ form: "We couldn't sign out. Try again." }); });
           }}>Use a different account</Button>
-          : <p className="text-body-md text-ink">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-bold text-ink underline underline-offset-4">Log in</Link></p>}
+          : <p className={v2 ? "text-center text-body-md text-ink" : "text-body-md text-ink"}>Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-bold text-ink underline underline-offset-4">Log in</Link></p>}
       </form>
     </AuthShell>
   );
@@ -165,11 +181,12 @@ function ClerkAccount({ token, email, name, google = false }: { token?: string; 
   const { session, loading } = useSession();
   React.useEffect(() => { if (!loading && session?.via === "clerk") router.replace("/profile/canvas/"); }, [session, loading, router]);
   const [firstName, ...rest] = (name ?? "").split(" ");
+  const v2 = useAuthV2();
   return (
     <AuthShell header="Sign up"
       lead={<p>{google ? "Finish connecting your Google account." : <>{email ? `Create a password for ${email}.` : "Continue your account setup."} You may need to verify your email before continuing.</>}</p>}>
       <div className="grid gap-6">
-        <h1 className="font-display text-heading-lg text-balance text-ink">{email ? "Create your password" : "Continue your signup"}</h1>
+        <h1 className={authTitle(v2)}>{email ? "Create your password" : "Continue your signup"}</h1>
         {!google && <p className="text-body-md text-ink-muted">Use at least 8 characters. If Clerk asks for a 6-digit code afterward, that confirms your email; it does not replace your password.</p>}
         <ClerkSlot label="Loading sign-up">
           <SignUp routing="hash" signInUrl={`${basePath}/login/`}
@@ -188,6 +205,7 @@ const BIG = "swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swis
 function InviteProblem({ lookup, session }: { lookup: InviteLookup; session?: Session }) {
   const email = lookup.invite?.email;
   const leave = useLeave();
+  const v2 = useAuthV2();
   // Signed in as someone else: Log in / Create an account log them out first, so the link does what it says.
   const away = (href: string) => session ? { onClick: (e: React.MouseEvent) => { e.preventDefault(); void leave(session, href); } } : {};
   const copy: Record<InviteLookup["state"], { icon: React.ReactNode; title: string; body: string; steps: string[]; primary?: React.ReactNode; secondary?: React.ReactNode }> = {
@@ -219,7 +237,7 @@ function InviteProblem({ lookup, session }: { lookup: InviteLookup; session?: Se
     <AuthShell header="Sign up" steps={false}>
       <div className="grid gap-6">
         <div>
-          <h1 className="font-display text-heading-lg text-balance text-ink">{c.title}</h1>
+          <h1 className={authTitle(v2)}>{c.title}</h1>
           <p className="mt-2 text-body-md text-pretty text-ink-muted">{c.body}</p>
         </div>
         {session && <Banner tone="info" title={`You're signed in as ${displayName(session)}`}>

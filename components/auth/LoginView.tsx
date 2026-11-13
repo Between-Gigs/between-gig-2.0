@@ -14,6 +14,7 @@ import { useSession } from "@/lib/session";
 import { basePath } from "@/lib/site";
 import { AuthShell } from "./AuthShell";
 import { ClerkSlot } from "./ClerkSlot";
+import { authSubtitle, authTitle, useAuthV2 } from "./authDesign";
 import { GateSkeleton, SignedInPanel, useSignedInGate } from "./SignedIn";
 
 const RESEND_SECONDS = 30;
@@ -68,6 +69,7 @@ function ClerkLogin() {
   // A session Clerk didn't open (the sample's, in a Clerk build) gets the same signed-in screen as sample mode.
   const gate = useSignedInGate();
   const otherSession = !isSignedIn && gate && gate.via !== "clerk" ? gate : null;
+  const v2 = useAuthV2();
 
   React.useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
@@ -80,8 +82,8 @@ function ClerkLogin() {
     <AuthShell header="Log in">
       <div className="grid gap-6">
         <div>
-          <h1 className="font-display text-heading-lg text-balance text-ink">Welcome back</h1>
-          <p className="mt-2 text-body-md text-pretty text-ink-muted">Use the email and password you created.</p>
+          <h1 className={authTitle(v2, true)}>{v2 ? "Log in" : "Welcome back"}</h1>
+          <p className={authSubtitle(v2, true)}>Use the email and password you created.</p>
         </div>
         {params.get("signedOut") && <Banner tone="success" title="You're logged out">See you next time.</Banner>}
         {params.get("__clerk_status") === "client_mismatch" && <Banner tone="warning" title="This sign-in link is out of date">
@@ -116,6 +118,7 @@ function SampleLogin() {
   const [wait, setWait] = React.useState(0);
   const [sample, setSample] = React.useState<string | null>(null);
   const codeInput = React.useRef<HTMLInputElement>(null);
+  const v2 = useAuthV2();
 
   React.useEffect(() => {
     if (wait <= 0) return;
@@ -174,18 +177,18 @@ function SampleLogin() {
         {step === "email" ? (
           <form noValidate onSubmit={send} className="grid gap-5">
             <div>
-              <h1 className="font-display text-heading-lg text-balance text-ink">Welcome back</h1>
-              <p className="mt-2 text-body-md text-pretty text-ink-muted">Log in with the email you joined with. We'll send you a 6-digit code.</p>
+              <h1 className={authTitle(v2, true)}>{v2 ? "Log in" : "Welcome back"}</h1>
+              <p className={authSubtitle(v2, true)}>Log in with the email you joined with. We'll send you a 6-digit code.</p>
             </div>
             <Field label="Email" error={error}>
-              <Input type="email" inputMode="email" autoComplete="email" value={email} start={<Mail />} autoFocus
+              <Input type="email" inputMode="email" autoComplete="email" value={email} start={v2 ? undefined : <Mail />} placeholder={v2 ? "you@example.com" : undefined} autoFocus
                 onChange={(e) => { setEmail(e.target.value); setError(undefined); setErrorKind(undefined); }} />
             </Field>
             {data.kind === "sample" && error && errorKind === "not-registered" && (
               <p className="-mt-2 text-body-sm text-ink-muted">Sample mode: the invitation is in the <Link href="/emails/" className="inline-flex min-h-6 items-center gap-1 text-link underline underline-offset-2"><Inbox className="size-3.5" aria-hidden="true" />sample outbox</Link>.</p>
             )}
             <Button type="submit" variant="primary" size="lg" fullWidth className="swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm" loading={busy} iconEnd={<ArrowRight />}>Email me a code</Button>
-            <p className="text-body-md text-ink">New here? <Link href="/join/" className="inline-flex min-h-11 items-center font-bold text-ink underline underline-offset-4">Create an account</Link>.</p>
+            <p className={v2 ? "text-center text-body-md text-ink" : "text-body-md text-ink"}>New here? <Link href="/join/" className="inline-flex min-h-11 items-center font-bold text-ink underline underline-offset-4">Create an account</Link>.</p>
             {data.kind === "sample" && (
               <p className="rounded-md bg-surface-sunken p-4 text-body-sm text-ink-muted">
                 Sample mode: the code shows on screen and no email is sent. Try <button type="button" className="inline-flex min-h-6 items-center font-semibold text-link underline underline-offset-2" onClick={() => setEmail("maya.chen@example.com")}>maya.chen@example.com</button> (Gigster) or{" "}
@@ -196,8 +199,8 @@ function SampleLogin() {
         ) : (
           <form noValidate onSubmit={(e) => { e.preventDefault(); void verify(); }} className="grid gap-5">
             <div>
-              <h1 className="font-display text-heading-lg text-balance text-ink">Check your email</h1>
-              <p className="mt-2 text-body-md text-pretty text-ink-muted">We sent a 6-digit code to <b className="text-ink">{email.trim().toLowerCase()}</b>. It expires in 10 minutes.</p>
+              <h1 className={authTitle(v2, true)}>Check your email</h1>
+              <p className={authSubtitle(v2, true)}>We sent a 6-digit code to <b className="text-ink">{email.trim().toLowerCase()}</b>. It expires in 10 minutes.</p>
             </div>
             {needsNewCode && (
               <Banner tone="warning" title={codeError.kind === "expired-code" ? "Code expired" : "Send a new code"}

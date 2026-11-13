@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { blankFields } from "@/lib/data/seed";
-import { ABOUT_MAX, contentChanged, hasRate, isPartFilled, readNotes, validateStep } from "./validate";
+import { completeFields } from "@/lib/data/contract/fixtures";
+import { defaultProfileTemplate } from "./template";
+import { ABOUT_MAX, MAX_SERVICES, contentChanged, gigsterChecklist, hasRate, isPartFilled, readNotes, validateGigster, validateStep } from "./validate";
 
 describe("lib/profile/validate.ts", () => {
   it("a rate of 0 or blank is 'Rate on request', the same everywhere", () => {
@@ -38,5 +40,38 @@ describe("lib/profile/validate.ts", () => {
     expect(readNotes([{ section: "about", note: "Photo: Clearer photo.\nAdd your IMDb link." }]))
       .toEqual([{ section: "photo", note: "Clearer photo." }, { section: "about", note: "Add your IMDb link." }]);
     expect(readNotes([{ section: "about", note: "Add your IMDb link." }])).toEqual([{ section: "about", note: "Add your IMDb link." }]);
+  });
+
+  it("allows up to five services, and each line is one short sentence", () => {
+    const five = ["A", "B", "C", "D", "E"];
+    expect(MAX_SERVICES).toBe(5);
+    expect(validateStep(1, { ...blankFields("A"), services: five }).services).toBeUndefined();
+    expect(validateStep(1, { ...blankFields("A"), services: [...five, "F"] }).services).toMatch(/up to 5/);
+    expect(validateStep(1, { ...blankFields("A"), services: ["A"], serviceLines: { A: "x".repeat(121) } }).serviceLines).toMatch(/120/);
+  });
+
+  it("the Gigster editor needs a line for every service and a question for a personality answer", () => {
+    const f = { ...completeFields("Sample Crew", "img/people/maya.jpg"), services: ["Event Styling"] };
+    expect(validateGigster(f, defaultProfileTemplate).serviceLines).toMatch(/each service/);
+    const lined = { ...f, serviceLines: { "Event Styling": "I'll dress your table for a dinner party." } };
+    expect(validateGigster(lined, defaultProfileTemplate)).toEqual({});
+    expect(validateGigster({ ...lined, personality: "I juggle." }, defaultProfileTemplate).personalityQuestion).toBeTruthy();
+    expect(validateGigster({ ...lined, personality: "I juggle.", personalityQuestion: "quiet-skill" }, defaultProfileTemplate)).toEqual({});
+    expect(validateGigster({ ...lined, services: [], other: "" }, defaultProfileTemplate).services).toBeTruthy();
+  });
+
+  it("the checklist splits what's needed to submit from what can come later", () => {
+    const { required, optional } = gigsterChecklist(blankFields("A"), defaultProfileTemplate);
+    expect(required.map((i) => i.id)).toEqual(["photo", "name", "services", "availability", "where", "film", "experience", "credits"]);
+    expect(optional.map((i) => i.id)).toEqual(["title", "rate", "personality", "contact"]);
+    expect(required.find((i) => i.id === "name")?.done).toBe(true);
+    expect(required.find((i) => i.id === "photo")?.done).toBe(false);
+  });
+
+  it("contentChanged sees a changed service line, and ignores empty editor answers", () => {
+    const a = { ...blankFields("A"), credits: ["One"], services: ["S"], serviceLines: { S: "One" } };
+    expect(contentChanged(a, { ...a, serviceLines: { S: "Two" } })).toBe(true);
+    expect(contentChanged({ ...a, serviceLines: {} }, { ...a, serviceLines: undefined })).toBe(false);
+    expect(contentChanged({ ...a, title: "" }, a)).toBe(false);
   });
 });

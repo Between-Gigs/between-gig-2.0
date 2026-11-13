@@ -30,7 +30,7 @@ try {
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, colorScheme: mode, reducedMotion: "reduce" });
     await context.addInitScript(({ look, mode }) => {
       if (window !== window.top) return;
-      localStorage.setItem("bg2-site-look", look);
+      localStorage.setItem("bg2-site-look-v2", look);
       localStorage.setItem("bg-theme", mode);
     }, { look, mode });
     // Check local assets even when an external identity provider is unavailable.
@@ -42,7 +42,7 @@ try {
     await guide.waitForFunction(() => Boolean(window.bgSample));
     for (const [title, route, bodyFamily] of [
       ["Simone", "/p/simone/", look === "modern" ? "Geist" : (look === "friendly" || look === "editorial") ? "Plus Jakarta Sans" : (look === "classic" || look === "call-sheet") ? "Figtree" : "Inter"],
-      ["For professionals", "/professionals/", look === "modern" ? "Geist" : look === "swiss" ? "Inter" : "Figtree"],
+      ["For professionals", "/professionals/", look === "modern" ? "Geist" : (look === "friendly" || look === "editorial") ? "Plus Jakarta Sans" : (look === "classic" || look === "call-sheet") ? "Figtree" : "Inter"],
     ]) {
       const link = guide.locator("main li a").filter({ hasText: title }).first();
       await link.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "instant" }));

@@ -6,6 +6,9 @@ import { cx } from "@ds/components";
 import { Page } from "@/components/site/Page";
 import { ModernWelcome } from "./ModernWelcome";
 import { AuthTemplate } from "@/components/ds/templates/AuthTemplate";
+import { AuthStageTemplate } from "@/components/ds/templates/AuthStageTemplate";
+import { Status } from "@/components/ds/atoms";
+import { useAuthV2 } from "./authDesign";
 
 const steps = [
   { title: "Open your link", body: "Set up your account with this email address." },
@@ -14,6 +17,9 @@ const steps = [
 ];
 
 /**
+ * Green Room (`editorial`) shows the launch frame, AuthStageTemplate, unless an AuthDesignProvider asks for "v1" (the Hub
+ * drafts), which keeps the previous AuthTemplate. The other looks keep their own frames below.
+ *
  * Log in and Sign up share one frame (direction G · Swiss grid): on a 12-column grid, the huge headline and lead fill
  * the left eight columns and the form sits in the right four (cols 9–12, over step 3) under a thick rule; tablets split 6/6. Sign up then lists the three steps in
  * a row under thick rules, the first one (where they are now) as the screen's single mint block. `lead` is a short note
@@ -29,6 +35,25 @@ export function AuthShell({ header, lead, children, className, eyebrow, steps: s
   const classic = look === "classic";
   const modern = look === "modern";
   const login = header === "Log in";
+  const v2 = useAuthV2();
+  if (look === "editorial" && v2) {
+    // Launch design (Flow p2): still-life stage, welcome on the paper, the form in the card. `eyebrow` (how they
+    // arrived, "You're invited") becomes a badge at the top of the card; the stage keeps the Founding Gigsters line.
+    return (
+      <Page bare>
+        <AuthStageTemplate
+          eyebrow={login ? "Welcome back" : "Founding Gigsters"}
+          title={login ? <>Pick up where<br className="max-sm:hidden" /> you left off.</> : <>Bring your craft<br className="max-sm:hidden" /> beyond the set.</>}
+          lead={login ? "Log in to keep your profile current and see where it stands." : "Create a profile so people can find the services you offer between gigs."}>
+          <div className={className}>
+            {eyebrow && <Status tone="brand" className="mb-4">{eyebrow}</Status>}
+            {children}
+            {lead && <div className="mt-6 border-t border-line pt-4 text-body-sm text-ink-muted">{lead}</div>}
+          </div>
+        </AuthStageTemplate>
+      </Page>
+    );
+  }
   if (look === "editorial") {
     return (
       <Page bare>

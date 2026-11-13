@@ -36,12 +36,15 @@ const groups: { id: string; art: SectionArt; title: string; body: string; pages:
   { id: "journey", art: { icon: "memo", tint: "bg-tint-peach" }, title: "The Gigster journey", body: "The invite, signing in and the profile clients see.", pages: [
     { href: "/preview/gigster-journey/", title: "Stage 2 invitation journey", body: "Try the revised invitation, account setup, profile edit and review handoff." },
     { href: "/emails/invite/", title: "Invite email", body: "“Your craft. More possibilities.” and its plain-text version." },
+    { href: "/join/", title: "Sign up", body: "“Bring your craft beyond the set.” Create an account in one step." },
     { href: "/login/", title: "Log in", body: "Email code sign-in, for Gigsters and owners." },
+    { href: "/profile/canvas/", title: "Edit your profile", body: "How I can help first, what's required to submit, then Preview and Submit for review." },
+    { href: "/profile/submitted/", title: "Profile submitted", body: "In review: what happens next, and your profile stays private." },
     { href: "/emails/", title: "Every email", body: "All the emails, and the sample outbox." },
   ] },
   { id: "public", art: { icon: "clapper_board", tint: "bg-tint-mint-soft" }, title: "The public site", body: "What visitors and clients see today, and once we open.", pages: [
-    { href: basePath === "/hub" ? "/home/" : "/", title: "Home today", body: "The Los Angeles call sheet: coming soon." },
-    { href: "/professionals/", title: "For professionals", body: "Why join, and get on the call sheet." },
+    { href: basePath === "/hub" ? "/home/" : "/", title: "Coming soon", body: "The Los Angeles Call Sheet, and one button to create your Gigster profile." },
+    { href: "/professionals/", title: "For professionals", body: "Why join, with every button going straight to sign-up." },
     { href: "/storyboard/", title: "The Storyboard", body: "The interactive sketchbook and its forms." },
     { href: "/crew-call/", title: "Crew Call", body: "Hollywood talent at your service: the client-side call sheet." },
     { href: "/proposals/home/", title: "Home once we open", body: "Three proposals: visitor, Gigster, owner." },
@@ -55,6 +58,13 @@ const groups: { id: string; art: SectionArt; title: string; body: string; pages:
     { href: "/studio/", title: "Studio", body: "A page designer with a CMS: tables, galleries, kanban, lists and calendars." },
     { href: "/preview/curtain/", title: "Curtain tuner", body: "Tune the home page curtain live and copy your favourite settings." },
     { href: "/preview/cursors/", title: "Mouse effects", body: "Try five mouse effects and pick one for the site." },
+  ] },
+  { id: "drafts", art: { icon: "framed_picture", tint: "bg-tint-sky" }, title: "Previous designs", body: "The pages as they were before the Green Room launch, kept for comparison. Nothing here is live.", pages: [
+    { href: "/preview/drafts/coming-soon-v1/", title: "Coming soon · v1", body: "The call-sheet home with its two-step form." },
+    { href: "/preview/drafts/professionals-v1/", title: "For professionals · v1", body: "The earlier long page and its call-sheet form." },
+    { href: "/preview/drafts/join-v1/", title: "Sign up · v1", body: "The previous create-account layout." },
+    { href: "/preview/drafts/login-v1/", title: "Log in · v1", body: "The previous log-in layout." },
+    { href: "/preview/drafts/profile-editor-v1/", title: "Profile editor · v1", body: "The edit-on-page profile editor before the rebuild." },
   ] },
 ];
 

@@ -47,12 +47,18 @@ describe("initial site appearance", () => {
   });
 
   it("keeps the original public brand typography apart from the product theme", () => {
-    for (const path of ["/", "/professionals", "/storyboard/", "/crew-call/", "/proposals/home/"]) {
+    for (const path of ["/storyboard/", "/crew-call/", "/proposals/home/", "/preview/drafts/coming-soon-v1/", "/preview/drafts/professionals-v1"]) {
       expect(isBrandPage(path)).toBe(true);
     }
-    for (const path of ["/profile/", "/preview/", "/join/", "/storyboard-notes/"]) {
+    for (const path of ["/profile/", "/preview/", "/join/", "/storyboard-notes/", "/preview/drafts/", "/preview/drafts/coming-soon-v2/"]) {
       expect(isBrandPage(path)).toBe(false);
     }
+  });
+
+  it("renders the live Coming soon and For professionals pages in Green Room", () => {
+    for (const path of ["/", "", "/professionals", "/professionals/"]) expect(isBrandPage(path)).toBe(false);
+    expect(beforePaint("/", () => null)).toBe("editorial");
+    expect(beforePaint("/professionals/", () => null)).toBe("editorial");
   });
 
   it("keeps the internal tools outside the site design on load and navigation", () => {

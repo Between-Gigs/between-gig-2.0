@@ -17,7 +17,7 @@ try {
     await page.getByLabel("Email", { exact: true }).fill("password-check@example.com");
     await page.getByLabel("Full name").fill("Password Check");
     await page.getByRole("button", { name: "Continue to password", exact: true }).click();
-    await page.getByText("Agree to the Terms of Use and Privacy Policy to continue.", { exact: true }).waitFor();
+    await page.getByText("Agree to the Terms and Privacy Policy to continue.", { exact: true }).waitFor();
     await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Continue to password", exact: true }).click();
     await page.getByRole("heading", { name: "Create your password", exact: true }).waitFor();

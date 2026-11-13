@@ -14,6 +14,12 @@ export const ABOUT_MAX = 600;
 export const NAME_MAX = 60;
 export const DEPARTMENT_MAX = 40;
 export const DATES_MAX = 80;
+/** Up to five services per Gigster (Patti, 13 Nov 2026). */
+export const MAX_SERVICES = 5;
+/** The Gigster's own line per service: one sentence in customer words. */
+export const SERVICE_LINE_MAX = 120;
+/** The professional title under the name. */
+export const TITLE_MAX = 60;
 
 /** A starting rate clients see: a whole number above 0. Blank or 0 reads "Rate on request" everywhere. */
 export const hasRate = (rate: string | undefined) => Number(rate) > 0;
@@ -29,6 +35,10 @@ export function contentChanged(a: ProfileFields, b: ProfileFields): boolean {
   const norm = (f: ProfileFields) => {
     const rest: Record<string, unknown> = { ...f, creditPins: f.credits.map((_, i) => f.creditPins?.[i] !== false) };
     for (const k of LIVE_FIELDS) delete rest[k];
+    // The editor's answers as sorted pairs (a replacer list would drop nested keys), and absent when empty.
+    const lines = Object.entries(f.serviceLines ?? {}).filter(([, v]) => v.trim()).sort(([a], [b]) => a.localeCompare(b));
+    if (lines.length) rest.serviceLines = lines; else delete rest.serviceLines;
+    for (const key of ["personalityQuestion", "title"] as const) if (!f[key]) delete rest[key];
     // A draft saved before the booking questions existed has the same answers as blank inputs.
     for (const key of Object.keys(stageTwoLimits) as (keyof typeof stageTwoLimits)[]) {
       if (!f[key]) delete rest[key];
@@ -96,9 +106,14 @@ export function validateStep(step: number, d: ProfileFields, template = readProf
     if (d.name.trim().length > NAME_MAX) e.name = `Keep your name to ${NAME_MAX} characters.`;
     if (d.years !== "" && Number.isNaN(Number(d.years))) e.years = missingAnswer.years;
     if (d.position.trim().length > DEPARTMENT_MAX) e.position = `Keep your department to ${DEPARTMENT_MAX} characters.`;
+    if ((d.title?.trim().length ?? 0) > TITLE_MAX) e.title = `Keep your title to ${TITLE_MAX} characters.`;
     if (d.imdb.trim() && !IMDB_RE.test(d.imdb.trim())) e.imdb = template.required.includes("imdb")
       ? "Use an IMDb name-profile link, like https://www.imdb.com/name/nm1234567/."
       : "Use an IMDb name-profile link, like https://www.imdb.com/name/nm1234567/, or leave it empty.";
+  }
+  if (step === 1) {
+    if (d.services.length > MAX_SERVICES) e.services = `Choose up to ${MAX_SERVICES} services. You have ${d.services.length}.`;
+    if (d.services.some((s) => (d.serviceLines?.[s]?.trim().length ?? 0) > SERVICE_LINE_MAX)) e.serviceLines = `Keep each line to ${SERVICE_LINE_MAX} characters.`;
   }
   if (step === 2) {
     if (d.zip && !/^\d{5}$/.test(d.zip)) e.zip = missingAnswer.zip;
@@ -112,6 +127,82 @@ export function validateStep(step: number, d: ProfileFields, template = readProf
     if (d.earliestStart && !startDateLabel(d.earliestStart)) e.earliestStart = "Choose a valid calendar date.";
   }
   return e;
+}
+
+/**
+ * The Gigster editor's submit check (/profile/canvas/): every configured required answer (validateAll), plus what the
+ * editor asks for on top. At least one service, each with its own line of what you'll do ("One clearly described
+ * service is enough to start"), and a personality answer says which question it answers. Empty when it can be sent.
+ */
+export function validateGigster(d: ProfileFields, template = readProfileTemplate()): FieldErrors {
+  const e: FieldErrors = Object.assign({}, ...Object.values(validateAll(d, template)));
+  if (!d.services.length && !e.services) e.services = missingAnswer.services;
+  if (!e.serviceLines && d.services.some((s) => !d.serviceLines?.[s]?.trim())) e.serviceLines = "Add one line about what you'll do for each service.";
+  if (d.personality?.trim() && !d.personalityQuestion) e.personalityQuestion = "Choose the question you're answering.";
+  // The editor asks about film and TV experience, not an "About me".
+  if (e.about === missingAnswer.about) e.about = "Tell clients how your film and TV experience helps you deliver this service.";
+  return e;
+}
+
+/** How the editor names each field in its "things to finish" list. */
+export const gigsterFieldLabel: Partial<Record<keyof ProfileFields, string>> = {
+  photo: "Profile photo", name: "Your name", services: "How I can help", serviceLines: "What you'll do", dates: "When you're usually free",
+  monthStatus: "This month", areas: "Where you work", zip: "ZIP code", otherCity: "Where you work", position: "Your film and TV work",
+  skills: "On-set skills", years: "Years in film and TV", about: "How that experience helps", credits: "Credits", imdb: "IMDb link",
+};
+
+/** The editor's checklist: what's needed to submit, and what can come later. Each item names the fields it covers. */
+export const gigsterItems = [
+  { id: "photo", label: "A photo of you", fields: ["photo"] },
+  { id: "name", label: "Your name", fields: ["name"] },
+  { id: "services", label: "A service, described in one line", fields: ["services", "other", "serviceLines"] },
+  { id: "availability", label: "When you're usually free", fields: ["dates", "monthStatus", "earliestStart"] },
+  { id: "where", label: "Where you work", fields: ["zip", "areas", "otherCity", "market", "travel"] },
+  { id: "film", label: "Your film and TV work", fields: ["position", "skills", "years"] },
+  { id: "experience", label: "How that experience helps", fields: ["about"] },
+  { id: "credits", label: "A credit", fields: ["credits", "imdb"] },
+  { id: "title", label: "A professional title", fields: ["title"] },
+  { id: "rate", label: "Your rate and minimum", fields: ["rate", "basis", "bookingMinimum"] },
+  { id: "personality", label: "A personality question", fields: ["personality", "personalityQuestion"] },
+  { id: "contact", label: "Private booking contact", fields: ["bookingMobile"] },
+] as const satisfies readonly { id: string; label: string; fields: readonly (keyof ProfileFields)[] }[];
+export type GigsterItemId = (typeof gigsterItems)[number]["id"];
+
+/** Which item each field belongs to, so an error links to its section. */
+export const gigsterItemOf = (field: keyof ProfileFields): GigsterItemId | undefined =>
+  gigsterItems.find((i) => (i.fields as readonly string[]).includes(field))?.id;
+
+function itemFilled(id: GigsterItemId, d: ProfileFields): boolean {
+  switch (id) {
+    case "photo": return !!d.photo;
+    case "name": return !!d.name.trim();
+    case "services": return d.services.length > 0 && d.services.every((s) => !!d.serviceLines?.[s]?.trim());
+    case "film": return !!d.position.trim() && d.skills.length > 0 && d.years !== "";
+    case "experience": return !!d.about.trim();
+    case "credits": return d.credits.some((c) => c.trim());
+    case "where": return isPartFilled("where", d);
+    case "availability": return !!d.dates.trim();
+    case "title": return !!d.title?.trim();
+    case "rate": return hasRate(d.rate);
+    case "personality": return !!d.personality?.trim() && !!d.personalityQuestion;
+    case "contact": return !!d.bookingMobile?.trim();
+  }
+}
+
+/**
+ * Required items (needed to submit) and optional ones (can come later), each with whether it's done. An item is
+ * required when the editor always asks for it (photo, name, a service) or when the profile template requires any of
+ * its fields; otherwise it can come later.
+ */
+export function gigsterChecklist(d: ProfileFields, template = readProfileTemplate()) {
+  const errors = validateGigster(d, template);
+  const always: GigsterItemId[] = ["services"];
+  const out = gigsterItems.map((item) => {
+    const required = always.includes(item.id) || item.fields.some((f) => (template.required as readonly string[]).includes(f === "areas" || f === "otherCity" ? "location" : f));
+    const invalid = item.fields.some((f) => errors[f]);
+    return { id: item.id, label: item.label, required, done: !invalid && itemFilled(item.id, d) };
+  });
+  return { required: out.filter((i) => i.required), optional: out.filter((i) => !i.required), errors };
 }
 
 /** Every step's errors, keyed by step index. Empty when the profile can be submitted. */
@@ -135,7 +226,7 @@ export function completeness(d: ProfileFields | null, template = readProfileTemp
 /** Which step a field lives on, so the error summary can link to it. */
 export const fieldStep: Partial<Record<keyof ProfileFields, number>> = {
   photo: 0, name: 0, years: 0, position: 0, imdb: 0, credits: 0,
-  skills: 1, services: 1, other: 1,
+  skills: 1, services: 1, other: 1, serviceLines: 1, title: 0, personalityQuestion: 3,
   market: 2, otherCity: 2, zip: 2, areas: 2, travel: 2, dates: 2, rate: 2, basis: 2,
   about: 3, languages: 3, insurance: 3, tools: 3, transport: 3, mode: 3,
   bookingMobile: 3, earliestStart: 3, bookingMinimum: 3, personality: 3, hireableJobs: 3,
@@ -146,6 +237,7 @@ export const fieldLabel: Partial<Record<keyof ProfileFields, string>> = {
   imdb: "IMDb profile link", credits: "Notable credits", skills: "On-set skills", services: "Off-set services",
   rate: "Starting rate", travel: "Travel notes", languages: "Languages", transport: "Transport", tools: "Tools and equipment",
   bookingMobile: "Private booking mobile", earliestStart: "Earliest start date", bookingMinimum: "Minimum booking", personality: "Personality answer", hireableJobs: "Specific jobs",
+  serviceLines: "What you'll do", personalityQuestion: "Personality question", title: "Professional title",
   otherCity: "City / region and country", zip: "Home ZIP code", areas: "Service areas", dates: "Dates or times this month", about: "About me",
 };
 

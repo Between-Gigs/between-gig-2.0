@@ -92,18 +92,18 @@ export const routes = [
   { name: "workspace-publish", path: "/workspace/site/", setup: reset, ready: "main iframe", act: async (page) => { await page.getByRole("button", { name: "Publish", exact: true }).click(); await page.locator("dialog[open]").waitFor(); } },
   { name: "workspace-notifications", path: "/workspace/", setup: reset, ready: "main h1", act: async (page) => { await page.getByRole("button", { name: /^Notifications/ }).click(); await page.getByText("Due soon").waitFor().catch(() => {}); } },
   { name: "workspace-shortcuts", path: "/workspace/", setup: reset, ready: "main h1", act: async (page) => { await page.locator("main").press("?"); await page.locator("dialog[open]").waitFor(); } },
-  { name: "canvas-blank", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "[data-spot]", act: async (page) => { await page.waitForTimeout(2400); } },
-  { name: "canvas-editing", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "[data-spot]", act: async (page) => {
-    // Desktop: Next spot in the stage bar. Phones: the Next button in the bottom dock.
-    const spot = page.getByRole("button", { name: "Next spot" });
-    if (await spot.isVisible()) await spot.click(); else await page.getByRole("button", { name: /^Next:/ }).first().click();
-    await page.getByRole("button", { name: /^Next:/ }).first().click(); await page.waitForTimeout(300);
+  { name: "canvas-blank", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "[data-gigster-editor]" },
+  { name: "canvas-editing", path: "/profile/canvas/", setup: as("gigster", "ava-sinclair"), ready: "[data-gigster-editor]", act: async (page) => {
+    await page.locator("#f-name").scrollIntoViewIfNeeded();
+    await page.getByRole("button", { name: /^Choose a service/ }).first().click().catch(() => {});
+    await page.waitForTimeout(300);
   } },
-  { name: "canvas-draft", path: "/profile/canvas/", setup: as("gigster", "elena-petrova"), ready: "[data-spot]" },
+  { name: "canvas-draft", path: "/profile/canvas/", setup: as("gigster", "elena-petrova"), ready: "[data-gigster-editor]" },
   { name: "simple-profile", path: "/profile/simple/", setup: as("gigster", "maya"), ready: "h1" },
   { name: "simple-profile-edit", path: "/profile/simple/", setup: as("gigster", "elena-petrova"), ready: "h1", act: async (page) => { await page.getByRole("button", { name: "Edit profile" }).click(); await page.locator("#name").waitFor(); } },
-  { name: "canvas-changes", path: "/profile/canvas/", setup: as("gigster", "hana-kim"), ready: "[data-spot]" },
-  { name: "canvas-client", path: "/profile/canvas/", setup: as("gigster", "elena-petrova"), ready: "[data-spot]", act: async (page) => { await page.getByRole("radio", { name: "Preview" }).click(); await page.waitForTimeout(400); } },
+  { name: "canvas-changes", path: "/profile/canvas/", setup: as("gigster", "hana-kim"), ready: "[data-gigster-editor]" },
+  { name: "canvas-client", path: "/profile/canvas/", setup: as("gigster", "elena-petrova"), ready: "[data-gigster-editor]", act: async (page) => { await page.getByRole("button", { name: "Preview" }).first().click(); await page.waitForTimeout(400); } },
+  { name: "profile-submitted-page", path: "/profile/submitted/", setup: as("gigster", "imani-carter"), ready: "h1" },
   { name: "public-maya", path: "/p/maya/", setup: reset, ready: "h1" },
   { name: "gigsters", path: "/p/", setup: reset, ready: "[data-results]" },
   { name: "public-monogram", path: "/p/dana-whitfield/", setup: reset, ready: "h1" },
@@ -116,8 +116,10 @@ export const routes = [
   { name: "not-found", path: "/no-such-page/", ready: "h1" },
   // Milestone 3: the public funnel.
   { name: "professionals", path: "/professionals/", ready: "h1" },
+  { name: "draft-coming-soon-v1", path: "/preview/drafts/coming-soon-v1/", ready: "h1" },
+  { name: "draft-professionals-v1", path: "/preview/drafts/professionals-v1/", ready: "h1" },
   {
-    name: "call-sheet-dialog", path: "/professionals/", setup: reset, ready: "h1",
+    name: "call-sheet-dialog", path: "/preview/drafts/professionals-v1/", setup: reset, ready: "h1",
     act: async (page) => { await page.getByRole("button", { name: "Get on the call sheet" }).first().click(); await page.getByRole("dialog").waitFor(); },
   },
   { name: "storyboard", path: "/storyboard/", ready: "h1" },

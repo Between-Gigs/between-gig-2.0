@@ -74,7 +74,7 @@ Templates live on Figma **DS · Templates** and in `components/ds/templates`.
 
 | Template | Code | Page that fills it |
 |---|---|---|
-| Create account / Log in | `AuthTemplate` | `/join/`, `/login/` (via `components/auth/AuthShell`) |
+| Create account / Log in | `AuthStageTemplate` (launch, Flow p2); `AuthTemplate` is the previous layout, kept as the Hub drafts `/preview/drafts/join-v1/` and `login-v1/` | `/join/`, `/login/` (via `components/auth/AuthShell`; `components/auth/authDesign` picks v1 or v2) |
 | Public profile | `ProfileTemplate` | `/p/<slug>/`, `/profile/` |
 | Find a professional | `SearchTemplate` | `/p/` |
 | Profile submitted | `ConfirmationTemplate` | available for a full-page confirmation; `/profile/` keeps its "Submitted for review" card and the full profile preview |

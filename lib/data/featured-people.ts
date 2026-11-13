@@ -75,6 +75,8 @@ export const featuredPeople: SeedPerson[] = professionalExamples.map((card) => {
       credits: [card.credits], imdb: "", languages: "English", insurance: "private",
       monthStatus: d.availability, dates: card.availability,
       bookingMobile: d.mobile, earliestStart: d.earliest, bookingMinimum: d.minimum, personality: d.personality, hireableJobs: d.hireableJobs,
+      // The Gigster editor's answers: their one line for the service, and the question the personality line answers.
+      serviceLines: Object.fromEntries(d.fields.services.map((s) => [s, d.hireableJobs])), personalityQuestion: "never-guess",
     },
     extras: {
       tagline: card.services,

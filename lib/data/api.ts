@@ -6,7 +6,14 @@
  */
 import { basePath } from "@/lib/site";
 import type { DataSource } from "./source";
-import type { ProfileDraft, ProfileFields } from "./types";
+import type { Profile, ProfileDraft, ProfileFields } from "./types";
+
+/**
+ * The Gigster editor's answers Company OS has no field for yet (docs: the report for 13 Nov 2026). Until it does, they
+ * stay in this browser beside the builder's step, so a Gigster's own editor and preview keep them across reloads. They
+ * don't reach the team or the public page on live: those need the backend fields.
+ */
+export const LOCAL_ONLY_FIELDS = ["serviceLines", "personalityQuestion", "personality", "title", "bookingMinimum", "earliestStart", "bookingMobile", "hireableJobs"] as const satisfies readonly (keyof ProfileFields)[];
 
 /** A refusal from the server: Company OS's status and code (e.g. 422 profile_incomplete), with its English fallback. */
 export class DataError extends Error {
@@ -63,7 +70,25 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
     send(name.replace(".", "/"), { method: "POST", keepalive: urgent, headers: { "content-type": "application/json" }, body: JSON.stringify({ args }) }) as Promise<T>;
 
   const stepKey = (personId: string) => `bg2-builder-step:${personId}`;
-  const withStep = (d: ProfileDraft | null) => (d ? { ...d, step: Number(storage.getItem(stepKey(d.personId)) ?? 0) || 0 } : d);
+  const extrasKey = (personId: string) => `bg2-profile-extras:${personId}`;
+  const readExtras = (personId: string): Partial<ProfileFields> => {
+    try {
+      const raw = JSON.parse(storage.getItem(extrasKey(personId)) ?? "{}") as Record<string, unknown>;
+      return Object.fromEntries(LOCAL_ONLY_FIELDS.filter((k) => raw[k] !== undefined).map((k) => [k, raw[k]])) as Partial<ProfileFields>;
+    } catch { return {}; }
+  };
+  const keepExtras = (personId: string, f: ProfileFields) => {
+    try { storage.setItem(extrasKey(personId), JSON.stringify(Object.fromEntries(LOCAL_ONLY_FIELDS.map((k) => [k, f[k]])))); } catch { /* storage blocked */ }
+  };
+  // The server's answer, with this browser's answers for the fields it doesn't store (a server value wins once it has one).
+  const withExtras = <T extends { personId: string; fields: ProfileFields } | null>(d: T): T => {
+    if (!d) return d;
+    const local = readExtras(d.personId);
+    const fields = { ...d.fields };
+    for (const k of LOCAL_ONLY_FIELDS) if (fields[k] === undefined && local[k] !== undefined) (fields as Record<string, unknown>)[k] = local[k];
+    return { ...d, fields };
+  };
+  const withStep = (d: ProfileDraft | null) => (d ? { ...withExtras(d), step: Number(storage.getItem(stepKey(d.personId)) ?? 0) || 0 } : d);
 
   return {
     kind: "live",
@@ -108,10 +133,11 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
       getDraft: async (personId) => withStep(await call<ProfileDraft | null>("profiles.getDraft", [personId])),
       async saveDraft(personId, fields: ProfileFields, step) {
         try { storage.setItem(stepKey(personId), String(step)); } catch { /* storage blocked: the builder starts at step 1 */ }
+        keepExtras(personId, fields);
         return withStep(await inOrder(personId, () => call<ProfileDraft>("profiles.saveDraft", [personId, fields])))!;
       },
       submit: (personId) => call("profiles.submit", [personId]),
-      getProfile: (personId) => call("profiles.getProfile", [personId]),
+      getProfile: async (personId) => withExtras(await call<Profile | null>("profiles.getProfile", [personId])),
       uploadPhoto: (personId, file) => inOrder(personId, () =>
         send(`profiles/uploadPhoto?personId=${encodeURIComponent(personId)}`, { method: "POST", headers: { "content-type": file.type || "image/jpeg" }, body: file }) as Promise<string>),
     },

@@ -36,18 +36,18 @@ export async function flow({ browser, base, outDir }) {
       await page.getByRole("link", { name: "You're invited to Between Gigs" }).click();
       await page.waitForURL(/\/emails\/invite\/\?outbox=/);
       await page.locator("iframe").waitFor();
-      const href = await page.frameLocator("iframe").getByRole("link", { name: /Create your Gigster profile/i }).getAttribute("href");
+      const href = await page.frameLocator("iframe").getByRole("link", { name: /^Create your profile/i }).getAttribute("href");
       if (!href?.includes("/join/?invite=")) throw new Error(`invite link looks wrong: ${href}`);
       await page.goto(href);
     })
     && await step("join", async () => {
       await page.getByLabel("Full name").waitFor();
       if ((await page.getByLabel("Email").inputValue()) !== "riley.park@example.com") throw new Error("email not prefilled");
-      await page.getByRole("button", { name: "Create my profile" }).click();
-      await expectText("Agree to the Terms of Use");
+      await page.getByRole("button", { name: "Create account", exact: true }).click();
+      await expectText("Agree to the Terms and Privacy Policy");
       await page.getByLabel("Full name").fill("Riley Park");
       await page.getByRole("checkbox").check();
-      await page.getByRole("button", { name: "Create my profile" }).click();
+      await page.getByRole("button", { name: "Create account", exact: true }).click();
       await page.waitForURL(/\/profile\/canvas\/?$/);
       // A brand-new account lands on its own blank profile, with the welcome.
       await page.getByRole("heading", { name: /This is your page\./ }).first().waitFor();
@@ -163,7 +163,8 @@ export async function flow({ browser, base, outDir }) {
   const funnel = ok
     && await step("call-sheet-signup", async () => {
       await page.evaluate(() => window.bgSample.signInAs("invited"));
-      await page.goto(`${base}/professionals/`);
+      // The two-step call-sheet form now lives only on the pre-Green Room draft (13 Nov 2026); the live page links to /join/.
+      await page.goto(`${base}/preview/drafts/professionals-v1/`);
       await page.getByRole("button", { name: "I offer this service: Interior styling" }).click();
       await expectText("Interested in offering: Interior Styling");
       await page.getByRole("button", { name: "Get on the call sheet" }).last().click();
@@ -175,6 +176,22 @@ export async function flow({ browser, base, outDir }) {
       await page.getByLabel("What would you offer?").fill("Room styling and sourcing between shoots.");
       await page.getByRole("button", { name: "Save optional details" }).click();
       await expectText("Thank you for joining!");
+    })
+    && await step("join-calls-to-action", async () => {
+      // Coming soon and For professionals: every call to action goes straight to sign-up and says where it goes.
+      for (const path of ["/", "/professionals/"]) {
+        await page.goto(`${base}${path}`);
+        const ctas = page.getByRole("link", { name: "Create your Gigster profile" });
+        if (await ctas.count() < 1) throw new Error(`${path}: no "Create your Gigster profile" link`);
+        for (const href of await ctas.evaluateAll((els) => els.map((el) => el.getAttribute("href")))) {
+          if (!/\/join\/$/.test(href ?? "")) throw new Error(`${path}: call to action goes to ${href}, not /join/`);
+        }
+        if (await page.getByRole("button", { name: "Get on the call sheet" }).count()) throw new Error(`${path}: still opens the two-step call-sheet form`);
+      }
+      await page.goto(`${base}/professionals/`);
+      await expectText("Decide when you're available.");
+      await page.getByRole("link", { name: "Create your Gigster profile" }).first().click();
+      await page.waitForURL(/\/join\/?$/);
     })
     && await step("storyboard-talent", async () => {
       await page.goto(`${base}/storyboard/`);

@@ -1,6 +1,7 @@
 /* Sent when an owner suggests edits. One short note per section, never a thread. Copy: proposal. */
 import { light } from "./tokens";
 import { button, defaultContext, esc, FONT_UI, hero, layout, p, section, signature, textFooter, type EmailContext, type RenderedEmail } from "./layout";
+import { SIGN_OFF } from "./config";
 
 export interface ChangesRequestedProps {
   firstName: string;
@@ -51,8 +52,7 @@ ${editUrl}
 
 Your answers are saved, so you only need to change these parts. Then submit again and we'll take another look.
 
-Patti & Peter
-Founders, Between Gigs
+${SIGN_OFF}
 
 ${textFooter(REASON, ctx.siteUrl)}`;
   return { subject, preheader, html: layout({ title: subject, preheader, body, reason: REASON, ctx }), text };

@@ -9,13 +9,21 @@ import type * as React from "react";
 import { asset } from "@/lib/site";
 import { Heading, Text, TextLink } from "../atoms";
 
-/** A full-bleed reference photo (still life or film set) behind a section. The image is decoration only. */
-export function PhotoStage({ image = "/art/wallpapers/craft-invitation-desktop.jpg", className, children }: { image?: string; className?: string; children: React.ReactNode }) {
+/**
+ * A full-bleed reference photo (still life or film set) behind a section. The image is decoration only.
+ * `portrait` swaps in the tall crop when the viewport is portrait (phones, tablets upright), so the props stay in the
+ * corners instead of being cropped away. The live copies sit in public/art/stage (public/art/wallpapers is internal and
+ * left out of the server build).
+ */
+export function PhotoStage({ image = "/art/stage/still-life-desktop.jpg", portrait, as: Tag = "section", className, children, ...rest }: { image?: string; portrait?: string; as?: "section" | "div"; className?: string; children: React.ReactNode } & Omit<React.HTMLAttributes<HTMLElement>, "children" | "className">) {
   return (
-    <section className={cx("relative isolate overflow-hidden bg-bg", className)}>
-      <img src={asset(image)} alt="" aria-hidden="true" className="absolute inset-0 -z-10 size-full object-cover dark:opacity-25" />
+    <Tag className={cx("relative isolate overflow-hidden bg-bg", className)} {...rest}>
+      <picture>
+        {portrait && <source media="(orientation: portrait)" srcSet={asset(portrait)} />}
+        <img src={asset(image)} alt="" aria-hidden="true" decoding="async" className="absolute inset-0 -z-10 size-full object-cover dark:opacity-25" />
+      </picture>
       {children}
-    </section>
+    </Tag>
   );
 }
 
