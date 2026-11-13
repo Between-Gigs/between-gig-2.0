@@ -5,7 +5,6 @@ import { clerkEnabled } from "@/lib/auth/clerk";
 import { HorizonComets } from "./HorizonComets";
 import { TiltCards } from "./TiltCards";
 import { SampleHook } from "./SampleHook";
-import { CursorFx, CursorStyleSheet } from "@/components/fx/CursorFx";
 
 /** Client-side roots: Clerk (when a publishable key is set), and the toast queue. */
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -21,8 +20,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <SampleHook />
         <HorizonComets />
         <TiltCards />
-        <CursorFx />
-        <CursorStyleSheet />
+        {/* No custom cursor or mouse effect site-wide (removed 13 Nov 2026): the system pointer everywhere. The chooser at
+            /preview/cursors still previews them on its own panels. */}
       </ToastProvider>
     </div>
   );

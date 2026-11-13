@@ -14,7 +14,7 @@ import type { Profile, ProfileDraft, ProfileFields } from "./types";
  * stay in this browser beside the builder's step, so a Gigster's own editor and preview keep them across reloads. They
  * don't reach the team or the public page on live: those need the backend fields.
  */
-export const LOCAL_ONLY_FIELDS = ["serviceLines", "personalityQuestion", "personality", "title", "bookingMinimum", "earliestStart", "bookingMobile", "hireableJobs"] as const satisfies readonly (keyof ProfileFields)[];
+export const LOCAL_ONLY_FIELDS = ["serviceLines", "personalityQuestion", "personality", "title", "workSamples", "resumeUrl", "bookingMinimum", "earliestStart", "bookingMobile", "hireableJobs"] as const satisfies readonly (keyof ProfileFields)[];
 
 /** A refusal from the server: Company OS's status and code (e.g. 422 profile_incomplete), with its English fallback. */
 export class DataError extends Error {

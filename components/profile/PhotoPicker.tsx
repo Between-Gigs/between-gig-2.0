@@ -1,6 +1,7 @@
 "use client";
 import { Button, Modal, Slider } from "@ds/components";
-import { Check, Crop as CropIcon, ImagePlus, Trash2 } from "lucide-react";
+import { Camera, Check, Crop as CropIcon, ImagePlus, Plus, Trash2 } from "lucide-react";
+import { cx } from "@ds/components/cx";
 import * as React from "react";
 import { useProfileTemplate } from "@/lib/profile/use-profile-template";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
@@ -122,8 +123,10 @@ function PhotoCropper({ src, onCancel, onSave }: { src: string; onCancel: () => 
  * Profile photo: pick, preview, replace or remove. The cropped photo goes through profiles.uploadPhoto: live, it is
  * stored on the profile at once and the field keeps its /media link; the sample keeps a small data URL.
  */
-export function PhotoPicker({ value, name, onChange, error, id, personId: forPerson, confirm }: {
+export function PhotoPicker({ value, name, onChange, error, id, personId: forPerson, confirm, canvas = false }: {
   value: string; name: string; onChange: (v: string) => void; error?: string; id: string;
+  /** The editor's on-page layout (Flow p3): one dashed box, the photo filling it once chosen. */
+  canvas?: boolean;
   /** Whose profile the photo is for (else the signed-in person). */
   personId?: string;
   /** Runs `go` once a change is allowed (the live-edit warning on an approved profile), before anything is uploaded. */
@@ -155,6 +158,35 @@ export function PhotoPicker({ value, name, onChange, error, id, personId: forPer
     if (confirm) confirm(() => void start()); else await start();
   };
   const message = problem ?? error;
+  const fileInput = <input ref={input} id={id} type="file" accept="image/*" className="sr-only" tabIndex={-1} aria-labelledby={`${id}-label`}
+    onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = ""; }} />;
+  if (canvas) return (
+    <div className="grid gap-3">
+      <p id={`${id}-label`} className="sr-only">Profile photo{required.includes("photo") ? "" : " · optional"}</p>
+      {fileInput}
+      {value ? (
+        <div className="grid gap-2">
+          <PersonPhoto id="self" name={name} src={value} alt="Your profile photo" className="aspect-square w-full rounded-lg" />
+          <div className="flex flex-wrap gap-1">
+            <Button variant="ghost" size="sm" className="min-h-11" iconStart={<ImagePlus />} onClick={() => input.current?.click()}>Replace</Button>
+            <Button variant="ghost" size="sm" className="min-h-11" iconStart={<CropIcon />} onClick={() => (confirm ? confirm(() => setCropping(value)) : setCropping(value))}>Crop</Button>
+            <Button variant="ghost" size="sm" className="min-h-11" iconStart={<Trash2 />} onClick={() => onChange("")}>Remove</Button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => input.current?.click()} aria-describedby={message ? `${id}-error` : undefined}
+          className={cx("grid aspect-4/3 w-full place-content-center justify-items-center gap-2 rounded-lg border-2 border-dashed bg-surface/60 p-6 text-center transition-colors duration-fast",
+            "hover:border-ink-brand hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+            message ? "border-danger" : "border-line-dashed")}>
+          <Camera aria-hidden="true" className="size-9 text-ink" strokeWidth={1.5} />
+          <span className="flex items-center gap-1.5 text-body-lg text-ink"><Plus aria-hidden="true" className="size-4" />Add your photo</span>
+          <span className="max-w-52 text-body-sm text-ink-muted">Choose a clear, friendly photo of yourself.</span>
+        </button>
+      )}
+      {message && <p id={`${id}-error`} className="text-body-sm text-danger">{message}</p>}
+      {cropping && <PhotoCropper src={cropping} onCancel={() => setCropping(null)} onSave={use} />}
+    </div>
+  );
   return (
     <div className="flex flex-col items-start gap-4 border-2 border-line bg-surface-sunken p-4 sm:flex-row sm:items-center">
       {addTile

@@ -66,7 +66,7 @@ function yearsLine(years: string, position: string) {
 
 export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [], draft = false, part, aside, first, callName,
   pageLabel, services, helps, portfolio, sample, editing, show, priced, rate, where, credits, unseen, reviewed, P,
-  creditRows, questions, sections, saved, onSave, onShare, onPhoto, onRequest }: ProfileLayoutProps) {
+  creditRows, resumeUrl, questions, sections, saved, onSave, onShare, onPhoto, onRequest }: ProfileLayoutProps) {
   const Name = embedded || mode === "owner" ? "h2" : "h1";
   const craft = f.position || services[0] || f.skills[0] || "";
   const title = f.title?.trim() || "";
@@ -216,6 +216,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
             ))}
           </ol>
         ), "Your notable credits, best first", "block")}
+        {resumeUrl && <a className="inline-flex min-h-11 w-fit items-center gap-1.5 text-label-md font-semibold text-link underline underline-offset-4" href={resumeUrl} target="_blank" rel="noreferrer">View résumé<span className="sr-only"> (opens in a new tab)</span></a>}
         {(mode === "owner" || editing || draft) && P("imdb", !!f.imdb, (
           <Text size="sm" muted><a className="inline-flex min-h-11 items-center text-link underline underline-offset-2" href={f.imdb} target="_blank" rel="noreferrer">IMDb page<span className="sr-only"> (opens in a new tab)</span></a> · only the Between Gigs team sees this</Text>
         ), "Your IMDb link. Only the team sees it.", "block")}

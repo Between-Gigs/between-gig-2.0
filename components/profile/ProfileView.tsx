@@ -76,7 +76,10 @@ function profileContent({ person, fields: f, extras, mode, draft = false, part }
     pageLabel: person.status === "approved" ? "Live" : "Your page · private",
     reviewed: !editing && (mode === "public" || person.status === "approved"),
     unseen: mode === "public" && data.kind === "live",
-    sample: !!person.sample, helps: extras?.helps ?? [], portfolio: extras?.portfolio ?? [],
+    sample: !!person.sample, helps: extras?.helps ?? [],
+    // The Gigster's own work samples come first; the fictional sample people keep their curated portfolio.
+    portfolio: (f.workSamples ?? []).filter(Boolean).length ? (f.workSamples ?? []).filter(Boolean).map((src, i) => ({ src, caption: `Work sample ${i + 1}` })) : extras?.portfolio ?? [],
+    resumeUrl: /^https?:\/\//.test(f.resumeUrl ?? "") ? f.resumeUrl! : "",
     rate: priced ? `$${f.rate}/${basisShort[f.basis]}` : null,
     where: f.market === "la" ? (f.areas.length ? locationLabel(f) : "") : locationLabel(f),
     creditRows: credits.map(splitCredit),

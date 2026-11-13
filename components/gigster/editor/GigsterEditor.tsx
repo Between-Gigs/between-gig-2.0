@@ -8,7 +8,7 @@
  */
 import { Button, Skeleton, useToast } from "@ds/components";
 import { cx } from "@ds/components/cx";
-import { ArrowLeft, ArrowRight, Eye, FileText, MessageSquareWarning, Send } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronDown, Eye, FileText, MessageSquareWarning, Save, Send } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -25,8 +25,8 @@ import { useLiveEditWarning } from "@/components/profile/LiveEditWarning";
 import { ProfileView } from "@/components/profile/ProfileView";
 import { Page } from "@/components/site/Page";
 import { markArea } from "@/lib/split-area";
-import { Checklist } from "./Checklist";
-import { ContactSection, CreditsSection, FilmSection, HelpSection, IdentitySection, PersonalitySection, RatesSection, WhereSection } from "./sections";
+import { Checklist, type ChecklistItem } from "./Checklist";
+import { CanvasColumns, CanvasContact, CanvasHelp, CanvasIdentity, CanvasRates, CanvasSamples } from "./canvas";
 import type { Setter } from "./ui";
 
 markArea("bg-split:dashboard");
@@ -230,6 +230,9 @@ function Editor({ personId }: { personId: string }) {
     }
   };
 
+  // It saves as you go; Save draft saves now and says so (Justin's bar: "Private draft · Preview · Save draft").
+  const saveDraft = () => { dirty.current = true; void flush().then(() => toast({ message: "Draft saved", tone: "success" })); };
+
   const sendButton = (size: "md" | "lg", full = false) => nothingToSend
     ? <Link href="/profile/submitted/" className={cx("inline-flex min-h-11 items-center justify-center gap-2 text-label-md font-semibold text-ink underline underline-offset-4", full && "w-full")}>
         {status === "approved" ? "Your page is live" : "Submitted · view status"}
@@ -248,7 +251,9 @@ function Editor({ personId }: { personId: string }) {
           <p className="flex min-w-0 items-center gap-2 text-label-md font-semibold text-ink"><FileText aria-hidden="true" className="size-4 shrink-0" />{stateLabel}</p>
           <SaveIndicator state={save} onRetry={() => { dirty.current = true; void flush(); }} />
           <div className="ml-auto flex items-center gap-2">
-            {view === "edit" && <Button variant="secondary" iconStart={<Eye />} className="min-h-11" onClick={() => switchView("preview")}>Preview</Button>}
+            {view === "edit" && <Button variant="ghost" iconStart={<Eye />} className="min-h-11" onClick={() => switchView("preview")}>Preview</Button>}
+            {view === "edit" && <span aria-hidden="true" className="h-6 w-px bg-line-strong max-sm:hidden" />}
+            {view === "edit" && <Button variant="secondary" iconStart={<Save />} className="min-h-11 max-sm:hidden" onClick={saveDraft}>Save draft</Button>}
             <span className="max-sm:hidden">{sendButton("md")}</span>
           </div>
         </div>
@@ -272,17 +277,19 @@ function Editor({ personId }: { personId: string }) {
             </div>
           </div>
         ) : (<>
-          <header className="grid gap-3">
+          <header className="grid gap-2">
             <p className="text-eyebrow tracking-widest text-ink-muted uppercase">Your Gigster profile</p>
             {status === "registered" || status === "invited" || status === "draft"
-              ? <Heading level="h1" as="h1" className="wrap-anywhere">Welcome, {first}. This is your page.</Heading>
-              : <Heading level="h1" as="h1" className="wrap-anywhere">Edit your profile</Heading>}
-            <Text size="lg" muted className="max-w-2xl text-pretty">
+              ? <h1 className="font-display text-heading-lg text-ink wrap-anywhere">Welcome, {first}. This is your page.</h1>
+              : <h1 className="font-display text-heading-lg text-ink wrap-anywhere">Edit your profile</h1>}
+            <p className="max-w-2xl text-body-md text-pretty text-ink-muted">
               {status === "approved"
                 ? data.kind === "live" ? "Availability changes go live as you save. Other changes take your page off the site until the team approves them." : "Availability changes go live as you save. Other changes wait here until you send them again."
-                : "Fill it in once, in your own words. It saves as you go and stays private until the Between Gigs team approves it."}
-            </Text>
+                : "This is your profile as clients will see it: fill it in right here. It saves as you go and stays private until the Between Gigs team approves it."}
+            </p>
           </header>
+
+          <Readiness required={checklist.required} optional={checklist.optional} onGo={(id) => goTo(ITEM_TARGET[id])} />
 
           {notes.length > 0 && (
             <section aria-labelledby="notes-h" className="grid gap-4 rounded-lg bg-warning-soft p-5 sm:p-6">
@@ -318,20 +325,17 @@ function Editor({ personId }: { personId: string }) {
             </div>
           )}
 
-          <Checklist required={checklist.required} optional={checklist.optional} onGo={(id) => goTo(ITEM_TARGET[id])} />
-
-          <IdentitySection d={d} set={set} errors={errors} personId={personId} required={required} confirmPhoto={(go) => live.guard("photo", go)} />
-          <div className="border-t border-line pt-10"><HelpSection d={d} set={set} errors={errors} /></div>
-          <div className="border-t border-line pt-10"><RatesSection d={d} set={set} errors={errors} required={required} /></div>
-          <div className="border-t border-line pt-10"><WhereSection d={d} set={set} errors={errors} required={required} /></div>
-          <div className="border-t border-line pt-10"><FilmSection d={d} set={set} errors={errors} required={required} /></div>
-          <div className="grid gap-12 border-t border-line pt-10 lg:grid-cols-2 lg:gap-10">
-            <CreditsSection d={d} set={set} errors={errors} required={required} />
-            <PersonalitySection d={d} set={set} errors={errors} />
+          {/* The profile itself is the form (Justin's Flow p3 design): ruled rows, serif headings, "+ Add" to open a field. */}
+          <CanvasIdentity d={d} set={set} errors={errors} personId={personId} required={required} confirmPhoto={(go) => live.guard("photo", go)} />
+          <div className="grid gap-12 border-t border-line-strong pt-10 lg:grid-cols-12 lg:gap-0">
+            <div className="min-w-0 lg:col-span-8 lg:pr-10"><CanvasHelp d={d} set={set} errors={errors} /></div>
+            <div className="min-w-0 lg:col-span-4 lg:border-l lg:border-line-strong lg:pl-10"><CanvasRates d={d} set={set} errors={errors} required={required} /></div>
           </div>
-          <ContactSection d={d} set={set} errors={errors} email={person.email} />
+          <div className="border-t border-line-strong pt-10"><CanvasSamples d={d} set={set} errors={errors} /></div>
+          <div className="border-t border-line-strong pt-10"><CanvasColumns d={d} set={set} errors={errors} required={required} /></div>
+          <div className="border-t border-line-strong pt-6"><CanvasContact d={d} set={set} errors={errors} email={person.email} /></div>
 
-          <section aria-labelledby="next-h" className="grid gap-4 rounded-lg bg-surface-brand p-6 text-ink sm:flex sm:items-center sm:justify-between sm:gap-6 sm:p-8" data-theme="dark">
+          <section aria-labelledby="next-h" className="grid gap-4 border-t border-line-strong pt-8 sm:flex sm:items-center sm:justify-between sm:gap-6">
             <div className="grid gap-1">
               <h2 id="next-h" className="font-display text-heading-lg text-ink">{nothingToSend ? (status === "approved" ? "Your page is live" : "Your profile is with the team") : "Ready? Preview it, then submit."}</h2>
               <p className="text-body-md text-ink-muted">{nothingToSend ? (status === "approved" ? "Availability saves as you go. Edit anything else and you can send it for review here." : "Changes you make here save as you go. We'll email you when there's an update.") : "See your page as clients will, then send it to the Between Gigs team. It stays private during review."}</p>
@@ -349,5 +353,32 @@ function Editor({ personId }: { personId: string }) {
         {sendButton("lg", true)}
       </div>
     </Page>
+  );
+}
+
+/**
+ * Justin's "Profile completeness" row, as Patti and Peter asked: how many of the things needed to submit are in (no
+ * "0%" homework bar), a quiet progress line, and the list of what's needed and what can come later one tap away.
+ */
+function Readiness({ required, optional, onGo }: { required: ChecklistItem[]; optional: ChecklistItem[]; onGo: (id: GigsterItemId) => void }) {
+  const [open, setOpen] = React.useState(false);
+  const done = required.filter((i) => i.done).length;
+  const left = required.length - done;
+  return (
+    <section aria-labelledby="readiness-h" className="border-y border-line-strong">
+      <button type="button" aria-expanded={open} aria-controls="readiness-panel" onClick={() => setOpen(!open)}
+        className="flex min-h-14 w-full flex-wrap items-center gap-x-4 gap-y-2 py-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
+        <span id="readiness-h" className="text-label-lg font-semibold text-ink">Ready to submit</span>
+        <span className="text-label-lg font-semibold text-ink tabular-nums">{done} of {required.length}</span>
+        <span aria-hidden="true" className="h-1.5 min-w-24 flex-1 overflow-hidden rounded-full bg-surface-sunken sm:max-w-80">
+          <span className="block h-full rounded-full bg-action transition-[width] duration-base" style={{ width: `${required.length ? (done / required.length) * 100 : 0}%` }} />
+        </span>
+        <span className="ml-auto flex items-center gap-2 text-body-sm text-ink-muted">
+          {left === 0 ? "Everything needed is in" : `${left === 1 ? "1 thing" : `${left} things`} to add`}
+          <ChevronDown aria-hidden="true" className={cx("size-5 text-ink transition-transform duration-fast", open && "rotate-180")} />
+        </span>
+      </button>
+      {open && <div id="readiness-panel" className="pb-6"><Checklist required={required} optional={optional} onGo={onGo} /></div>}
+    </section>
   );
 }
