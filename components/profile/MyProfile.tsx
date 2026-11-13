@@ -51,7 +51,7 @@ export function MyProfile() {
   }, [session?.personId]);
 
   if (!session || loadedId !== session.personId || !s) {
-    return <Page><div aria-busy="true" aria-label="Loading your profile" className="grid gap-4"><Skeleton className="h-10 w-1/3" /><Skeleton shape="block" className="h-24" /><Skeleton shape="block" className="h-96" /></div></Page>;
+    return <Page decor="corners"><div aria-busy="true" aria-label="Loading your profile" className="grid gap-4"><Skeleton className="h-10 w-1/3" /><Skeleton shape="block" className="h-24" /><Skeleton shape="block" className="h-96" /></div></Page>;
   }
 
   const { person } = s;
@@ -87,7 +87,7 @@ export function MyProfile() {
   );
 
   if (warm) return (
-    <Page>
+    <Page decor="corners">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="flex items-center gap-3 font-display text-display-sm wrap-anywhere text-ink"><Icon3D name="waving_hand" className="size-10" />Hi, {first}</h1>
         {state !== "new" && <PersonStatusBadge status={person.status} audience="gigster" />}
@@ -108,7 +108,7 @@ export function MyProfile() {
   );
 
   return (
-    <Page>
+    <Page decor="corners">
       <div className="grid gap-x-6 sm:pt-4 md:grid-cols-12">
         <div className="min-w-0 md:col-span-12 lg:col-span-9">
           <p className="flex flex-wrap items-center gap-x-5 gap-y-2 text-eyebrow text-ink uppercase">

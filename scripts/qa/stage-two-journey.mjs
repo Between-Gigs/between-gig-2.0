@@ -21,6 +21,9 @@ try {
     await invitation.getByRole("link", { name: "Create your profile" }).click();
     await page.getByRole("combobox", { name: "Profile example" }).click();
     await page.getByRole("option", { name, exact: true }).click();
+    // The list closes and the choice re-renders the form; tick the box only once that has settled.
+    await page.getByRole("listbox").waitFor({ state: "detached" }).catch(() => {});
+    await page.getByRole("combobox", { name: "Profile example" }).filter({ hasText: name }).waitFor();
     const prefill = page.getByRole("checkbox", { name: "Prefill my test draft with this example" });
     assert.equal(await prefill.isChecked(), false);
     await prefill.check();

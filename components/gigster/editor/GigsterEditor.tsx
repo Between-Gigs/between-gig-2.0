@@ -65,7 +65,7 @@ export function GigsterEditor() {
 
 function EditorSkeleton() {
   return (
-    <Page>
+    <Page decor>
       <div aria-busy="true" aria-label="Loading your profile" className="grid gap-8">
         <Skeleton className="h-10 w-1/2" /><Skeleton shape="block" className="h-40" />
         <div className="grid gap-6 md:grid-cols-12"><Skeleton shape="block" className="h-64 md:col-span-5" /><div className="grid gap-4 md:col-span-7"><Skeleton className="h-12" /><Skeleton /><Skeleton /></div></div>
@@ -237,7 +237,7 @@ function Editor({ personId }: { personId: string }) {
     : <Button variant="primary" size={size} fullWidth={full} loading={submitting} iconEnd={<Send />} onClick={submit}>{sendLabel}</Button>;
 
   return (
-    <Page bare>
+    <Page bare decor>
       <ExampleReference />
       {live.dialog}
       {/* The bar: where the profile stands, saving, Preview and Submit. */}
