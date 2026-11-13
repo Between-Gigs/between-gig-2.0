@@ -1,6 +1,7 @@
 "use client";
 import { useLook } from "@/components/site/LookSync";
-import { asset } from "@/lib/site";
+import { selectedDarkWallpaper } from "@/lib/wallpaper-theme";
+import { ThemedImg } from "@/components/ui/ThemedImg";
 import { Icon3D } from "@/components/ui/Icon3D";
 import { cx } from "@ds/components";
 import { Page } from "@/components/site/Page";
@@ -145,7 +146,7 @@ function WarmWelcome({ login, eyebrow, showSteps }: { login: boolean; eyebrow?: 
           <Icon3D name="clapper_board" className="size-7" />
           <span className="grid"><b className="text-label-md">Production comes first</b><span className="text-body-sm text-ink-muted">Pause any time</span></span>
         </span>
-        <img src={asset("email/craft-invitation-desktop.jpg")} alt="" className="block aspect-video w-full rounded-tl-2xl object-cover" />
+        <ThemedImg src="email/craft-invitation-desktop.jpg" darkSrc={selectedDarkWallpaper("email/craft-invitation-desktop.jpg")} alt="" className="aspect-video w-full rounded-tl-2xl object-cover" />
       </div>
     </aside>
   );

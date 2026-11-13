@@ -4,6 +4,7 @@
  * components/site (SiteHeader, SiteFooter) and follow this look through its tokens.
  */
 import { cx } from "@ds/components/cx";
+import { selectedDarkWallpaper } from "@/lib/wallpaper-theme";
 import { nightOf } from "@/components/ui/ThemedImg";
 import { Bookmark, Calendar, MapPin } from "lucide-react";
 import type * as React from "react";
@@ -19,11 +20,11 @@ import { Heading, Text, TextLink } from "../atoms";
 export function PhotoStage({ image = "/art/stage/still-life-desktop.jpg", portrait, as: Tag = "section", className, children, ...rest }: { image?: string; portrait?: string; as?: "section" | "div"; className?: string; children: React.ReactNode } & Omit<React.HTMLAttributes<HTMLElement>, "children" | "className">) {
   return (
     <Tag className={cx("relative isolate overflow-hidden bg-bg", className)} {...rest}>
-      {/* Day photo in the light theme, its night grade in the dark one (no fading the day photo under an overlay). */}
+      {/* Day photo in the light theme, its selected dark artwork (or scene-specific night grade) in the dark one (no fading the day photo under an overlay). */}
       {[false, true].map((night) => (
         <picture key={String(night)}>
-          {portrait && <source media="(orientation: portrait)" srcSet={asset(night ? nightOf(portrait) : portrait)} />}
-          <img src={asset(night ? nightOf(image) : image)} alt="" aria-hidden="true" decoding="async" loading="lazy"
+          {portrait && <source media="(orientation: portrait)" srcSet={asset(night ? (selectedDarkWallpaper(portrait) ?? nightOf(portrait)) : portrait)} />}
+          <img src={asset(night ? (selectedDarkWallpaper(image) ?? nightOf(image)) : image)} alt="" aria-hidden="true" decoding="async" loading="lazy"
             className={cx("absolute inset-0 -z-10 size-full object-cover", night ? "hidden dark:block" : "dark:hidden")} />
         </picture>
       ))}
