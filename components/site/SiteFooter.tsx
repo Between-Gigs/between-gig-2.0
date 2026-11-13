@@ -1,3 +1,4 @@
+import { cx } from "@ds/components/cx";
 import { Logo } from "@ds/components/Logo";
 import Link from "next/link";
 import { data } from "@/lib/data";
@@ -22,17 +23,19 @@ const label = "mb-2 text-eyebrow text-ink-muted uppercase";
  * brand line in serif and the contact address on the left, two short link columns on the right, and one thin-ruled
  * line of small print. No trademark line (removed at the client's request, 13 Nov 2026).
  */
-export function SiteFooter({ photo }: { photo?: FooterPhoto } = {}) {
+/** The site footer uses option 1, the craft table (client, 13 Nov 2026); pass `photo={null}` for none. */
+export function SiteFooter({ photo = "craft" }: { photo?: FooterPhoto | null } = {}) {
   return (
     // A soft band of its own instead of a rule across the top (client, 13 Nov 2026).
     <footer className="bg-surface-sunken embedded:hidden!">
       {photo && (
-        // The photo as a band above the links, so the words never sit on the picture; it fades into the band below.
+        // The photo as a band above the links, cut with a sharp edge; the footer panel casts a shadow up onto it,
+        // so the picture sits further back. No gradient (client, 13 Nov 2026).
         <div aria-hidden="true" className="relative h-40 overflow-hidden sm:h-56 lg:h-64">
           <ThemedImg src={`/art/footer/${photo}.jpg`} width={1920} height={640} className="absolute inset-0 size-full object-cover" />
-          <span className="absolute inset-x-0 bottom-0 h-1/3 bg-linear-to-t from-surface-sunken to-transparent" />
         </div>
       )}
+      <div className={cx("relative bg-surface-sunken", photo && "shadow-lift")}>
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="grid grid-cols-2 gap-x-6 gap-y-10 pt-12 pb-12 md:grid-cols-12 md:gap-x-8">
           <div className="col-span-2 grid content-start gap-4 md:col-span-6">
@@ -59,6 +62,7 @@ export function SiteFooter({ photo }: { photo?: FooterPhoto } = {}) {
           {showsPreviewNote(data.kind) && <span>Preview build: people in the sample data are fictional. <Link href="/preview/" className="underline underline-offset-2 hover:text-ink">Preview guide</Link></span>}
           {showsPreviewNote(data.kind) && <VersionSwitcher className="sm:ml-auto" />}
         </div>
+      </div>
       </div>
     </footer>
   );

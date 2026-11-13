@@ -316,6 +316,16 @@
  * A pinned bar inside a centred column (the owner kit's page bar on public pages): its background and rule reach the
  * window's edges instead of stopping at the column, so it reads as one band under the site header.
  */
+/* The footer panel's edge over its photo band: a sharp edge casting a shadow up onto the picture, so the photo
+   reads as further back, behind the footer (client, 13 Nov 2026). Deeper in the dark theme. */
+@utility shadow-lift {
+  box-shadow: 0 -10px 22px -6px color-mix(in oklab, --theme(--color-forest-950) 30%, transparent),
+    0 -2px 5px color-mix(in oklab, --theme(--color-forest-950) 16%, transparent);
+  :where(.dark, [data-theme="dark"]) & {
+    box-shadow: 0 -12px 26px -6px color-mix(in oklab, black 62%, transparent), 0 -2px 6px color-mix(in oklab, black 38%, transparent);
+  }
+}
+
 @utility bar-bleed {
   /* Shadows never add scroll width, unlike a 100vw box: the band spreads sideways and is clipped top and bottom. */
   background-color: var(--bg);
