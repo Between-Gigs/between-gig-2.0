@@ -6,20 +6,12 @@ import Link from "next/link";
 import * as React from "react";
 import { CallSheetDialog } from "@/components/funnel/CallSheetDialog";
 import { CallSheetButton } from "@/components/funnel/parts";
-import { VersionSwitcher } from "@/components/site/VersionSwitcher";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { LookSwitcher } from "@/components/site/LookSwitcher";
 import { useLook } from "@/components/site/LookSync";
-import { data } from "@/lib/data";
-import { showsPreviewNote } from "@/lib/preview-note";
 import { curtainDefaults, startCurtain, type CurtainController, type CurtainParams } from "@/lib/curtain";
 import { startGravityField } from "@/lib/gravity-field";
 
-const links = [
-  { label: "For professionals", href: "/professionals/" },
-  { label: "Storyboard", href: "/storyboard/" },
-  { label: "Privacy", href: "/privacy/" },
-  { label: "Terms", href: "/terms/" },
-];
 
 /**
  * Milestone 5a: today's home page, the "call sheet", rebuilt from the design system's ComingSoon template.
@@ -108,20 +100,11 @@ export function CallSheetHome({ curtain = HOME_CURTAIN }: {
           </div>
         </main>
 
-        <footer className="relative grid grid-cols-12 items-start gap-x-6 gap-y-2 py-4 text-body-sm swiss:border-t-4 swiss:border-line-strong">
-          <span className="col-span-12 inline-flex min-h-11 items-center text-ink md:col-span-4">© 2026 Between Gigs</span>
-          <nav aria-label="Footer" className="col-span-12 flex flex-wrap gap-x-5 md:col-span-8 md:justify-end">
-            {links.map((l) => (
-              <Link key={l.href} href={l.href} className={footLink}>{l.label}</Link>
-            ))}
-            <a href="mailto:hello@between-gigs.com" className={footLink}>hello@between-gigs.com</a>
-          </nav>
-          {showsPreviewNote(data.kind) && <div className="col-span-12 flex md:justify-end"><VersionSwitcher /></div>}
-        </footer>
       </div>
+      {/* The same footer as every other page, under the frame. */}
+      <SiteFooter />
       <CallSheetDialog open={dialog} category="" placement="home" onClose={() => setDialog(false)} />
     </div>
   );
 }
 
-const footLink = "inline-flex min-h-11 items-center text-ink-muted underline-offset-4 transition-colors duration-fast hover:text-ink hover:underline";

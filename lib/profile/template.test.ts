@@ -52,8 +52,9 @@ describe("profile template", () => {
   });
 
   it("keeps the existing sample and live defaults until a template is explicitly applied", () => {
-    expect(partsDone(blankFields("Sam"))).toEqual({ done: 1, total: 10 });
-    expect(completeness(blankFields("Sam"))).toBeCloseTo(1 / 11);
+    // Credits became optional (client, 13 Nov 2026): nine required parts, not ten.
+    expect(partsDone(blankFields("Sam"))).toEqual({ done: 1, total: 9 });
+    expect(completeness(blankFields("Sam"))).toBeCloseTo(1 / 10);
     expect(validateAll(blankFields())[0]).toHaveProperty("photo");
   });
 });

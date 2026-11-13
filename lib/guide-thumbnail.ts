@@ -29,6 +29,8 @@ export const prepareGuideThumbnail = process.env.BG_BUILD === "server" || proces
     // Autofocus inside a child document can scroll its parent guide to a different card.
     document.documentElement.inert = true;
     document.documentElement.dataset.guideThumbnail = "";
+    // A page that scrolls a field into view would scroll the hub too: thumbnails never do.
+    if (typeof Element !== "undefined") Element.prototype.scrollIntoView = function () {};
   } catch (_) {}
 })();`;
 

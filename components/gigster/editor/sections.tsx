@@ -270,7 +270,7 @@ export function FilmSection({ d, set, errors, required }: SectionProps & { requi
 /** Credits (pin to show, drag to reorder) and the optional IMDb link. */
 export function CreditsSection({ d, set, errors, required }: SectionProps & { required: (field: string) => boolean }) {
   return (
-    <EditorSection id="sec-credits" title="Credits" size="h2" need={required("credits")} lead="Your best first. Only pinned credits show on your profile.">
+    <EditorSection id="sec-credits" title="Credits" size="h2" need={required("credits")} lead="Productions you worked on, and your role on each.">
       <Credits credits={d.credits} pins={d.creditPins ?? []} error={errors.credits} onChange={(c, p) => { set("credits")(c); set("creditPins")(p); }} />
       <Field label="IMDb profile link" optional={!required("imdb")} error={errors.imdb} hint="Helps the team confirm your credits. Clients don't see it.">
         <Input id="f-imdb" type="url" inputMode="url" value={d.imdb} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} />

@@ -49,7 +49,7 @@ export function ActivityList({ events, className, onOpen, photoFor, phoneLimit }
 }) {
   const look = useLook();
   const brand = look !== "swiss";
-  if (!events.length) return <p className="py-4 text-body-sm text-ink-muted">Nothing yet. Invites, sign-ups and reviews show up here.</p>;
+  if (!events.length) return <p className="px-3 py-4 text-body-sm text-ink-muted">Nothing yet. Invites, sign-ups and reviews show up here.</p>;
   const days: [string, ActivityEvent[]][] = [];
   for (const e of events) {
     const label = dayLabel(e.at);

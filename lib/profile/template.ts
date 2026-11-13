@@ -34,7 +34,8 @@ export interface ProfileTemplate {
 }
 const fields = Object.keys(profileFieldParts) as ProfileFieldRule[];
 export const defaultProfileTemplate: ProfileTemplate = {
-  required: ["name", "position", "years", "services", "skills", "zip", "location", "dates", "about", "credits", "photo"],
+  // Credits are optional (client, 13 Nov 2026): plenty of good Gigsters have none to name yet.
+  required: ["name", "position", "years", "services", "skills", "zip", "location", "dates", "about", "photo"],
   order: Object.keys(profileParts) as ProfilePartId[],
   sections: Object.keys(profileSections) as ProfileSectionId[],
 };

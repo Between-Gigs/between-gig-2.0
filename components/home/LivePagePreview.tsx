@@ -32,6 +32,32 @@ export function GuidePreviews({ children }: { children: React.ReactNode }) {
 
 type PreviewProps = { href: string; title: string; as?: string };
 
+/*
+ * Each preview is a whole page in an iframe, and the hub has dozens. Loading them all as they pass made scrolling
+ * stutter and frames reload on the way back. So: a card asks for its frame only after it has been on screen briefly,
+ * at most two frames load at a time, and loaded frames stay (up to eight; the ones seen longest ago go first).
+ */
+const MAX_LOADING = 2;
+const MAX_MOUNTED = 8;
+const DWELL_MS = 250;
+type Slot = { visible: boolean; mounted: boolean; loading: boolean; seen: number; set: (on: boolean) => void };
+const slots = new Set<Slot>();
+function pump() {
+  const all = [...slots];
+  const mounted = all.filter((e) => e.mounted);
+  if (mounted.length > MAX_MOUNTED) {
+    for (const e of mounted.filter((m) => !m.visible).sort((a, b) => a.seen - b.seen).slice(0, mounted.length - MAX_MOUNTED)) {
+      e.mounted = false; e.loading = false; e.set(false);
+    }
+  }
+  let free = MAX_LOADING - all.filter((e) => e.loading).length;
+  for (const e of all.filter((w) => w.visible && !w.mounted).sort((a, b) => a.seen - b.seen)) {
+    if (free <= 0) break;
+    e.mounted = true; e.loading = true; e.set(true); free--;
+  }
+}
+const Loaded = React.createContext<() => void>(() => {});
+
 export function LivePagePreview({ href, title, as = "visitor" }: PreviewProps) {
   const host = React.useRef<HTMLSpanElement>(null);
   const appearance = React.useContext(Appearance);
@@ -39,21 +65,37 @@ export function LivePagePreview({ href, title, as = "visitor" }: PreviewProps) {
   const template = /^\/(?:p|profile|preview\/(?:profile-editor|profiles|gigster-journey))(?:\/|$)/.test(href) ? savedTemplate : undefined;
   const [nearby, setNearby] = React.useState(false);
   const [scale, setScale] = React.useState(0);
+  const slot = React.useRef<Slot | null>(null);
   React.useEffect(() => {
     const el = host.current;
     if (!el) return;
+    const me: Slot = { visible: false, mounted: false, loading: false, seen: 0, set: setNearby };
+    slot.current = me; slots.add(me);
+    let dwell = 0;
     const resize = new ResizeObserver(([entry]) => setScale(entry.contentRect.width / width));
     resize.observe(el);
-    const visibility = new IntersectionObserver(([entry]) => setNearby(entry.isIntersecting), { rootMargin: "150px 0px" });
+    const visibility = new IntersectionObserver(([entry]) => {
+      window.clearTimeout(dwell);
+      if (entry.isIntersecting) dwell = window.setTimeout(() => { me.visible = true; me.seen = performance.now(); pump(); }, DWELL_MS);
+      else if (me.visible) { me.visible = false; me.seen = performance.now(); pump(); }
+    }, { rootMargin: "100px 0px" });
     visibility.observe(el);
-    return () => { visibility.disconnect(); resize.disconnect(); };
+    return () => { window.clearTimeout(dwell); visibility.disconnect(); resize.disconnect(); slots.delete(me); pump(); };
   }, []);
+  // When the appearance changes every frame reloads: they queue again.
+  React.useEffect(() => {
+    const me = slot.current;
+    if (me?.mounted) { me.loading = true; }
+  }, [appearance, template]);
+  const loaded = React.useCallback(() => { const me = slot.current; if (me && me.loading) { me.loading = false; pump(); } }, []);
 
   return (
     <span ref={host} inert aria-hidden="true"
       className="pointer-events-none relative block aspect-video w-full overflow-hidden rounded-lg bg-surface-sunken">
       {nearby && scale > 0 && appearance && (
-        <PreviewFrame key={`${appearance}/${template ?? ""}`} template={template} href={href} as={as} title={title} scale={scale} />
+        <Loaded.Provider value={loaded}>
+          <PreviewFrame key={`${appearance}/${template ?? ""}`} template={template} href={href} as={as} title={title} scale={scale} />
+        </Loaded.Provider>
       )}
     </span>
   );
@@ -67,6 +109,9 @@ function showsPage(frame: HTMLIFrameElement) {
 function PreviewFrame({ href, as, title, scale, template }: PreviewProps & { scale: number; template?: string }) {
   const [status, setStatus] = React.useState<"loading" | "ready" | "unavailable">("loading");
   const frame = React.useRef<HTMLIFrameElement>(null);
+  const done = React.useContext(Loaded);
+  // Ready or not, a settled frame frees its loading place for the next card.
+  React.useEffect(() => { if (status !== "loading") done(); }, [status, done]);
   React.useEffect(() => {
     const el = frame.current;
     if (!el) return;

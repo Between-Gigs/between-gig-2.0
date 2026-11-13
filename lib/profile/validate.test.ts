@@ -62,8 +62,9 @@ describe("lib/profile/validate.ts", () => {
 
   it("the checklist splits what's needed to submit from what can come later", () => {
     const { required, optional } = gigsterChecklist(blankFields("A"), defaultProfileTemplate);
-    expect(required.map((i) => i.id)).toEqual(["photo", "name", "services", "availability", "where", "film", "experience", "credits"]);
-    expect(optional.map((i) => i.id)).toEqual(["title", "rate", "personality", "contact"]);
+    // Credits are optional (client, 13 Nov 2026).
+    expect(required.map((i) => i.id)).toEqual(["photo", "name", "services", "availability", "where", "film", "experience"]);
+    expect(optional.map((i) => i.id)).toContain("credits");
     expect(required.find((i) => i.id === "name")?.done).toBe(true);
     expect(required.find((i) => i.id === "photo")?.done).toBe(false);
   });

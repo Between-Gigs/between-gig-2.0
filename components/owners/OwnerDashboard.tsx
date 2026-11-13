@@ -227,7 +227,7 @@ function Dashboard({ session }: { session: Session }) {
                     )}
                   </>
                 : <>
-                    <p className="pt-2 pb-1 text-body-sm text-ink-muted tabular-nums">Out of {d.funnel.invited} invited, plus {d.funnel.signedUp} who signed up on their own. Pick a step to list it.</p>
+                    <p className="px-5 pt-2 pb-1 text-body-sm text-ink-muted tabular-nums">Out of {d.funnel.invited} invited, plus {d.funnel.signedUp} who signed up on their own. Pick a step to list it.</p>
                     <FunnelCompact bare d={d} selected={cohort === "invited" || view === "signed_up" ? view : undefined} onSelect={(x) => pick(x, x === "signed_up" ? "all" : "invited")} />
                   </>}
             </div>

@@ -26,7 +26,7 @@ import { ProfileView } from "@/components/profile/ProfileView";
 import { Page } from "@/components/site/Page";
 import { markArea } from "@/lib/split-area";
 import { Checklist, type ChecklistItem } from "./Checklist";
-import { CanvasColumns, CanvasContact, CanvasHelp, CanvasIdentity, CanvasRates, CanvasSamples } from "./canvas";
+import { CanvasColumns, CanvasContact, CanvasDetails, CanvasHelp, CanvasIdentity, CanvasRates, CanvasSamples } from "./canvas";
 import type { Setter } from "./ui";
 
 markArea("bg-split:dashboard");
@@ -333,6 +333,7 @@ function Editor({ personId }: { personId: string }) {
           </div>
           <div className="border-t border-line-strong pt-10"><CanvasSamples d={d} set={set} errors={errors} /></div>
           <div className="border-t border-line-strong pt-10"><CanvasColumns d={d} set={set} errors={errors} required={required} /></div>
+          <div className="border-t border-line-strong pt-10"><CanvasDetails d={d} set={set} errors={errors} /></div>
           <div className="border-t border-line-strong pt-6"><CanvasContact d={d} set={set} errors={errors} email={person.email} /></div>
 
           <section aria-labelledby="next-h" className="grid gap-4 border-t border-line-strong pt-8 sm:flex sm:items-center sm:justify-between sm:gap-6">

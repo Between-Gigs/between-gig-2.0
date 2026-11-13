@@ -5,23 +5,14 @@
  * something is already happening that people can do. The one button goes straight to sign-up (/join/) and says so.
  * The previous design stays at /preview/drafts/coming-soon-v1/ (components/home/CallSheetHome).
  */
-import Link from "next/link";
 import { Eyebrow, Heading, Status, Text, TextLink } from "@/components/ds/atoms";
 import { PhotoStage } from "@/components/ds/organisms";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
-import { VersionSwitcher } from "@/components/site/VersionSwitcher";
-import { data } from "@/lib/data";
-import { showsPreviewNote } from "@/lib/preview-note";
 import { JoinButton } from "./JoinCta";
 
 export const STILL_LIFE = { image: "/art/stage/still-life-desktop.jpg", portrait: "/art/stage/still-life-portrait.jpg" } as const;
 
-const links = [
-  { label: "Storyboard", href: "/storyboard/" },
-  { label: "Privacy", href: "/privacy/" },
-  { label: "Terms", href: "/terms/" },
-];
-const footLink = "inline-flex min-h-11 items-center text-body-sm text-ink-muted underline-offset-4 hover:text-ink hover:underline";
 
 export function ComingSoon() {
   return (
@@ -44,16 +35,8 @@ export function ComingSoon() {
           </div>
         </PhotoStage>
       </main>
-      <footer className="border-t border-line bg-bg">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-2 sm:px-6">
-          <span className="inline-flex min-h-11 items-center text-body-sm text-ink-muted">© 2026 Between Gigs</span>
-          <nav aria-label="Footer" className="flex flex-wrap gap-x-5">
-            {links.map((l) => <Link key={l.href} href={l.href} className={footLink}>{l.label}</Link>)}
-            <a href="mailto:hello@between-gigs.com" className={footLink}>hello@between-gigs.com</a>
-          </nav>
-          {showsPreviewNote(data.kind) && <div className="flex w-full justify-end"><VersionSwitcher /></div>}
-        </div>
-      </footer>
+      {/* The same footer as every other page. */}
+      <SiteFooter />
     </div>
   );
 }

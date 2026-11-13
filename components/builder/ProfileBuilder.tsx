@@ -1,7 +1,7 @@
 "use client";
 import { Badge, Banner, Button, Drawer, Field, IconButton, Input, RadioGroup, Skeleton, Stepper, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
-import { AlertCircle, ArrowLeft, ArrowRight, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, CloudCheck, Eye, Film, GripVertical, Inbox, Link2, LoaderCircle, MapPin, MessageSquareWarning, Pencil, Pin, PinOff, Plus, Sparkles, Trash2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, CloudCheck, Eye, Film, GripVertical, Inbox, Link2, LoaderCircle, MapPin, MessageSquareWarning, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -377,13 +377,19 @@ function EditorialSteps({ d, step, onStep }: { d: ProfileFields; step: number; o
 }
 
 /**
- * Notable credits: up to five, in the order the Gigster wants, each pinned (shown to clients) or not.
+ * Notable credits: up to five, in the order the Gigster wants; all of them show to clients.
  * Reorder by dragging the grip at the left (mouse or touch), or focus it and use the arrow keys. Pins run
  * parallel to the credits, so moving or removing a credit carries its pin with it.
  */
+/** "Production · Role" into its two parts, and back. A production typed with its own " · " keeps working. */
+const splitCredit = (c: string): [string, string] => { const k = c.indexOf(" · "); return k < 0 ? [c, ""] : [c.slice(0, k), c.slice(k + 3)]; };
+const joinCredit = (production: string, role: string) => (role ? `${production} · ${role}` : production);
+
 export function Credits({ credits, pins, error, onChange }: { credits: string[]; pins: boolean[]; error?: string; onChange: (credits: string[], pins: boolean[]) => void }) {
-  const pinned = (i: number) => pins[i] !== false;
-  const all = credits.map((_, i) => pinned(i));
+  // Every credit shows, in the order set here (pinning was removed at the client's request, 13 Nov 2026): any edit
+  // saves them all as shown, so an older hidden credit comes back rather than staying invisible.
+  void pins;
+  const all = credits.map(() => true);
   const rows = React.useRef<(HTMLLIElement | null)[]>([]);
   const [dragging, setDragging] = React.useState<number | null>(null);
   const [said, setSaid] = React.useState("");
@@ -409,16 +415,14 @@ export function Credits({ credits, pins, error, onChange }: { credits: string[];
     requestAnimationFrame(() => document.getElementById(`credit-grip-${j}`)?.focus());
   };
   const { required } = useProfileTemplate();
-  const filled = credits.filter((c) => c.trim()).length;
-  const shown = credits.filter((c, i) => c.trim() && pinned(i)).length;
   return (
     <fieldset className="grid gap-2">
       <legend className="mb-1 text-label-md text-ink">Notable credits <span className="font-normal text-ink-subtle">{required.includes("credits") ? "· at least one, up to five" : "· optional, up to five"}</span></legend>
-      <p id="credits-hint" className="mb-1 text-body-sm text-ink-muted">Put your best first: drag the grip to reorder. Only pinned credits show on your profile{filled > 1 ? ` (${shown} of ${filled} now)` : ""}.</p>
+      <p id="credits-hint" className="mb-1 text-body-sm text-ink-muted">Put your best first: drag the grip to reorder.</p>
       <ol className="grid gap-2">
         {credits.map((c, i) => (
           <li key={i} ref={(el) => { rows.current[i] = el; }}
-            className={cx("flex items-center gap-1.5 rounded-lg border p-1.5 transition-colors", pinned(i) ? "border-line bg-surface" : "border-dashed border-line bg-surface-sunken",
+            className={cx("flex items-center gap-1.5 rounded-lg border border-line bg-surface p-1.5 transition-colors",
               dragging === i && "border-ink-brand bg-surface-selected shadow-md")}>
             {credits.length > 1
               ? <button type="button" id={`credit-grip-${i}`} aria-label={`Move credit ${i + 1} of ${credits.length}`} aria-describedby="credits-hint"
@@ -430,12 +434,14 @@ export function Credits({ credits, pins, error, onChange }: { credits: string[];
                   <GripVertical className="size-5" aria-hidden="true" />
                 </button>
               : <span aria-hidden="true" className="size-10 shrink-0" />}
-            <Input id={i === 0 ? "f-credits" : `credit-${i}`} aria-label={`Credit ${i + 1}`} value={c} placeholder="Production · Role" className="min-w-0 flex-1" invalid={!!error && i === 0}
-              aria-describedby={error && i === 0 ? "credits-error" : undefined}
-              onChange={(e) => onChange(credits.map((x, j) => (j === i ? e.target.value : x)), all)} />
-            <IconButton label={pinned(i) ? `Unpin credit ${i + 1}: hide it from your profile` : `Pin credit ${i + 1}: show it on your profile`} aria-pressed={pinned(i)}
-              variant="ghost" className={pinned(i) ? "text-ink-brand" : "text-ink-subtle"} icon={pinned(i) ? <Pin /> : <PinOff />}
-              onClick={() => onChange(credits, all.map((p, j) => (j === i ? !p : p)))} />
+            {/* Two fields per credit, kept as one "Production · Role" line (the format the profile reads). */}
+            <div className="grid min-w-0 flex-1 gap-1.5">
+              <Input id={i === 0 ? "f-credits" : `credit-${i}`} aria-label={`Credit ${i + 1}: production`} value={splitCredit(c)[0]} placeholder="Production" className="min-w-0" invalid={!!error && i === 0}
+                aria-describedby={error && i === 0 ? "credits-error" : undefined}
+                onChange={(e) => onChange(credits.map((x, j) => (j === i ? joinCredit(e.target.value, splitCredit(x)[1]) : x)), all)} />
+              <Input id={`credit-role-${i}`} aria-label={`Credit ${i + 1}: your role`} value={splitCredit(c)[1]} placeholder="Your role" className="min-w-0"
+                onChange={(e) => onChange(credits.map((x, j) => (j === i ? joinCredit(splitCredit(x)[0], e.target.value) : x)), all)} />
+            </div>
             {credits.length > 1 && <IconButton label={`Remove credit ${i + 1}`} variant="ghost" icon={<Trash2 />} onClick={() => onChange(credits.filter((_, j) => j !== i), all.filter((_, j) => j !== i))} />}
           </li>
         ))}

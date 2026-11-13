@@ -1,6 +1,6 @@
 "use client";
 import { Breadcrumbs, cx } from "@ds/components";
-import { Eye, Mail } from "lucide-react";
+import { Check, Eye, Mail } from "lucide-react";
 import * as React from "react";
 import { data, type PersonSummary, type Profile } from "@/lib/data";
 import { waitlistCategoryLabel } from "@/lib/data/taxonomy";
@@ -66,9 +66,16 @@ function Person({ id }: { id: string }) {
   const { person: p, fields, completeness, fromDraft } = s;
   const history = reviewHistory(s);
   const name = p.name || p.email;
-  const timeline: [string, string | null][] = [
-    ["Invited", shortDate(p.invitedAt)], ["Registered", shortDate(p.registeredAt)], ["Submitted", shortDate(p.submittedAt)], ["Approved", shortDate(p.approvedAt)],
-  ];
+  // The four steps. The status decides which are done, so a later step always implies the earlier ones (a re-sent
+  // invite can't make "Registered" read "Not yet" after they submitted). A date shows only when it fits the order;
+  // otherwise the step just reads "Done". The first step not done is "Next", saying who it waits on.
+  const reached = { invited: 0, registered: 1, draft: 1, submitted: 2, changes_requested: 2, approved: 3 }[p.status as string] ?? 0;
+  const stamps = [p.invitedAt, p.registeredAt, p.submittedAt, p.approvedAt];
+  const fits = (i: number) => !!stamps[i] && stamps.slice(i + 1, reached + 1).every((later) => !later || later >= stamps[i]!);
+  const nextHint = p.status === "changes_requested" ? "Waiting on their edits"
+    : (["Waiting on them to sign up", "Waiting on their profile", "Waiting on your review"][reached] ?? "");
+  const timeline: [string, string | null][] = (["Invited", "Registered", "Submitted", "Approved"] as const).map((label, i) =>
+    [label, i <= reached ? (fits(i) ? shortDate(stamps[i]) : "Done") : null]);
 
   // A slim header: who, where they are, and the four steps so far as a timeline.
   const header = (
@@ -90,16 +97,25 @@ function Person({ id }: { id: string }) {
         </div>
       </div>
       <ol aria-label="Timeline" className="grid grid-cols-4 lg:col-span-6">
-        {timeline.map(([k, v], i) => (
-          <li key={k} className="relative grid gap-1.5 pr-1 xs:pr-2">
-            <span aria-hidden="true" className="flex items-center">
-              <span className={cx("size-3.5 shrink-0", v ? "bg-ink" : "border-2 border-line-strong")} />
-              {i < timeline.length - 1 && <span className={cx("flex-1", timeline[i + 1][1] ? "h-1 bg-ink" : "border-t-2 border-dashed border-line-strong")} />}
-            </span>
-            <span className="truncate text-caption font-bold tracking-wide text-ink-muted uppercase sm:tracking-widest">{k}</span>
-            <span className="text-body-sm whitespace-nowrap text-ink tabular-nums">{v ?? <span className="text-ink-muted">Not yet</span>}</span>
-          </li>
-        ))}
+        {timeline.map(([k, v], i) => {
+          const next = !v && i === reached + 1;
+          return (
+            <li key={k} aria-current={next ? "step" : undefined} className="relative grid content-start gap-1.5 pr-1 xs:pr-2">
+              <span aria-hidden="true" className="flex items-center">
+                <span className={cx("grid size-5 shrink-0 place-items-center rounded-full",
+                  v ? "bg-action text-on-action" : next ? "border-2 border-ink-brand bg-bg" : "border-2 border-line bg-bg")}>
+                  {v && <Check className="size-3" strokeWidth={3} />}
+                  {next && <span className="size-1.5 rounded-full bg-ink-brand" />}
+                </span>
+                {i < timeline.length - 1 && <span className={cx("mx-1 flex-1", timeline[i + 1][1] ? "h-0.5 bg-action" : "border-t-2 border-dotted border-line-strong")} />}
+              </span>
+              <span className={cx("truncate text-label-sm font-semibold", v || next ? "text-ink" : "text-ink-muted")}>{k}</span>
+              <span className="text-body-sm text-ink-muted tabular-nums">
+                {v ?? (next ? <span className="font-semibold text-ink-brand">Next<span className="block font-normal text-ink-muted max-sm:hidden">{nextHint}</span></span> : "Not yet")}
+              </span>
+            </li>
+          );
+        })}
       </ol>
     </header>
   );

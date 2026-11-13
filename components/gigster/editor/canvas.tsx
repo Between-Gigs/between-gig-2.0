@@ -9,7 +9,7 @@
  */
 import { Button, Field, Input, RadioGroup, Select, Switch, Textarea } from "@ds/components";
 import { cx } from "@ds/components/cx";
-import { Camera, Lock, MapPin, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { Camera, GripVertical, Lock, MapPin, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { data } from "@/lib/data";
 import { laServiceAreas, onSetSkills, serviceChoices } from "@/lib/data/taxonomy";
@@ -62,14 +62,16 @@ function InPlace({ id, label, value, placeholder, onChange, maxLength, size, err
   return (
     <div className="grid gap-1.5">
       <label htmlFor={id} className="sr-only">{label}</label>
-      <div className={cx("flex items-end gap-3 rounded-sm focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-focus",
-        size === "name" ? "border-b-2 pb-2" : "border-b pb-1.5", error ? "border-danger" : size === "name" ? "border-ink-brand" : "border-transparent hover:border-line focus-within:border-line")}>
+      {/* Focus reads as the page, not a form box: the underline turns forest and thickens, on a soft surface. */}
+      <div className={cx("group -mx-2 flex items-end gap-3 rounded-t-md border-b-2 px-2 transition-colors duration-fast focus-within:bg-surface",
+        size === "name" ? "pb-2" : "pt-1 pb-1.5",
+        error ? "border-danger" : size === "name" ? "border-ink-brand" : "border-transparent hover:border-line focus-within:border-ink-brand")}>
         <input id={id} value={value} maxLength={maxLength} placeholder={placeholder} autoComplete={autoComplete}
           aria-invalid={!!error || undefined} aria-describedby={error ? `${id}-error` : undefined}
           onChange={(e) => onChange(e.target.value.slice(0, maxLength))}
           className={cx("min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-ink-subtle",
             size === "name" ? "font-display text-display-md sm:text-display-lg" : "text-heading-md")} />
-        <Pencil aria-hidden="true" className={cx("shrink-0 text-ink-muted", size === "name" ? "mb-3 size-5" : "mb-1.5 size-4")} />
+        <Pencil aria-hidden="true" className={cx("shrink-0 text-ink-muted transition-colors group-focus-within:text-ink-brand", size === "name" ? "mb-3 size-5" : "mb-1.5 size-4")} />
       </div>
       {error && <p id={`${id}-error`} className="text-body-sm text-danger">{error}</p>}
     </div>
@@ -144,14 +146,43 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
     set("services")(rows.filter((_, j) => j !== i));
     set("serviceLines")(nextLines);
   };
-  const optionsFor = (current?: string) => choices.filter((c) => c === current || !rows.includes(c)).map((c) => ({ value: c, label: c }));
+  const [otherOpen, setOtherOpen] = React.useState(!!d.other.trim());
+  const OTHER = "__other";
+  const optionsFor = (current?: string) => [
+    ...choices.filter((c) => c === current || !rows.includes(c)).map((c) => ({ value: c, label: c })),
+    // Not on the list: the team reviews a new service before it shows (it is stored as "Something else").
+    ...(current === undefined && !otherOpen ? [{ value: OTHER, label: "Something else: name your own" }] : []),
+  ];
+  const pickNew = (next: string) => {
+    if (next !== OTHER) return add(next);
+    setOtherOpen(true); setAdding(false);
+    requestAnimationFrame(() => document.getElementById("f-other")?.focus());
+  };
+  // Order: drag the grip, or focus it and use the arrow keys. The first service leads the profile.
+  const items = React.useRef<(HTMLLIElement | null)[]>([]);
+  const [dragging, setDragging] = React.useState<number | null>(null);
+  const [said, setSaid] = React.useState("");
+  const swap = (i: number, j: number) => { const next = [...rows]; [next[i], next[j]] = [next[j], next[i]]; set("services")(next); };
+  const drag = (e: React.PointerEvent) => {
+    if (dragging === null) return;
+    const up = items.current[dragging - 1]?.getBoundingClientRect(), down = items.current[dragging + 1]?.getBoundingClientRect();
+    if (up && e.clientY < up.top + up.height / 2) { swap(dragging, dragging - 1); setDragging(dragging - 1); }
+    else if (down && e.clientY > down.top + down.height / 2) { swap(dragging, dragging + 1); setDragging(dragging + 1); }
+  };
+  const drop = () => { if (dragging !== null) setSaid(`Moved to position ${dragging + 1} of ${rows.length}.`); setDragging(null); };
+  const key = (e: React.KeyboardEvent, i: number) => {
+    const j = e.key === "ArrowUp" ? i - 1 : e.key === "ArrowDown" ? i + 1 : -1;
+    if (j < 0 || j >= rows.length) return;
+    e.preventDefault(); swap(i, j); setSaid(`Moved to position ${j + 1} of ${rows.length}.`);
+    requestAnimationFrame(() => document.getElementById(`service-grip-${j}`)?.focus());
+  };
   const missingLine = !!errors.serviceLines;
 
   return (
     <section id="sec-help" aria-labelledby="sec-help-h" className="grid min-w-0 scroll-mt-40 content-start gap-5">
       <div className="grid gap-2">
         <H id="sec-help-h">How I can help</H>
-        <p className="max-w-xl text-body-md text-ink-muted">The most important part of your profile. Name a service, then say in one line what a customer can hire you to do. One clear service is enough to start.</p>
+        <p id="services-hint" className="max-w-xl text-body-md text-ink-muted">The most important part of your profile. Name a service, then say in one line what a customer can hire you to do. One clear service is enough to start.{rows.length > 1 && " Drag the grip to put your main service first."}</p>
       </div>
       <ol className="grid gap-5">
         {rows.map((s, i) => {
@@ -159,9 +190,20 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
           const line = lines[s] ?? "";
           const lineError = missingLine && !line.trim() ? "Add one line about what you'll do." : undefined;
           return (
-            <li key={i} className="grid gap-3 border-b border-line pb-5 last:border-b-0">
+            <li key={s} ref={(el) => { items.current[i] = el; }}
+              className={cx("grid gap-3 border-b border-line pb-5 transition-colors last:border-b-0", dragging === i && "-mx-3 rounded-lg bg-surface-selected px-3 pt-3 shadow-md")}>
               <div className="grid gap-4 sm:grid-cols-12 sm:gap-0">
                 <div className="flex items-start gap-1 sm:col-span-5 sm:pr-5">
+                  {rows.length > 1 && (
+                    <button type="button" id={`service-grip-${i}`} aria-label={`Move ${s}, service ${i + 1} of ${rows.length}`} aria-describedby="services-hint"
+                      title="Drag to reorder, or use the arrow keys"
+                      className={cx("grid size-10 shrink-0 touch-none place-items-center rounded-md text-ink-subtle transition-colors hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-ink-brand",
+                        dragging === i ? "cursor-grabbing text-ink-brand" : "cursor-grab")}
+                      onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDragging(i); }}
+                      onPointerMove={drag} onPointerUp={drop} onPointerCancel={drop} onKeyDown={(e) => key(e, i)}>
+                      <GripVertical aria-hidden="true" className="size-5" />
+                    </button>
+                  )}
                   <div className="min-w-0 flex-1">
                     <label htmlFor={`f-service-${i}`} className="sr-only">Service {i + 1}</label>
                     <Select id={`f-service-${i}`} options={optionsFor(s)} value={s} onValueChange={(v) => replace(i, v)} />
@@ -182,11 +224,25 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
             </li>
           );
         })}
+        {otherOpen && (
+          <li key="other" className="grid gap-2 border-b border-line pb-5">
+            <div className="flex items-start gap-1">
+              <div className="grid min-w-0 flex-1 gap-1.5">
+                <label htmlFor="f-other" className="text-body-md text-ink">Your own service</label>
+                <Input id="f-other" value={d.other} maxLength={SERVICE_LINE_MAX} placeholder="e.g. Pet portraits, or home organizing for moves"
+                  onChange={(e) => set("other")(e.target.value.slice(0, SERVICE_LINE_MAX))} />
+                <p className="text-body-sm text-ink-muted">Not on the list? Name it and say what you&apos;d do. The Between Gigs team reviews new services before they show on your profile.</p>
+              </div>
+              <button type="button" aria-label="Remove your own service" onClick={() => { set("other")(""); setOtherOpen(false); }}
+                className="grid size-10 shrink-0 place-items-center rounded-md text-ink-muted hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-focus"><Trash2 aria-hidden="true" className="size-4" /></button>
+            </div>
+          </li>
+        )}
         {showBlank && (
           <li key="blank" className="grid gap-2 sm:grid-cols-12 sm:items-start sm:gap-0">
             <div className="grid gap-1 sm:col-span-5 sm:pr-5">
               <label htmlFor={`f-service-${rows.length}`} className="sr-only">{rows.length ? `Service ${rows.length + 1}` : "Your first service"}</label>
-              <Select id={`f-service-${rows.length}`} options={optionsFor()} placeholder="Choose a service" invalid={!rows.length && !!errors.services} onValueChange={add} />
+              <Select id={`f-service-${rows.length}`} options={optionsFor()} placeholder="Choose a service" invalid={!rows.length && !otherOpen && !!errors.services} onValueChange={pickNew} />
               {!rows.length && errors.services && <p className="text-body-sm text-danger">{errors.services}</p>}
             </div>
             <div className="grid gap-1 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
@@ -197,15 +253,11 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
           </li>
         )}
       </ol>
+      <p role="status" aria-live="polite" className="sr-only">{said}</p>
       <GroupError id="f-services-error">{rows.length ? errors.services : undefined}</GroupError>
       {!showBlank && (rows.length < MAX_SERVICES
         ? <div><Button variant="secondary" iconStart={<Plus />} onClick={() => setAdding(true)}>Add another service <span className="text-ink-muted">· {rows.length} of {MAX_SERVICES}</span></Button></div>
         : <p className="text-body-sm text-ink-muted">That&apos;s the most: {MAX_SERVICES} services. Remove one to add another.</p>)}
-      {d.other.trim() && (
-        <Field label="Something else you offer" optional hint="Goes to a private review. It isn't on your profile automatically.">
-          <Textarea id="f-other" rows={2} value={d.other} onChange={(e) => set("other")(e.target.value)} />
-        </Field>
-      )}
     </section>
   );
 }
@@ -374,7 +426,7 @@ export function CanvasColumns({ d, set, errors, required }: SectionProps & { req
         <H id="sec-credits-h" size="md">Credits</H>
         {credOpen ? (
           <div className="grid gap-4">
-            <p className="text-body-sm text-ink-muted">Your best first. Only pinned credits show on your profile.</p>
+            <p className="text-body-sm text-ink-muted">Productions you worked on, and your role on each.</p>
             <Credits credits={d.credits} pins={d.creditPins ?? []} error={errors.credits} onChange={(c, p) => { set("credits")(c); set("creditPins")(p); }} />
             <Field label="IMDb profile link" optional={!required("imdb")} error={errors.imdb} hint="Helps the team confirm your credits. Clients don't see it.">
               <Input id="f-imdb" type="url" inputMode="url" value={d.imdb} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} />
@@ -408,6 +460,33 @@ export function CanvasColumns({ d, set, errors, required }: SectionProps & { req
         )}
       </section>
     </div>
+  );
+}
+
+/** "Details · Optional": what the profile's Details block shows (languages and how they work), asked right here. */
+export function CanvasDetails({ d, set }: SectionProps) {
+  const filled = !!(d.languages.trim() || d.tools.trim() || d.transport.trim() || d.mode !== "on-site" || d.insurance !== "private");
+  const [open, openIt] = useOpen(filled);
+  return (
+    <section id="sec-details" aria-labelledby="sec-details-h" className="grid scroll-mt-40 gap-5">
+      <H id="sec-details-h" tag="Optional" size="md">Details</H>
+      {!open ? (
+        <div className="grid gap-1">
+          <AddLink id="f-details-open" onClick={() => { openIt(); requestAnimationFrame(() => document.getElementById("f-languages")?.focus()); }}>Add languages and how you work</AddLink>
+          <p className="text-body-sm text-ink-muted">Languages you speak, on site or at your studio, transport and tools. They show under Details on your profile.</p>
+        </div>
+      ) : (
+        <div className="grid gap-x-10 gap-y-5 md:grid-cols-2">
+          <Field label="Languages" optional><Input id="f-languages" value={d.languages} placeholder="e.g. English, Spanish" maxLength={120} onChange={(e) => set("languages")(e.target.value)} /></Field>
+          <RadioGroup name="f-mode" label="How you work" value={d.mode} onChange={(v) => set("mode")(v as typeof d.mode)}
+            options={[{ value: "on-site", label: "On site, at the client's place" }, { value: "studio", label: "At my studio" }, { value: "both", label: "Both" }]} />
+          <Field label="Transport" optional><Input id="f-transport" value={d.transport} placeholder="e.g. Car, can carry a rolling rack" maxLength={120} onChange={(e) => set("transport")(e.target.value)} /></Field>
+          <Field label="Tools and equipment" optional><Input id="f-tools" value={d.tools} placeholder="e.g. Steamer, sewing kit, garment bags" maxLength={160} onChange={(e) => set("tools")(e.target.value)} /></Field>
+          <RadioGroup name="f-insurance" label={<>Insurance <span className="font-normal text-ink-subtle">· optional, self-reported</span></>} value={d.insurance} onChange={(v) => set("insurance")(v as typeof d.insurance)}
+            options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance yet" }]} />
+        </div>
+      )}
+    </section>
   );
 }
 

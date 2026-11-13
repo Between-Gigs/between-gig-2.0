@@ -1,5 +1,5 @@
 "use client";
-import { Badge } from "@ds/components";
+import { Badge, cx } from "@ds/components";
 import { Icon3D } from "@/components/ui/Icon3D";
 import { useLook } from "@/components/site/LookSync";
 import { ArrowRight, CircleCheck, MessageSquareWarning, PartyPopper, PencilLine, Users } from "lucide-react";
@@ -78,7 +78,7 @@ function Queue() {
         )}
 
         <Panel number={rows.length ? "02" : "01"} title="Decided recently" flush collapsible="queue-decided" aside={decided.length > 0 && <span>Undo is in the toast right after each decision</span>}>
-          {decided.length === 0 ? <p className="pb-5 text-body-md text-ink-muted">Nothing decided yet. Approvals and suggested edits show up here.</p> : (
+          {decided.length === 0 ? <p className={cx("pb-5 text-body-md text-ink-muted", brand && "px-5 sm:px-6")}>Nothing decided yet. Approvals and suggested edits show up here.</p> : (
             <ul className="@container border-t-2 border-line-strong">
               {decided.slice(0, 5).map((e) => {
                 const approved = e.kind === "approved";
