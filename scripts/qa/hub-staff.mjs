@@ -60,7 +60,7 @@ try {
   await page.getByLabel("Full name").fill("Sample Owner");
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Create my Gigster profile" }).click();
-  await page.getByRole("button", { name: "Send for review", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Submit for review", exact: true }).first().waitFor();
   const session = await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).session);
   assert.equal(session.role, "owner");
   assert.ok(session.personId);
@@ -69,7 +69,7 @@ try {
   await page.getByRole("button", { name: "Switch experience" }).waitFor();
   await page.getByRole("button", { name: "Switch experience" }).click();
   await page.getByRole("menuitem", { name: /Gigster Experience/ }).click();
-  await page.getByRole("button", { name: "Send for review", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Submit for review", exact: true }).first().waitFor();
   for (const width of [390, 420, 768]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(base + "/owners/staff/");

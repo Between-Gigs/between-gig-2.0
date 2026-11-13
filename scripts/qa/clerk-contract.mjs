@@ -54,7 +54,7 @@ try {
     await page.waitForURL(new RegExp(`${basePath}/profile/canvas/$`));
     // A new account lands on its own blank profile (Edit on your profile), with the welcome on the page.
     await page.getByRole("heading", { name: /This is your page\./ }).first().waitFor();
-    await page.locator("[data-spot]").first().waitFor();
+    await page.locator("[data-gigster-editor]").first().waitFor();
     await page.waitForTimeout(450); // allow delayed SDK initialization and role effects to settle
     assert.equal(new URL(page.url()).pathname, `${basePath}/profile/canvas/`, "signup callback must reach profile creation without a login bounce");
     assert.equal(navigations.includes(`${basePath}/login/`), false, "role gate must wait for SDK/session initialization");
