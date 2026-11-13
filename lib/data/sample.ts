@@ -238,7 +238,7 @@ function rearmInvite(state: State) {
   return invite.token;
 }
 
-const ownerSession = (): Session => ({ personId: null, email: SAMPLE_OWNER.email, role: "owner", name: SAMPLE_OWNER.name, startedAt: now() });
+const ownerSession = (state?: State): Session => ({ personId: state?.people.find((p) => p.email.toLowerCase() === SAMPLE_OWNER.email.toLowerCase())?.id ?? null, email: SAMPLE_OWNER.email, role: "owner", name: SAMPLE_OWNER.name, startedAt: now() });
 
 function lookupInvite(state: State, token: string): InviteLookup {
   const invite = state.invites.find((i) => i.token === token.trim());
@@ -374,7 +374,7 @@ export const sampleSource: DataSource = {
       }
       state.challenges = state.challenges.filter((x) => x !== c);
       const person = state.people.find((p) => p.email.toLowerCase() === address);
-      state.session = person ? sessionFor(person) : ownerSession();
+      state.session = address === SAMPLE_OWNER.email.toLowerCase() ? ownerSession(state) : person ? sessionFor(person) : ownerSession(state);
       save(state, true);
       return { ok: true, session: clone(state.session) };
     },
@@ -382,7 +382,8 @@ export const sampleSource: DataSource = {
       const state = load();
       const address = identity.email.trim().toLowerCase();
       if (identity.role === "owner") {
-        state.session = { ...ownerSession(), email: address, name: identity.name || SAMPLE_OWNER.name, via: "clerk" };
+        const person = state.people.find((p) => p.email.toLowerCase() === address);
+        state.session = { ...ownerSession(state), personId: person?.id ?? null, email: address, name: identity.name || SAMPLE_OWNER.name, via: "clerk" };
         save(state, true);
         return { ok: true, session: clone(state.session), created: false };
       }
@@ -409,6 +410,25 @@ export const sampleSource: DataSource = {
         created = true;
       }
       state.session = { ...sessionFor(person), via: "clerk" };
+      save(state, true);
+      return { ok: true, session: clone(state.session), created };
+    },
+    async signUp({ name, acceptedTerms }): Promise<SyncExternalResult> {
+      const state = load();
+      const current = state.session;
+      if (!current || current.role !== "owner") return { ok: false, error: "unknown-email" };
+      if (acceptedTerms !== true || !name.trim()) return { ok: false, error: "terms" };
+      const address = current.email.trim().toLowerCase();
+      let person = state.people.find((p) => p.email.toLowerCase() === address);
+      const created = !person;
+      if (!person) {
+        const t = now();
+        const id = uid();
+        person = { id, email: address, name: cleanName(name), slug: uniqueSlug(state, cleanName(name), id), status: "registered", source: "self", waitlistZip: "", waitlistCategory: "", invitedAt: "", registeredAt: t, updatedAt: t, sample: true };
+        state.people.push(person);
+        log(state, "registered", { personId: id, name: person.name, email: address });
+      }
+      state.session = { ...current, personId: person.id };
       save(state, true);
       return { ok: true, session: clone(state.session), created };
     },
@@ -731,7 +751,7 @@ export const sampleSource: DataSource = {
     },
     async signInAs(role: Role | "invited", personId?: string) {
       const state = load();
-      if (role === "owner") { state.session = ownerSession(); save(state, true); return {}; }
+      if (role === "owner") { state.session = ownerSession(state); save(state, true); return {}; }
       if (role === "invited") {
         state.session = null;
         const inviteToken = rearmInvite(state);

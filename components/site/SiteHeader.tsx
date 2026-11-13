@@ -7,6 +7,7 @@ import { useAuthActions } from "@/lib/auth/context";
 import { useSession } from "@/lib/session";
 
 import { LookSwitcher } from "./LookSwitcher";
+import { ExperienceSwitcher } from "./ExperienceSwitcher";
 
 interface NavLink { href: string; label: string }
 
@@ -22,10 +23,10 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
   const auth = useAuthActions();
 
   const links: NavLink[] = app ? [] : session?.role === "owner"
-    ? [{ href: "/owners/", label: "Dashboard" }, { href: "/owners/review/", label: "Review" }, { href: "/owners/people/", label: "People" }, { href: "/owners/waitlist/", label: "Waitlist" }, { href: "/emails/", label: "Emails" }]
+    ? [{ href: "/profile/canvas/", label: "Gigster Experience" }, { href: "/owners/", label: "Owner Experience" }, { href: "/hub/", label: "Hub" }]
     : session?.role === "gigster"
       ? [{ href: "/profile/", label: "My profile" }, { href: "/profile/canvas/", label: "Edit profile" }]
-      : [{ href: "/professionals/", label: "For professionals" }, { href: "/storyboard/", label: "Storyboard" }];
+      : [{ href: "/professionals/", label: "For professionals" }, { href: "/storyboard/", label: "Storyboard" }, { href: "/hub/", label: "Hub" }];
 
   // Only the most specific matching link is current: on /profile/canvas/ that's "Edit profile", not "My profile";
   // on /owners/review/ it's "Review", not "Dashboard".
@@ -74,6 +75,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
           </nav>
         )}
         <div className={cx("flex flex-1 items-center justify-end gap-1 sm:gap-2", links.length > 3 ? "swiss:md:col-span-9 swiss:lg:col-span-3" : "swiss:md:col-span-4")}>
+          <ExperienceSwitcher className={app ? undefined : "md:hidden"} />
           <LookSwitcher />
           <ThemeToggle size="sm" showLabel={false} className="pr-0.5!" />
           {app ? null : loading ? <span className="h-11 w-20" aria-hidden="true" /> : session ? (

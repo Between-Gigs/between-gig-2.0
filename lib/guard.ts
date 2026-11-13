@@ -18,8 +18,8 @@ export function useRequireRole(role: Role): Session | null {
   const { session, loading } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const ok = !loading && !!session && session.role === role;
-  const other = !loading && !!session && session.role !== role ? session.role : null;
+  const ok = !loading && !!session && (session.role === role || (role === "gigster" && session.role === "owner" && !!session.personId));
+  const other = !loading && !!session && !ok ? session.role : null;
   React.useEffect(() => {
     if (loading || ok) return;
     if (other) router.replace(home[other]);
