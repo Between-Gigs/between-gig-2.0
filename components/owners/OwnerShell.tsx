@@ -16,6 +16,7 @@ import { Icon3D } from "@/components/ui/Icon3D";
 import type { Icon3DName } from "@/lib/icons3d";
 import { markArea } from "@/lib/split-area";
 import { SAMPLE_OWNER } from "@/lib/data/fields";
+import { ownerEmailPreview } from "@/lib/owner-email-preview";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 
 markArea("bg-split:dashboard");
@@ -24,7 +25,7 @@ markArea("bg-split:dashboard");
 export const COLLAPSED_KEY = "bg2-owner-nav-collapsed";
 
 type CountKey = "review" | "people" | "waitlist";
-interface Item { href: string; label: string; icon: LucideIcon; art: Icon3DName; exact?: boolean; count?: CountKey; hint?: string; short?: string }
+interface Item { href: string; label: string; icon: LucideIcon; art: Icon3DName; fullPage?: boolean; exact?: boolean; count?: CountKey; hint?: string; short?: string }
 
 /** The owners' sections, grouped by the job: see the day, look after Gigsters, talk to people. */
 const sections: { title: string; items: Item[] }[] = [
@@ -38,7 +39,7 @@ const sections: { title: string; items: Item[] }[] = [
     ],
   },
   { title: "Team", items: [{ href: "/owners/staff/", label: "Staff", icon: Users, art: "handshake" }] },
-  { title: "Messages", items: [{ href: "/emails/", label: "Emails", icon: Mail, art: "envelope" }] },
+  { title: "Previews", items: [{ ...ownerEmailPreview(data.kind), icon: Mail, art: "envelope" }] },
 ];
 
 function countsFrom(d: DashboardSummary): Record<CountKey, number> {
@@ -373,11 +374,11 @@ function TabBar({ counts, section }: { counts: Record<CountKey, number> | null; 
       })}
       <Menu align="end" className="flex"
         items={[
-          ...rest.map((i) => ({ label: i.label, icon: <i.icon />, checked: active(i) || undefined, onSelect: () => router.push(i.href) })),
+          ...rest.map((i) => ({ label: i.label, icon: <i.icon />, checked: active(i) || undefined, onSelect: () => { if (i.fullPage) window.location.assign(i.href); else router.push(i.href); } })),
           ...(session ? ["separator" as const, { label: "Log out", icon: <LogOut />, onSelect: () => void signOut() }] : []),
         ]}
         trigger={
-          <button type="button" aria-label={moreActive ? "More: Emails, Log out (Emails is open)" : "More: Emails, Log out"} className={cell(moreActive)}>
+          <button type="button" aria-label="More owner pages and account actions" className={cell(moreActive)}>
             <Ellipsis aria-hidden="true" className="size-5" strokeWidth={1.75} />
             <span aria-hidden="true">More</span>
           </button>
@@ -416,8 +417,15 @@ function NavLink({ item: i, count, active, attention, drawer = false, onNavigate
   const brand = look !== "swiss";
   const name = count !== undefined && i.hint ? `${i.label}, ${count} ${i.hint}` : i.label;
   const Icon = i.icon;
+  const navigate = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    onNavigate?.();
+    if (i.fullPage && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+      event.preventDefault();
+      window.location.assign(i.href);
+    }
+  };
   if (brand) return (
-    <Link href={i.href} onClick={onNavigate} aria-current={active ? "page" : undefined} aria-label={name} title={name}
+    <Link href={i.href} prefetch={i.fullPage ? false : undefined} onClick={navigate} aria-current={active ? "page" : undefined} aria-label={name} title={name}
       className={cx(
         "group flex min-h-12 items-center gap-3 rounded-lg px-3 py-1.5 text-label-md transition-colors duration-fast",
         !drawer && "nav-collapsed:size-12 nav-collapsed:min-h-12 nav-collapsed:justify-center nav-collapsed:p-0",
@@ -443,7 +451,7 @@ function NavLink({ item: i, count, active, attention, drawer = false, onNavigate
     </Link>
   );
   return (
-    <Link href={i.href} aria-current={active ? "page" : undefined} aria-label={name} title={name}
+    <Link href={i.href} prefetch={i.fullPage ? false : undefined} onClick={navigate} aria-current={active ? "page" : undefined} aria-label={name} title={name}
       className={cx(
         "group flex min-h-12 items-center gap-3 border-b border-line px-2.5 py-1.5 transition-colors duration-fast",
         "nav-collapsed:size-12 nav-collapsed:min-h-12 nav-collapsed:justify-center nav-collapsed:p-0",
