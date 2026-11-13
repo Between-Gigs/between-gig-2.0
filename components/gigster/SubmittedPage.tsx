@@ -4,7 +4,7 @@
  * "IN REVIEW", the serif "Profile submitted.", the thanks line, their name and title, "View my profile" and "Edit
  * profile", and "Your profile stays private during review." Opened at another time, it says where the profile stands.
  */
-import { Skeleton } from "@ds/components";
+import { Skeleton, cx } from "@ds/components";
 import { Check } from "lucide-react";
 import * as React from "react";
 import { data, type Person, type ProfileFields } from "@/lib/data";
@@ -22,10 +22,13 @@ markArea("bg-split:dashboard");
 function Stage({ children }: { children: React.ReactNode }) {
   return (
     <section className="relative isolate flex flex-1 items-center overflow-hidden bg-bg">
-      <picture>
-        <source media="(min-width: 48rem)" srcSet={asset("/art/stage/still-life-desktop.jpg")} />
-        <img src={asset("/art/stage/still-life-portrait.jpg")} alt="" aria-hidden="true" className="absolute inset-0 -z-10 size-full object-cover object-center dark:opacity-20" />
-      </picture>
+      {[false, true].map((night) => (
+        <picture key={String(night)}>
+          <source media="(min-width: 48rem)" srcSet={asset(night ? "/art/stage/still-life-desktop-night.jpg" : "/art/stage/still-life-desktop.jpg")} />
+          <img src={asset(night ? "/art/stage/still-life-portrait-night.jpg" : "/art/stage/still-life-portrait.jpg")} alt="" aria-hidden="true" loading="lazy"
+            className={cx("absolute inset-0 -z-10 size-full object-cover object-center", night ? "hidden dark:block" : "dark:hidden")} />
+        </picture>
+      ))}
       {children}
     </section>
   );

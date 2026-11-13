@@ -45,6 +45,11 @@ const crewCall: Artwork[] = [
   },
 ];
 
+/** Night grades of the two photographic sets, for the dark theme (made from the originals, not new scenes). */
+const night = (items: Artwork[]): Artwork[] => items.map((a) => ({
+  ...a, file: a.file.replace(/\.jpg$/, "-night.jpg"), title: `${a.title} · Night`, alt: `${a.alt} Graded for night: deep shadows, warm lights.`,
+}));
+
 const callSheet: Artwork[] = [
   {
     file: "call-sheet-night.jpg", title: "Night horizon",
@@ -126,13 +131,15 @@ export default function WallpapersPage() {
         </header>
         <section aria-labelledby="invitation-art">
           <h2 id="invitation-art" className="font-display text-heading-lg text-ink">The craft invitation</h2>
-          <p className="mt-2 max-w-2xl text-body-md text-ink-muted">The invitation’s original portrait composition and a widescreen companion, both with a clear center.</p>
+          <p className="mt-2 max-w-2xl text-body-md text-ink-muted">The invitation’s original portrait composition and a widescreen companion, both with a clear center, in day and night.</p>
           <FormatPair items={invitation} collection="The craft invitation" />
+          <FormatPair items={night(invitation)} collection="The craft invitation" />
         </section>
         <section aria-labelledby="crew-call-art" className="mt-14 border-t border-line pt-8 sm:mt-16 swiss:border-t-4 swiss:border-line-strong">
           <h2 id="crew-call-art" className="font-display text-heading-lg text-ink">Crew Call film set</h2>
-          <p className="mt-2 max-w-2xl text-body-md text-ink-muted">The sunlit film set from Crew Call, in a widescreen crop and a portrait adaptation.</p>
+          <p className="mt-2 max-w-2xl text-body-md text-ink-muted">The sunlit film set from Crew Call, in a widescreen crop and a portrait adaptation, in day and night.</p>
           <FormatPair items={crewCall} collection="Crew Call film set" />
+          <FormatPair items={night(crewCall)} collection="Crew Call film set" />
         </section>
         <section aria-labelledby="call-sheet-art" className="mt-14 border-t border-line pt-8 sm:mt-16 swiss:border-t-4 swiss:border-line-strong">
           <h2 id="call-sheet-art" className="font-display text-heading-lg text-ink">Los Angeles Call Sheet</h2>

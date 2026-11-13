@@ -57,7 +57,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
 
   return (
     // Swiss (product screens): the same row on a 12-column grid from md (logo · links · account), closed by a 4px ink rule.
-    <header className={cx("sticky top-0 embedded:hidden! z-sticky border-b border-line", app ? "bg-surface" : "bg-bg swiss:border-b-0")}>
+    <header className={cx("sticky top-0 embedded:hidden! z-sticky border-b border-line shadow-md" /* a clear drop shadow (client, 13 Nov 2026) */, app ? "bg-surface" : "bg-bg swiss:border-b-0 swiss:shadow-none")}>
       <div className={cx("mx-auto px-4 sm:px-6", app ? "max-w-none lg:px-5" : "max-w-7xl")}>
       <div className={cx("flex h-16 items-center gap-4 lg:h-20", app ? "h-16! gap-2" : "swiss:border-b-4 swiss:border-line-strong swiss:md:grid swiss:md:grid-cols-12 swiss:md:gap-x-6")}>
         {onOpenNav && <IconButton label="Open owner menu" variant="ghost" icon={<MenuIcon />} onClick={onOpenNav} className="lg:hidden" />}
