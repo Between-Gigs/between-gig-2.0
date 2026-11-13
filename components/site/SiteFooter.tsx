@@ -8,15 +8,16 @@ const linkClass = "inline-flex min-h-11 w-fit items-center text-body-md text-ink
 const label = "mb-2 text-eyebrow text-ink-muted uppercase";
 
 /**
- * The footer in the Green Room style (Justin's Flow): the cream page closed by a strong forest rule, the logo with the
+ * The footer in the Green Room style (Justin's Flow): a soft tinted band under the page, the logo with the
  * brand line in serif and the contact address on the left, two short link columns on the right, and one thin-ruled
  * line of small print. No trademark line (removed at the client's request, 13 Nov 2026).
  */
 export function SiteFooter() {
   return (
-    <footer className="bg-bg embedded:hidden!">
+    // A soft band of its own instead of a rule across the top (client, 13 Nov 2026).
+    <footer className="bg-surface-sunken embedded:hidden!">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-10 border-t-2 border-line-strong pt-10 pb-12 md:grid-cols-12 md:gap-x-8">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 pt-12 pb-12 md:grid-cols-12 md:gap-x-8">
           <div className="col-span-2 grid content-start gap-4 md:col-span-6">
             <Link href="/" aria-label="Between Gigs home" className="inline-flex w-fit rounded-md"><Logo height={36} /></Link>
             <p className="max-w-sm font-display text-heading-lg text-balance text-ink">Extraordinary talent. <span className="text-ink-brand">Everyday solutions.</span></p>

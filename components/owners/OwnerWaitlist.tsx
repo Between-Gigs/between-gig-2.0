@@ -1,6 +1,6 @@
 "use client";
 import { Badge, Button, Checkbox, Input, Modal, Pager, Select, cx, type BadgeTone, useToast } from "@ds/components";
-import { Eye, Mail, RotateCw, Search, Send, X } from "lucide-react";
+import { Mail, RotateCw, Search, Send, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -47,7 +47,6 @@ function Waitlist() {
   const [page, setPage] = React.useState(1);
   const [selected, setSelected] = React.useState<string[]>([]);
   const [confirm, setConfirm] = React.useState(false);
-  const [preview, setPreview] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   /** Bulk invites go 10 at a time: how many have been sent so far, of how many. */
   const [progress, setProgress] = React.useState<[number, number] | null>(null);
@@ -218,18 +217,11 @@ function Waitlist() {
             {hidden > 0 && <p className="text-body-sm text-ink-muted tabular-nums">{hidden} hidden by filters</p>}
             <Button size="sm" variant="ghost" iconStart={<X />} onClick={() => setSelected([])}>Clear</Button>
             <div className="ml-auto flex gap-2">
-              <Button size="sm" variant="secondary" iconStart={<Eye />} onClick={() => setPreview(true)}>Preview email</Button>
               <Button size="sm" variant="primary" iconStart={<Send />} onClick={() => setConfirm(true)}>Invite {people(n)}</Button>
             </div>
           </div>
         )}
       </div>
-
-      <Modal open={preview} onClose={() => setPreview(false)} size="lg" title="The invite email"
-        description={`What ${n === 1 ? "they get" : `each of the ${n} gets`}, with their own “Create your profile” link. Shown for ${emails[0] ?? "the first person"}.`}
-        footer={<><Button variant="ghost" onClick={() => setPreview(false)}>Close</Button><Button variant="primary" iconStart={<Send />} onClick={() => { setPreview(false); setConfirm(true); }}>Invite {people(n)}</Button></>}>
-        <iframe title="Invite email preview" srcDoc={email.html} className="block h-120 w-full border border-line bg-surface" />
-      </Modal>
 
       <Modal open={confirm} onClose={() => setConfirm(false)} size="sm" title={`Invite ${people(n)}?`}
         description={<>We queue {invites(n)}, one to each address, with a personal link that&apos;s valid for 30 days.</>}
@@ -241,9 +233,6 @@ function Waitlist() {
             <p className="text-body-sm break-words text-ink-muted">To {emails.slice(0, 2).join(", ")}{emails.length > 2 ? ` and ${emails.length - 2} more` : ""}</p>
             {hidden > 0 && <p className="text-body-sm text-ink-muted tabular-nums">{hidden === n ? (n === 1 ? "They're" : "All of them are") : `${hidden} of them ${hidden === 1 ? "is" : "are"}`} hidden by the filters right now.</p>}
           </div>
-          <button type="button" onClick={() => { setConfirm(false); setPreview(true); }} className="inline-flex min-h-6 w-fit items-center gap-1 text-label-md text-link underline underline-offset-2">
-            <Eye className="size-4" aria-hidden="true" />Preview the email
-          </button>
         </div>
       </Modal>
       </OwnerPage>

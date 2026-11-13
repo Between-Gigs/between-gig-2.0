@@ -153,6 +153,10 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
     // Not on the list: the team reviews a new service before it shows (it is stored as "Something else").
     ...(current === undefined && !otherOpen ? [{ value: OTHER, label: "Something else: name your own" }] : []),
   ];
+  // "Something else" holds the service's name on its first line and what they'd do after it.
+  const [otherName = "", ...otherRest] = d.other.split("\n");
+  const otherLine = otherRest.join(" ");
+  const setOther = (name: string, line: string) => set("other")(line.trim() ? `${name}\n${line.slice(0, SERVICE_LINE_MAX)}` : name);
   const pickNew = (next: string) => {
     if (next !== OTHER) return add(next);
     setOtherOpen(true); setAdding(false);
@@ -225,17 +229,28 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
           );
         })}
         {otherOpen && (
-          <li key="other" className="grid gap-2 border-b border-line pb-5">
-            <div className="flex items-start gap-1">
-              <div className="grid min-w-0 flex-1 gap-1.5">
-                <label htmlFor="f-other" className="text-body-md text-ink">Your own service</label>
-                <Input id="f-other" value={d.other} maxLength={SERVICE_LINE_MAX} placeholder="e.g. Pet portraits, or home organizing for moves"
-                  onChange={(e) => set("other")(e.target.value.slice(0, SERVICE_LINE_MAX))} />
-                <p className="text-body-sm text-ink-muted">Not on the list? Name it and say what you&apos;d do. The Between Gigs team reviews new services before they show on your profile.</p>
+          // Their own service, laid out like the others: its name, then what a customer can hire them to do. Both go
+          // in "Something else" (name on the first line), which the team reviews before it shows.
+          <li key="other" className="grid gap-3 border-b border-line pb-5">
+            <div className="grid gap-4 sm:grid-cols-12 sm:gap-0">
+              <div className="flex items-start gap-1 sm:col-span-5 sm:pr-5">
+                <div className="grid min-w-0 flex-1 gap-1.5">
+                  <label htmlFor="f-other" className="text-body-md text-ink">Your own service</label>
+                  <Input id="f-other" value={otherName} maxLength={60} placeholder="e.g. Web design"
+                    onChange={(e) => setOther(e.target.value.replace(/\n/g, " "), otherLine)} />
+                </div>
+                <button type="button" aria-label="Remove your own service" onClick={() => { set("other")(""); setOtherOpen(false); }}
+                  className="mt-7 grid size-10 shrink-0 place-items-center rounded-md text-ink-muted hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-focus"><Trash2 aria-hidden="true" className="size-4" /></button>
               </div>
-              <button type="button" aria-label="Remove your own service" onClick={() => { set("other")(""); setOtherOpen(false); }}
-                className="grid size-10 shrink-0 place-items-center rounded-md text-ink-muted hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-focus"><Trash2 aria-hidden="true" className="size-4" /></button>
+              <div className="grid min-w-0 gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
+                <label htmlFor="f-other-line" className="text-body-md text-ink">What can a customer hire you to do?</label>
+                <Textarea id="f-other-line" rows={2} showCount maxLength={SERVICE_LINE_MAX} value={otherLine}
+                  placeholder="I'll design and build a simple website for your business."
+                  onChange={(e) => setOther(otherName, e.target.value)} />
+                <p className="text-body-sm text-ink-muted italic">Example: Hang artwork and style a room for a party.</p>
+              </div>
             </div>
+            <p className="text-body-sm text-ink-muted">Not on the list? The Between Gigs team reviews new services before they show on your profile.</p>
           </li>
         )}
         {showBlank && (

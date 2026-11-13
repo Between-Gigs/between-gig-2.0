@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { comingSoon, hero, services, testimonials, type CrewIcon } from "@/lib/crew-call";
 import { asset } from "@/lib/site";
+import { ThemedImg } from "@/components/ui/ThemedImg";
 import { Planner, type PlannerTopic } from "@/components/funnel/Storyboard";
 import { Page } from "@/components/site/Page";
 
@@ -37,7 +38,7 @@ function CrewTile({ title, line, badge, object, onOpen }: { title: string; line:
   return (
     <button type="button" onClick={onOpen}
       className="group relative flex h-full min-h-32 w-full overflow-hidden rounded-md border border-line-strong bg-surface text-left shadow-xs transition-shadow duration-fast hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
-      <img src={asset(object)} alt="" width={180} height={165} loading="lazy" decoding="async"
+      <ThemedImg src={object} width={180} height={165}
         className="absolute inset-y-0 right-0 h-full w-2/5 object-cover object-right mask-l-from-60% mask-l-to-100%" />
       <span className="relative grid w-3/5 min-w-0 content-start gap-2 p-3 pr-1">
         <span className="flex items-center gap-2.5">
@@ -72,7 +73,7 @@ export function CrewCall() {
         <div data-client-locked="" className="bg-bg text-ink">
           {/* Hero: the client's film-set photo, the promise in the forest serif, one search. */}
           <section aria-labelledby="cc-h" className="relative isolate mx-auto max-w-7xl overflow-hidden">
-            <img src={asset(hero.image)} alt="" width={1600} height={800} className="absolute inset-0 -z-20 size-full object-cover" />
+            <ThemedImg src={hero.image} width={1600} height={800} loading="eager" className="absolute inset-0 -z-20 size-full object-cover" />
             {/* A wash in the page colour behind the words: barely there on light, a dusk scrim on dark. */}
             <span aria-hidden="true" className="absolute inset-0 -z-10 bg-radial from-bg/70 via-bg/30 to-transparent" />
             <div className="mx-auto grid max-w-3xl justify-items-center gap-5 px-4 pt-12 pb-14 text-center sm:px-6 sm:pt-16 sm:pb-16">
