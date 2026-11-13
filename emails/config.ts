@@ -18,13 +18,14 @@ export const FOOTER_ADDRESS_LINE = `Between Gigs · ${MAILING_ADDRESS}`;
  * When a Gigster can expect to hear back after submitting, read as "You'll hear from us <REVIEW_TIME>." A concrete
  * promise (Peter: "say when they can expect to hear from us"); the email and /profile/submitted/ both read it.
  */
-export const REVIEW_TIME = "within 3 business days";
+export const REVIEW_TIME = "within 3\u00a0business days";
 
 /**
- * What vetting there is, for the confirmation email: the team's review of every profile, which is real today. No
- * background check exists, so none is mentioned; if one is added, say here when it happens and how we'll get in touch.
+ * Vetting, for the confirmation email. The vetting today is the team's review, which the email already describes
+ * ("Our team will review your profile…"), so this adds nothing. No background check exists; if one is added, say here
+ * in one sentence when it happens and how we'll get in touch.
  */
-export const VETTING_NOTE: string | null = "Every profile is read by a person on our team before it goes live. If we need anything else from you, we'll email you.";
+export const VETTING_NOTE: string | null = null;
 
 /** How the Gigster emails sign off (Peter, Nov 2026: "we're part of a community, not a cold machine"). */
 export const SIGN_OFF = "YOUR BETWEEN GIGS TEAM";
