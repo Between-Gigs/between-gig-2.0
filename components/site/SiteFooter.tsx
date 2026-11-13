@@ -23,8 +23,9 @@ const label = "mb-2 text-eyebrow text-ink-muted uppercase";
  * brand line in serif and the contact address on the left, two short link columns on the right, and one thin-ruled
  * line of small print. No trademark line (removed at the client's request, 13 Nov 2026).
  */
-/** The site footer uses option 1, the craft table (client, 13 Nov 2026); pass `photo={null}` for none. */
-export function SiteFooter({ photo = "craft" }: { photo?: FooterPhoto | null } = {}) {
+/** No photo on the site footer (client, 13 Nov 2026: "it shouldn't come with the footer"). The photo bands stay
+ * available for the /preview/footers/ comparison. */
+export function SiteFooter({ photo = null }: { photo?: FooterPhoto | null } = {}) {
   return (
     // A soft band of its own instead of a rule across the top (client, 13 Nov 2026).
     <footer className="bg-surface-sunken embedded:hidden!">
@@ -35,7 +36,7 @@ export function SiteFooter({ photo = "craft" }: { photo?: FooterPhoto | null } =
           <ThemedImg src={`/art/footer/${photo}.jpg`} width={1920} height={640} className="absolute inset-0 size-full object-cover" />
         </div>
       )}
-      <div className={cx("relative bg-surface-sunken", photo && "shadow-lift")}>
+      <div className="relative bg-surface-sunken shadow-lift">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="grid grid-cols-2 gap-x-6 gap-y-10 pt-12 pb-12 md:grid-cols-12 md:gap-x-8">
           <div className="col-span-2 grid content-start gap-4 md:col-span-6">
