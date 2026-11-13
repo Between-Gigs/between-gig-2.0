@@ -243,12 +243,12 @@ function Editor({ personId }: { personId: string }) {
       {/* The bar: where the profile stands, saving, Preview and Submit. */}
       <div className="sticky top-16 z-sticky border-b border-line bg-bg lg:top-20 embedded:top-0">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
+          {/* Going back sits where back always is: first, on the left. */}
+          {view === "preview" && <Button variant="secondary" iconStart={<ArrowLeft />} className="min-h-11" onClick={() => switchView("edit")}>Back to edit</Button>}
           <p className="flex min-w-0 items-center gap-2 text-label-md font-semibold text-ink"><FileText aria-hidden="true" className="size-4 shrink-0" />{stateLabel}</p>
           <SaveIndicator state={save} onRetry={() => { dirty.current = true; void flush(); }} />
           <div className="ml-auto flex items-center gap-2">
-            {view === "edit"
-              ? <Button variant="secondary" iconStart={<Eye />} className="min-h-11" onClick={() => switchView("preview")}>Preview</Button>
-              : <Button variant="secondary" iconStart={<ArrowLeft />} className="min-h-11" onClick={() => switchView("edit")}>Back to edit</Button>}
+            {view === "edit" && <Button variant="secondary" iconStart={<Eye />} className="min-h-11" onClick={() => switchView("preview")}>Preview</Button>}
             <span className="max-sm:hidden">{sendButton("md")}</span>
           </div>
         </div>
@@ -257,18 +257,16 @@ function Editor({ personId }: { personId: string }) {
       <div data-gigster-editor="" className="mx-auto grid max-w-7xl gap-12 px-4 pt-8 pb-24 sm:px-6 lg:pt-12">
         {view === "preview" ? (
           <div className="grid gap-8">
-            <div className="grid gap-4 rounded-lg border border-line bg-surface p-5 sm:flex sm:items-center sm:justify-between sm:gap-6 sm:p-6">
+            {/* "Back to edit" is in the sticky bar above (left), so the banner only says where you are. */}
+            <div className="grid gap-4 rounded-lg border border-line bg-surface p-5 sm:p-6">
               <div className="grid gap-1">
                 <p className="text-eyebrow tracking-widest text-ink-muted uppercase">Preview</p>
                 <Heading level="h3" as="h1">This is how clients will see your profile.</Heading>
                 <Text size="sm" muted>Your booking contact and ZIP code stay private. Your profile stays private until the team approves it.</Text>
               </div>
-              <div className="flex flex-wrap gap-2 sm:shrink-0">
-                <Button variant="secondary" size="lg" iconStart={<ArrowLeft />} onClick={() => switchView("edit")}>Back to edit</Button>
-              </div>
             </div>
             <ProfileView person={person} fields={d} mode="own" />
-            <div className="flex flex-wrap items-center justify-end gap-3 border-t border-line pt-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-6">
               <Button variant="secondary" size="lg" iconStart={<ArrowLeft />} onClick={() => switchView("edit")}>Back to edit</Button>
               {sendButton("lg")}
             </div>
