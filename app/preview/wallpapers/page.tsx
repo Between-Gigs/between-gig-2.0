@@ -6,7 +6,7 @@ import { asset } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Wallpapers & background art",
-  description: "Download the Between Gigs invitation artwork, Crew Call film set and Los Angeles Call Sheet backgrounds.",
+  description: "Download the Between Gigs craft invitation and Crew Call film set backgrounds.",
   robots: { index: false, follow: false },
 };
 
@@ -49,37 +49,6 @@ const crewCall: Artwork[] = [
 const night = (items: Artwork[]): Artwork[] => items.map((a) => ({
   ...a, file: a.file.replace(/\.jpg$/, "-night.jpg"), title: `${a.title} · Night`, alt: `${a.alt} Graded for night: deep shadows, warm lights.`,
 }));
-
-const callSheet: Artwork[] = [
-  {
-    file: "call-sheet-night.jpg", title: "Night horizon",
-    alt: "A fine field of dots crosses a dark forest-green background above a curved, glowing mint horizon.",
-    width: 3840, height: 2160,
-  },
-  {
-    file: "call-sheet-day.jpg", title: "Day horizon",
-    alt: "A pale green field of dots with a soft mint horizon illuminating its lower edge.",
-    width: 3840, height: 2160,
-  },
-  {
-    file: "stage-curtain.jpg", title: "Stage curtain",
-    alt: "Pleats of mint-green dots hang above the Call Sheet stage in a dark theater.",
-    width: 3840, height: 2160,
-  },
-];
-
-const templateFrame: Artwork[] = [
-  {
-    file: "template-craft-desktop.jpg", title: "Desktop",
-    alt: "Forest-green velvet, brass scissors, a vintage camera, film, fabric swatches and a dress sketch frame a wide ivory field.",
-    width: 1920, height: 1080,
-  },
-  {
-    file: "template-craft-portrait.jpg", original: "email/craft-border.jpg", title: "Template portrait",
-    alt: "The portrait frame used behind the HTML invitation, with a camera body, ribbon, landscape prints and a dress sketch.",
-    width: 900, height: 1125,
-  },
-];
 
 function ArtPrint({ art, collection }: { art: Artwork; collection: string }) {
   const directory = "art/wallpapers/";
@@ -141,18 +110,7 @@ export default function WallpapersPage() {
           <FormatPair items={crewCall} collection="Crew Call film set" />
           <FormatPair items={night(crewCall)} collection="Crew Call film set" />
         </section>
-        <section aria-labelledby="call-sheet-art" className="mt-14 border-t border-line pt-8 sm:mt-16 swiss:border-t-4 swiss:border-line-strong">
-          <h2 id="call-sheet-art" className="font-display text-heading-lg text-ink">Los Angeles Call Sheet</h2>
-          <p className="mt-2 max-w-2xl text-body-md text-ink-muted">4K stills from the homepage’s Day and Night horizons and its dot-matrix stage curtain.</p>
-          <div className="mt-6 grid gap-x-6 gap-y-8 md:grid-cols-3">
-            {callSheet.map((art) => <ArtPrint key={art.file} art={art} collection="Call Sheet" />)}
-          </div>
-        </section>
-        <section aria-labelledby="template-art" className="mt-14 border-t border-line pt-8 sm:mt-16 swiss:border-t-4 swiss:border-line-strong">
-          <h2 id="template-art" className="font-display text-heading-lg text-ink">Email template frame</h2>
-          <p className="mt-2 max-w-2xl text-body-md text-ink-muted">The template’s alternate flat lay, with a vintage camera, a tape measure, and landscape prints.</p>
-          <FormatPair items={templateFrame} collection="Email template frame" />
-        </section>
+
       </div>
     </Page>
   );

@@ -145,7 +145,7 @@ function WarmWelcome({ login, eyebrow, showSteps }: { login: boolean; eyebrow?: 
           <Icon3D name="clapper_board" className="size-7" />
           <span className="grid"><b className="text-label-md">Production comes first</b><span className="text-body-sm text-ink-muted">Pause any time</span></span>
         </span>
-        <img src={asset("email/craft-bottom.jpg")} alt="" className="block aspect-video w-full rounded-tl-2xl object-cover" />
+        <img src={asset("email/craft-invitation-desktop.jpg")} alt="" className="block aspect-video w-full rounded-tl-2xl object-cover" />
       </div>
     </aside>
   );
