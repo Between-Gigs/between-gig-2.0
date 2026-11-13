@@ -134,7 +134,7 @@ function Section({ n, id, title, body, aside, art, children }: { art?: SectionAr
   if (cards && !art) return <section aria-labelledby={id}><h2 id={id} className="sr-only">{title}</h2>{children}</section>;
   if (cards && art) {
     return (
-      <section aria-labelledby={id} className={cx("rounded-2xl border border-line bg-surface p-6 sm:p-8", id === "roles-h" ? "mt-14" : "mt-6")}>
+      <section aria-labelledby={id} className={cx("grid gap-6 rounded-2xl border border-line bg-surface p-6 sm:p-8", id === "roles-h" ? "mt-14" : "mt-6")}>
         <SectionHead id={id} title={title} body={body} icon={art.icon} tint={art.tint}>{aside}</SectionHead>
         {children}
       </section>
@@ -210,7 +210,7 @@ function Guide() {
           <ThemeBadge />
         </nav>
       </BrandBand>
-      <div className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 card-layout:relative card-layout:z-raised card-layout:-mt-12">
+      <div className="mx-auto max-w-7xl px-4 pt-10 pb-20 sm:px-6 sm:pt-12">
         <section aria-labelledby="experience-h" className="mb-8 grid gap-4 rounded-2xl border border-line bg-surface p-5 sm:p-7">
           <div><h2 id="experience-h" className="font-display text-heading-lg text-ink">Choose your experience</h2><p className="mt-1 text-body-md text-ink-muted">One account can be both a Gigster and part of the team.</p></div>
           <div className="grid gap-3 md:grid-cols-3">
