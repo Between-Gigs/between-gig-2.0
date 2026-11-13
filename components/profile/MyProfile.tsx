@@ -31,6 +31,8 @@ const when = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-US", 
 export function MyProfile() {
   const look = useLook();
   const warm = look !== "swiss";
+  /* Editorial (the gold standard, Justin's Flow p3): ruled sections and serif heads, no tinted cards or 3D art. */
+  const ruled = look === "editorial";
   const template = useProfileTemplate();
   const session = useRequireRole("gigster");
   const [s, setS] = React.useState<PersonSummary | null>(null);
@@ -62,8 +64,8 @@ export function MyProfile() {
   const state = !started || !fields ? "new" : person.status;
 
   const nextStep = state === "approved" && fields
-    ? <Live person={person} warm={warm} />
-    : <Status person={person} state={state} parts={partsDone(fields, person.name, template)} first={first} warm={warm} />;
+    ? <Live person={person} warm={warm} ruled={ruled} />
+    : <Status person={person} state={state} parts={partsDone(fields, person.name, template)} first={first} warm={warm} ruled={ruled} />;
   const expanded = expandedId === person.id;
   const previewFields = fields ?? blankFields(person.name);
   const card = (
@@ -88,7 +90,7 @@ export function MyProfile() {
   if (warm) return (
     <Page decor="corners">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="flex items-center gap-3 font-display text-display-sm wrap-anywhere text-ink"><Icon3D name="waving_hand" className="size-10" />Hi, {first}</h1>
+        <h1 className={cx("flex items-center gap-3 font-display wrap-anywhere text-ink", ruled ? "text-display-md" : "text-display-sm")}>{!ruled && <Icon3D name="waving_hand" className="size-10" />}Hi, {first}</h1>
         {state !== "new" && <PersonStatusBadge status={person.status} audience="gigster" />}
       </div>
       <p className="mt-2 text-body-lg text-ink-muted">Here&apos;s where your profile stands.</p>
@@ -97,8 +99,10 @@ export function MyProfile() {
         <div className="lg:col-span-7">
           {nextStep}
         </div>
-        <aside aria-label="Your card in search" className="grid gap-4 rounded-2xl bg-tint-sand p-5 text-tint-ink sm:p-6 lg:col-span-5">
-          <p className="flex items-center gap-2 text-label-md text-tint-ink"><Icon3D name="eyes" className="size-7" />Your card in search</p>
+        <aside aria-label="Your card in search" className={cx("grid gap-4 lg:col-span-5", ruled ? "border-t border-line-strong pt-5" : "rounded-2xl bg-tint-sand p-5 text-tint-ink sm:p-6")}>
+          {ruled
+            ? <div><h2 className="font-display text-heading-lg text-ink">Your card in search</h2><p className="mt-1 text-body-md text-ink-muted">What clients see when they browse.</p></div>
+            : <p className="flex items-center gap-2 text-label-md text-tint-ink"><Icon3D name="eyes" className="size-7" />Your card in search</p>}
           {card}
         </aside>
       </div>
@@ -156,7 +160,7 @@ function SectionLabel({ n, id, children }: { n: string; id: string; children: Re
 const onMint = "justify-between! bg-forest-950! text-white! hover:bg-forest-800!";
 
 /** One card, one next step: not started, draft, with the team, or changes requested. */
-function Status({ person, state, parts, first, warm }: { warm: boolean; person: Person; state: string; parts: { done: number; total: number }; first: string }) {
+function Status({ person, state, parts, first, warm, ruled }: { warm: boolean; ruled: boolean; person: Person; state: string; parts: { done: number; total: number }; first: string }) {
   const notes = person.reviewNotes ?? [];
   const c = {
     new: { title: "Let's build your profile", body: "Fill it in right on the page clients will see. It takes about 10 minutes and saves as you go.", cta: "Start your profile" },
@@ -171,18 +175,18 @@ function Status({ person, state, parts, first, warm }: { warm: boolean; person: 
   const tint = { draft: "bg-tint-butter", submitted: "bg-tint-sky", changes_requested: "bg-tint-peach" }[state] ?? "bg-tint-mint-soft";
   const Heading = warm ? "h2" : "h3";
   return (
-    <section aria-labelledby="status-h" className={cx("grid gap-6 p-6 sm:p-8", warm ? cx("rounded-2xl text-tint-ink", tint) : "bg-tint-mint text-forest-950")}>
+    <section aria-labelledby="status-h" className={cx("grid gap-6", ruled ? "border-t border-line-strong pt-5 text-ink" : warm ? cx("rounded-2xl p-6 text-tint-ink sm:p-8", tint) : "bg-tint-mint p-6 text-forest-950 sm:p-8")}>
       <div className={warm ? "flex flex-col items-start gap-5 sm:flex-row" : "grid gap-3"}>
-        {warm ? <span aria-hidden="true" className="grid size-20 shrink-0 place-items-center rounded-full bg-surface shadow-sm"><Icon3D name={art[state] ?? "memo"} className="size-12" /></span> : <Icon aria-hidden="true" className="size-8" strokeWidth={2.25} />}
+        {ruled ? null : warm ? <span aria-hidden="true" className="grid size-20 shrink-0 place-items-center rounded-full bg-surface shadow-sm"><Icon3D name={art[state] ?? "memo"} className="size-12" /></span> : <Icon aria-hidden="true" className="size-8" strokeWidth={2.25} />}
         <div className="grid gap-1.5">
         <Heading id="status-h" className="font-display text-heading-lg text-balance">{c.title}</Heading>
-        <p className={cx("max-w-prose wrap-anywhere", warm ? "text-body-md" : "text-body-lg")}>{c.body}</p>
+        <p className={cx("max-w-prose wrap-anywhere", ruled ? "text-body-lg text-ink-muted" : warm ? "text-body-md" : "text-body-lg")}>{c.body}</p>
         </div>
       </div>
       {state === "changes_requested" && notes.length > 0 && (
         <ul className={warm ? "grid gap-2" : "grid"}>
           {notes.map((n) => (
-            <li key={n.note} className={cx("grid gap-1 text-body-md", warm ? "rounded-lg bg-surface p-4 text-ink shadow-xs" : "border-t-2 border-forest-950 py-3")}><b className="text-eyebrow uppercase">{sectionLabel[n.section]}</b>{n.note}</li>
+            <li key={n.note} className={cx("grid gap-1 text-body-md", ruled ? "border-t border-line py-3 text-ink" : warm ? "rounded-lg bg-surface p-4 text-ink shadow-xs" : "border-t-2 border-forest-950 py-3")}><b className="text-eyebrow uppercase">{sectionLabel[n.section]}</b>{n.note}</li>
           ))}
         </ul>
       )}
@@ -196,7 +200,7 @@ function Status({ person, state, parts, first, warm }: { warm: boolean; person: 
 }
 
 /** Approved: the public link, sharing, and this month's availability, in one light card. */
-function Live({ person, warm }: { person: Person; warm: boolean }) {
+function Live({ person, warm, ruled }: { person: Person; warm: boolean; ruled: boolean }) {
   const toast = useToast();
   const first = person.name.split(" ")[0] || "there";
   const url = absoluteUrl(`/p/${person.slug}/`);
@@ -215,7 +219,7 @@ function Live({ person, warm }: { person: Person; warm: boolean }) {
     <section data-theme="dark" aria-labelledby="live-h" className={cx("relative isolate grid overflow-hidden bg-surface-brand phosphor-dots p-6 text-ink", warm ? "gap-6 rounded-2xl sm:p-8" : "gap-8 sm:p-10")}>
       <span aria-hidden="true" className="glow-horizon -z-10 opacity-50" />
       <div className={warm ? "flex flex-col items-start gap-5 sm:flex-row" : "grid gap-3"}>
-        {warm && <span aria-hidden="true" className="grid size-20 shrink-0 place-items-center rounded-full bg-surface shadow-sm"><Icon3D name="party_popper" className="size-12" /></span>}
+        {warm && !ruled && <span aria-hidden="true" className="grid size-20 shrink-0 place-items-center rounded-full bg-surface shadow-sm"><Icon3D name="party_popper" className="size-12" /></span>}
         <div className="grid gap-1.5">
           {!warm && <p className="text-eyebrow text-ink-brand uppercase">Live on Between Gigs</p>}
           <Heading id="live-h" className={cx("font-display wrap-anywhere text-ink", warm ? "text-heading-lg" : "text-display-sm sm:text-display-md")}>You&apos;re live, {first}</Heading>
