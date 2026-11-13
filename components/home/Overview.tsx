@@ -53,6 +53,7 @@ const groups: { id: string; art: SectionArt; title: string; body: string; pages:
     { href: "/preview/design-system/", title: "Design system", body: "Every theme side by side, Styled or Unstyled, and each atom, molecule, organism and template live." },
     { href: "/preview/profile-editor/", title: "Gigster profile editor", body: "Choose required fields, arrange the form and adjust the profile page." },
     { href: "/preview/wallpapers/", title: "Wallpapers & background art", body: "Download the invitation artwork and Call Sheet backgrounds." },
+    { href: "/preview/footers/", title: "Footer photos", body: "Four photo bands for the footer, on the real footer, to pick one." },
     { href: "/workspace/", title: "Workspace", body: "Every project in one shell: switcher, ⌘K, folders, and each page inside it." },
     { href: "/owners/staff/", title: "Staff & access", body: "Manage invitations, multiple roles and access rules in the sample dashboard." },
     { href: "/studio/", title: "Studio", body: "A page designer with a CMS: tables, galleries, kanban, lists and calendars." },

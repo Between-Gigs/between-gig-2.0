@@ -148,22 +148,22 @@ export function CrewCall() {
             </div>
 
             {soon.length > 0 && (
-              <div className="mt-8 border-t-2 border-line-strong pt-6">
-                <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-2">
-                  <h3 className="font-serif text-display-sm font-bold text-ink-deep sm:text-display-md">Coming soon</h3>
-                  <p className="text-heading-md text-ink sm:border-l sm:border-line-strong sm:pl-8">Need one now? Tell us what you have in mind.</p>
+              <div className="mt-6 border-t border-line pt-6">
+                              <div className="flex flex-wrap items-end justify-between gap-2">
+                  <h3 className="font-serif text-heading-lg text-ink">Coming soon</h3>
+                  <p className="text-body-sm text-ink-muted">Need one now? Tap it and tell us. We&apos;ll find someone.</p>
                 </div>
-                <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 md:grid-cols-5">
+                <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-5">
                   {soon.map((s) => (
                     <li key={s.id}>
                       <button type="button" onClick={() => pick(s.title, <SoonPatch icon={icons[s.icon]} small />, true)} aria-label={`${s.title}, coming soon. Tell us you need it.`}
                         className="group grid w-full justify-items-center gap-4 rounded-xl px-2 pt-3 pb-3 text-center transition-colors duration-fast hover:bg-surface-hover">
                         <span className="relative grid justify-items-center">
                           <SoonPatch icon={icons[s.icon]} />
-                          <span aria-hidden="true" data-theme="dark" className="absolute -bottom-3 w-32 bg-surface-brand py-0.5 text-center text-label-sm tracking-wide text-ink uppercase shadow-sm"
+                          <span aria-hidden="true" data-theme="dark" className="absolute -bottom-3 w-28 bg-surface-brand py-0.5 text-center text-label-sm tracking-wide text-ink uppercase shadow-sm"
                             style={{ clipPath: "polygon(0 0, 100% 0, 93% 50%, 100% 100%, 0 100%, 7% 50%)" }}>Coming soon</span>
                         </span>
-                        <span className="text-body-lg text-ink group-hover:text-ink-brand">{s.title}</span>
+                        <span className="font-serif text-body-md text-ink group-hover:text-ink-brand">{s.title}</span>
                       </button>
                     </li>
                   ))}
@@ -352,11 +352,10 @@ function Strip({ label, children, className, itemClass, progress = false }: { la
 /** Coming-soon patch until the client's own art arrives: a duotone icon on cream inside the patches' gold ring. */
 function SoonPatch({ icon: Icon, small = false }: { icon: LucideIcon; small?: boolean }) {
   return (
-    // Justin's medallion: a polished gold ring around a cream face with the service's line icon.
-    <span aria-hidden="true" className={cx("grid place-items-center rounded-full bg-linear-to-b from-amber-300 via-amber-700 to-amber-300 shadow-md transition-transform duration-fast group-hover:-translate-y-1",
-      small ? "size-14 p-1" : "size-28 p-1.5")}>
-      <span className="grid size-full place-items-center rounded-full bg-radial from-surface to-amber-100 ring-1 ring-amber-900/20 ring-inset">
-        <Icon className={cx("text-forest-900", small ? "size-6" : "size-12")} strokeWidth={1.4} />
+    <span aria-hidden="true" className={cx("grid place-items-center rounded-full border-4 border-amber-700 bg-amber-100 shadow-md transition-transform duration-fast group-hover:-translate-y-1",
+      small ? "size-14" : "size-24")}>
+      <span className={cx("grid place-items-center rounded-full border-2 border-dashed border-amber-700/40 bg-forest-50", small ? "size-10" : "size-18")}>
+        <Icon className={cx("fill-amber-300/70 text-forest-800", small ? "size-6" : "size-10")} strokeWidth={1.6} />
       </span>
     </span>
   );

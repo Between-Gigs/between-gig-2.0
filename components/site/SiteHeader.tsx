@@ -1,11 +1,12 @@
 "use client";
 import { Avatar, IconButton, Logo, Menu, ThemeToggle, cx, type MenuEntry } from "@ds/components";
-import { LogOut, Menu as MenuIcon, PencilLine, UserRound, Users } from "lucide-react";
+import { LogIn, LogOut, Menu as MenuIcon, PencilLine, UserPlus, UserRound, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import * as React from "react";
 import { useAuthActions } from "@/lib/auth/context";
 import { data } from "@/lib/data";
-import { basePath } from "@/lib/site";
+import { asset, basePath } from "@/lib/site";
 import { useSession } from "@/lib/session";
 
 import { LookSwitcher } from "./LookSwitcher";
@@ -46,6 +47,16 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
   };
 
   const displayName = session ? (session.name || session.email).replace(/\s*\(.*\)$/, "") : "";
+  const photo = useOwnPhoto(session?.role === "gigster" ? session.personId ?? undefined : undefined, pathname);
+  // Signed out: the public links, then the account actions that make sense on this page (no "Log in" on the log-in
+  // page, no "Create an account" on the sign-up page).
+  const onLogin = pathname.startsWith("/login"), onJoin = pathname.startsWith("/join");
+  const guestMenu: MenuEntry[] = [
+    ...links.map((l) => ({ label: l.label, checked: current(l.href) || undefined, onSelect: () => navigate(l.href) })),
+    ...(onLogin && onJoin ? [] : ["separator" as const]),
+    ...(onLogin ? [] : [{ label: "Log in", icon: <LogIn />, onSelect: () => router.push("/login/") }]),
+    ...(onJoin ? [] : [{ label: "Create an account", icon: <UserPlus />, onSelect: () => router.push("/join/") }]),
+  ];
   const menu: MenuEntry[] = session ? [
     { heading: session.role === "owner" ? "Signed in as owner" : "Signed in" },
     ...(session.role === "owner"
@@ -86,7 +97,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
             <Menu align="end" items={menu}
               header={
                 <div className="flex items-center gap-3 px-3 pt-2 pb-3">
-                  <Avatar name={displayName} size="lg" className="swiss:rounded-none" />
+                  <Avatar name={displayName} src={photo} size="lg" className="swiss:rounded-none" />
                   <div className="min-w-0"><p className="truncate text-label-md text-ink">{session.name || "Gigster"}</p><p className="truncate text-body-sm text-ink-muted">{session.email}</p></div>
                 </div>
               }
@@ -94,13 +105,13 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
                 // The avatar is the account button: a ring that brightens on hover and while the menu is open.
                 <button type="button" aria-label={`Account: ${session.name || session.email}`}
                   className="grid size-11 place-items-center rounded-full ring-2 ring-line transition-shadow duration-fast hover:ring-ink-brand aria-expanded:ring-ink-brand swiss:rounded-none swiss:ring-0 swiss:hover:ring-2 swiss:hover:ring-line-strong swiss:aria-expanded:ring-4 swiss:aria-expanded:ring-line-strong">
-                  <Avatar name={displayName} size="md" className="swiss:size-11 swiss:rounded-none swiss:text-label-md" />
+                  <Avatar name={displayName} src={photo} size="md" className="swiss:size-11 swiss:rounded-none swiss:text-label-md" />
                 </button>
               } />
           ) : (
             <>
-              {!pathname.startsWith("/login") && <Link href="/login/" className="hidden min-h-11 items-center rounded-full px-3 text-label-md text-ink hover:bg-surface-hover swiss:rounded-none swiss:px-0 swiss:font-display swiss:font-semibold swiss:underline-offset-8 swiss:hover:bg-transparent swiss:hover:underline sm:inline-flex">Log in</Link>}
-              <Menu align="end" items={[...links.map((l) => ({ label: l.label, checked: current(l.href) || undefined, onSelect: () => navigate(l.href) })), "separator" as const, { label: "Log in", icon: <UserRound />, onSelect: () => router.push("/login/") }]}
+              {!onLogin && <Link href="/login/" className="hidden min-h-11 items-center rounded-full px-3 text-label-md text-ink hover:bg-surface-hover swiss:rounded-none swiss:px-0 swiss:font-display swiss:font-semibold swiss:underline-offset-8 swiss:hover:bg-transparent swiss:hover:underline sm:inline-flex">Log in</Link>}
+              <Menu align="end" items={guestMenu}
                 trigger={
                   <button type="button" aria-label="Menu" className="grid size-11 place-items-center rounded-full ring-2 ring-line transition-shadow duration-fast hover:ring-ink-brand aria-expanded:ring-ink-brand swiss:rounded-none swiss:ring-line-strong swiss:md:hidden">
                     <span aria-hidden="true" className="grid size-8 place-items-center rounded-full bg-surface-selected text-ink-brand swiss:rounded-none swiss:bg-transparent swiss:text-ink"><UserRound className="size-4" /></span>
@@ -113,4 +124,20 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
       </div>
     </header>
   );
+}
+
+/** The signed-in Gigster's photo for the account button: their draft's, else their submitted profile's. Rechecked on
+ * each page change, so a new photo shows as soon as they leave the editor. */
+function useOwnPhoto(personId: string | undefined, pathname: string) {
+  const [photo, setPhoto] = React.useState<string | undefined>();
+  React.useEffect(() => {
+    if (!personId) { setPhoto(undefined); return; } // eslint-disable-line react-hooks/set-state-in-effect
+    let live = true;
+    void Promise.all([data.profiles.getDraft(personId).catch(() => null), data.profiles.getProfile(personId).catch(() => null)]).then(([draft, sent]) => {
+      const src = draft?.fields.photo || sent?.fields.photo || "";
+      if (live) setPhoto(src ? (/^(data:|blob:|https?:)/.test(src) ? src : asset(src)) : undefined);
+    });
+    return () => { live = false; };
+  }, [personId, pathname]);
+  return photo;
 }
