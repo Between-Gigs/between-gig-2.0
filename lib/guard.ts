@@ -10,16 +10,15 @@ const home: Record<Role, string> = { owner: "/owners/", gigster: "/profile/" };
 /**
  * Client-side gate for signed-in pages. Production also enforces this in the API (every DataSource call
  * is checked server-side); this only decides what to render. Returns null while deciding.
- * Signed out: a Gigster page goes to /login/ and comes back after. Signed in with the other role (an owner opening
- * /profile/ or /profile/canvas/): straight to that role's own home, never to /login/, which would only say
- * "You're already signed in".
+ * Signed out: a Gigster page goes to /login/ and comes back after. Owners with their own linked person may use
+ * Gigster routes while retaining owner authority; profile/layout handles their one-time setup first.
  */
 export function useRequireRole(role: Role): Session | null {
   const { session, loading } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const ok = !loading && !!session && session.role === role;
-  const other = !loading && !!session && session.role !== role ? session.role : null;
+  const ok = !loading && !!session && (session.role === role || (role === "gigster" && session.role === "owner" && !!session.personId));
+  const other = !loading && !!session && !ok ? session.role : null;
   React.useEffect(() => {
     if (loading || ok) return;
     if (other) router.replace(home[other]);

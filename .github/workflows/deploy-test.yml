@@ -3,7 +3,7 @@
 #
 #   "Run workflow" button (any branch) ─► checks ─► infra ─► build with test's settings + bundle ─► settings + deploy ─► outside smoke check
 #
-# By hand only: GitHub -> Actions -> "Deploy web (test)" -> Run workflow -> pick the branch.
+# Each main update deploys test after the full checks; Run workflow still deploys a selected branch.
 # Company OS must have deployed its `api` to Between Gigs' test environment first: this service's variables
 # reference it.
 #
@@ -23,6 +23,9 @@ run-name: Deploy web (test) ${{ github.ref_name }}
 
 on:
   workflow_dispatch:
+  # Keep the Railway test app on the same approved main commits as GitHub Pages.
+  push:
+    branches: [main]
 
 concurrency:
   group: deploy-web-test

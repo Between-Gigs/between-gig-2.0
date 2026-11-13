@@ -17,7 +17,7 @@ export default async function proxy(request: NextRequest) {
   if (gated) return gated;
 
   const { pathname } = request.nextUrl;
-  if (pathname === "/preview" || pathname.startsWith("/preview/")) {
+  if (pathname === "/hub" || pathname.startsWith("/hub/") || pathname === "/preview" || pathname.startsWith("/preview/")) {
     const response = NextResponse.next();
     if (env.passphrase) response.headers.set("x-robots-tag", "noindex, nofollow");
     return response;

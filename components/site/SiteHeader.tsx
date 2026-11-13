@@ -4,9 +4,12 @@ import { LogOut, Menu as MenuIcon, PencilLine, UserRound, Users } from "lucide-r
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthActions } from "@/lib/auth/context";
+import { data } from "@/lib/data";
+import { basePath } from "@/lib/site";
 import { useSession } from "@/lib/session";
 
 import { LookSwitcher } from "./LookSwitcher";
+import { ExperienceSwitcher } from "./ExperienceSwitcher";
 
 interface NavLink { href: string; label: string }
 
@@ -20,12 +23,13 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
   const router = useRouter();
   const { session, loading } = useSession();
   const auth = useAuthActions();
+  const navigate = (href: string) => { if (data.kind === "live" && href === "/hub/") window.location.assign(href); else router.push(href); };
 
-  const links: NavLink[] = app ? [] : session?.role === "owner"
-    ? [{ href: "/owners/", label: "Dashboard" }, { href: "/owners/review/", label: "Review" }, { href: "/owners/people/", label: "People" }, { href: "/owners/waitlist/", label: "Waitlist" }, { href: "/emails/", label: "Emails" }]
+  const links: NavLink[] = (app ? [] : session?.role === "owner"
+    ? [{ href: "/profile/canvas/", label: "Gigster Experience" }, { href: "/owners/", label: "Owner Experience" }, { href: "/hub/", label: "Hub" }]
     : session?.role === "gigster"
       ? [{ href: "/profile/", label: "My profile" }, { href: "/profile/canvas/", label: "Edit profile" }]
-      : [{ href: "/professionals/", label: "For professionals" }, { href: "/storyboard/", label: "Storyboard" }];
+      : [{ href: "/professionals/", label: "For professionals" }, { href: "/storyboard/", label: "Storyboard" }, { href: "/hub/", label: "Hub" }]).map(link => ({ ...link, href: basePath === "/hub" && link.href === "/hub/" ? "/" : link.href }));
 
   // Only the most specific matching link is current: on /profile/canvas/ that's "Edit profile", not "My profile";
   // on /owners/review/ it's "Review", not "Dashboard".
@@ -45,7 +49,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
   const menu: MenuEntry[] = session ? [
     { heading: session.role === "owner" ? "Signed in as owner" : "Signed in" },
     ...(session.role === "owner"
-      ? links.map((l) => ({ label: l.label, icon: l.href === "/owners/people/" ? <Users /> : undefined, checked: current(l.href) || undefined, onSelect: () => router.push(l.href) }))
+      ? links.map((l) => ({ label: l.label, icon: l.href === "/owners/people/" ? <Users /> : undefined, checked: current(l.href) || undefined, onSelect: () => navigate(l.href) }))
       : [{ label: "My profile", icon: <UserRound />, onSelect: () => router.push("/profile/") }, { label: "Edit profile", icon: <PencilLine />, onSelect: () => router.push("/profile/canvas/") }]),
     "separator",
     { label: "Log out", icon: <LogOut />, onSelect: () => void signOut() },
@@ -58,13 +62,13 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
       <div className={cx("flex h-16 items-center gap-4 lg:h-20", app ? "h-16! gap-2" : "swiss:border-b-4 swiss:border-line-strong swiss:md:grid swiss:md:grid-cols-12 swiss:md:gap-x-6")}>
         {onOpenNav && <IconButton label="Open owner menu" variant="ghost" icon={<MenuIcon />} onClick={onOpenNav} className="lg:hidden" />}
         <div className="flex flex-1 items-center swiss:md:col-span-3">
-          <Link href="/" aria-label="Between Gigs home" className="inline-flex min-h-11 shrink-0 items-center rounded-md"><Logo height={28} className="hidden xs:block" /><Logo layout="mark" height={28} className="xs:hidden" /></Link>
+          <Link href="/" aria-label="Between Gigs home" className="inline-flex min-h-11 shrink-0 items-center rounded-md"><Logo height={28} className="hidden sm:block" /><Logo layout="mark" height={28} className="sm:hidden" /></Link>
         </div>
         {/* Airbnb-style: the page links sit in the middle, the current one underlined. */}
         {links.length > 0 && (
           <nav aria-label="Main" className={cx("hidden items-center gap-2 swiss:md:gap-8", links.length > 3 ? "lg:flex swiss:lg:col-span-6 swiss:lg:gap-5" : "md:flex swiss:md:col-span-5")}>
             {links.map((l) => (
-              <Link key={l.href} href={l.href} aria-current={current(l.href) ? "page" : undefined}
+              <Link key={l.href} href={l.href} onClick={event => { if (data.kind === "live" && l.href === "/hub/") { event.preventDefault(); window.location.assign(l.href); } }} aria-current={current(l.href) ? "page" : undefined}
                 className={cx("relative inline-flex min-h-11 items-center px-3 text-label-md transition-colors duration-fast",
                   "swiss:px-0 swiss:font-display swiss:font-semibold swiss:text-ink swiss:underline-offset-8",
                   current(l.href) ? "text-ink after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:rounded-full after:bg-ink friendly:rounded-full friendly:bg-surface-selected friendly:after:hidden swiss:underline swiss:decoration-4 swiss:after:hidden" : "text-ink-muted hover:text-ink friendly:rounded-full friendly:hover:bg-surface-hover swiss:decoration-2 swiss:hover:underline")}>
@@ -74,7 +78,8 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
           </nav>
         )}
         <div className={cx("flex flex-1 items-center justify-end gap-1 sm:gap-2", links.length > 3 ? "swiss:md:col-span-9 swiss:lg:col-span-3" : "swiss:md:col-span-4")}>
-          <LookSwitcher />
+          <ExperienceSwitcher className={app ? undefined : "md:hidden"} />
+          <span className="hidden sm:contents"><LookSwitcher /></span><span className="sm:hidden"><LookSwitcher compact /></span>
           <ThemeToggle size="sm" showLabel={false} className="pr-0.5!" />
           {app ? null : loading ? <span className="h-11 w-20" aria-hidden="true" /> : session ? (
             <Menu align="end" items={menu}
@@ -94,7 +99,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
           ) : (
             <>
               {!pathname.startsWith("/login") && <Link href="/login/" className="hidden min-h-11 items-center rounded-full px-3 text-label-md text-ink hover:bg-surface-hover swiss:rounded-none swiss:px-0 swiss:font-display swiss:font-semibold swiss:underline-offset-8 swiss:hover:bg-transparent swiss:hover:underline sm:inline-flex">Log in</Link>}
-              <Menu align="end" items={[...links.map((l) => ({ label: l.label, checked: current(l.href) || undefined, onSelect: () => router.push(l.href) })), "separator" as const, { label: "Log in", icon: <UserRound />, onSelect: () => router.push("/login/") }]}
+              <Menu align="end" items={[...links.map((l) => ({ label: l.label, checked: current(l.href) || undefined, onSelect: () => navigate(l.href) })), "separator" as const, { label: "Log in", icon: <UserRound />, onSelect: () => router.push("/login/") }]}
                 trigger={
                   <button type="button" aria-label="Menu" className="grid size-11 place-items-center rounded-full ring-2 ring-line transition-shadow duration-fast hover:ring-ink-brand aria-expanded:ring-ink-brand swiss:rounded-none swiss:ring-line-strong swiss:md:hidden">
                     <span aria-hidden="true" className="grid size-8 place-items-center rounded-full bg-surface-selected text-ink-brand swiss:rounded-none swiss:bg-transparent swiss:text-ink"><UserRound className="size-4" /></span>

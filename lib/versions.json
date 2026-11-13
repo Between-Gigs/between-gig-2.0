@@ -1,9 +1,24 @@
 [
   {
+    "n": 8,
+    "name": "Hub and staff access",
+    "date": "12 Nov 2026",
+    "current": true,
+    "profile": "/profile/canvas/",
+    "summary": "Move between your Gigster profile, owner dashboard and public testing Hub. Manage staff with multiple roles and role access rules.",
+    "highlights": [
+      "Hub at /hub with /preview compatibility",
+      "Public Hub while Clerk testing continues",
+      "Gigster and Owner experience switcher",
+      "Staff invitations and multiple roles",
+      "Existing Company OS access controls"
+    ]
+  },
+  {
     "n": 7,
     "name": "Gigster profiles and invitation",
     "date": "11 Nov 2026",
-    "current": true,
+    "commit": "326c7558550edbdee4ad81f425a621d69fafc10d",
     "profile": "/p/simone/",
     "summary": "Try the Stage 2 invitation, compare four completed profiles and adjust the fields and layout in the profile editor.",
     "highlights": ["Four sample Gigsters", "Shareable profile settings", "Stage 2 journey", "Wallpapers and Call Sheet backgrounds", "Call Sheet and Crisp modern app themes", "Profile, owner and preview layouts"]

@@ -10,6 +10,7 @@ import { data, type DashboardSummary } from "@/lib/data";
 import { useAuthActions } from "@/lib/auth/context";
 import { useSession } from "@/lib/session";
 import { LookSwitcher } from "@/components/site/LookSwitcher";
+import { ExperienceSwitcher } from "@/components/site/ExperienceSwitcher";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Icon3D } from "@/components/ui/Icon3D";
 import type { Icon3DName } from "@/lib/icons3d";
@@ -36,6 +37,7 @@ const sections: { title: string; items: Item[] }[] = [
       { href: "/owners/waitlist/", label: "Waitlist", icon: ListChecks, art: "hourglass_done", count: "waitlist", hint: "not invited yet" },
     ],
   },
+  { title: "Team", items: [{ href: "/owners/staff/", label: "Staff", icon: Users, art: "handshake" }] },
   { title: "Messages", items: [{ href: "/emails/", label: "Emails", icon: Mail, art: "envelope" }] },
 ];
 
@@ -140,7 +142,7 @@ export function OwnerFrame({ children, section: fixed, fit: fixedFit = false }: 
               {!brand && <TopLine section={section} />}
               {children}
             </div>
-            <p className={cx("mx-auto w-full max-w-7xl shrink-0 3xl:max-w-(--breakpoint-2xl) px-4 text-caption text-ink-muted sm:px-6 lg:px-10", fit ? "pb-6 lg:pb-3" : "pb-6")}>Sample data: everyone shown here is fictional.</p>
+            {data.kind === "sample" && <p className={cx("mx-auto w-full max-w-7xl shrink-0 3xl:max-w-(--breakpoint-2xl) px-4 text-caption text-ink-muted sm:px-6 lg:px-10", fit ? "pb-6 lg:pb-3" : "pb-6")}>Sample data: everyone shown here is fictional.</p>}
           </main>
         </div>
         {!brand && <TabBar counts={counts} section={section} />}
@@ -201,7 +203,7 @@ function ModernOwnerToolbar({ onOpenNav }: { onOpenNav: () => void }) {
     <Link href="/" aria-label="Between Gigs home" className="mo-logo"><Logo height={24} /></Link>
     <form role="search" onSubmit={find}><Input type="search" size="sm" aria-label="Search people" placeholder="Search people by name or email…" start={<Search />} value={q} onChange={event => setQ(event.target.value)} /></form>
     <time>{new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</time>
-    <LookSwitcher compact /><ThemeToggle size="sm" showLabel={false} />
+    <ExperienceSwitcher /><LookSwitcher compact /><ThemeToggle size="sm" showLabel={false} />
   </header>;
 }
 
@@ -340,8 +342,8 @@ function TabBar({ counts, section }: { counts: Record<CountKey, number> | null; 
   const signOut = useSignOut();
   const { session } = useSession();
   const all = sections.flatMap((s) => s.items);
-  const tabs = all.filter((i) => i.href.startsWith("/owners/"));
-  const rest = all.filter((i) => !i.href.startsWith("/owners/"));
+  const tabs = all.filter((i) => i.href.startsWith("/owners/")).slice(0, 4);
+  const rest = all.filter((i) => !tabs.includes(i));
   const moreActive = rest.some(active);
   const cell = (on: boolean) => cx(
     "relative flex min-h-14 w-full flex-col items-center justify-center gap-1 px-1 text-caption font-bold transition-colors duration-fast",

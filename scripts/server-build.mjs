@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
  * thumbnails and the workspace's covers) and waiting on the client (Crew Call, proposals).
  */
 export const INTERNAL = [
-  "app/workspace", "app/studio", "app/preview", "app/emails", "app/crew-call", "app/proposals", "app/profile/simple",
+  "app/workspace", "app/studio", "app/preview", "app/hub", "app/emails", "app/crew-call", "app/proposals", "app/profile/simple",
   "app/versions", "public/art/wallpapers", "public/artifacts", "public/studio-source", "public/thumbs", "public/workspace", "public/versions",
 ];
 
@@ -24,7 +24,7 @@ export const INTERNAL = [
  */
 export const LIVE_PAGES = [
   "/", "/join", "/licensing-insurance", "/login", "/owners", "/owners/people", "/owners/people/[id]", "/owners/review",
-  "/owners/waitlist", "/p", "/p/[slug]", "/preview-access", "/privacy", "/professionals", "/profile", "/profile/canvas", "/profile/edit",
+  "/owners/waitlist", "/owners/staff", "/p", "/p/[slug]", "/preview-access", "/privacy", "/professionals", "/profile", "/profile/canvas", "/profile/edit",
   "/provider-standards", "/storyboard", "/terms",
 ];
 
@@ -32,7 +32,7 @@ export const LIVE_PAGES = [
 export const LIVE_ROUTES = [
   "/", "/professionals/", "/storyboard/", "/privacy/", "/terms/", "/licensing-insurance/", "/provider-standards/",
   "/join/", "/login/", "/profile/canvas/", "/profile/edit/", "/profile/", "/p/", "/p/maya/",
-  "/owners/", "/owners/review/", "/owners/people/", "/owners/people/maya/", "/owners/waitlist/", "/preview-access/",
+  "/owners/", "/owners/review/", "/owners/people/", "/owners/people/maya/", "/owners/waitlist/", "/owners/staff/", "/preview-access/",
 ];
 
 /** Top-level public/ folders the live pages and the emails use. Any other must be in INTERNAL. */
@@ -41,6 +41,27 @@ export const PUBLIC_LIVE = ["art", "cursors", "email", "fonts", "img", "og"];
 
 /** node_modules into the copy: a copy-on-write clone (macOS) or hard links (Linux), else a plain copy. */
 function cloneNodeModules(from, to) {
+  if (process.platform === "win32") {
+    // pnpm uses absolute directory junctions on Windows. Recreate them inside the staged copy,
+    // and hard-link package files so Turbopack never resolves dependencies outside its project.
+    const walk = (source, target) => {
+      const stat = fs.lstatSync(source);
+      if (stat.isSymbolicLink()) {
+        const resolved = path.resolve(path.dirname(source), fs.readlinkSync(source));
+        const rel = path.relative(from, resolved);
+        if (rel.startsWith("..") || path.isAbsolute(rel)) throw new Error("server-build: dependency link leaves node_modules");
+        const destination = path.join(to, rel);
+        fs.symlinkSync(path.relative(path.dirname(target), destination), target, fs.statSync(source).isDirectory() ? "junction" : "file");
+      } else if (stat.isDirectory()) {
+        fs.mkdirSync(target, { recursive: true });
+        for (const name of fs.readdirSync(source)) walk(path.join(source, name), path.join(target, name));
+      } else {
+        try { fs.linkSync(source, target); } catch { fs.copyFileSync(source, target); }
+      }
+    };
+    walk(from, to);
+    return;
+  }
   const tries = process.platform === "darwin" ? [["-cR"], ["-R"]] : [["-al"], ["-R"]];
   for (const flags of tries) if (spawnSync("cp", [...flags, from, to], { stdio: "ignore" }).status === 0) return;
   throw new Error("server-build: could not copy node_modules");

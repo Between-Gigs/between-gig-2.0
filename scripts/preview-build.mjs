@@ -1,6 +1,6 @@
 // The preview for the server builds (owner, 2026-11-02): the GitHub Pages build of the whole site, every route on the
-// sample data, with base path /preview, into .next/standalone/preview-site/, where lib/server/preview.ts serves it to
-// super admins at /preview/. Built from a temporary copy of the working tree (as server-build.mjs does), with no Clerk
+// sample data, with base path /hub, into .next/standalone/preview-site/, where lib/server/preview.ts serves it to
+// the public Hub at /hub/. Built from a temporary copy of the working tree (as server-build.mjs does), with no Clerk
 // key and no data source, so it never signs anyone in or calls Company OS. Run after `pnpm build:server`.
 //   node scripts/preview-build.mjs
 import { execFileSync, spawn } from "node:child_process";
@@ -10,7 +10,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { stageCopy } from "./server-build.mjs";
 
-export const PREVIEW_BASE = "/preview";
+export const PREVIEW_BASE = "/hub";
 
 /** The export's environment: the caller's, without anything that would make it live. */
 export function previewEnv(env, sha) {
@@ -29,6 +29,10 @@ export async function buildPreview(root, { tmp = os.tmpdir() } = {}) {
   const src = path.join(dir, "src");
   try {
     stageCopy(root, src, []);
+    // Correct route trees: the sandbox root is the Hub; the original public home remains at /hub/home/.
+    fs.mkdirSync(path.join(src, "app/home"), { recursive: true });
+    fs.copyFileSync(path.join(src, "app/page.tsx"), path.join(src, "app/home/page.tsx"));
+    fs.writeFileSync(path.join(src, "app/page.tsx"), 'export { default, metadata } from "./preview/page";\n');
     let sha = process.env.GITHUB_SHA ?? "";
     if (!sha) { try { sha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim(); } catch { /* not a checkout */ } }
     const env = previewEnv(process.env, sha);

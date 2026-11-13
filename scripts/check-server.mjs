@@ -4,7 +4,6 @@
 // answers 200. A second start with TEST_GATE_PASSPHRASE checks the test gate. Exits 1 on any failure.
 //   node scripts/check-server.mjs
 import { spawn } from "node:child_process";
-import { createHmac } from "node:crypto";
 import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
@@ -80,10 +79,6 @@ async function start(extra) {
   return { base, stop: () => server.kill() };
 }
 
-/** A preview cookie as lib/server/preview.ts signs it. */
-const previewCookie = (exp = Date.now() + 3_600_000, user = "check-server") =>
-  `bg_preview=${exp}.${Buffer.from(user).toString("base64url")}.${createHmac("sha256", SECRET).update(`preview||${user}|${exp}`).digest("hex")}`;
-
 let server = { stop() {} };
 try {
   server = await start({ COOKIE_SIGNING_SECRET: SECRET });
@@ -117,6 +112,7 @@ try {
 
   // Each server-only handler answers itself, not with Next's not-found page (a made-up id for dynamic segments).
   for (const r of SERVER_ONLY) {
+    if (r.path.startsWith("/hub") || r.path.startsWith("/preview")) continue;
     const url = `${r.path.replace(/\[\.{0,3}[^\]]+\]/g, "f2-check")}/`;
     const res = await fetch(base + url, { redirect: "manual" });
     const body = await res.text();
@@ -135,20 +131,13 @@ try {
   const health = await fetch(`${base}/healthz/`);
   if (health.status !== 200 || (await health.text()) !== "ok") fail("/healthz/ did not answer 200 ok");
 
-  // /preview/: without the cookie, the door; with it, the sample export with its own headers.
-  const door = await fetch(`${base}/preview/emails/`, { redirect: "manual" });
-  if (door.status !== 302 || door.headers.get("location") !== "/preview-access/?next=%2Fpreview%2Femails%2F") fail(`/preview/emails/ without a cookie answered ${door.status} ${door.headers.get("location")}`);
-  for (const url of ["/preview/preview/", "/preview/preview/cursors/", "/preview/emails/", "/preview/studio/", "/preview/thumbs/home.jpg", "/preview/"]) {
-    const res = await fetch(base + url, { redirect: "manual", headers: { cookie: previewCookie() } });
-    const want = 200;
-    if (res.status !== want) { fail(`${url} with a preview cookie answered ${res.status}, expected ${want}`); continue; }
-    if (want === 200) {
-      if (!/frame-ancestors 'self'/.test(res.headers.get("content-security-policy") ?? "")) fail(`${url}: not the preview's CSP`);
-      if (res.headers.get("x-frame-options") !== "SAMEORIGIN") fail(`${url}: x-frame-options is ${res.headers.get("x-frame-options")}`);
-    }
+  // The public sandbox and legacy aliases need neither a Clerk session nor the old cookie.
+  for (const url of ["/hub/", "/hub/home/", "/hub/preview/cursors/", "/hub/emails/", "/hub/studio/", "/hub/thumbs/home.jpg", "/preview/", "/preview/preview/"]) {
+    const res = await fetch(base + url);
+    if (res.status !== 200) fail(url + " answered " + res.status);
+    if (!/frame-ancestors 'self'/.test(res.headers.get("content-security-policy") ?? "")) fail(url + ": not the Hub CSP");
+    if (res.headers.get("x-frame-options") !== "SAMEORIGIN") fail(url + ": incorrect frame policy");
   }
-  const expired = await fetch(`${base}/preview/preview/`, { redirect: "manual", headers: { cookie: previewCookie(Date.now() - 1) } });
-  if (expired.status !== 302) fail(`an expired preview cookie answered ${expired.status}`);
   server.stop();
 
   // The test gate: everything but the exempt paths asks for the passphrase.
@@ -158,7 +147,7 @@ try {
   if (home.status !== 401 || !(await home.text()).includes('action="/test-gate/"')) fail(`gate: / answered ${home.status} without the passphrase page`);
   const api = await fetch(`${g}/api/auth/session/`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
   if (api.status !== 401) fail(`gate: the API answered ${api.status}`);
-  for (const url of ["/healthz/", "/email/between-gigs-wide-on-light.png"]) {
+  for (const url of ["/healthz/", "/email/between-gigs-wide-on-light.png", "/hub/", "/preview/"]) {
     const res = await fetch(g + url);
     if (res.status !== 200) fail(`gate: exempt ${url} answered ${res.status}`);
   }
@@ -200,4 +189,4 @@ if (failures.length) {
   console.error(`❌ check-server: ${failures.length} problem(s):\n  - ${failures.join("\n  - ")}`);
   process.exit(1);
 }
-console.log(`✅ check-server: ${LIVE_ROUTES.length} live routes 200 with headers and per-request nonces; ${INTERNAL_URLS.length} internal URLs 404 and absent from the build; ${SERVER_ONLY.length} server-only routes served; /preview/ behind its cookie; the test gate`);
+console.log(`✅ check-server: ${LIVE_ROUTES.length} live routes 200 with headers and per-request nonces; ${INTERNAL_URLS.length} internal URLs 404 and absent from the build; ${SERVER_ONLY.length} server-only routes served; /hub/ and /preview/ public sample aliases; the test gate`);
