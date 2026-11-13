@@ -131,3 +131,45 @@ describe("fromProfile", () => {
     expect(f).toMatchObject({ zip: "", insurance: "private", credits: ["Feature A (sample)"], creditPins: [true] });
   });
 });
+
+// The Gigster editor's newer answers (title, one line per service, the personality question and answer) travel as
+// tenant fields only once the recipe has them: toProfile sends them with { extras: true } (server setting
+// COMPANY_OS_PROFILE_EXTRAS=1), and fromProfile reads them whenever Company OS returns them.
+describe("profile extras (tenant fields)", () => {
+  const extra: ProfileFields = {
+    ...filled,
+    title: "  Wardrobe stylist  ",
+    serviceLines: { "Wardrobe & Personal Styling": " Closet edits for real life ", Unpicked: "drop me" },
+    personalityQuestion: "bucket",
+    personality: " See the northern lights ",
+  };
+
+  it("leaves them out by default, so a backend without the fields keeps accepting saves", () => {
+    const { data } = toProfile(extra);
+    for (const k of ["professional_title", "service_lines", "personality_question", "personality_answer"]) expect(data).not.toHaveProperty(k);
+  });
+
+  it("sends them trimmed with extras on, keeping only lines for chosen services", () => {
+    const { data } = toProfile(extra, { extras: true });
+    expect(data.professional_title).toBe("Wardrobe stylist");
+    expect(data.service_lines).toEqual({ "Wardrobe & Personal Styling": "Closet edits for real life" });
+    expect(data.personality_question).toBe("bucket");
+    expect(data.personality_answer).toBe("See the northern lights");
+  });
+
+  it("reads them back, and leaves them undefined when Company OS has none (the browser copy then fills in)", () => {
+    const { data, items } = toProfile(extra, { extras: true });
+    const back = fromProfile(data, items, "");
+    expect(back.title).toBe("Wardrobe stylist");
+    expect(back.serviceLines).toEqual({ "Wardrobe & Personal Styling": "Closet edits for real life" });
+    expect(back.personalityQuestion).toBe("bucket");
+    expect(back.personality).toBe("See the northern lights");
+    const plain = fromProfile(toProfile(filled).data, [], "");
+    for (const k of ["title", "serviceLines", "personalityQuestion", "personality"] as const) expect(plain[k]).toBeUndefined();
+  });
+
+  it("ignores a malformed service_lines value", () => {
+    expect(fromProfile({ service_lines: "nope" }, [], "").serviceLines).toBeUndefined();
+    expect(fromProfile({ service_lines: { a: 3, b: "ok" } }, [], "").serviceLines).toEqual({ b: "ok" });
+  });
+});

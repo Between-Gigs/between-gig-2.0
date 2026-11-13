@@ -9,7 +9,8 @@ import type { DataSource } from "./source";
 import type { Profile, ProfileDraft, ProfileFields } from "./types";
 
 /**
- * The Gigster editor's answers Company OS has no field for yet (docs: the report for 13 Nov 2026). Until it does, they
+ * The answers Company OS may not have fields for. The editor's (title, serviceLines, personalityQuestion, personality)
+ * reach Company OS once COMPANY_OS_PROFILE_EXTRAS=1 (docs/handoff/companyos-profile-extras.md). Until then, and for the rest, they
  * stay in this browser beside the builder's step, so a Gigster's own editor and preview keep them across reloads. They
  * don't reach the team or the public page on live: those need the backend fields.
  */

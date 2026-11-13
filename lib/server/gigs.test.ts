@@ -29,6 +29,12 @@ describe("draftOps", () => {
     expect(draftOps(PERSON, fields, stored())).toEqual([]);
   });
 
+  it("sends the editor's tenant fields only when Company OS has them (COMPANY_OS_PROFILE_EXTRAS)", () => {
+    const next = { ...fields, title: "Wardrobe stylist" };
+    expect(draftOps(PERSON, next, stored(), false)).toEqual([]);
+    expect(draftOps(PERSON, next, stored(), true)).toEqual([{ op: "update", entity: "profile", id: "prof", data: { professional_title: "Wardrobe stylist" } }]);
+  });
+
   it("only the changed field goes in the update", () => {
     expect(draftOps(PERSON, { ...fields, about: "Seven years now." }, stored())).toEqual([{ op: "update", entity: "profile", id: "prof", data: { about: "Seven years now." } }]);
   });

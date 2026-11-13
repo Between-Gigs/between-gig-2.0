@@ -1,31 +1,30 @@
 /*
- * Settings shared by every email, HTML and plain text alike. Each one is a single place to change wording the client
- * still has to confirm (open questions in docs/feedback-2026-11-13.md).
+ * Settings shared by every email, HTML and plain text alike, decided 13 Nov 2026 (docs/feedback-2026-11-13.md, "Decisions").
+ * Company OS sends copies of these templates: after a change, run `pnpm emails:companyos <company-os checkout>`.
  */
 
 /**
- * The postal address in every footer. CAN-SPAM requires a valid physical mailing address in commercial email.
- * PLACEHOLDER: 11766 Wilshire Blvd is not confirmed. Replace it with Between Gigs' real business mailing address
- * (a street address, P.O. box or registered private mailbox) before these emails go to real recipients.
+ * Where Between Gigs is, in every footer. The street address that was here (11766 Wilshire Blvd) was a stand-in nobody
+ * recognised, so it's gone: an email shouldn't print an address that isn't the company's. CAN-SPAM asks commercial
+ * email (the invite) for a valid postal address: when Between Gigs has one (a street address, P.O. box or registered
+ * private mailbox), put it here in full, e.g. "123 Main St · Los Angeles, CA 90000".
  */
-export const MAILING_ADDRESS = "11766 Wilshire Blvd · Los Angeles, CA 90025";
+export const MAILING_ADDRESS = "Los Angeles, California";
 
 /** The footer's address line: "Between Gigs · <address>". */
 export const FOOTER_ADDRESS_LINE = `Between Gigs · ${MAILING_ADDRESS}`;
 
 /**
- * When a Gigster can expect to hear back after submitting, read as "You'll hear from us <REVIEW_TIME>."
- * Default wording pending the client's answer on review turnaround.
+ * When a Gigster can expect to hear back after submitting, read as "You'll hear from us <REVIEW_TIME>." A concrete
+ * promise (Peter: "say when they can expect to hear from us"); the email and /profile/submitted/ both read it.
  */
-export const REVIEW_TIME = "within a few business days";
+export const REVIEW_TIME = "within 3 business days";
 
 /**
- * Vetting or background-check timing for the confirmation email. No policy exists yet, so it stays null and the email
- * says nothing about it.
- * TODO(client): if vetting or a background check is planned, set one sentence here, e.g. when it happens and how
- * we'll get in touch. Don't invent the policy.
+ * What vetting there is, for the confirmation email: the team's review of every profile, which is real today. No
+ * background check exists, so none is mentioned; if one is added, say here when it happens and how we'll get in touch.
  */
-export const VETTING_NOTE: string | null = null;
+export const VETTING_NOTE: string | null = "Every profile is read by a person on our team before it goes live. If we need anything else from you, we'll email you.";
 
 /** How the Gigster emails sign off (Peter, Nov 2026: "we're part of a community, not a cold machine"). */
 export const SIGN_OFF = "YOUR BETWEEN GIGS TEAM";

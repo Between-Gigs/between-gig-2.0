@@ -111,6 +111,7 @@ of them.
 | `APP_URL` | the site's origin, `https://…`, no trailing slash (test: `https://test.between-gigs.com`) | workflow, from the GitHub variable `APP_URL` |
 | `COOKIE_SIGNING_SECRET` | random, different per environment: signs the preview's and the gate's cookies | workflow, from the GitHub secret |
 | `TEST_GATE_PASSPHRASE` | test only: the passphrase in front of the test site | workflow, from the GitHub secret |
+| `COMPANY_OS_PROFILE_EXTRAS` | `1` once Company OS's recipe has the profile editor's tenant fields (docs/handoff/companyos-profile-extras.md); unset until then | the IaC or a Railway variable |
 | `NODE_ENV`, `PORT`, `HOSTNAME` | `production`, `3000`, `0.0.0.0` | the IaC |
 
 The platform key (`COMPANY_OS_PLATFORM_KEY`) is **not** on this service. It is only typed into a shell for the

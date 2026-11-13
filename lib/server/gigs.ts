@@ -315,8 +315,11 @@ export async function getDraft(ctx: Ctx, personId: string): Promise<ProfileDraft
 const keyOf = (i: { kind?: unknown; value?: unknown }) => `${String(i.kind)}\u0000${String(i.value)}`;
 
 /** The batch that turns the stored profile into these answers: changed fields only, items by difference. */
-export function draftOps(personId: string, fields: ProfileFields, existing: { profile?: Row; items: Row[] }): BatchOp[] {
-  const { data, items } = toProfile(fields);
+/** Company OS has the editor's tenant fields (title, service lines, personality): set once the recipe is applied. */
+const profileExtras = () => process.env.COMPANY_OS_PROFILE_EXTRAS === "1";
+
+export function draftOps(personId: string, fields: ProfileFields, existing: { profile?: Row; items: Row[] }, extras = profileExtras()): BatchOp[] {
+  const { data, items } = toProfile(fields, { extras });
   if (!existing.profile) {
     return [
       { op: "create", entity: "profile", data: { ...data, person: personId } },
@@ -327,10 +330,13 @@ export function draftOps(personId: string, fields: ProfileFields, existing: { pr
   const old = existing.profile.data;
   // Compared with the stored profile as 2.0 reads it: a value 2.0 shows as its nearest (work mode "remote" as on site)
   // goes back only if the person changed that answer, so no stored value is lost and no edit is made by accident.
-  const shown = toProfile(fromProfile(old, itemsOf(existing.items), fields.photo)).data;
+  const shown = toProfile(fromProfile(old, itemsOf(existing.items), fields.photo), { extras }).data;
   const changed: Record<string, unknown> = {};
+  // An empty object (no service lines) is as unset as an empty string.
+  const blank = (v: unknown) => v == null || v === "" || (typeof v === "object" && !Array.isArray(v) && !Object.keys(v as object).length);
   for (const [k, v] of Object.entries(data)) {
-    const unset = old[k] == null || old[k] === "";
+    const unset = blank(old[k]);
+    if (unset && blank(v)) continue;
     if (JSON.stringify(old[k] ?? "") !== JSON.stringify(v) && (unset || JSON.stringify(shown[k] ?? "") !== JSON.stringify(v))) changed[k] = v;
   }
   // A cleared number or month isn't in toProfile's output: clear it.

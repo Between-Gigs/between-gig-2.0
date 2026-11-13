@@ -14,6 +14,7 @@ import { Heading, Text, TextLink } from "@/components/ds/atoms";
 import { Page } from "@/components/site/Page";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { markArea } from "@/lib/split-area";
+import { REVIEW_TIME } from "@/emails/config";
 
 markArea("bg-split:dashboard");
 
@@ -74,7 +75,7 @@ export function SubmittedPage() {
             <ButtonLink href={live && person.slug ? `/p/${person.slug}/` : "/profile/"} variant="primary" size="lg" fullWidth className="min-w-64 sm:w-auto">View my profile</ButtonLink>
             <TextLink href="/profile/canvas/">{inReview || live ? "Edit profile" : "Continue your profile"}</TextLink>
           </div>
-          <Text size="sm" muted>{live ? "Changes other than availability go back to the team for review." : "Your profile stays private during review."}</Text>
+          <Text size="sm" muted>{live ? "Changes other than availability go back to the team for review." : `Your profile stays private during review. You'll hear from us ${REVIEW_TIME}.`}</Text>
         </div>
       </Stage>
     </Page>

@@ -17,8 +17,27 @@ const mode: Record<WorkMode, string> = { "on-site": "on_site", studio: "at_provi
 
 export type ProfileItem = { kind: "credit" | "skill" | "service" | "area"; value: string; position: number; visible?: boolean };
 
+/**
+ * The Gigster editor's newer answers as tenant fields (Company OS recipe, docs/handoff/companyos-profile-extras.md).
+ * Company OS refuses a field its recipe doesn't have, so they're sent only with `extras` (the server's
+ * COMPANY_OS_PROFILE_EXTRAS=1, set once the recipe is applied). Until then the browser keeps them (lib/data/api.ts).
+ */
+export const EXTRA_FIELDS = { title: "professional_title", serviceLines: "service_lines", personalityQuestion: "personality_question", personality: "personality_answer" } as const;
+
+function extrasOf(f: ProfileFields): Record<string, unknown> {
+  const lines = Object.fromEntries(
+    Object.entries(f.serviceLines ?? {}).map(([k, v]) => [k, String(v ?? "").trim()]).filter(([k, v]) => v && f.services.includes(k)),
+  );
+  return {
+    [EXTRA_FIELDS.title]: (f.title ?? "").trim(),
+    [EXTRA_FIELDS.serviceLines]: lines,
+    [EXTRA_FIELDS.personalityQuestion]: f.personalityQuestion ?? "",
+    [EXTRA_FIELDS.personality]: (f.personality ?? "").trim(),
+  };
+}
+
 /** The profile's data (without `person`, `status` or the photo) and its items, in 2.0's order. */
-export function toProfile(f: ProfileFields): { data: Record<string, unknown>; items: ProfileItem[] } {
+export function toProfile(f: ProfileFields, opts: { extras?: boolean } = {}): { data: Record<string, unknown>; items: ProfileItem[] } {
   const years = f.years.trim() === "" ? NaN : Number(f.years);
   const data: Record<string, unknown> = {
     display_name: f.name.trim(),
@@ -41,6 +60,7 @@ export function toProfile(f: ProfileFields): { data: Record<string, unknown>; it
     transport: f.transport.trim(),
     work_mode: mode[f.mode],
     services_other: f.other.trim(),
+    ...(opts.extras ? extrasOf(f) : {}),
   };
   const credits = f.credits
     .map((value, i) => ({ value: value.trim(), visible: f.creditPins?.[i] !== false }))
@@ -92,5 +112,21 @@ export function fromProfile(data: Record<string, unknown>, items: ProfileItem[],
     tools: text(data.tools),
     transport: text(data.transport),
     mode: invert(mode)[text(data.work_mode)] ?? "on-site",
+    ...extrasFrom(data),
   };
+}
+
+/** The tenant-field answers Company OS returned, leaving out any it has none for (the browser copy fills those). */
+function extrasFrom(data: Record<string, unknown>): Partial<ProfileFields> {
+  const out: Partial<ProfileFields> = {};
+  const t = (k: string) => (typeof data[k] === "string" && data[k] !== "" ? (data[k] as string) : undefined);
+  if (t(EXTRA_FIELDS.title)) out.title = t(EXTRA_FIELDS.title);
+  if (t(EXTRA_FIELDS.personalityQuestion)) out.personalityQuestion = t(EXTRA_FIELDS.personalityQuestion);
+  if (t(EXTRA_FIELDS.personality)) out.personality = t(EXTRA_FIELDS.personality);
+  const raw = data[EXTRA_FIELDS.serviceLines];
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    const lines = Object.fromEntries(Object.entries(raw).filter(([, v]) => typeof v === "string" && v));
+    if (Object.keys(lines).length) out.serviceLines = lines as Record<string, string>;
+  }
+  return out;
 }
