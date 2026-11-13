@@ -2,6 +2,7 @@ import { Field, Input, Textarea } from "@ds/components";
 import type { ProfileFields } from "@/lib/data/types";
 import type { ProfileFieldRule } from "@/lib/profile/template";
 import { stageTwoLimits, type StageTwoField } from "@/lib/profile/stage-two";
+import { DateField } from "@/components/ui/DateField";
 
 interface Props {
   fields: ProfileFields;
@@ -23,7 +24,7 @@ export function BookingFields({ fields: f, email, set, required, errors = {} }: 
       </Field>
       <Field label="Earliest start date" optional={optional("earliestStart")} error={errors.earliestStart}
         hint="The first calendar day you could start a project.">
-        <Input id="f-earliestStart" type="date" value={f.earliestStart ?? ""} onChange={(e) => set("earliestStart")(e.target.value)} />
+        <DateField id="f-earliestStart" value={f.earliestStart ?? ""} invalid={!!errors.earliestStart} onChange={set("earliestStart")} />
       </Field>
       <Field label="Minimum booking" optional={optional("bookingMinimum")} error={errors.bookingMinimum}>
         <Input id="f-bookingMinimum" maxLength={stageTwoLimits.bookingMinimum} value={f.bookingMinimum ?? ""}

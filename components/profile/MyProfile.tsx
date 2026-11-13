@@ -81,7 +81,6 @@ export function MyProfile() {
       {expanded && <>
         <p className="mb-5 text-eyebrow text-ink-muted uppercase">Full profile preview</p>
         <ProfileView person={person} fields={previewFields} extras={profile?.extras} mode="own" embedded />
-        <Button variant="secondary" iconStart={<ChevronUp />} onClick={() => { setExpandedId(""); toggleRef.current?.focus(); }}>Collapse profile preview</Button>
       </>}
     </section>
   );

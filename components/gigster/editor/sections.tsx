@@ -19,6 +19,7 @@ import { Credits } from "@/components/builder/ProfileBuilder";
 import { PhotoPicker } from "@/components/profile/PhotoPicker";
 import { Text } from "@/components/ds/atoms";
 import { EditorSection, GroupError, Pills, type SectionProps } from "./ui";
+import { DateField } from "@/components/ui/DateField";
 
 /** The Between Gigs fee, taken from what the client pays. */
 export const PLATFORM_FEE = 0.1;
@@ -223,7 +224,7 @@ export function RatesSection({ d, set, errors, required }: SectionProps & { requ
         </Field>
         <Pills label="Quick picks for general availability" options={quickDates} isOn={(o) => d.dates === o} onToggle={(o) => set("dates")(o)} />
         <Field label="Earliest start date" optional error={errors.earliestStart}>
-          <Input id="f-start" type="date" value={d.earliestStart ?? ""} className="max-w-56" onChange={(e) => set("earliestStart")(e.target.value)} />
+          <DateField id="f-start" value={d.earliestStart ?? ""} className="max-w-64" invalid={!!errors.earliestStart} onChange={set("earliestStart")} />
         </Field>
       </EditorSection>
     </div>

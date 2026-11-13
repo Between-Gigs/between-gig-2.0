@@ -1,6 +1,7 @@
 // The Milestone 2 happy path, end to end, in one browser context:
 // invite email → join → sign out → sign in with a code → builder (validation, autosave + resume) → submit
 // → my profile → owner search finds them → their profile opens. Returns a list of problems (empty = pass).
+import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -132,7 +133,9 @@ export async function flow({ browser, base, outDir }) {
       await page.getByRole("button", { name: "Show full profile preview" }).click();
       const preview = page.getByRole("region", { name: "Full profile preview" });
       await preview.getByText(/Fifteen years dressing sets/).waitFor();
-      await preview.getByRole("button", { name: "Collapse profile preview" }).click();
+      // One toggle opens and closes it (no second button under the preview).
+      assert.equal(await preview.getByRole("button", { name: /Collapse profile preview/ }).count(), 0);
+      await page.getByRole("button", { name: "Hide full profile preview" }).click();
       await preview.waitFor({ state: "hidden" });
       await page.getByRole("button", { name: "Show full profile preview" }).waitFor();
     })
