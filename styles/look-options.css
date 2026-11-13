@@ -19,3 +19,5 @@
 .look-option.look-option-lg { width: 100%; height: 6rem; padding: 14px; gap: 8px; }
 .look-option.look-option-lg::before { height: 10px; }
 .look-option.look-option-lg::after { height: 16px; }
+/* Inside a chip (rounded-lg, 6px padding): the swatch nests concentrically, at most 6px; Swiss stays square. */
+.look-option.look-option-chip { border-radius: min(var(--swatch-radius, 5px), 6px); }

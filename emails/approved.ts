@@ -1,5 +1,6 @@
-/* Sent when an owner approves a submitted profile. Copy: proposal, in Patti & Peter's voice. */
+/* Sent when an owner approves a submitted profile. Copy: proposal. Signed by the team (./config SIGN_OFF). */
 import { button, defaultContext, h2, hero, layout, link, p, section, signature, steps, textFooter, type EmailContext, type RenderedEmail } from "./layout";
+import { SIGN_OFF } from "./config";
 
 export interface ApprovedProps {
   firstName: string;
@@ -46,8 +47,7 @@ ${TIPS.map(([t, d], i) => `0${i + 1} ${t}: ${d}`).join("\n")}
 Want to change something? Edit your profile any time. Changes go to a quick review before they appear:
 ${editUrl}
 
-Patti & Peter
-Founders, Between Gigs
+${SIGN_OFF}
 
 ${textFooter(REASON, ctx.siteUrl)}`;
   return { subject, preheader, html: layout({ title: subject, preheader, body, reason: REASON, ctx }), text };

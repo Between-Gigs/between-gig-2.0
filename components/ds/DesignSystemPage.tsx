@@ -28,7 +28,7 @@ const tryOn = [
 ];
 
 const templates = [
-  { title: "Create account / Log in", href: "/join/", code: "AuthTemplate", node: "57-605" },
+  { title: "Create account / Log in", href: "/join/", code: "AuthStageTemplate", node: "57-605" },
   { title: "Public profile", href: "/p/maya/", code: "ProfileTemplate", node: "59-802" },
   { title: "Find a professional", href: "/p/", code: "SearchTemplate", node: "60-866" },
   { title: "Profile builder", href: "/profile/edit/", code: "ProfileBuilder", node: "59-676" },

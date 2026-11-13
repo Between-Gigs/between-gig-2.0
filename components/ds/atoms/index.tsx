@@ -34,7 +34,7 @@ export function Eyebrow({ children, rule = false, className }: { children: React
   return (
     <div className={cx("grid justify-items-start gap-3", className)}>
       <p className="text-eyebrow tracking-widest text-ink-muted uppercase">{children}</p>
-      {rule && <span aria-hidden="true" className="h-0.5 w-10 rounded-full bg-border-focus" />}
+      {rule && <span aria-hidden="true" className="h-0.5 w-10 rounded-full bg-focus" />}
     </div>
   );
 }

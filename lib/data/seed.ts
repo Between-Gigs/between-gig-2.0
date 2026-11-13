@@ -41,6 +41,12 @@ const photoPeople: SeedPerson[] = [
       about: "I bring a costume-minded eye to the clothes you already love. From thoughtful alterations to a more useful wardrobe, I focus on comfortable fit, practical details and pieces that work for everyday life. We can start with a single garment or work through a closet together.",
       languages: "English, Spanish", tools: "Sewing kit and garment-care tools; project-specific equipment to discuss", transport: "Personal vehicle",
       credits: ["Fictional production · Wardrobe assistant (sample credit)"],
+      title: "Wardrobe stylist & closet organizer", bookingMinimum: "2 hours", earliestStart: "2026-11-16",
+      serviceLines: {
+        "Wardrobe & Personal Styling": "I'll sort your wardrobe and set up a closet you can keep organized.",
+        "Wardrobe & Laundry Care": "I'll mend, steam and store your favorite pieces so they last.",
+      },
+      personalityQuestion: "quiet-skill", personality: "I can steam a silk gown in the back of a moving van.",
     },
     extras: {
       tagline: "Thoughtful alterations, wardrobe edits and custom pieces for everyday life.",

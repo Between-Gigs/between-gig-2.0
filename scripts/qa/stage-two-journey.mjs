@@ -18,7 +18,7 @@ try {
     await page.goto(`${url}/preview/gigster-journey/`);
     const invitation = page.getByRole("article");
     assert.equal(await invitation.getByRole("link").count(), 1);
-    await invitation.getByRole("link", { name: "Create Your Gigster Profile" }).click();
+    await invitation.getByRole("link", { name: "Create your profile" }).click();
     await page.getByRole("combobox", { name: "Profile example" }).click();
     await page.getByRole("option", { name, exact: true }).click();
     const prefill = page.getByRole("checkbox", { name: "Prefill my test draft with this example" });
@@ -36,12 +36,11 @@ try {
     const example = page.getByRole("link", { name: `View ${name}’s completed example`, exact: false });
     await example.waitFor();
     assert.equal(await example.getAttribute("target"), "_blank");
-    await page.locator('[data-spot="about"] [data-spot-edit]').first().click();
     const about = page.locator("#f-about");
+    await about.scrollIntoViewIfNeeded();
     await about.fill(`${(await about.inputValue()).slice(0, 300)} I can plan a project around your schedule.`);
-    await page.getByRole("button", { name: "Close", exact: true }).last().click();
-    await page.getByRole("button", { name: "Send for review", exact: true }).filter({ visible: true }).first().click();
-    await page.getByText("Sent for review", { exact: true }).first().waitFor();
+    await page.getByRole("button", { name: "Submit for review", exact: true }).filter({ visible: true }).first().click();
+    await page.getByRole("heading", { name: "Profile submitted." }).waitFor();
     const result = await page.evaluate((slug) => {
       const state = JSON.parse(localStorage.getItem("bg2-sample-v2"));
       return {

@@ -12,8 +12,8 @@ const OUT = path.join(ROOT, "deliverables/screenshots");
 
 /* Client-facing titles, grouped by area, in the order a walkthrough would take. */
 const plan = [
-  ["01 Home", [["home", "Home - Coming soon (call sheet)"], ["proposal-visitor", "Home proposal - signed out"], ["proposal-gigster", "Home proposal - Gigster"], ["proposal-owner", "Home proposal - owner"]]],
-  ["02 Public funnel", [["professionals", "For professionals"], ["call-sheet-dialog", "Get on the call sheet - dialog"], ["storyboard", "Storyboard"], ["storyboard-form", "Storyboard - offer your skills form"]]],
+  ["01 Home", [["home", "Home - Coming soon (Los Angeles Call Sheet)"], ["proposal-visitor", "Home proposal - signed out"], ["proposal-gigster", "Home proposal - Gigster"], ["proposal-owner", "Home proposal - owner"]]],
+  ["02 Public funnel", [["professionals", "For professionals"], ["call-sheet-dialog", "Get on the call sheet - dialog (draft v1)"], ["storyboard", "Storyboard"], ["storyboard-form", "Storyboard - offer your skills form"]]],
   ["03 Emails", [["emails", "Emails - overview and outbox"], ["email-invite", "Email - invite"], ["email-sign-in-code", "Email - sign-in code"], ["email-profile-submitted", "Email - profile submitted"], ["email-approved", "Email - profile approved"], ["email-changes-requested", "Email - changes requested"], ["email-welcome", "Email - welcome"], ["email-coming-soon", "Email - coming soon"]]],
   ["04 Join and sign in", [["join-valid", "Join from invite"], ["join-used", "Join - invite already used"], ["join-expired", "Join - invite expired"], ["join-unknown", "Join - invite not found"], ["login", "Sign in - email"], ["login-code", "Sign in - 6-digit code"]]],
   ["05 Profile builder", [["builder-start", "Profile builder - about you"], ["builder-where", "Profile builder - where and when"], ["builder-review", "Profile builder - review with owner notes"]]],

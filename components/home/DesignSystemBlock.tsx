@@ -24,26 +24,26 @@ export function DesignSystemBlock() {
           <p className="font-display text-display-sm text-ink">{looks[current].name}{plain && <span className="text-ink-muted"> · Unstyled</span>}</p>
           <p className="text-body-md text-ink-muted">{looks[current].detail}</p>
         </div>
-        <ul aria-label="Themes" className="flex flex-wrap gap-2">
+        <ul aria-label="Themes" className="flex flex-wrap gap-2.5">
           {lookIds.map((look) => (
             <li key={look}>
               <button type="button" onClick={() => { setUnstyled(false); selectLook(look); }} aria-pressed={current === look && !plain}
                 title={looks[look].detail}
-                className={cx("inline-flex min-h-11 items-center gap-2 rounded-full border py-1 pr-3.5 pl-1.5 text-label-md text-ink transition-colors duration-fast hover:bg-surface-hover",
+                className={cx("inline-flex min-h-11 items-center gap-2.5 rounded-lg border py-1.5 pr-4 pl-1.5 text-label-md text-ink transition-colors duration-fast hover:bg-surface-hover",
                   current === look && !plain ? "border-line-strong bg-surface-selected" : "border-line")}>
-                <span aria-hidden="true" className="look-option" data-option={look} />{looks[look].name}
+                <span aria-hidden="true" className="look-option look-option-chip" data-option={look} />{looks[look].name}
               </button>
             </li>
           ))}
           <li>
             <button type="button" onClick={() => setUnstyled(!plain)} aria-pressed={plain}
-              className={cx("inline-flex min-h-11 items-center gap-2 rounded-full border py-1 pr-3.5 pl-1.5 text-label-md text-ink transition-colors duration-fast hover:bg-surface-hover",
+              className={cx("inline-flex min-h-11 items-center gap-2.5 rounded-lg border py-1.5 pr-4 pl-1.5 text-label-md text-ink transition-colors duration-fast hover:bg-surface-hover",
                 plain ? "border-line-strong bg-surface-selected" : "border-line")}>
-              <span aria-hidden="true" className="look-option" data-option="unstyled" />Unstyled
+              <span aria-hidden="true" className="look-option look-option-chip" data-option="unstyled" />Unstyled
             </button>
           </li>
         </ul>
-        <div className="flex flex-wrap gap-2">
+        <div className="mt-2 flex flex-wrap gap-2">
           <ButtonLink href="/preview/design-system/" variant="primary" iconEnd={<ArrowRight />}>Open the design system</ButtonLink>
           {plain && <Button variant="ghost" onClick={() => setUnstyled(false)}>Back to styled</Button>}
         </div>

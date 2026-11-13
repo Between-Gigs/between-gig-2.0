@@ -79,7 +79,8 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
         )}
         <div className={cx("flex flex-1 items-center justify-end gap-1 sm:gap-2", links.length > 3 ? "swiss:md:col-span-9 swiss:lg:col-span-3" : "swiss:md:col-span-4")}>
           <ExperienceSwitcher className={app ? undefined : "md:hidden"} />
-          <span className="hidden sm:contents"><LookSwitcher /></span><span className="sm:hidden"><LookSwitcher compact /></span>
+          {/* The theme is picked (Green Room). Only owners/admins, and the Hub, keep the Theme menu for reviewing alternatives. */}
+          {(session?.role === "owner" || /^\/(hub|preview)(\/|$)/.test(pathname)) && <><span className="hidden sm:contents"><LookSwitcher /></span><span className="sm:hidden"><LookSwitcher compact /></span></>}
           <ThemeToggle size="sm" showLabel={false} className="pr-0.5!" />
           {app ? null : loading ? <span className="h-11 w-20" aria-hidden="true" /> : session ? (
             <Menu align="end" items={menu}

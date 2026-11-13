@@ -11,6 +11,7 @@ import { useSession } from "@/lib/session";
 import { basePath } from "@/lib/site";
 import { AuthShell } from "./AuthShell";
 import { ClerkSlot } from "./ClerkSlot";
+import { authSubtitle, authTitle, useAuthV2 } from "./authDesign";
 import { SignedInPanel, useSignedInGate } from "./SignedIn";
 
 /**
@@ -50,11 +51,12 @@ function Details({ ticket, finish }: { ticket: boolean; finish?: NonNullable<Ret
   const [terms, setTerms] = React.useState(false);
   const [errors, setErrors] = React.useState<{ name?: string; terms?: string }>({});
   const [next, setNext] = React.useState(false);
+  const v2 = useAuthV2();
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const found: typeof errors = {};
     if (!name.trim()) found.name = "Enter your full name, as you'd like clients to see it.";
-    if (!terms) found.terms = "Agree to the Terms of Use and Privacy Policy to continue.";
+    if (!terms) found.terms = "Agree to the Terms and Privacy Policy to continue.";
     setErrors(found);
     if (Object.keys(found).length) return;
     if (!finish) { setNext(true); return; }
@@ -71,18 +73,18 @@ function Details({ ticket, finish }: { ticket: boolean; finish?: NonNullable<Ret
   if (next) return <TicketSignUp name={name.trim()} />;
   return (
     <AuthShell header="Sign up"
-      lead={<p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
-      <h1 className="font-display text-heading-lg text-balance text-ink">Create your account</h1>
-      <p className="mt-2 text-body-md text-pretty text-ink-muted">{ticket ? "Your invitation confirms your email. Tell us your name to get started." : finish ? `You're signed in as ${finish.email}. Tell us your name to finish.` : "Tell us your name, then we'll confirm your email."}</p>
+      lead={v2 ? undefined : <p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
+      <h1 className={authTitle(v2, true)}>Create your account</h1>
+      <p className={authSubtitle(v2, true)}>{ticket ? "Your invitation confirms your email. Tell us your name to get started." : finish ? `You're signed in as ${finish.email}. Tell us your name to finish.` : "Tell us your name, then we'll confirm your email."}</p>
       <form noValidate onSubmit={(e) => void submit(e)} className="mt-8 grid gap-5">
         <Field label="Full name" error={errors.name}>
-          <Input value={name} autoComplete="name" autoFocus onChange={(e) => { setName(e.target.value); setErrors((x) => ({ ...x, name: undefined })); }} />
+          <Input value={name} autoComplete="name" autoFocus placeholder={v2 ? "Maya Chen" : undefined} onChange={(e) => { setName(e.target.value); setErrors((x) => ({ ...x, name: undefined })); }} />
         </Field>
         <div className="grid gap-1.5">
           <Checkbox checked={terms} aria-invalid={!!errors.terms || undefined} aria-describedby={errors.terms ? "terms-error" : undefined}
             onChange={(e) => { setTerms(e.target.checked); setErrors((x) => ({ ...x, terms: undefined })); }}
-            label={<>I agree to the <a className="text-link underline underline-offset-2" href="https://between-gigs.com/terms" target="_blank" rel="noreferrer">Terms of Use</a> and <a className="text-link underline underline-offset-2" href="https://between-gigs.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.</>}
-            description="You can ask us to delete your account at any time." />
+            label={<>I agree to the <a className="text-link underline underline-offset-2" href="https://between-gigs.com/terms" target="_blank" rel="noreferrer">{v2 ? "Terms" : "Terms of Use"}</a> and <a className="text-link underline underline-offset-2" href="https://between-gigs.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>{v2 ? "" : "."}</>}
+            description={v2 ? undefined : "You can ask us to delete your account at any time."} />
           {errors.terms && <p id="terms-error" className="pl-7.5 text-body-sm text-danger">{errors.terms}</p>}
         </div>
         {failed && <Banner tone="danger" title="We couldn't finish">{failed}</Banner>}
@@ -90,7 +92,7 @@ function Details({ ticket, finish }: { ticket: boolean; finish?: NonNullable<Ret
           <Button type="button" variant="secondary" size="lg" fullWidth onClick={() => void signOut()}>Log out and use another account</Button>
         )}
         <Button type="submit" variant="primary" size="lg" fullWidth loading={busy} className="glow-hover swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm" iconEnd={<ArrowRight />}>Continue</Button>
-        <p className="text-body-md text-ink">Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-bold text-ink underline underline-offset-4">Log in</Link></p>
+        <p className={v2 ? "text-center text-body-md text-ink" : "text-body-md text-ink"}>Already joined? <Link href="/login/" className="inline-flex min-h-6 items-center font-bold text-ink underline underline-offset-4">Log in</Link></p>
       </form>
     </AuthShell>
   );
@@ -102,10 +104,11 @@ function TicketSignUp({ name }: { name?: string }) {
   const { session, loading } = useSession();
   React.useEffect(() => { if (!loading && session) router.replace("/profile/canvas/"); }, [session, loading, router]);
   const [firstName, ...rest] = (name ?? "").split(" ");
+  const v2 = useAuthV2();
   return (
     <AuthShell header="Sign up">
       <div className="grid gap-6">
-        <h1 className="font-display text-heading-lg text-balance text-ink">Finish your account</h1>
+        <h1 className={authTitle(v2)}>Finish your account</h1>
         <ClerkSlot label="Loading sign-up">
           <SignUp routing="hash" signInUrl={`${basePath}/login/`}
             initialValues={name ? { firstName, lastName: rest.join(" ") || undefined } : undefined}
@@ -118,10 +121,11 @@ function TicketSignUp({ name }: { name?: string }) {
 }
 
 function Unavailable() {
+  const v2 = useAuthV2();
   return (
     <AuthShell header="Sign up" steps={false}>
       <div className="grid gap-4">
-        <h1 className="font-display text-heading-lg text-balance text-ink">Sign-up isn&apos;t available</h1>
+        <h1 className={authTitle(v2)}>Sign-up isn&apos;t available</h1>
         <p className="text-body-md text-pretty text-ink-muted">Sign-in couldn&apos;t load. Reload the page, or <Link href="/login/" className="text-link underline underline-offset-2">log in</Link> if you already joined.</p>
       </div>
     </AuthShell>

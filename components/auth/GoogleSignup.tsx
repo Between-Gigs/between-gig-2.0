@@ -3,6 +3,7 @@ import { useClerk } from "@clerk/react";
 import { Button } from "@ds/components";
 import * as React from "react";
 import { absoluteUrl, asset } from "@/lib/site";
+import { useAuthV2 } from "./authDesign";
 
 /** Hand off to the configured Google connection. A first-time Gigster confirms their name and accepts terms on return. */
 export function GoogleSignup({ token }: { token?: string }) {
@@ -10,6 +11,7 @@ export function GoogleSignup({ token }: { token?: string }) {
   const [requested, setRequested] = React.useState(false);
   const [error, setError] = React.useState("");
   const redirecting = React.useRef(false);
+  const v2 = useAuthV2();
   React.useEffect(() => {
     if (!requested) return;
     const fail = (message: string) => {
@@ -47,7 +49,7 @@ export function GoogleSignup({ token }: { token?: string }) {
         onClick={() => { setError(""); setRequested(true); }}>Continue with Google</Button>
       {error && <p role="alert" className="text-body-sm text-danger">{error}</p>}
       <div className="flex items-center gap-3 text-body-sm text-ink-muted">
-        <span aria-hidden="true" className="h-px flex-1 bg-line" />or continue with email<span aria-hidden="true" className="h-px flex-1 bg-line" />
+        <span aria-hidden="true" className="h-px flex-1 bg-line" />{v2 ? "or" : "or continue with email"}<span aria-hidden="true" className="h-px flex-1 bg-line" />
       </div>
     </div>
   );

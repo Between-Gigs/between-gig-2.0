@@ -19,7 +19,7 @@ describe("passive guide frames", () => {
     const { window, document, outer } = boot(true);
     expect(document.documentElement.dataset).toHaveProperty("guideThumbnail");
     expect(document.documentElement).toHaveProperty("inert", true);
-    expect(window.localStorage.getItem("bg2-site-look")).toBe("swiss");
+    expect(window.localStorage.getItem("bg2-site-look-v2")).toBe("swiss");
     expect(window.localStorage.getItem("bg-theme")).toBe("dark");
     expect(window.localStorage.getItem("bg2-sample-v2")).toBeNull();
     window.localStorage.setItem("bg2-sample-v2", "sample owner");

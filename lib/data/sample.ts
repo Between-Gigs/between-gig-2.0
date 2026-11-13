@@ -86,8 +86,8 @@ function addFeaturedExamples(state: State) {
   for (const record of [...state.drafts, ...state.profiles]) {
     const defaults = featuredPeople.find((p) => p.id === record.personId)?.fields;
     if (!defaults) continue;
-    for (const key of ["bookingMobile", "earliestStart", "bookingMinimum", "personality", "hireableJobs"] as const) {
-      if (record.fields[key] === undefined) record.fields[key] = defaults[key];
+    for (const key of ["bookingMobile", "earliestStart", "bookingMinimum", "personality", "hireableJobs", "personalityQuestion", "serviceLines"] as const) {
+      if (record.fields[key] === undefined) (record.fields as unknown as Record<string, unknown>)[key] = defaults[key];
     }
   }
   const missing = featuredPeople.filter((sample) => !state.people.some((p) => p.id === sample.id));

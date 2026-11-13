@@ -109,6 +109,15 @@ export interface ProfileFields {
   personality?: string;
   /** Private to the Gigster and booking team. Excluded from public profiles and browse results. */
   bookingMobile?: string;
+  /**
+   * The Gigster editor (Nov 2026). The Gigster's own one line per service ("what you'll do", in customer words), keyed
+   * by the service name in `services`. The standard description beside it is lib/profile/service-descriptions.ts.
+   */
+  serviceLines?: Record<string, string>;
+  /** Which of the four personality questions `personality` answers (lib/profile/personality.ts). */
+  personalityQuestion?: string;
+  /** A short professional title under the name, like "Wardrobe stylist & closet organizer". */
+  title?: string;
 }
 
 /** The person's working copy: what the builder autosaves. */

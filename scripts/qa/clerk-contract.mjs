@@ -106,7 +106,7 @@ try {
     assert.equal(await page.getByLabel("Email", { exact: true }).isEditable(), false);
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).people.some((p) => p.email === "existing-google@example.test")), false);
     await page.getByRole("button", { name: "Finish setup", exact: true }).click();
-    await page.getByText("Agree to the Terms of Use and Privacy Policy to continue.", { exact: true }).waitFor();
+    await page.getByText("Agree to the Terms and Privacy Policy to continue.", { exact: true }).waitFor();
     await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Finish setup", exact: true }).click();
     await page.waitForURL(new RegExp(`${basePath}/profile/canvas/$`));
@@ -142,7 +142,7 @@ try {
     assert.equal(request.unsafeMetadata?.acceptedTerms, undefined);
     assert.equal(await socialPage.getByLabel("Email", { exact: true }).inputValue(), "existing-google@example.test");
     await socialPage.getByRole("button", { name: "Finish setup" }).click();
-    await socialPage.getByText("Agree to the Terms of Use and Privacy Policy to continue.", { exact: true }).waitFor();
+    await socialPage.getByText("Agree to the Terms and Privacy Policy to continue.", { exact: true }).waitFor();
     await socialPage.getByRole("checkbox").check();
     await socialPage.getByRole("button", { name: "Finish setup" }).click();
     await socialPage.waitForURL((u) => u.pathname === basePath + "/profile/canvas/");

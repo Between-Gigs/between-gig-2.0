@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { ProfileCanvas } from "@/components/canvas/ProfileCanvas";
+import { GigsterEditor } from "@/components/gigster/editor/GigsterEditor";
 import { share } from "@/lib/og";
 
-export const metadata: Metadata = { ...share("profile-canvas"), title: "Edit on your profile" };
+export const metadata: Metadata = { ...share("profile-canvas"), title: "Your Gigster profile" };
 
 export default function Page() {
-  return <ProfileCanvas />;
+  return <GigsterEditor />;
 }

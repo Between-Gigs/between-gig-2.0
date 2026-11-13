@@ -16,11 +16,11 @@ export const SITE_ROUTES = [
 ];
 /** The dashboards: signed-in Gigsters (profile) and owners. */
 export const DASHBOARD_ROUTES = [
-  "/owners", "/owners/people", "/owners/people/[id]", "/owners/review", "/owners/waitlist", "/owners/staff", "/profile", "/profile/canvas", "/profile/edit",
+  "/owners", "/owners/people", "/owners/people/[id]", "/owners/review", "/owners/waitlist", "/owners/staff", "/profile", "/profile/canvas", "/profile/edit", "/profile/submitted",
 ];
 /** Client modules only the dashboards may load. The public profile's own views (PublicProfile, ProfileView) are the site's. */
 export const DASHBOARD_MODULES = [
-  /^components\/owners\//, /^components\/builder\//, /^components\/canvas\//,
+  /^components\/owners\//, /^components\/builder\//, /^components\/canvas\//, /^components\/gigster\//,
   /^components\/profile\/(MyProfile|PhotoPicker|ChipPicker|LiveEditWarning)\.tsx$/,
 ];
 /** The sample store's localStorage key, in lib/data/sample.ts only. */
