@@ -217,7 +217,8 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
             </li>
           ))}
         </ul>
-        {sample && <Text size="sm" muted className="mt-4 inline-flex items-start gap-2"><Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />Concept images showing the kind of work to discuss, not completed client projects.</Text>}
+        {/* Only under the made-up sample images, never under photos the Gigster uploaded. */}
+        {sample && !f.workSamples?.length && <Text size="sm" muted className="mt-4 inline-flex items-start gap-2"><Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />Concept images showing the kind of work to discuss, not completed client projects.</Text>}
       </Block>
     ),
     credits: story,

@@ -9,7 +9,7 @@
  */
 import { Button, Field, Input, RadioGroup, Select, Switch, Textarea } from "@ds/components";
 import { cx } from "@ds/components/cx";
-import { Camera, Lock, MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Camera, Lock, MapPin, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { data } from "@/lib/data";
 import { laServiceAreas, onSetSkills, serviceChoices } from "@/lib/data/taxonomy";
@@ -286,13 +286,20 @@ async function resize(file: File, max = 1200): Promise<string> {
 export function CanvasSamples({ d, set }: SectionProps) {
   const samples = (d.workSamples ?? []).filter(Boolean);
   const input = React.useRef<HTMLInputElement>(null);
+  // Which filled slot the next chosen photo replaces; null adds new ones.
+  const replacing = React.useRef<number | null>(null);
   const [problem, setProblem] = React.useState("");
   const pick = async (files: FileList | null) => {
-    const list = [...(files ?? [])].filter((f) => f.type.startsWith("image/")).slice(0, MAX_SAMPLES - samples.length);
+    const at = replacing.current; replacing.current = null;
+    const list = [...(files ?? [])].filter((f) => f.type.startsWith("image/")).slice(0, at === null ? MAX_SAMPLES - samples.length : 1);
     if (!list.length) return;
-    try { setProblem(""); set("workSamples")([...samples, ...(await Promise.all(list.map((f) => resize(f))))].slice(0, MAX_SAMPLES)); }
-    catch { setProblem("We couldn't read that photo. Try another one."); }
+    try {
+      setProblem("");
+      const added = await Promise.all(list.map((f) => resize(f)));
+      set("workSamples")(at === null ? [...samples, ...added].slice(0, MAX_SAMPLES) : samples.map((x, j) => (j === at ? added[0] : x)));
+    } catch { setProblem("We couldn't read that photo. Try another one."); }
   };
+  const choose = (at: number | null) => { replacing.current = at; input.current?.click(); };
   return (
     <section id="sec-work" aria-labelledby="sec-work-h" className="grid scroll-mt-40 gap-5">
       <H id="sec-work-h" tag={samples.length ? `${samples.length} of ${MAX_SAMPLES}` : `Optional · up to ${MAX_SAMPLES}`}>Work samples</H>
@@ -306,11 +313,15 @@ export function CanvasSamples({ d, set }: SectionProps) {
               {src ? (
                 <figure className="relative aspect-video overflow-hidden rounded-lg border border-line bg-surface">
                   <img src={src} alt={`Work sample ${i + 1}`} className="size-full object-cover" />
-                  <button type="button" aria-label={`Remove work sample ${i + 1}`} onClick={() => set("workSamples")(samples.filter((_, j) => j !== i))}
-                    className="absolute top-2 right-2 grid size-9 place-items-center rounded-full bg-surface text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus"><X aria-hidden="true" className="size-4" /></button>
+                  <span className="absolute inset-x-2 bottom-2 flex justify-end gap-2">
+                    <button type="button" aria-label={`Replace work sample ${i + 1}`} onClick={() => choose(i)}
+                      className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus"><RefreshCw aria-hidden="true" className="size-4" />Replace</button>
+                    <button type="button" aria-label={`Remove work sample ${i + 1}`} onClick={() => set("workSamples")(samples.filter((_, j) => j !== i))}
+                      className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus"><X aria-hidden="true" className="size-4" />Remove</button>
+                  </span>
                 </figure>
               ) : (
-                <button type="button" onClick={() => input.current?.click()} aria-label={i === samples.length ? undefined : "Add a work sample"} disabled={i > samples.length}
+                <button type="button" onClick={() => choose(null)} aria-label={i === samples.length ? undefined : "Add a work sample"} disabled={i > samples.length}
                   className="grid aspect-video w-full place-content-center justify-items-center gap-2 rounded-lg border-2 border-dashed border-line-dashed bg-surface/60 text-ink transition-colors duration-fast hover:border-ink-brand hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-default disabled:hover:border-line-dashed disabled:hover:bg-surface/60">
                   <Camera aria-hidden="true" className={cx("size-7", i === samples.length ? "text-ink" : "text-ink-subtle")} strokeWidth={1.5} />
                   {i === samples.length && <span className="flex items-center gap-1.5 text-body-md"><Plus aria-hidden="true" className="size-4" />Add a work sample</span>}

@@ -64,9 +64,9 @@ export function SignedInPanel({ session, title, inviteFor }: { session: Session;
   };
   const go = <ButtonLink href={homeFor(session)} variant={inviteFor ? "secondary" : "primary"} size="lg"
     className={inviteFor ? undefined : "swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm"}
-    fullWidth={!inviteFor} iconEnd={<ArrowRight />}>{owner ? "Go to the dashboard" : "Go to my profile"}</ButtonLink>;
+    fullWidth iconEnd={<ArrowRight />}>{owner ? "Go to the dashboard" : "Go to my profile"}</ButtonLink>;
   const out = <Button variant={inviteFor ? "primary" : "secondary"} size="lg" loading={busy} iconStart={inviteFor ? undefined : <LogOut />} iconEnd={inviteFor ? <LogOut /> : undefined} onClick={() => void logOut()}
-    fullWidth={!!inviteFor} className={inviteFor ? "swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm" : undefined}>
+    fullWidth className={inviteFor ? "swiss:h-14 swiss:justify-between swiss:px-6 swiss:font-display swiss:text-heading-sm" : undefined}>
     {inviteFor ? "Log out to use this invite" : "Log out"}
   </Button>;
 
@@ -81,7 +81,8 @@ export function SignedInPanel({ session, title, inviteFor }: { session: Session;
       </div>
       {error && <Banner tone="danger" title="We couldn't log you out">Try again.</Banner>}
       <div className="grid gap-3">
-        {inviteFor ? <>{out}<div>{go}</div></> : <>{go}<div>{out}</div></>}
+        {/* Both actions span the card, so they line up. */}
+        {inviteFor ? <>{out}{go}</> : <>{go}{out}</>}
       </div>
       <p className="border-t border-line pt-5 text-body-md text-ink">
         Need a separate account? <CreateAccountLink session={session} />. We&apos;ll log you out first.
