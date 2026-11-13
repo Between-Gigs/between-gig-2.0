@@ -11,6 +11,7 @@ import { useSession } from "@/lib/session";
 import { basePath } from "@/lib/site";
 import { AuthShell } from "./AuthShell";
 import { ClerkSlot } from "./ClerkSlot";
+import { GoogleSignup } from "./GoogleSignup";
 import { authSubtitle, authTitle, useAuthV2 } from "./authDesign";
 import { SignedInPanel, useSignedInGate } from "./SignedIn";
 
@@ -76,7 +77,10 @@ function Details({ ticket, finish }: { ticket: boolean; finish?: NonNullable<Ret
       lead={v2 ? undefined : <p>Create your account, then build a profile that feels like you. It takes about 10 minutes, and it saves as you go.</p>}>
       <h1 className={authTitle(v2, true)}>Create your account</h1>
       <p className={authSubtitle(v2, true)}>{ticket ? "Your invitation confirms your email. Tell us your name to get started." : finish ? `You're signed in as ${finish.email}. Tell us your name to finish.` : "Tell us your name, then we'll confirm your email."}</p>
-      <form noValidate onSubmit={(e) => void submit(e)} className="mt-8 grid gap-5">
+      {/* Open sign-up offers Google first, as on the sample /join (GoogleSignup returns here: Clerk finishes the
+          sign-in, then this page asks for the name and the terms). Invitations keep Clerk's own options. */}
+      {!ticket && !finish && <GoogleSignup />}
+      <form noValidate onSubmit={(e) => void submit(e)} className={!ticket && !finish ? "mt-5 grid gap-5" : "mt-8 grid gap-5"}>
         <Field label="Full name" error={errors.name}>
           <Input value={name} autoComplete="name" autoFocus placeholder={v2 ? "Maya Chen" : undefined} onChange={(e) => { setName(e.target.value); setErrors((x) => ({ ...x, name: undefined })); }} />
         </Field>
