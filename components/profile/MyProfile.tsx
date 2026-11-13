@@ -87,6 +87,18 @@ export function MyProfile() {
     </section>
   );
 
+  // Editorial (Green Room): the page is the profile itself, as in Justin's Flow p4, with one ruled status line on top.
+  if (ruled) return (
+    <Page decor="bottom">
+      <OwnStatus person={person} state={state} first={first} parts={partsDone(fields, person.name, template)} />
+      {state === "new" ? null : (
+        <div className="mt-10 min-w-0">
+          <ProfileView person={person} fields={previewFields} extras={profile?.extras} mode="own" />
+        </div>
+      )}
+    </Page>
+  );
+
   if (warm) return (
     <Page decor="corners">
       <div className="flex flex-wrap items-center gap-3">
@@ -239,6 +251,58 @@ function Live({ person, warm, ruled }: { person: Person; warm: boolean; ruled: b
         <ButtonLink href={`/p/${person.slug}/`} variant="primary" size="lg" iconStart={<Eye />}>View your public page</ButtonLink>
         <ButtonLink href="/profile/canvas/" size="lg" iconStart={<PencilLine />}>Edit profile</ButtonLink>
       </div>
+    </section>
+  );
+}
+
+/**
+ * Editorial My profile: one ruled line with where the profile stands and the one action, above the profile page itself.
+ * Not started: a short invitation instead, since there is no page to show yet.
+ */
+function OwnStatus({ person, state, first, parts }: { person: Person; state: string; first: string; parts: { done: number; total: number } }) {
+  const toast = useToast();
+  const url = absoluteUrl(`/p/${person.slug}/`);
+  const notes = person.reviewNotes ?? [];
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(url); toast({ message: "Link copied", tone: "success" }); }
+    catch { toast({ message: "Couldn't copy. Select the link and copy it instead.", tone: "danger" }); }
+  };
+  if (state === "new" || state === "registered" || state === "invited") return (
+    <section aria-labelledby="own-h" className="grid max-w-2xl gap-5 border-t border-line-strong pt-8">
+      <p className="text-eyebrow text-ink-muted uppercase">My profile</p>
+      <h1 id="own-h" className="font-display text-display-md text-balance text-ink">Let&apos;s build your profile</h1>
+      <p className="text-body-lg text-ink-muted">Hi {first}. Fill it in right on the page clients will see. It takes about 10 minutes and saves as you go.</p>
+      <div><ButtonLink href="/profile/canvas/" variant="primary" size="lg" iconEnd={<ArrowRight />}>Start your profile</ButtonLink></div>
+    </section>
+  );
+  const line = {
+    draft: `Draft · only you can see it. ${parts.total ? `${parts.done} of ${parts.total} parts done.` : ""}`,
+    submitted: `Submitted for review${person.submittedAt ? ` on ${when(person.submittedAt)}` : ""}. We'll email you when it's approved or if we suggest a change.`,
+    changes_requested: "Changes requested. Update them, then send it again.",
+    approved: `Your page is live${person.approvedAt ? ` since ${when(person.approvedAt)}` : ""}. Keep this month's availability current.`,
+  }[state] ?? "";
+  return (
+    <section aria-label="Where your profile stands" className="grid gap-4 border-y border-line-strong py-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <p className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-body-md text-ink">
+          <PersonStatusBadge status={person.status} audience="gigster" />
+          <span className="min-w-0">{line}</span>
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {state === "approved" && <Button variant="ghost" iconStart={<Copy />} onClick={copy}>Copy link</Button>}
+          {state === "approved" && <ButtonLink href={`/p/${person.slug}/`} variant="ghost" iconStart={<Eye />}>View public page</ButtonLink>}
+          <ButtonLink href="/profile/canvas/" variant={state === "submitted" || state === "approved" ? "secondary" : "primary"} iconStart={<PencilLine />}>
+            {state === "draft" ? "Continue your profile" : state === "changes_requested" ? "Make the changes" : "Edit profile"}
+          </ButtonLink>
+        </div>
+      </div>
+      {state === "changes_requested" && notes.length > 0 && (
+        <ul className="grid">
+          {notes.map((n) => (
+            <li key={n.note} className="grid gap-1 border-t border-line py-3 text-body-md text-ink"><b className="text-eyebrow uppercase">{sectionLabel[n.section]}</b>{n.note}</li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

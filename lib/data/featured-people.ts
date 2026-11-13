@@ -65,6 +65,13 @@ const details: Record<ExampleId, ExampleDetails> = {
   },
 };
 
+const moreWork: Record<string, [number, string][]> = {
+  simone: [[2, "A styled reading corner"], [3, "Mood board and swatches"], [4, "A sourced vintage console"], [5, "A bright dining nook"]],
+  luis: [[3, "Hand-cut dovetail joinery"], [4, "A built-in bookshelf and window seat"], [5, "A painted backdrop flat"]],
+  renee: [[2, "A garden long-table dinner"], [3, "The day-of run of show"], [4, "A welcome table, ready for guests"], [5, "An evening courtyard reception"]],
+  devon: [[2, "A restaurant private dining room"], [3, "A rooftop event space"], [4, "A boutique hotel lobby"], [5, "A warehouse venue"]],
+};
+
 /** Read-only source fixtures. Each sample session builds its own draft and published records from them. */
 export const featuredPeople: SeedPerson[] = professionalExamples.map((card) => {
   const d = details[card.id];
@@ -81,9 +88,12 @@ export const featuredPeople: SeedPerson[] = professionalExamples.map((card) => {
     extras: {
       tagline: card.services,
       helps: d.jobs,
+      // Five work samples each (the most a Gigster can add): the card photo first, then generated sample images
+      // (public/art/samples/work/README.md).
       portfolio: [
         { src: `art/samples/cards/${card.img}-work.jpg`, caption: card.portfolio },
         ...(card.id === "luis" ? [{ src: "art/samples/furniture.jpg", caption: "A sculpted walnut sideboard" }] : []),
+        ...(moreWork[card.id] ?? []).map(([n, caption]) => ({ src: `art/samples/work/${card.id}-${n}.jpg`, caption })),
       ],
     },
   };

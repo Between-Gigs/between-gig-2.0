@@ -129,15 +129,13 @@ export async function flow({ browser, base, outDir }) {
       await page.getByRole("link", { name: "See my profile" }).click();
       await page.waitForURL(/\/profile\/?$/);
       await expectText("Submitted for review");
-      await page.getByRole("heading", { name: "Hi, Riley", level: 1 }).waitFor();
-      await page.getByRole("button", { name: "Show full profile preview" }).click();
-      const preview = page.getByRole("region", { name: "Full profile preview" });
-      await preview.getByText(/Fifteen years dressing sets/).waitFor();
-      // One toggle opens and closes it (no second button under the preview).
-      assert.equal(await preview.getByRole("button", { name: /Collapse profile preview/ }).count(), 0);
-      await page.getByRole("button", { name: "Hide full profile preview" }).click();
-      await preview.waitFor({ state: "hidden" });
-      await page.getByRole("button", { name: "Show full profile preview" }).waitFor();
+      // Green Room: My profile is the profile page itself (Justin's Flow p4) under one ruled status line.
+      const status = page.getByRole("region", { name: "Where your profile stands" });
+      await status.getByRole("link", { name: "Edit profile" }).waitFor();
+      await page.getByRole("heading", { name: "Riley Park", level: 1 }).waitFor();
+      await page.getByText(/Fifteen years dressing sets/).first().waitFor();
+      // No old dashboard pieces: no preview toggle and no dark "You're live" block.
+      assert.equal(await page.getByRole("button", { name: /full profile preview/ }).count(), 0);
     })
     && await step("confirmation-email", async () => {
       await page.goto(`${base}/emails/`);

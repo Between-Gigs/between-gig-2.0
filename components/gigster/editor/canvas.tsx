@@ -24,7 +24,9 @@ import { GroupError, Pills, type SectionProps } from "./ui";
 import { takeHome } from "./sections";
 
 const quickDates = ["Weekday mornings", "Weekday evenings", "Weekends", "Most days", "Between shoots, ask me"];
-const MAX_SAMPLES = 3;
+/** Up to five work samples; three slots show at first and another appears as each fills. */
+const MAX_SAMPLES = 5;
+const FIRST_SLOTS = 3;
 
 /** A serif section heading, large like the mockup's, with an optional quiet tag ("· Optional"). */
 function H({ id, children, tag, size = "lg" }: { id: string; children: React.ReactNode; tag?: string; size?: "lg" | "md" }) {
@@ -280,7 +282,7 @@ async function resize(file: File, max = 1200): Promise<string> {
   } finally { URL.revokeObjectURL(url); }
 }
 
-/** "Work samples · Optional": three slots, the first one labelled. */
+/** "Work samples · Optional": three slots to start, up to five; the next empty one is labelled. */
 export function CanvasSamples({ d, set }: SectionProps) {
   const samples = (d.workSamples ?? []).filter(Boolean);
   const input = React.useRef<HTMLInputElement>(null);
@@ -293,11 +295,11 @@ export function CanvasSamples({ d, set }: SectionProps) {
   };
   return (
     <section id="sec-work" aria-labelledby="sec-work-h" className="grid scroll-mt-40 gap-5">
-      <H id="sec-work-h" tag="Optional">Work samples</H>
+      <H id="sec-work-h" tag={samples.length ? `${samples.length} of ${MAX_SAMPLES}` : `Optional · up to ${MAX_SAMPLES}`}>Work samples</H>
       <input ref={input} type="file" accept="image/*" multiple className="sr-only" tabIndex={-1} aria-label="Add work samples"
         onChange={(e) => { void pick(e.target.files); e.target.value = ""; }} />
       <ul className="grid gap-4 sm:grid-cols-3">
-        {Array.from({ length: MAX_SAMPLES }, (_, i) => {
+        {Array.from({ length: Math.min(MAX_SAMPLES, Math.max(FIRST_SLOTS, samples.length + 1)) }, (_, i) => {
           const src = samples[i];
           return (
             <li key={i} className="min-w-0">

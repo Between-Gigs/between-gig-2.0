@@ -9,7 +9,7 @@
  * same: only the presentation changes.
  */
 import { Accordion, Button, cx } from "@ds/components";
-import { BadgeCheck, BriefcaseBusiness, Clapperboard, Heart, Info, Languages, MapPin, Share } from "lucide-react";
+import { BadgeCheck, BriefcaseBusiness, Heart, Info, Languages, Share } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
@@ -22,23 +22,18 @@ import { hasRate } from "@/lib/profile/validate";
 import { asset } from "@/lib/site";
 import type { ProfileSectionId } from "@/lib/profile/template";
 import { Divider, Heading, Quote, Status, Text } from "../atoms";
-import { RateBlock, SectionHeading, ServiceRow } from "../molecules";
+import { RateBlock, SectionHeading } from "../molecules";
 import { ProfileResultCard } from "../organisms";
 
-/** One line of the identity meta: a lucide icon and the words. */
-function Meta({ icon: Icon, children }: { icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>; children: React.ReactNode }) {
-  return (
-    <li className="flex min-w-0 items-start gap-2 text-body-md text-ink-muted">
-      <Icon aria-hidden className="mt-0.5 size-4 shrink-0 text-ink" />
-      <span className="min-w-0 break-words">{children}</span>
-    </li>
-  );
+/** One plain line of the identity meta (Justin's Flow p4: no icons, just the words). */
+function Meta({ children }: { children: React.ReactNode }) {
+  return <li className="min-w-0 break-words text-body-md text-ink-muted">{children}</li>;
 }
 
 /** A body section: the serif heading with a rule above it, then its content. */
 function Block({ id, title, meta, children }: { id: ProfileSectionId; title: string; meta?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section aria-label={title} data-profile-section={id} className="grid gap-5 border-t border-line pt-8">
+    <section aria-label={title} data-profile-section={id} className="grid gap-5 border-t border-line-strong pt-8">
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
         <SectionHeading title={title} level="h2" />
         {meta && <Text size="sm" muted>{meta}</Text>}
@@ -51,7 +46,7 @@ function Block({ id, title, meta, children }: { id: ProfileSectionId; title: str
 /** One of the three short columns under the work samples: a smaller serif heading over its content. */
 function Column({ title, label, children }: { title: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
-    <section aria-label={label} className="grid min-w-0 content-start gap-3 md:border-l md:border-line md:pl-6 md:first:border-l-0 md:first:pl-0 lg:pl-8">
+    <section aria-label={label} className="grid min-w-0 content-start gap-3 md:border-l md:border-line-strong md:pl-6 md:first:border-l-0 md:first:pl-0 lg:pl-8">
       <Heading level="h3" as="h3" className="break-words">{title}</Heading>
       <div className="grid min-w-0 gap-3">{children}</div>
     </section>
@@ -94,7 +89,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
 
   const identity = (
     <section aria-label={`About ${first}`} className="grid gap-6 md:grid-cols-12 md:items-center md:gap-8 lg:gap-12">
-      <div className="min-w-0 md:col-span-5">
+      <div className="min-w-0 md:col-span-4">
         {P("photo", !!f.photo || !show, (
           <PersonPhoto id={person.id} morph={!editing} name={f.name} src={f.photo || undefined} fallback="brand" department={f.position} skills={f.skills}
             alt={f.photo ? `Portrait of ${f.name}${sample ? " (fictional)" : ""}` : undefined}
@@ -102,15 +97,15 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
         ), "Add photo", "photo")}
       </div>
 
-      <div className="grid min-w-0 content-start gap-4 md:col-span-7">
+      <div className="grid min-w-0 content-start gap-3 md:col-span-8">
         {editing && <Status tone="neutral" dot={false}>{pageLabel}</Status>}
         {P("name", !!f.name.trim(), <Heading level="display-l" as={Name} className="wrap-anywhere max-sm:text-display-md">{f.name}</Heading>, "Your name", "title")}
         {(title || (!show && craft)) && <p className="text-heading-md break-words text-ink">{title || craft}</p>}
         {reviewed && <p className="inline-flex items-center gap-1.5 text-label-md text-ink-brand"><BadgeCheck aria-hidden="true" className="size-4" />Reviewed by Between Gigs</p>}
-        <ul className="grid gap-2">
-          {(where || show) && <Meta icon={MapPin}>{P("where", !!where, <span>{where}{f.travel.trim() ? ` · ${f.travel.trim()}` : ""}</span>, "Where you work")}</Meta>}
-          {years && <Meta icon={BriefcaseBusiness}>{years}</Meta>}
-          {editing && <Meta icon={Clapperboard}>{P("position", !!f.position, <span>{f.position}</span>, "Department")}</Meta>}
+        <ul className="grid gap-1">
+          {(where || show) && <Meta>{P("where", !!where, <span>{where}{f.travel.trim() ? ` · ${f.travel.trim()}` : ""}</span>, "Where you work")}</Meta>}
+          {years && <Meta>{years}</Meta>}
+          {editing && <Meta>{P("position", !!f.position, <span>{f.position}</span>, "Department")}</Meta>}
         </ul>
         {publicActions && (
           <div className="-ml-3 flex flex-wrap gap-1">
@@ -129,26 +124,20 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
       {P("services", services.length > 0 || !!f.other.trim(), (
         <div className="grid gap-5">
           {services.length > 0 && (
-            <ul className="border-t border-line">
+            <ul>
               {services.map((s) => {
-                const line = lineOf(s), standard = serviceDescription(s);
+                const line = lineOf(s) || (services.length === 1 && f.hireableJobs?.trim()) || "", standard = serviceDescription(s);
                 return (
-                  <li key={s}>
-                    <ServiceRow
-                      name={<span className="grid gap-1"><span className="text-heading-md">{s}</span>{standard && <span className="text-body-sm font-normal text-ink-muted">{standard}</span>}</span>}
-                      description={line || (services.length === 1 && f.hireableJobs?.trim()) || (standard ? "" : rate ? `From ${rate}` : "Rate agreed first")} />
+                  <li key={s} className="grid gap-x-6 gap-y-1 border-t border-line py-4 first:border-t-0 first:pt-0 sm:grid-cols-12">
+                    <span className="text-label-lg font-semibold text-ink sm:col-span-4">{s}</span>
+                    <span className="grid gap-1 sm:col-span-8">
+                      <span className="text-body-md text-ink">{line || (standard ? standard : rate ? `From ${rate}` : "Rate agreed first")}</span>
+                      {line && standard && <span className="text-body-sm text-ink-muted">{standard}</span>}
+                    </span>
                   </li>
                 );
               })}
             </ul>
-          )}
-          {helps.length > 0 && (
-            <div className="grid gap-3">
-              <Text size="sm" muted>{first} can also help with</Text>
-              <ul className="flex flex-wrap gap-2">
-                {helps.map((h) => <li key={h}><Status tone="neutral" dot={false} className="text-ink">{h}</Status></li>)}
-              </ul>
-            </div>
           )}
           <Text size="sm" muted>Scope, timing and the final price are agreed with {first} before anything is booked.</Text>
           {editing && f.other.trim() && <Text size="sm" muted>Something else, in private review: {f.other}</Text>}
@@ -158,34 +147,22 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
   );
 
   const rateColumn = (
-    <div className="grid min-w-0 content-start gap-5 rounded-lg border border-line bg-surface p-5 lg:rounded-none lg:border-0 lg:border-l lg:bg-transparent lg:p-0 lg:pl-10">
+    <div className="grid min-w-0 content-start gap-4 lg:border-l lg:border-line-strong lg:pl-10">
       {rateBlock}
       {P("availability", !!f.dates.trim() || !show, <Text>{f.dates || monthStatusLabel[f.monthStatus]}</Text>, "When you're usually free")}
       {start && <Text muted>Earliest start · {start}</Text>}
-      {!editing && (
-        // Phones and tablets get the request in the bar at the foot of the screen instead.
+      {!editing && mode !== "own" && (
+        // Phones and tablets get the request in the bar at the foot of the screen instead. Not on your own page.
         <div className={cx("grid gap-2", publicActions && !aside && "max-lg:hidden")}>
           <Button variant="primary" size="lg" fullWidth disabled={mode !== "public"} aria-describedby={`${person.id}-request-note`} onClick={onRequest}>
             Request {callName}
           </Button>
           <p id={`${person.id}-request-note`} className="text-body-sm text-ink-muted">
-            {mode === "public" ? "You won't be charged. Scope and rate are agreed first." : mode === "own" ? "Clients see this on your profile." : "Owner view: requests are off here."}
+            {mode === "public" ? "You won't be charged. Scope and rate are agreed first." : "Owner view: requests are off here."}
           </p>
         </div>
       )}
     </div>
-  );
-
-  const checked = (
-    <section aria-labelledby={`${person.id}-checked`} className="grid gap-4 rounded-lg border border-line bg-surface p-5">
-      <Heading level="h4" as="h2" id={`${person.id}-checked`}>What we&apos;ve checked</Heading>
-      <ul className="grid gap-3">
-        <li className="flex items-start gap-3"><BadgeCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-ink-brand" />
-          <Text size="sm" as="span">{reviewed ? "Profile reviewed by the Between Gigs team" : "Reviewed by the Between Gigs team before it goes public"}</Text></li>
-        <li className="flex items-start gap-3"><Info aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-ink-muted" />
-          <Text size="sm" muted as="span">Credits and details are shared by {first}, not independently verified</Text></li>
-      </ul>
-    </section>
   );
 
   // How they work: mode and travel, transport, tools and (when shared) insurance.
@@ -198,21 +175,20 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
 
   // Experience, Selected credits and the personality question, side by side on wider screens.
   const story = (show || !!f.about.trim() || credits.length > 0 || f.skills.length > 0 || !!personality) && (
-    <section aria-label="Experience and credits" data-profile-section="credits" className="grid gap-8 border-t border-line pt-8 md:grid-cols-3 md:gap-6">
+    <section aria-label="Experience and credits" data-profile-section="credits" className="grid gap-8 border-t border-line-strong pt-8 md:grid-cols-3 md:gap-6">
       <Column title="Experience" label="Experience">
         {P("about", !!f.about.trim(), <Text className="whitespace-pre-line break-words">{f.about}</Text>, "How your film and TV experience helps you deliver this service.", "block")}
         {P("skills", f.skills.length > 0, (
-          <ul aria-label={`On-set ${f.skills.length === 1 ? "skill" : "skills"}`} className="flex flex-wrap gap-2">{f.skills.map((s) => <li key={s}><Status tone="neutral" dot={false} className="text-ink">{s}</Status></li>)}</ul>
+          editing
+            ? <ul aria-label={`On-set ${f.skills.length === 1 ? "skill" : "skills"}`} className="flex flex-wrap gap-2">{f.skills.map((s) => <li key={s}><Status tone="neutral" dot={false} className="text-ink">{s}</Status></li>)}</ul>
+            : <Text size="sm" muted>On set: {f.skills.join(" · ")}</Text>
         ), "Your on-set skills", "block")}
       </Column>
       <Column title="Selected credits" label="Selected credits">
         {P("credits", credits.length > 0, (
-          <ol className="grid gap-3">
+          <ol className="grid gap-1.5">
             {creditRows.map(({ title: t, role }, i) => (
-              <li key={credits[i]} className="flex items-start gap-3">
-                <Clapperboard aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-ink" />
-                <span className="min-w-0 break-words text-body-md text-ink">{t}{role && <span className="text-ink-muted"> · {role}</span>}</span>
-              </li>
+              <li key={credits[i]} className="min-w-0 break-words text-body-md text-ink">{t}{role && <span className="text-ink-muted"> · {role}</span>}</li>
             ))}
           </ol>
         ), "Your notable credits, best first", "block")}
@@ -231,20 +207,17 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
 
   const body: Partial<Record<ProfileSectionId, React.ReactNode>> = {
     work: portfolio.length > 0 && (
-      <Block id="work" title="Work samples" meta={`${portfolio.length} photos`}>
+      <Block id="work" title="Work samples">
         <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          {portfolio.slice(0, 3).map((it, i) => (
-            <li key={it.src} className={cx("min-w-0", i === 2 && "max-md:hidden")}>
+          {portfolio.slice(0, 5).map((it, i) => (
+            <li key={it.src} className="min-w-0">
               <button type="button" onClick={() => onPhoto(i)} aria-label={`Open image: ${it.caption}`} className="group relative block aspect-4/3 w-full overflow-hidden rounded-lg bg-surface-sunken">
                 <img src={asset(it.src)} alt="" loading="lazy" className="absolute inset-0 size-full object-cover transition duration-base group-hover:scale-105" />
               </button>
             </li>
           ))}
         </ul>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Button variant="secondary" size="sm" onClick={() => onPhoto(0)}>Show all {portfolio.length} photos</Button>
-          {sample && <Text size="sm" muted className="inline-flex items-start gap-2"><Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />Concept images showing the kind of work to discuss, not completed client projects.</Text>}
-        </div>
+        {sample && <Text size="sm" muted className="mt-4 inline-flex items-start gap-2"><Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />Concept images showing the kind of work to discuss, not completed client projects.</Text>}
       </Block>
     ),
     credits: story,
@@ -281,12 +254,11 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
 
       <div className={cx("mt-12 grid gap-10", !!aside && "lg:grid-cols-12 lg:gap-x-10 xl:gap-x-14")}>
         <div className={cx("grid min-w-0 content-start gap-12", !!aside && "lg:col-span-8")}>
-          <div className="grid gap-8 border-t border-line pt-8 lg:grid-cols-12 lg:gap-x-10">
+          <div className="grid gap-8 border-t border-line-strong pt-8 lg:grid-cols-12 lg:gap-x-10">
             <div className="min-w-0 lg:col-span-8">{help}</div>
             <div className="min-w-0 lg:col-span-4">{rateColumn}</div>
           </div>
           {sections.map((key) => body[key] && <React.Fragment key={key}>{body[key]}</React.Fragment>)}
-          {!aside && <div className="max-w-xl">{checked}</div>}
           {sample && !editing && <Text size="sm" muted>This is a fictional sample profile: the person, biography and credits are made up for the preview.</Text>}
         </div>
         {aside && (

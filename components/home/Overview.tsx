@@ -199,7 +199,7 @@ function Guide() {
         <nav aria-label="Hub shortcuts" className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2">
           <Link href="/preview/profiles/" className="inline-flex min-h-11 items-center gap-3 rounded-md text-label-md text-ink hover:underline">
             <span aria-hidden="true" className="flex -space-x-2">
-              {profiles.map((p) => <img key={p.id} src={asset(`art/samples/cards/${p.img}-portrait.jpg`)} alt="" className="size-9 rounded-full border-2 border-surface-brand object-cover" />)}
+              {profiles.map((p) => <img key={p.id} src={asset(`art/samples/cards/${p.img}-portrait.jpg`)} alt="" className="size-9 rounded-full border-2 border-bg object-cover" />)}
             </span>
             Sample profiles
           </Link>
