@@ -14,6 +14,7 @@ import { basePath } from "@/lib/site";
 import { AuthShell } from "./AuthShell";
 import { InviteJoin } from "./InviteJoin";
 import { GoogleSignup } from "./GoogleSignup";
+import { NativeSignup } from "./NativeSignup";
 import { ClerkSlot } from "./ClerkSlot";
 import { authSubtitle, authTitle, useAuthV2 } from "./authDesign";
 import { displayName, GateSkeleton, homeFor, SignedInPanel, useLeave, useSignedInGate } from "./SignedIn";
@@ -38,7 +39,7 @@ function SampleJoin() {
     setResumeClerk(clerkEnabled && (window.location.hash.startsWith("#/") || /^#(?:sso-callback|verify-email-address|verify-phone-number)(?:[/?]|$)/.test(window.location.hash))); // eslint-disable-line react-hooks/set-state-in-effect
   }, []);
   if (onboarding) return <JoinForm key={`onboarding-${onboarding.email}`} initialEmail={onboarding.email} initialName={onboarding.name} authenticated />;
-  if (resumeClerk) return <ClerkAccount google={params.get("method") === "google"} />;
+  if (resumeClerk) return <NativeSignup inviteToken={token || undefined} />;
   return <JoinForToken key={token} token={token} />;
 }
 
@@ -56,7 +57,7 @@ function JoinForToken({ token }: { token: string }) {
   }, [token]);
 
   if (gate === undefined) return <AuthShell header="Sign up" steps={false}><GateSkeleton /></AuthShell>;
-  if (!token) return gate ? <AuthShell header="Sign up" steps={false}><SignedInPanel session={gate} /></AuthShell> : <JoinForm key="open" />;
+  if (!token) return gate ? <AuthShell header="Sign up" steps={false}><SignedInPanel session={gate} /></AuthShell> : clerkEnabled ? <NativeSignup /> : <JoinForm key="open" />;
   if (!lookup) {
     return (
       <AuthShell header="Sign up">
@@ -76,6 +77,7 @@ function JoinForToken({ token }: { token: string }) {
     }
     return <InviteProblem lookup={lookup} session={gate} />;
   }
+  if (lookup.state === "valid" && lookup.invite && clerkEnabled) return <NativeSignup inviteToken={token} email={lookup.invite.email} />;
   if (lookup.state === "valid" && lookup.invite) return <JoinForm key={token} token={token} initialEmail={lookup.invite.email} />;
   return <InviteProblem lookup={lookup} />;
 }

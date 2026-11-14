@@ -49,22 +49,45 @@ function callback(user: Identity, to: string) {
   // A full callback reload exercises the real Bridge and role guard before browser state is initialized.
   window.location.assign(to);
 }
-export function SignUp({ initialValues, unsafeMetadata, fallbackRedirectUrl }: { initialValues: { emailAddress: string; firstName: string; lastName?: string }; unsafeMetadata: Record<string, unknown>; fallbackRedirectUrl: string; [key: string]: unknown }) {
+export function SignUp({ initialValues, unsafeMetadata = {}, fallbackRedirectUrl }: { initialValues?: { emailAddress?: string; firstName?: string; lastName?: string }; unsafeMetadata?: Record<string, unknown>; fallbackRedirectUrl: string; [key: string]: unknown }) {
+  const context = React.useContext(Context);
+  React.useEffect(() => {
+    if (context.isLoaded && context.user) {
+      const target = window as unknown as { qaSignedInSignupMounts?: number };
+      target.qaSignedInSignupMounts = (target.qaSignedInSignupMounts ?? 0) + 1;
+      context.routerPush(fallbackRedirectUrl);
+    }
+  }, [context, fallbackRedirectUrl]);
+  const [email, setEmail] = React.useState(initialValues?.emailAddress ?? "");
+  const [name, setName] = React.useState([initialValues?.firstName, initialValues?.lastName].filter(Boolean).join(" "));
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState("");
+  const [pending, setPending] = React.useState<Identity | null>(null);
+  if (pending) return <section aria-label="Mock native Clerk email verification">
+    <p>Verify your test email before continuing.</p>
+    <button type="button" onClick={() => callback(pending, fallbackRedirectUrl)}>Verify test email</button>
+  </section>;
   return <form aria-label="Mock native Clerk signup" onSubmit={(event) => {
     event.preventDefault();
+    if (!email.includes("@")) { setError("Enter an email"); return; }
     if (password.length < 8) { setError("Password must have at least 8 characters"); return; }
     const users = accounts();
-    if (users.some((u) => u.primaryEmailAddress.emailAddress === initialValues.emailAddress)) { setError("Account already exists"); return; }
+    if (users.some((u) => u.primaryEmailAddress.emailAddress === email)) { setError("Account already exists"); return; }
     // Client-editable metadata must never confer the owner role in the real Bridge.
-    const user: Identity = { id: `clerk-${users.length}`, fullName: `${initialValues.firstName} ${initialValues.lastName ?? ""}`.trim(), primaryEmailAddress: { emailAddress: initialValues.emailAddress }, unsafeMetadata: { ...unsafeMetadata, role: "owner" }, publicMetadata: {}, password, provider: "password" };
+    const user: Identity = { id: `clerk-${users.length}`, fullName: name, primaryEmailAddress: { emailAddress: email }, unsafeMetadata: { ...unsafeMetadata, role: "owner" }, publicMetadata: {}, password, provider: "password" };
     localStorage.setItem(KEY, JSON.stringify([...users, user]));
-    callback(user, fallbackRedirectUrl);
+    setPending(user);
   }}>
+    <label>Full name<input aria-label="Full name" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} /></label>
+    <label>Email<input aria-label="Email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
     <label>Password<input aria-label="Password" type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
     {error && <p role="alert">{error}</p>}
     <button type="submit">Create test account</button>
+    <button type="button" onClick={() => {
+      sessionStorage.setItem("qa-google-request", JSON.stringify({ strategy: "oauth_google", unsafeMetadata }));
+      if (sessionStorage.getItem("qa-google-unavailable")) { setError("Couldn't open Google"); return; }
+      callback({ ...google, unsafeMetadata }, fallbackRedirectUrl);
+    }}>Continue with Google</button>
   </form>;
 }
 export function SignIn({ fallbackRedirectUrl }: { fallbackRedirectUrl: string; [key: string]: unknown }) {
