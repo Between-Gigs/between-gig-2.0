@@ -1,29 +1,46 @@
 "use client";
 
 import Link from "next/link";
+import { useSyncExternalStore } from "react";
+import { basePath } from "@/lib/site";
+import { buttonSizes, buttonVariants } from "@ds/components/Button";
 import { Logo, ThemeToggle } from "@ds/components";
 import { ArrowRight } from "lucide-react";
 import { PhotoStage } from "@/components/ds/organisms";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { STILL_LIFE } from "@/components/landing/ComingSoon";
-import { ButtonLink } from "@/components/ui/ButtonLink";
+
+
+function subscribeTheme(onChange: () => void) {
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  return () => observer.disconnect();
+}
+function readTheme(): "light" | "dark" { return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light"; }
 
 /** Peter's November 13 direction, isolated for review. Delete this route to retire it. */
 export function PeterHomePreview() {
+  const theme = useSyncExternalStore<"light" | "dark">(subscribeTheme, readTheme, () => "light");
+  const joinHref = basePath === "/hub" ? "/join/" : `${basePath}/join/`;
+  function changeTheme(next: "light" | "dark") {
+    // Apply immediately: this review page should never wait on a view-transition callback.
+    document.documentElement.setAttribute("data-theme", next);
+    try { localStorage.setItem("bg-theme", next); } catch { /* storage blocked: still switches */ }
+  }
   return (
     <div className="flex min-h-dvh flex-col bg-bg text-ink">
       <header className="relative z-sticky border-b border-line bg-bg shadow-sm">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 items-center gap-2 sm:grid-cols-3 px-4 py-3 sm:gap-4 sm:px-6 lg:py-5">
+        <div className="mx-auto grid max-w-7xl grid-cols-2 items-center gap-2 lg:grid-cols-3 px-4 py-3 sm:gap-4 sm:px-6 lg:py-5">
           <Link href="/" aria-label="Between Gigs home" className="inline-flex min-h-11 w-fit items-center rounded-md">
             <Logo height={28} className="hidden md:block" />
             <Logo layout="mark" height={28} className="md:hidden" />
           </Link>
-          <p className="order-3 col-span-2 pb-1 text-center font-display text-heading-sm sm:order-none sm:col-span-1 sm:pb-0 font-semibold leading-tight sm:text-heading-md" data-preview-title>
+          <p className="order-3 col-span-2 min-w-0 max-w-full break-words pb-1 text-center font-display text-heading-sm lg:order-none lg:col-span-1 lg:pb-0 font-semibold leading-tight sm:text-heading-md" data-preview-title>
             Los Angeles Call Sheet
           </p>
           <div className="flex items-center justify-end gap-1 sm:gap-2">
-            <ThemeToggle size="sm" showLabel={false} className="min-h-11" />
-            <Link href="/login/" className="inline-flex min-h-11 shrink-0 items-center rounded-full px-2 text-label-sm font-medium hover:bg-surface-hover sm:px-3 sm:text-label-md">Sign in</Link>
+            <ThemeToggle theme={theme} onChange={changeTheme} size="sm" showLabel={false} className="min-h-11" />
+            <a href={joinHref} className="inline-flex min-h-11 shrink-0 items-center rounded-full px-2 text-label-sm font-medium hover:bg-surface-hover sm:px-3 sm:text-label-md">Join / Sign in</a>
           </div>
         </div>
       </header>
@@ -43,14 +60,18 @@ export function PeterHomePreview() {
               </h1>
               <p className="max-w-2xl text-body-lg leading-relaxed sm:text-heading-sm">Put your behind-the-scenes skills to work beyond the set.</p>
               <div className="grid w-full justify-items-center gap-3 sm:mt-2">
-                <ButtonLink href="/join/" variant="primary" size="lg" iconEnd={<ArrowRight aria-hidden="true" />} className="min-h-14 max-w-full gap-3 whitespace-normal! rounded-full px-5 text-label-md sm:px-8 sm:text-heading-sm">
-                  Create your Gigster profile
-                </ButtonLink>
+                <a href={joinHref} className={`inline-flex items-center justify-center min-h-14 max-w-full gap-3 whitespace-normal rounded-full px-5 text-label-md sm:px-8 sm:text-heading-sm ${buttonVariants.primary} ${buttonSizes.lg}`}>
+                  Create your Gigster profile <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
+                </a>
                 <p className="text-body-md font-semibold italic">It’s free to join!</p>
               </div>
-              <div className="grid max-w-xl justify-items-center gap-4 sm:mt-1">
-                <span aria-hidden="true" className="h-px w-16 bg-accent-gold" />
-                <p className="text-body-lg leading-relaxed">Let us connect you to businesses and individuals who need your expertise.</p>
+              <div className="grid w-full max-w-3xl justify-items-center gap-1 sm:mt-1" data-preview-connection>
+                <p className="flex max-w-full items-center justify-center gap-3 text-body-md font-bold italic leading-relaxed sm:gap-5 sm:text-body-lg">
+                  <span aria-hidden="true" className="h-px w-4 shrink-0 bg-accent-gold sm:w-16" />
+                  <span>Let us connect you to</span>
+                  <span aria-hidden="true" className="h-px w-4 shrink-0 bg-accent-gold sm:w-16" />
+                </p>
+                <p className="text-body-lg font-semibold leading-relaxed">businesses and individuals who need your expertise.</p>
               </div>
             </div>
           </div>
