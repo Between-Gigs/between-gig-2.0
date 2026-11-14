@@ -52,6 +52,7 @@ try {
     const email = `new-user-${index}@example.test`;
     await page.goto(`${hosted.url}/join/`);
     await page.getByRole("form", { name: "Mock native Clerk signup" }).waitFor();
+    assert.equal(await page.getByText("Sample account preview", { exact: true }).count(), 0, "configured Clerk flow is never mislabeled as a simulated sign-in");
     assert.equal(await page.getByRole("checkbox").count(), 0, "native Clerk is the first signup step");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByLabel("Full name").fill("New Account");
