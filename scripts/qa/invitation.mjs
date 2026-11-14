@@ -66,7 +66,8 @@ try {
     assert.equal(await frame.getByRole("link", { name: "Privacy", exact: true }).getAttribute("href"), "https://between-gigs.com/privacy/");
     assert.equal(await frame.getByRole("link", { name: "Contact support", exact: true }).getAttribute("href"), "mailto:hello@between-gigs.com");
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "page fits viewport");
-    assert.ok(await frame.locator("html").evaluate(el => el.scrollWidth <= innerWidth + 1), "email fits iframe");
+    const emailBounds=await frame.locator("html").evaluate(el=>({width:innerWidth,scroll:el.scrollWidth,outside:[...document.querySelectorAll("body *")].map(n=>({tag:n.tagName,cls:n.className,left:n.getBoundingClientRect().left,right:n.getBoundingClientRect().right})).filter(n=>n.right>innerWidth+1||n.left< -1).slice(0,8)}));
+    assert.ok(emailBounds.scroll<=emailBounds.width+1, "email fits iframe: "+JSON.stringify({width,theme,...emailBounds}));
     assert.equal(await frame.locator('meta[name="color-scheme"]').getAttribute("content"), "light");
     await page.getByRole("radio", { name: "Dark", exact: true }).click();
     assert.equal(await frame.locator('meta[name="color-scheme"]').getAttribute("content"), "light");
