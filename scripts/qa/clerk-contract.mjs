@@ -95,7 +95,8 @@ try {
     // A returning identity must never mount SignUp while the app bridge resolves.
     for (const suffix of ["", "#/sso-callback"]) {
       await page.goto(`${hosted.url}/join/${suffix}`);
-      await page.waitForURL(new RegExp(`${basePath}/profile/$`));
+      if (suffix) await page.waitForURL(new RegExp(`${basePath}/profile/$`));
+      else await page.getByRole("heading", { name: "You're already signed in" }).waitFor();
       assert.equal(await page.evaluate(() => window.qaSignedInSignupMounts ?? 0), 0);
       assert.equal(await page.getByRole("form", { name: "Mock native Clerk signup" }).count(), 0);
     }
