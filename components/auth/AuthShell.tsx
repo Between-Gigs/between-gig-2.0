@@ -10,6 +10,7 @@ import { AuthTemplate } from "@/components/ds/templates/AuthTemplate";
 import { AuthStageTemplate } from "@/components/ds/templates/AuthStageTemplate";
 import { Status } from "@/components/ds/atoms";
 import { useAuthV2 } from "./authDesign";
+import { SampleAuthNotice } from "./SampleAuthNotice";
 
 const steps = [
   { title: "Open your link", body: "Set up your account with this email address." },
@@ -31,6 +32,7 @@ export function AuthShell({ header, lead, children, className, eyebrow, steps: s
   /** Sign up only: the three-step row. Off when there is nothing to start (an invite already used, invite-only). */
   steps?: boolean;
 }) {
+  const content = <><SampleAuthNotice />{children}</>;
   const look = useLook();
   const warm = look === "friendly" || look === "call-sheet";
   const classic = look === "classic";
@@ -48,7 +50,7 @@ export function AuthShell({ header, lead, children, className, eyebrow, steps: s
           lead={login ? "Log in to keep your profile current and see where it stands." : "Create a profile so people can find the services you offer between gigs."}>
           <div className={className}>
             {eyebrow && <Status tone="brand" className="mb-4">{eyebrow}</Status>}
-            {children}
+            {content}
             {lead && <div className="mt-6 border-t border-line pt-4 text-body-sm text-ink-muted">{lead}</div>}
           </div>
         </AuthStageTemplate>
@@ -60,7 +62,7 @@ export function AuthShell({ header, lead, children, className, eyebrow, steps: s
       <Page bare>
         <AuthTemplate login={login} eyebrow={eyebrow} showSteps={showSteps}>
           <div className={className}>
-            {children}
+            {content}
             {lead && <div className="mt-8 border-t border-line pt-5 text-body-sm text-ink-muted">{lead}</div>}
           </div>
         </AuthTemplate>
@@ -88,7 +90,7 @@ export function AuthShell({ header, lead, children, className, eyebrow, steps: s
         <div className={modern ? "modern-auth-form" : classic ? "p-6 sm:p-8" : warm ? "rounded-2xl bg-surface p-6 shadow-md sm:p-10 lg:p-14" : "self-start rounded-2xl border border-line bg-surface-raised p-5 shadow-sm sm:p-6 swiss:border-0 swiss:border-t-8 swiss:border-line-strong swiss:bg-transparent swiss:p-0 swiss:pt-6 md:col-span-6 lg:col-span-5 xl:col-span-4"}>
           {warm && <span aria-hidden="true" className="grid size-16 place-items-center rounded-xl bg-tint-mint-soft"><Icon3D name={login ? "waving_hand" : "key"} className="size-9" /></span>}
           <div className={cx(warm && "mt-6", className)}>
-            {children}
+            {content}
             {lead && <div className="mt-8 border-t border-line pt-5 text-body-sm text-ink-muted">{lead}</div>}
           </div>
         </div>

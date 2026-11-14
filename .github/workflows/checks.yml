@@ -34,6 +34,7 @@ jobs:
       - name: Test signup and existing product flow (sample mode, no real accounts)
         run: |
           node scripts/qa/auth-flow.mjs
+          node scripts/qa/auth-preview.mjs
           node scripts/qa/profile-entry.mjs
           node scripts/qa/hub-staff.mjs
           node scripts/qa/owner-sidebar.mjs
