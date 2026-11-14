@@ -79,6 +79,7 @@ try {
     await page.keyboard.press("ArrowRight");
     assert.equal(await group.getByRole("radio", { name: "List", exact: true }).getAttribute("aria-checked"), "true", "arrow keys select section list mode");
     assert.equal(await page.locator('section[aria-labelledby="public-h"] [data-guide-preview-mode="list"]').count(), 0, "list mode stays in its section");
+    await journey.screenshot({ path: `deliverables/hub-cleanup/list-${width}-${theme}.png` });
     await page.keyboard.press("ArrowRight");
     assert.equal(await full.getAttribute("aria-checked"), "true", "arrow keys select section view");
     assert.equal(await page.locator('section[aria-labelledby="public-h"] [data-guide-preview-mode="full"]').count(), 0, "neighbor section stays in thumbnail mode");
@@ -173,6 +174,7 @@ try {
       await page.getByRole("button", { name: "Reset sample data", exact: true }).click();
       const confirmation = page.getByRole("dialog", { name: "Reset this browser’s sample data?" });
       await confirmation.waitFor();
+      await confirmation.screenshot({ path: "deliverables/hub-cleanup/reset-confirmation-mobile.png" });
       assert.equal(await page.evaluate(() => localStorage.getItem("bg2-sample-v2")), saved.sample, "opening reset does not change sample data");
       await page.keyboard.press("Escape");
       await confirmation.waitFor({ state: "hidden" });
@@ -188,7 +190,7 @@ try {
       assert.equal(reset.unrelated, "keep");
       await page.evaluate(() => window.bgSample.signInAs("owner"));
       const signOut = page.locator('section[aria-labelledby="roles-h"]').getByRole("button", { name: /Sign out of sample/ });
-      const signOutCard = page.locator('section[aria-labelledby="roles-h"] li').filter({ has: signOut });
+      const signOutCard = page.locator('section[aria-labelledby="roles-h"] li').filter({ has: page.getByRole("button", { name: /Sign out of sample/ }) });
       await signOutCard.scrollIntoViewIfNeeded();
       const source = await signOutCard.locator("iframe").getAttribute("src");
       assert.equal(source, `${base}${base === "/hub" ? "/home/" : "/"}`, "sign-out thumbnail uses the public-site preview");
