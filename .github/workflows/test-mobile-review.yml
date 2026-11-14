@@ -1,0 +1,86 @@
+name: Test-site mobile review captures
+on:
+  push:
+    branches: [qa/mobile-review-disabled]
+permissions: {}
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    environment: test
+    timeout-minutes: 15
+    steps:
+      - name: Prepare isolated browser without credentials
+        run: |
+          mkdir -p /tmp/bg-test-review
+          cd /tmp/bg-test-review
+          npm init -y
+          npm install --ignore-scripts --save-exact playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Capture test-site pages without saving credentials
+        working-directory: /tmp/bg-test-review
+        env:
+          TEST_GATE_PASSPHRASE: ${{ secrets.TEST_GATE_PASSPHRASE }}
+        run: |
+          cat > capture.cjs <<'JS'
+          const { chromium } = require('playwright');
+          const fs = require('fs');
+          (async () => {
+            const passphrase = process.env.TEST_GATE_PASSPHRASE;
+            delete process.env.TEST_GATE_PASSPHRASE;
+            if (!passphrase) throw new Error('Missing approved test gate secret');
+            const browser = await chromium.launch();
+            fs.mkdirSync('captures', {recursive:true});
+            const report = [];
+            for (const mode of ['light','dark']) {
+              const context = await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1,isMobile:true,hasTouch:true,colorScheme:mode,reducedMotion:'reduce'});
+              const gate = await context.request.post('https://test.between-gigs.com/test-gate/',{
+                form:{passphrase,next:'/'}, maxRedirects:0
+              });
+              if(gate.status()!==303) throw new Error('Gate authentication unsuccessful');
+              await gate.dispose();
+              await context.addInitScript(mode=>localStorage.setItem('bg-theme',mode),mode);
+              for(const [name,path] of [['home','/'],['signup','/join/'],['login','/login/'],['professionals','/professionals/']]){
+                const page = await context.newPage();
+                const response = await page.goto('https://test.between-gigs.com'+path,{waitUntil:'networkidle',timeout:60000});
+                if(response.status()!==200 || new URL(page.url()).origin!=='https://test.between-gigs.com') throw new Error('Unexpected capture destination or response');
+                await page.evaluate(()=>document.fonts.ready);
+                await page.waitForTimeout(3000);
+                if(await page.locator('input[name="passphrase"]').count()) throw new Error('Gate still present');
+                if(await page.locator('html').getAttribute('data-theme')!==mode) throw new Error('Theme mismatch');
+                if(name==='signup'||name==='login') {
+                  await page.locator('.cl-rootBox').first().waitFor({timeout:30000});
+                  await page.waitForTimeout(1000);
+                }
+                const info={name,mode,url:page.url(),observedAt:new Date().toISOString(),viewport:{width:390,height:844},frames:[]};
+                let previous=-1;
+                for(let n=0;n<70;n++){
+                  const geometry=await page.evaluate(()=>({x:scrollX,y:scrollY,height:innerHeight,width:innerWidth,documentHeight:document.documentElement.scrollHeight,scrollWidth:document.documentElement.scrollWidth}));
+                  if(geometry.y===previous)break;
+                  previous=geometry.y;
+                  const filename=name+'-'+mode+'-'+String(n).padStart(3,'0')+'.png';
+                  await page.screenshot({path:'captures/'+filename,fullPage:false,animations:'disabled'});
+                  info.frames.push({filename,...geometry});
+                  if(geometry.y+geometry.height>=geometry.documentHeight-1)break;
+                  await page.evaluate(()=>window.scrollBy(0,720));
+                  await page.waitForTimeout(350);
+                }
+                report.push(info);
+                await page.close();
+              }
+              await context.close();
+            }
+            await browser.close();
+            fs.writeFileSync('captures/manifest.json',JSON.stringify(report,null,2));
+            // No trace, HAR, cookies, storage state, response bodies or HTML are saved.
+            for(const file of fs.readdirSync('captures')){
+              if(!/^[a-z0-9-]+\.png$|^manifest\.json$/.test(file)) throw new Error('Unexpected artifact file');
+              if(fs.readFileSync('captures/'+file).includes(Buffer.from(passphrase))) throw new Error('Sensitive value detected');
+            }
+          })().catch(()=>{console.error('Capture failed; sensitive diagnostics deliberately suppressed.');process.exit(1)});
+          JS
+          node capture.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test-site-mobile-light-dark
+          path: /tmp/bg-test-review/captures/
+          retention-days: 3
