@@ -29,9 +29,9 @@ export const craftP = (html: string, { size = 15, mb = 0, color = k.muted }: { s
 export const craftH2 = (text: string, mt = 0) =>
   `<h2 class="e-k-h2" style="margin:${mt}px 0 14px;font-family:${SERIF};font-size:26px;line-height:32px;font-weight:500;color:${k.ink}">${esc(text)}</h2>`;
 
-/** The one dark-green button. The padding sits on the link, so the whole pill is clickable. */
-export const craftButton = (href: string, label: string) => `<table ${T} align="center" style="margin:0 auto"><tr><td bgcolor="${k.ink}" style="background-color:${k.ink};border-radius:3px;mso-padding-alt:14px 30px">
-<a href="${esc(href)}" style="display:inline-block;padding:14px 30px;font-family:${SANS};font-size:15px;line-height:20px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:3px">${esc(label)}&nbsp;&nbsp;&rarr;</a>
+/** A dark-green button. The padding sits on the link, so the whole pill is clickable. */
+export const craftButton = (href: string, label: string, { hero = false }: { hero?: boolean } = {}) => `<table ${T} align="center" ${hero ? 'class="e-invite-button" width="100%"' : ""} style="${hero ? "width:100%;max-width:280px;text-align:center;" : ""}margin:0 auto"><tr><td bgcolor="${k.ink}" style="background-color:${k.ink};border-radius:3px;mso-padding-alt:14px ${hero ? "10px" : "30px"}">
+<a ${hero ? 'class="e-invite-button-link"' : ""} href="${esc(href)}" style="display:${hero ? "block" : "inline-block"};padding:14px ${hero ? "10px" : "30px"};font-family:${SANS};font-size:${hero ? 14 : 15}px;${hero ? "white-space:nowrap;" : ""}line-height:20px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:3px">${esc(label)}${hero ? "" : "&nbsp;&nbsp;&rarr;"}</a>
 </td></tr></table>`;
 
 export const craftLink = (href: string, label: string) =>

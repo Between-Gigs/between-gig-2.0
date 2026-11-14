@@ -16,36 +16,49 @@ try {
     await page.goto(`${url}/emails/invite/`);
     const frame = page.frameLocator("iframe");
     await frame.getByRole("heading", { name: "Your craft. More possibilities." }).waitFor();
-    assert.equal(await frame.getByRole("link", { name: /^Create your profile/ }).count(), 1);
+    assert.equal(await frame.getByRole("link", { name: /^Create your profile/ }).count(), 2);
     assert.equal(await frame.locator(".e-k-card").count(), 0, "hero has no white content card");
     const scene = frame.locator(".e-invite-scene");
     await frame.locator("body").evaluate(async () => { await document.fonts.ready; });
-    await scene.screenshot({ path: `deliverables/invitation/hero-${width}-${theme}${blocked ? "-images-blocked" : ""}.png` });
     await frame.locator("body").evaluate(async () => { await document.fonts.ready; });
     await frame.locator("body").evaluate(() => { window.scrollTo(0, 0); });
     const geometry = await scene.evaluate(el => {
       const box = el.getBoundingClientRect();
-      return { ratio: box.height / box.width, content: [...el.querySelectorAll("h1, .e-invite-lead")].map(node => {
+      return { ratio: box.height / box.width, content: [...el.querySelectorAll("h1, .e-invite-lead, .e-invite-button-link")].map(node => {
         const range = document.createRange(); range.selectNodeContents(node);
         return [...range.getClientRects()].map(rect => ({ left: (rect.left - box.left) / box.width, right: (rect.right - box.left) / box.width }));
       }).flat() };
     });
     assert.ok(geometry.ratio > 1.15 && geometry.ratio < 1.5, `scene preserves artwork proportions: ${geometry.ratio}`);
     assert.ok(geometry.content.every(rect => rect.left > .10 && rect.right < .90), "live hero type stays inside the artwork center");
-    if (!blocked) {
+    {
       // Run the actual email HTML in an isolated QA document: the product iframe intentionally blocks scripts.
       const emailPage = await context.newPage();
       await emailPage.setViewportSize({ width: await page.locator("iframe").evaluate(el => el.clientWidth), height: 900 });
       await emailPage.setContent(await frame.locator("html").evaluate(el => el.outerHTML));
-      await emailPage.addScriptTag({ content: fs.readFileSync("node_modules/axe-core/axe.min.js", "utf8") });
-      const violations = await emailPage.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } })).violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) })));
-      assert.deepEqual(violations, [], "email keyboard/contrast/accessibility");
+      await emailPage.locator(".e-invite-scene").screenshot({ path: `deliverables/invitation/hero-${width}-${theme}${blocked ? "-images-blocked" : ""}.png` });
+      if (!blocked) {
+        await emailPage.addScriptTag({ content: fs.readFileSync("node_modules/axe-core/axe.min.js", "utf8") });
+        const violations = await emailPage.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } })).violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) })));
+        assert.deepEqual(violations, [], "email keyboard/contrast/accessibility");
+      }
       await emailPage.close();
     }
-    const cta = frame.getByRole("link", { name: /^Create your profile/ });
+    const actions = frame.getByRole("link", { name: /^Create your profile/ });
+    assert.equal(await actions.nth(0).getAttribute("href"), await actions.nth(1).getAttribute("href"), "both actions use the approved destination");
+    const cta = actions.first();
+    assert.equal(await scene.getByRole("link", { name: /^Create your profile/ }).count(), 1, "hero action is inside the artwork");
     assert.match(await cta.getAttribute("href"), /\/join\/\?invite=/);
-    await cta.focus();
-    assert.equal(await cta.evaluate(el => el === document.activeElement), true, "CTA is keyboard focusable");
+    for (const action of [actions.first(), actions.last()]) {
+      await action.focus();
+      assert.equal(await action.evaluate(el => el === document.activeElement), true, "both CTAs are keyboard focusable");
+    }
+    const button = await scene.locator(".e-invite-button-link").evaluate(el => {
+      const box = el.closest(".e-invite-scene").getBoundingClientRect(), action = el.getBoundingClientRect();
+      return { left: (action.left - box.left) / box.width, right: (action.right - box.left) / box.width, bottom: (action.bottom - box.top) / box.height, height: action.height };
+    });
+    assert.ok(button.left >= .24 && button.right <= .80 && button.bottom <= .89, `hero button stays in the clear center: ${JSON.stringify(button)}`);
+    assert.ok(button.height >= 44, "hero button has a usable touch target");
     await frame.getByText("Welcome to Stage 2: Building our Gigster community!", { exact: true }).waitFor();
     assert.equal(await frame.getByText("Between Gigs · 11766 Wilshire Blvd, Los Angeles, CA 90025", { exact: true }).count(), 1);
     assert.equal(await frame.locator('[data-email-unsubscribe]').getAttribute("aria-disabled"), "true");
