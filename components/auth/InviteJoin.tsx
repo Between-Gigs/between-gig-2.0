@@ -12,8 +12,9 @@ import { basePath } from "@/lib/site";
 import { AuthShell } from "./AuthShell";
 import { ClerkSlot } from "./ClerkSlot";
 import { GoogleSignup } from "./GoogleSignup";
+import { NativeSignup } from "./NativeSignup";
 import { authSubtitle, authTitle, useAuthV2 } from "./authDesign";
-import { SignedInPanel, useSignedInGate } from "./SignedIn";
+import { GateSkeleton, SignedInPanel, useSignedInGate } from "./SignedIn";
 
 /**
  * /join live: open sign-up for Gigsters. With the invitation email's link (Clerk's ticket, `__clerk_ticket`) the address is
@@ -30,10 +31,13 @@ export function InviteJoin() {
   // Already signed in: who they are and Log out, instead of a sign-up they don't need.
   const gate = useSignedInGate();
   if (onboarding) return <Details key={onboarding.email} ticket={!!ticket} finish={onboarding} />;
-  if (resume) return <TicketSignUp />;
+  if (gate === undefined) return <AuthShell header="Sign up" steps={false}><GateSkeleton /></AuthShell>;
   if (gate) return <AuthShell header="Sign up" steps={false}><SignedInPanel session={gate} /></AuthShell>;
+  if (resume) return ticket ? <TicketSignUp /> : <NativeSignup />;
   if (!clerkEnabled) return <Unavailable />;
-  return <Details ticket={!!ticket} />;
+  // Invitation acceptance can admit an existing Company OS identity. Keep its
+  // explicit consent step before accepting the ticket, rather than relying on /me.
+  return ticket ? <Details ticket /> : <NativeSignup />;
 }
 
 const finishError: Record<string, string> = {

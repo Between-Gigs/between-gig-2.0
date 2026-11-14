@@ -7,6 +7,16 @@ import { spawn } from "node:child_process";
 import { chromium } from "playwright-core";
 import { serve } from "./serve.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+// Structural safety checks cover the live InviteJoin branch, which the sample SDK
+// integration below does not exercise. They do not prove live server behavior.
+const inviteJoin = fs.readFileSync(path.join(root, "components/auth/InviteJoin.tsx"), "utf8");
+assert.ok(inviteJoin.indexOf("if (gate === undefined)") < inviteJoin.indexOf("if (resume)"), "wait for live app session before callback resume");
+assert.ok(inviteJoin.indexOf("if (gate)") < inviteJoin.indexOf("if (resume)"), "known identity wins over callback widget");
+assert.match(inviteJoin, /return ticket \? <Details ticket \/> : <NativeSignup \/>/, "tickets retain pre-widget consent form");
+assert.ok(inviteJoin.indexOf("if (!terms)") < inviteJoin.indexOf("if (!finish) { setNext(true)"), "ticket progression follows consent validation");
+assert.ok(inviteJoin.indexOf("if (Object.keys(found).length) return") < inviteJoin.indexOf("if (!finish) { setNext(true)"), "invalid consent blocks ticket progression");
+console.log("Live InviteJoin structural consent/session checks passed (not a browser or server test).");
+if (process.argv.includes("--source-only")) process.exit(0);
 const preset = process.env.BG_CONTRACT_DIR;
 const isolated = preset ?? fs.mkdtempSync(path.join(path.dirname(root), ".bg-clerk-contract-"));
 const basePath = "/between-gig-2.0";
@@ -41,16 +51,34 @@ try {
     page.on("framenavigated", (frame) => { if (frame === page.mainFrame()) navigations.push(new URL(frame.url()).pathname); });
     const email = `new-user-${index}@example.test`;
     await page.goto(`${hosted.url}/join/`);
+    await page.getByRole("form", { name: "Mock native Clerk signup" }).waitFor();
+    assert.equal(await page.getByRole("checkbox").count(), 0, "native Clerk is the first signup step");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByLabel("Full name").fill("New Account");
-    await page.getByRole("checkbox").check();
-    await page.getByRole("button", { name: "Continue to password", exact: true }).click();
-    await page.getByRole("form", { name: "Mock native Clerk signup" }).waitFor();
     await page.getByLabel("Password", { exact: true }).fill("seven7!");
     await page.getByRole("button", { name: "Create test account" }).click();
     await page.getByRole("alert").getByText("Password must have at least 8 characters", { exact: true }).waitFor();
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Create test account" }).click();
+    await page.getByRole("button", { name: "Verify test email", exact: true }).waitFor();
+    assert.equal(await page.evaluate(() => localStorage.getItem("qa-clerk-active")), null, "unverified identity must not become an app session");
+    assert.equal(await page.evaluate((email) => JSON.parse(localStorage.getItem("bg2-sample-v2")).people.some((p) => p.email === email), email), false);
+    await page.getByRole("button", { name: "Verify test email", exact: true }).click();
+    await page.waitForURL(new RegExp(`${basePath}/join/$`));
+    await page.getByRole("heading", { name: "Finish your account setup", exact: true }).waitFor();
+    assert.equal(await page.evaluate(() => window.qaSignedInSignupMounts ?? 0), 0);
+    // Identity exists now; app registration must not exist until explicit consent.
+    assert.equal(await page.evaluate(() => !!JSON.parse(localStorage.getItem("qa-clerk-active"))), true);
+    assert.equal(await page.evaluate((email) => JSON.parse(localStorage.getItem("bg2-sample-v2")).people.some((p) => p.email === email), email), false);
+    await page.getByRole("button", { name: "Finish setup", exact: true }).click();
+    await page.getByText("Agree to the Terms and Privacy Policy to continue.", { exact: true }).waitFor();
+    assert.equal(await page.evaluate((email) => JSON.parse(localStorage.getItem("bg2-sample-v2")).people.some((p) => p.email === email), email), false);
+    // A callback reload must preserve the same identity and keep consent unchecked.
+    await page.reload();
+    await page.getByRole("heading", { name: "Finish your account setup", exact: true }).waitFor();
+    assert.equal(await page.getByRole("checkbox").isChecked(), false);
+    await page.getByRole("checkbox").check();
+    await page.getByRole("button", { name: "Finish setup", exact: true }).click();
     await page.waitForURL(new RegExp(`${basePath}/profile/canvas/$`));
     // A new account lands on its own blank profile (Edit on your profile), with the welcome on the page.
     await page.getByRole("heading", { name: /This is your page\./ }).first().waitFor();
@@ -64,6 +92,14 @@ try {
     assert.equal(state.session.via, "clerk");
     assert.equal(state.people.filter((p) => p.email === email).length, 1);
     const personId = state.session.personId;
+    // A returning identity must never mount SignUp while the app bridge resolves.
+    for (const suffix of ["", "#/sso-callback"]) {
+      await page.goto(`${hosted.url}/join/${suffix}`);
+      await page.waitForURL(new RegExp(`${basePath}/profile/$`));
+      assert.equal(await page.evaluate(() => window.qaSignedInSignupMounts ?? 0), 0);
+      assert.equal(await page.getByRole("form", { name: "Mock native Clerk signup" }).count(), 0);
+    }
+
     // Native SignIn cannot render for an existing single-session user. Cold /login
     // must route through app state, even with a stale self-returning next URL.
     await page.goto(`${hosted.url}/login/?next=${encodeURIComponent(`${basePath}/login/`)}`);
@@ -137,7 +173,6 @@ try {
     await socialPage.getByRole("heading", { name: "Finish your account setup" }).waitFor();
     const request = await socialPage.evaluate(() => JSON.parse(sessionStorage.getItem("qa-google-request")));
     assert.equal(request.strategy, "oauth_google");
-    assert.equal(request.redirectUrl, hosted.url + "/join/?method=google#/sso-callback");
     assert.equal(request.unsafeMetadata?.inviteToken, invite || undefined);
     assert.equal(request.unsafeMetadata?.acceptedTerms, undefined);
     assert.equal(await socialPage.getByLabel("Email", { exact: true }).inputValue(), "existing-google@example.test");
@@ -164,6 +199,11 @@ try {
     await ownerPage.getByRole("button", { name: /Account: Simone/ }).waitFor();
     assert.equal(await ownerPage.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).session.personId), "simone");
     assert.equal(await ownerPage.evaluate(() => JSON.parse(localStorage.getItem("qa-clerk-active")).id), "existing-owner-id");
+    await ownerPage.goto(`${hosted.url}/join/#/sso-callback`);
+    await ownerPage.getByRole("heading", { name: "You're already signed in" }).waitFor();
+    await ownerPage.getByText(/You're signed in as Simone/).waitFor();
+    assert.equal(await ownerPage.evaluate(() => window.qaSignedInSignupMounts ?? 0), 0, "local demo session must not mount Clerk signup or hang on its skeleton");
+    assert.equal(await ownerPage.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).session.personId), "simone");
     await ownerContext.close();
     console.log(`Mock SDK contract passed: ${password.length}-character signup, cold callback, profile creation, returning login, role gate, existing Google identity.`);
   }
