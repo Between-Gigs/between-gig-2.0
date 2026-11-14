@@ -2,42 +2,52 @@
  "home": {
   "path": "/",
   "title": "Extraordinary talent. Everyday solutions.",
-  "description": "Entertainment-industry talent, beyond the set. Get on the Los Angeles call sheet."
+  "description": "Put your behind-the-scenes skills to work beyond the set. Create your free Gigster profile on the Los Angeles Call Sheet.",
+  "shareTitle": "Between Gigs · Los Angeles Call Sheet",
+  "public": true
  },
  "professionals": {
   "path": "/professionals/",
-  "title": "For professionals",
-  "description": "Your skills don't stop when the cameras do. Get on the Los Angeles call sheet: free to join."
+  "title": "Extraordinary Talent. Everyday Help.",
+  "description": "Put your craft to work beyond the set. Get on the Between Gigs call sheet.",
+  "shareTitle": "Extraordinary Talent. Everyday Help.",
+  "public": true
  },
  "storyboard": {
   "path": "/storyboard/",
   "title": "The Storyboard",
-  "description": "How entertainment-industry talent can solve everyday needs for people and businesses."
+  "description": "See how entertainment-industry talent can solve everyday needs for people and businesses.",
+  "public": true
  },
  "crew-call": {
   "path": "/crew-call/",
   "title": "Crew Call",
-  "description": "Hollywood talent at your service: the skilled professionals behind your favourite films and shows."
+  "description": "Hollywood talent at your service: hire the skilled professionals behind your favorite movies and TV shows.",
+  "public": true
  },
  "privacy": {
   "path": "/privacy/",
   "title": "Privacy Policy",
-  "description": "What the Between Gigs preview and waitlist collect, and how it's used."
+  "description": "What the Between Gigs preview and waitlist collect, and how it's used.",
+  "public": true
  },
  "terms": {
   "path": "/terms/",
   "title": "Terms of Use",
-  "description": "The terms for the Between Gigs preview and waitlist."
+  "description": "The terms for the Between Gigs preview and waitlist.",
+  "public": true
  },
  "provider-standards": {
   "path": "/provider-standards/",
   "title": "Provider standards",
-  "description": "The standards we're designing for providers at launch."
+  "description": "The standards we're designing for providers at launch.",
+  "public": true
  },
  "licensing-insurance": {
   "path": "/licensing-insurance/",
   "title": "Licensing and insurance",
-  "description": "What industry skills do and don't qualify someone for, and what to check before hiring."
+  "description": "What industry skills do and don't qualify someone for, and what to check before hiring.",
+  "public": true
  },
  "join": {
   "path": "/join/?invite=riley-7q2m",
@@ -326,5 +336,103 @@
   "as": "reset",
   "title": "Design system",
   "description": "Tokens, components and templates, with the clickable prototype and the coming-soon template."
+ },
+ "gigsters": {
+  "path": "/p/",
+  "as": "reset",
+  "title": "Gigsters",
+  "description": "Film and TV crew, available between productions."
+ },
+ "p-simone": {
+  "path": "/p/simone/",
+  "as": "reset",
+  "title": "Simone · Art Director → Interior Styling",
+  "description": "Fictional sample Gigster profile. Room styling, mood boards and sourcing."
+ },
+ "p-luis": {
+  "path": "/p/luis/",
+  "as": "reset",
+  "title": "Luis · Set Carpenter → Custom Builds",
+  "description": "Fictional sample Gigster profile. Custom furniture and creative builds."
+ },
+ "p-renee": {
+  "path": "/p/renee/",
+  "as": "reset",
+  "title": "Renee · Production Coordinator → Events",
+  "description": "Fictional sample Gigster profile. Event timelines and vendor coordination."
+ },
+ "p-devon": {
+  "path": "/p/devon/",
+  "as": "reset",
+  "title": "Devon · Location Scout → Venues",
+  "description": "Fictional sample Gigster profile. Location research, event venues and scouting."
+ },
+ "profile-submitted": {
+  "path": "/profile/submitted/",
+  "as": "gigster:maya",
+  "title": "Profile submitted",
+  "description": "Your profile is with the Between Gigs team for review."
+ },
+ "profile-simple": {
+  "path": "/profile/simple/",
+  "as": "gigster:maya",
+  "title": "Your profile (simple editor)",
+  "description": "Edit your Gigster profile in one plain form."
+ },
+ "owners-staff": {
+  "path": "/owners/staff/",
+  "as": "owner",
+  "title": "Staff",
+  "description": "The Between Gigs team and who can review profiles."
+ },
+ "versions": {
+  "path": "/versions/",
+  "title": "Version history",
+  "description": "Earlier builds of the Between Gigs preview."
+ },
+ "preview-footers": {
+  "path": "/preview/footers/",
+  "title": "Footer photos",
+  "description": "Photo bands to compare for the site footer."
+ },
+ "preview-wallpapers": {
+  "path": "/preview/wallpapers/",
+  "title": "Wallpapers & background art",
+  "description": "Every background photo, by day and by night."
+ },
+ "preview-profiles": {
+  "path": "/preview/profiles/",
+  "title": "Sample Gigster profiles",
+  "description": "The sample profiles in the preview, at every stage."
+ },
+ "preview-profile-editor": {
+  "path": "/preview/profile-editor/",
+  "title": "Gigster profile editor",
+  "description": "The on-page profile editor with sample data."
+ },
+ "preview-gigster-journey": {
+  "path": "/preview/gigster-journey/",
+  "title": "Gigster journey",
+  "description": "Stage 2 invitation: the Gigster's path from invite to live profile."
+ },
+ "preview-design-system": {
+  "path": "/preview/design-system/",
+  "title": "Design system",
+  "description": "Tokens, components and type for the Green Room look."
+ },
+ "onboarding-flow": {
+  "path": "/artifacts/onboarding-flow/",
+  "title": "Gigster onboarding flow",
+  "description": "Every step, screen, branch and email from invite to live profile."
+ },
+ "onboarding-flows": {
+  "path": "/artifacts/onboarding-flows/",
+  "title": "Onboarding flows to compare",
+  "description": "The onboarding options side by side, to choose one."
+ },
+ "profile-signoff": {
+  "path": "/artifacts/profile-signoff/",
+  "title": "Profile design sign-off",
+  "description": "The Gigster profile design, ready for sign-off."
  }
 }

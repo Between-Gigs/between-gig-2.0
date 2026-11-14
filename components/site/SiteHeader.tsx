@@ -66,6 +66,12 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
         <div className="flex flex-1 items-center swiss:md:col-span-3">
           <Link href="/" aria-label="Between Gigs home" className="inline-flex min-h-11 shrink-0 items-center rounded-md"><Logo height={28} className="hidden sm:block" /><Logo layout="mark" height={28} className="sm:hidden" /></Link>
         </div>
+        {/* Signed out: the Los Angeles Call Sheet sits in the middle of the bar (Justin, 14 Nov 2026), on two lines on phones. */}
+        {!app && !loading && !session && (
+          <p data-header-title className="shrink-0 text-center font-display text-label-md leading-tight font-semibold text-balance text-ink sm:text-heading-sm swiss:md:col-span-6">
+            Los Angeles <br className="sm:hidden" />Call Sheet
+          </p>
+        )}
         {/* Airbnb-style: the page links sit in the middle, the current one underlined. */}
         {links.length > 0 && (
           <nav aria-label="Main" className={cx("hidden items-center gap-2 swiss:md:gap-8", links.length > 3 ? "lg:flex swiss:lg:col-span-6 swiss:lg:gap-5" : "md:flex swiss:md:col-span-5")}>
@@ -79,7 +85,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
             ))}
           </nav>
         )}
-        <div className={cx("flex flex-1 items-center justify-end gap-1 sm:gap-2", links.length > 3 ? "swiss:md:col-span-9 swiss:lg:col-span-3" : links.length === 0 ? "swiss:md:col-span-9" : "swiss:md:col-span-4")}>
+        <div className={cx("flex flex-1 items-center justify-end gap-1 sm:gap-2", links.length > 3 ? "swiss:md:col-span-9 swiss:lg:col-span-3" : links.length === 0 ? (session || loading ? "swiss:md:col-span-9" : "swiss:md:col-span-3") : "swiss:md:col-span-4")}>
           <ExperienceSwitcher className={app ? undefined : "md:hidden"} />
           {/* The theme is picked (Green Room). Only owners/admins, and the Hub, keep the Theme menu for reviewing alternatives. */}
           {(session?.role === "owner" || /^\/(hub|preview)(\/|$)/.test(pathname)) && <><span className="hidden sm:contents"><LookSwitcher /></span><span className="sm:hidden"><LookSwitcher compact /></span></>}

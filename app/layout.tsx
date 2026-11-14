@@ -7,9 +7,14 @@ import { Providers } from "@/components/site/Providers";
 import { share, siteOrigin } from "@/lib/og";
 import "./globals.css";
 
+// Pages without their own share image use the call sheet's, but never its canonical or og:url (they'd all point home).
+const homeShare = share("home");
+const fallbackCard = { ...homeShare.openGraph, url: undefined };
+
 export const metadata: Metadata = {
-  // Pages without their own share image use the call sheet's.
-  ...share("home"),
+  ...homeShare,
+  alternates: undefined,
+  openGraph: fallbackCard,
   metadataBase: new URL(siteOrigin),
   title: { default: "Between Gigs", template: "%s · Between Gigs" },
   description: "Extraordinary talent. Everyday solutions. Hollywood professionals between productions, for projects in everyday life.",

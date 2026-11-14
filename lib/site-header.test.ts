@@ -38,7 +38,19 @@ describe("public header authentication states", () => {
     const signIn = html.match(/<a href="\/login\/"[^>]+>/)?.[0] ?? "";
     expect(signIn).toContain("min-h-11");
     expect(signIn).not.toContain("hidden");
-    expect(html).toContain("swiss:md:col-span-9");
+    // Signed out, the Los Angeles Call Sheet sits in the middle of the bar (Justin, 14 Nov 2026).
+    expect(html).toContain("data-header-title");
+    expect(html).toMatch(/Los Angeles <br[^>]*\/?>Call Sheet/);
+    expect(html).toContain("swiss:md:col-span-3");
+  });
+  it("shows the Call Sheet title only to signed-out visitors", () => {
+    state.loading = true;
+    expect(render()).not.toContain("data-header-title");
+    state.loading = false;
+    state.session = { role: "gigster", name: "Test", email: "test@example.com" };
+    expect(render()).not.toContain("data-header-title");
+    state.session = null;
+    expect(render({ app: true })).not.toContain("data-header-title");
   });
   it("does not flash sign-in while session loads", () => {
     state.loading = true;

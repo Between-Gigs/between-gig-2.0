@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { share } from "@/lib/og";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Page } from "@/components/site/Page";
 import { SiteFooter, footerPhotos, type FooterPhoto } from "@/components/site/SiteFooter";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = { ...share("preview-footers"),
   title: "Footer photos",
   description: "Photo bands to choose from for the site footer, shown on the real footer.",
   robots: { index: false, follow: false },

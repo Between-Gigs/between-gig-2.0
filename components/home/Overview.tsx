@@ -62,6 +62,7 @@ const groups: { id: string; art: SectionArt; title: string; body: string; pages:
   ] },
   { id: "drafts", art: { icon: "framed_picture", tint: "bg-tint-sky" }, title: "Previous designs", body: "The pages as they were before the Green Room launch, kept for comparison. Nothing here is live.", pages: [
     { href: "/preview/drafts/coming-soon-v1/", title: "Coming soon · v1", body: "The call-sheet home with its two-step form." },
+    { href: "/preview/drafts/coming-soon-v2/", title: "Coming soon · v2", body: "The Green Room home with the Los Angeles Call Sheet headline." },
     { href: "/preview/drafts/professionals-v1/", title: "For professionals · v1", body: "The earlier long page and its call-sheet form." },
     { href: "/preview/drafts/join-v1/", title: "Sign up · v1", body: "The previous create-account layout." },
     { href: "/preview/drafts/login-v1/", title: "Log in · v1", body: "The previous log-in layout." },

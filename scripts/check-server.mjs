@@ -9,7 +9,7 @@ import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { appRoutes } from "./routes.mjs";
-import { INTERNAL, LIVE_PAGES, LIVE_ROUTES, PUBLIC_LIVE } from "./server-build.mjs";
+import { INTERNAL, LIVE_METADATA, LIVE_PAGES, LIVE_ROUTES, PUBLIC_LIVE } from "./server-build.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const STANDALONE = path.join(ROOT, ".next/standalone");
@@ -51,7 +51,7 @@ const routeKeys = new Set(Object.keys(manifest).map((k) => k.replace(/\/\([^)/]+
 for (const r of SERVER_ONLY) if (!routeKeys.has(`${r.path}/${r.kind}`)) fail(`${r.path} (${r.kind}.server.*) is not in the server build`);
 
 // Fail closed: nothing in the output that isn't a live page, Next's own error pages or a server-only handler.
-const allowed = new Set([...LIVE_PAGES.map((p) => `${p === "/" ? "" : p}/page`), "/_not-found/page", "/_global-error/page", ...SERVER_ONLY.map((r) => `${r.path}/${r.kind}`)]);
+const allowed = new Set([...LIVE_PAGES.map((p) => `${p === "/" ? "" : p}/page`), "/_not-found/page", "/_global-error/page", ...LIVE_METADATA.map((r) => `${r}/route`), ...SERVER_ONLY.map((r) => `${r.path}/${r.kind}`)]);
 for (const key of routeKeys) if (!allowed.has(key)) fail(`${key} is in the server build but is neither live nor server-only`);
 for (const name of fs.readdirSync(path.join(STANDALONE, "public"))) if (!PUBLIC_LIVE.includes(name)) fail(`public/${name} is in the server build but not in PUBLIC_LIVE`);
 
@@ -83,6 +83,12 @@ let server = { stop() {} };
 try {
   server = await start({ COOKIE_SIGNING_SECRET: SECRET });
   const { base } = server;
+
+  for (const route of LIVE_METADATA) {
+    const res = await fetch(base + route, { redirect: "manual" });
+    if (res.status !== 200) fail(`${route} answered ${res.status}, expected 200`);
+    else if (route === "/robots.txt" && !/User-Agent: \*/i.test(await res.text())) fail("/robots.txt has no User-Agent rule");
+  }
 
   const nonces = new Set();
   for (const route of LIVE_ROUTES) {

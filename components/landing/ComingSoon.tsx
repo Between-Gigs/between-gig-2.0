@@ -1,11 +1,12 @@
 "use client";
 /*
- * Coming soon (/), Green Room (feedback 13 Nov, Additional Pages p1). The still life fills the screen between the
- * header and a slim footer; the Los Angeles Call Sheet is the headline and "Coming soon" a seal above it, because
- * something is already happening that people can do. The one button goes straight to sign-up (/join/) and says so.
- * The previous design stays at /preview/drafts/coming-soon-v1/ (components/home/CallSheetHome).
+ * Coming soon (/), the client's logo-led hero (art and copy from the client via Justin, 14 Nov 2026; first reviewed
+ * at /preview/drafts/home-peter/). The still life fills the screen between the header and the footer; "Coming soon"
+ * is a forest seal, the brand line and the full logo lead, and the one button goes straight to sign-up (/join/).
+ * The closing three lines break where the client asked, with only "who need your expertise." in bold.
+ * Earlier designs: /preview/drafts/coming-soon-v1/ (CallSheetHome) and /preview/drafts/coming-soon-v2/ (ComingSoonV2).
  */
-import { Eyebrow, Heading, Status, Text, TextLink } from "@/components/ds/atoms";
+import { Logo } from "@ds/components";
 import { PhotoStage } from "@/components/ds/organisms";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
@@ -13,24 +14,38 @@ import { JoinButton } from "./JoinCta";
 
 export const STILL_LIFE = { image: "/art/stage/still-life-desktop.jpg", portrait: "/art/stage/still-life-portrait.jpg" } as const;
 
+/** A short gold rule either side of a line, as on the client's art. */
+const Rule = ({ className = "w-8 sm:w-12" }: { className?: string }) => <span aria-hidden="true" className={`h-px shrink-0 bg-accent-gold ${className}`} />;
 
 export function ComingSoon() {
   return (
     <div className="flex min-h-dvh flex-col overflow-x-clip bg-bg text-ink">
       <SiteHeader />
       <main id="main" tabIndex={-1} className="flex flex-1 flex-col outline-none">
-        <PhotoStage {...STILL_LIFE} aria-labelledby="call-sheet-h" className="flex flex-1 items-center">
-          <div className="mx-auto grid w-full max-w-3xl justify-items-start sm:justify-items-center gap-5 px-4 py-16 text-left sm:text-center sm:px-6 md:py-24">
-            <div className="grid justify-items-start sm:justify-items-center gap-5 rounded-2xl bg-bg/85 px-5 py-8 shadow-sm backdrop-blur-sm sm:px-10 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none dark:bg-bg/80 dark:md:bg-transparent">
-              <Eyebrow className="sm:justify-items-center!">Extraordinary talent. Everyday solutions.</Eyebrow>
-              <Status tone="gold">Between Gigs is coming soon</Status>
-              <Heading level="display-xl" as="h1" id="call-sheet-h" className="max-w-2xl max-sm:text-display-md">Los Angeles Call&nbsp;Sheet</Heading>
-              <Text size="lg" className="max-w-xl">Put your behind-the-scenes skills to work between gigs. Founding Gigsters are joining now.</Text>
-              <div className="mt-2 grid justify-items-start sm:justify-items-center gap-2">
-                <JoinButton />
-                <Text size="sm" muted>Free to join. About 10 minutes, and it saves as you go.</Text>
+        <PhotoStage {...STILL_LIFE} aria-labelledby="home-title" className="flex flex-1 items-center">
+          <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-8 md:py-16">
+            {/* Phones get a soft panel so the copy reads over the still life; from md the photo frames it on its own. */}
+            <div className="grid justify-items-center rounded-2xl bg-bg/90 px-5 py-8 max-xs:px-4 text-center shadow-sm backdrop-blur-sm sm:px-10 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none dark:bg-bg/85 dark:md:bg-transparent">
+              {/* An announcement shaped like the art's seal, not a disabled button. */}
+              <p className="inline-flex items-center gap-4 rounded-full bg-surface-brand px-6 py-2.5 text-label-md font-bold tracking-widest text-ink-on-brand uppercase shadow-md ring-1 ring-accent-gold/40 sm:gap-6 sm:px-10 sm:py-3 sm:text-body-lg">
+                <Rule className="w-6 sm:w-12" />Coming soon<Rule className="w-6 sm:w-12" />
+              </p>
+              <p className="mt-5 max-w-xl text-label-sm font-bold tracking-widest text-balance text-ink uppercase sm:text-label-md">Extraordinary talent. Everyday solutions.</p>
+              <h1 id="home-title" className="mt-4 w-full max-w-md sm:max-w-lg">
+                <Logo height={128} className="h-auto w-full" />
+              </h1>
+              <p className="mt-5 max-w-2xl text-body-lg font-medium text-balance text-ink md:text-heading-lg">
+                Put your behind-the-scenes skills to work beyond the set.
+              </p>
+              <div className="mt-6 grid justify-items-center gap-2.5">
+                <JoinButton className="max-w-full rounded-full! shadow-md md:h-16! md:px-10! md:text-body-lg! font-semibold!" />
+                <p className="text-body-md font-bold italic text-ink sm:text-body-lg md:text-heading-md">It&rsquo;s free to join!</p>
               </div>
-              <TextLink href="/professionals/" kind="arrow" className="font-medium text-ink-muted">Why join? For professionals</TextLink>
+              <div data-home-connection className="mt-6 grid justify-items-center gap-0.5 text-body-lg leading-snug max-xs:text-body-md text-ink md:text-heading-lg">
+                <p className="flex items-center gap-3 font-medium italic max-xs:gap-2 sm:gap-5"><Rule className="w-6 max-xs:w-4 sm:w-14" />Let us connect you to<Rule className="w-6 max-xs:w-4 sm:w-14" /></p>
+                <p className="font-medium">businesses and individuals</p>
+                <p className="font-bold text-ink-brand">who need your expertise.</p>
+              </div>
             </div>
           </div>
         </PhotoStage>
