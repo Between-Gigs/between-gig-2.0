@@ -2,6 +2,8 @@
 
 The Hub has independent thumbnail/full-height preview controls for each section, with thumbnail defaults and per-section saved preferences. Full-height frames measure their actual document; the existing lazy queue and bounded frame cache remain in use. Preview frames stay inert and keep isolated sample storage.
 
+Passive frame URLs omit fragment anchors, while navigation links keep their destinations. Resolving the design-system thumbnail's #foundations fragment was scrolling the outer Hub away from Scratchpad as it loaded; removing that passive fragment fixes the underlying viewport jump.
+
 Edit your profile previews use Elena's draft identity; Profile submitted previews use Imani's submitted identity. Their card actions also enter the appropriate fictional account before opening the page. This fixes protected-route login redirects at the source rather than substituting screenshots or covering login screens.
 
 Design system is the final Hub section. The sample profiles section is named Sample Gigster Profiles. Scratchpad opens the existing draft homepage, with the deployment's base path applied by Next Link. Sign up v1, Log in v1 and Profile editor v1 are removed from Previous designs; their files and direct URLs remain for recovery.

@@ -158,7 +158,8 @@ function PreviewFrame({ href, as, title, scale, template, mode, onHeight }: Prev
     <>
       {status === "unavailable" && <span className="absolute inset-0 grid place-items-center px-2 text-center text-caption text-ink-muted">Preview unavailable</span>}
       {status === "loading" && <span className="absolute inset-0 animate-pulse bg-surface-hover motion-reduce:animate-none" />}
-      <iframe ref={frame} data-guide-thumbnail="" data-profile-template={template} name={`bg-preview:${as}`} src={`${basePath}${href}`} title={`Preview of ${title}`} tabIndex={-1}
+      {/* A passive frame must not make its parent jump when the browser resolves a fragment anchor. */}
+      <iframe ref={frame} data-guide-thumbnail="" data-profile-template={template} name={`bg-preview:${as}`} src={`${basePath}${href.split("#")[0]}`} title={`Preview of ${title}`} tabIndex={-1}
         className={cx("absolute top-0 left-0 origin-top-left max-w-none border-0", status !== "ready" && "opacity-0")}
         style={{ width, height: mode === "full" ? documentHeight : height, transform: `scale(${scale})` }}
         onLoad={(event) => {

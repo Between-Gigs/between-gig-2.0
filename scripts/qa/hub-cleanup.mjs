@@ -111,8 +111,20 @@ try {
     const violations = await page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } })).violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) })));
     assert.deepEqual(violations, [], "Hub accessibility");
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "Hub fits viewport");
-    await scratchpad.scrollIntoViewIfNeeded();
-    await scratchpad.frameLocator("iframe").locator('[data-preview-title]').waitFor({ state: "attached" });
+    const draftCard = scratchpad.locator("li").filter({ has: page.getByRole("link", { name: /Draft homepage/ }) });
+    await draftCard.locator("[data-guide-preview-mode]").scrollIntoViewIfNeeded();
+    await draftCard.locator("iframe").waitFor();
+    await draftCard.frameLocator("iframe").locator("html[data-guide-ready]").waitFor({ state: "attached" });
+    await scratchpad.frameLocator("iframe").locator('[data-preview-title]').waitFor({ state: "attached" }).catch(async error => {
+      console.log(await page.locator('[data-guide-preview-mode]').evaluateAll(hosts => hosts.map(host => {
+        const frame = host.querySelector("iframe");
+        return { text: host.parentElement.parentElement.textContent.slice(0, 80), frame: frame?.title,
+          path: frame?.contentWindow.location.pathname, ready: frame?.contentDocument.documentElement.dataset.guideReady,
+          body: frame?.contentDocument.body?.innerText.slice(0, 100) };
+      })));
+      await page.screenshot({ path: `deliverables/hub-cleanup/failure-${width}-${theme}.png`, fullPage: false });
+      throw error;
+    });
     await page.evaluate(() => scrollBy(0, -120));
     await scratchpad.screenshot({ path: `deliverables/hub-cleanup/scratchpad-${width}-${theme}.png` });
     await scratchpad.getByRole("link", { name: /Draft homepage/ }).click();
