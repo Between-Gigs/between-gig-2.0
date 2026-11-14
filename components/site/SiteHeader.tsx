@@ -111,7 +111,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
             <>
               <Link href="/login/" className="inline-flex min-h-11 shrink-0 items-center rounded-full px-2 text-label-md text-ink hover:bg-surface-hover sm:px-3 swiss:rounded-none swiss:px-0 swiss:font-display swiss:font-semibold swiss:underline-offset-8 swiss:hover:bg-transparent swiss:hover:underline">Sign in</Link>
               {!raw.startsWith("/join/") && (
-                <Link href="/join/" data-header-signup className="inline-flex min-h-11 shrink-0 items-center rounded-full bg-action px-3 text-label-md font-semibold text-on-action shadow-sm transition-colors duration-fast hover:bg-action-hover sm:px-4 swiss:rounded-none">Sign up</Link>
+                <Link href="/join/" data-header-signup className="inline-flex min-h-11 shrink-0 items-center rounded-md bg-action px-3 text-label-md font-semibold text-on-action shadow-sm transition-colors duration-fast hover:bg-action-hover sm:px-4 swiss:rounded-none">Sign up</Link>
               )}
             </>
           )}

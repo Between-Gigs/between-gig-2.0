@@ -40,10 +40,11 @@ export function invite({ inviteUrl }: InviteProps, ctx: EmailContext = defaultCo
     craftP(`<strong>${esc(c.stage)}</strong>`, { size: 16, mb: 20, color: k.ink }),
     craftP(esc(c.introduction), { size: 16, mb: 20, color: k.ink }),
     craftP(`<strong>${esc(c.nextTitle)}</strong> ${esc(c.next)}`, { size: 16, mb: 24, color: k.ink }),
-    craftP(`<strong>${esc(c.ready)}</strong>`, { size: 16, mb: 16, color: k.ink }),
+    // The close is centred on the button (Anowar, 14 Nov 2026): the question, the button, the thanks and the sign-off.
+    craftP(`<strong>${esc(c.ready)}</strong>`, { size: 16, mb: 16, color: k.ink, center: true }),
     craftButton(inviteUrl, c.cta),
-    `<div style="padding-top:24px">${craftP(esc(c.closing), { size: 16, color: k.ink })}</div>`,
-    craftSignOff(SIGN_OFF),
+    `<div style="padding-top:24px">${craftP(esc(c.closing), { size: 16, color: k.ink, center: true })}</div>`,
+    craftSignOff(SIGN_OFF, 22, true),
   ].join("\n");
   const body = craftHero({ eyebrow: c.eyebrow, inner: hero, ctx, openPaper: true }) + craftPaper(details);
   const text = `${c.subject}\n\n${c.eyebrow.toUpperCase()}\n\n${c.title.join(" ")}\n\n${c.lead}\n\n${c.cta.toUpperCase()}:\n${inviteUrl}\n\n${c.opening}\n\n${c.stage}\n\n${c.introduction}\n\n${c.nextTitle} ${c.next}\n\n${c.ready}\n\n${c.cta.toUpperCase()}:\n${inviteUrl}\n\n${c.closing}\n\n${SIGN_OFF}\n\n${textFooter(INVITE_REASON, ctx.siteUrl, INVITE_UNSUBSCRIBE)}`;

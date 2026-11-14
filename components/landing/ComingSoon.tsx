@@ -44,7 +44,7 @@ export function ComingSoon() {
                 Put your behind-the-scenes skills to work beyond the set.
               </p>
               <div className="mt-6 grid justify-items-center gap-2.5">
-                <JoinButton {...cta} className="max-w-full rounded-full! shadow-md md:h-16! md:px-10! md:text-body-lg! font-semibold!" />
+                <JoinButton {...cta} className="max-w-full shadow-md md:h-16! md:px-10! md:text-body-lg! font-semibold!" />
                 {!member && <p className="text-body-md font-bold italic text-ink sm:text-body-lg md:text-heading-md">It&rsquo;s free to join!</p>}
               </div>
               <div data-home-connection className="mt-6 grid justify-items-center gap-0.5 text-body-lg leading-snug max-xs:text-body-md text-ink md:text-heading-lg">

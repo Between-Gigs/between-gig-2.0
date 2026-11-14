@@ -23,8 +23,8 @@ export const T = `role="presentation" cellpadding="0" cellspacing="0" border="0"
 export const craftTitle = (lines: readonly string[]) =>
   `<h1 class="e-k-h1" style="margin:0 0 18px;font-family:${SERIF};font-size:46px;line-height:48px;font-weight:500;letter-spacing:-0.02em;color:${k.ink}">${lines.map((t) => `<span style="white-space:nowrap">${esc(t)}</span>`).join("<br>")}</h1>`;
 
-export const craftP = (html: string, { size = 15, mb = 0, color = k.muted }: { size?: number; mb?: number; color?: string } = {}) =>
-  `<p style="margin:0 0 ${mb}px;font-family:${SANS};font-size:${size}px;line-height:${Math.round(size * 1.55)}px;color:${color}">${html}</p>`;
+export const craftP = (html: string, { size = 15, mb = 0, color = k.muted, center = false }: { size?: number; mb?: number; color?: string; center?: boolean } = {}) =>
+  `<p style="margin:0 0 ${mb}px;${center ? "text-align:center;" : ""}font-family:${SANS};font-size:${size}px;line-height:${Math.round(size * 1.55)}px;color:${color}">${html}</p>`;
 
 export const craftH2 = (text: string, mt = 0) =>
   `<h2 class="e-k-h2" style="margin:${mt}px 0 14px;font-family:${SERIF};font-size:26px;line-height:32px;font-weight:500;color:${k.ink}">${esc(text)}</h2>`;
@@ -41,8 +41,8 @@ export const craftRule = (margin = "26px auto 14px", width = "100%") =>
   `<div style="margin:${margin};width:${width};height:1px;line-height:1px;font-size:1px;background-color:${k.line}">&nbsp;</div>`;
 
 /** The spaced, capitalised team sign-off. */
-export const craftSignOff = (text: string, mt = 22) =>
-  `<p style="margin:${mt}px 0 0;font-family:${SANS};font-size:12px;line-height:18px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${k.ink}">${esc(text)}</p>`;
+export const craftSignOff = (text: string, mt = 22, center = false) =>
+  `<p style="margin:${mt}px 0 0;${center ? "text-align:center;" : ""}font-family:${SANS};font-size:12px;line-height:18px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${k.ink}">${esc(text)}</p>`;
 
 /** The photo frame around the cream card, with logo, eyebrow and rule; `inner` follows the rule. */
 export function craftHero({ eyebrow, inner, ctx, openPaper = false }: { eyebrow: string; inner: string; ctx: EmailContext; openPaper?: boolean }) {
