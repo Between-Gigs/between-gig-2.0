@@ -94,6 +94,7 @@ try {
     const personId = state.session.personId;
     // A returning identity must never mount SignUp while the app bridge resolves.
     for (const suffix of ["", "#/sso-callback"]) {
+      await page.goto("about:blank"); // cold callback, not same-document hash navigation
       await page.goto(`${hosted.url}/join/${suffix}`);
       if (suffix) await page.waitForURL(new RegExp(`${basePath}/profile/$`));
       else await page.getByRole("heading", { name: "You're already signed in" }).waitFor();
