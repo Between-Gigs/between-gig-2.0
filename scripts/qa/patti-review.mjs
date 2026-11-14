@@ -36,6 +36,7 @@ try {
   for(const [name,sel] of [["location","#sec-where"],["experience","#sec-film"],["services","#sec-help"],["rates","#sec-rates"],["showcase","#sec-work"],["credits","#sec-credits"],["personality","#sec-personality"],["details","#sec-details"],["contact","#sec-contact"]])await capture(name,sel);
   await p.getByRole("heading",{name:"You’re Almost There!",exact:true}).scrollIntoViewIfNeeded();await p.screenshot({path:"deliverables/patti-review/submit.png"});
   for(const width of [390,1440]) {await p.setViewportSize({width,height:1000});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),"no horizontal overflow at "+width);}
-  for(const [name,route] of [["signup","join"],["signin","login"],["professionals","professionals"],["invitation","emails/invite"]]){await p.goto(url+"/"+route+"/");await p.waitForLoadState("networkidle");await p.evaluate(()=>document.fonts.ready);await p.screenshot({path:"deliverables/patti-review/"+name+".png",fullPage:true});}
+  const publicPage=await browser.newPage({viewport:{width:1440,height:1000}});
+  for(const [name,route] of [["signup","join"],["signin","login"],["professionals","professionals"],["invitation","emails/invite"]]){await publicPage.goto(url+"/"+route+"/");await publicPage.waitForLoadState("networkidle");await publicPage.evaluate(()=>document.fonts.ready);await publicPage.screenshot({path:"deliverables/patti-review/"+name+".png",fullPage:true});}
   console.log("PASS: Patti review location, dual pricing, custom skills, persistence, separate marketing choice and 390/1440px layouts");
 } finally {await browser.close();server.close();}
