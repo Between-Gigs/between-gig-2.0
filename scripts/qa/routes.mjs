@@ -120,7 +120,7 @@ export const routes = [
   { name: "draft-professionals-v1", path: "/preview/drafts/professionals-v1/", ready: "h1" },
   {
     name: "call-sheet-dialog", path: "/preview/drafts/professionals-v1/", setup: reset, ready: "h1",
-    act: async (page) => { await page.getByRole("button", { name: "Get on the call sheet" }).first().click(); await page.getByRole("dialog").waitFor(); },
+    act: async (page) => { const draft = page.frameLocator('iframe[data-admin-page-preview]'); await draft.getByRole("button", { name: "Get on the call sheet" }).first().click(); await draft.getByRole("dialog").waitFor(); },
   },
   { name: "storyboard", path: "/storyboard/", ready: "h1" },
   { name: "crew-call", path: "/crew-call/", ready: "h1" },
