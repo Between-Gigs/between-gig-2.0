@@ -7,7 +7,7 @@ const { server, url: base } = await serve("out");
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? "/usr/bin/chromium" });
 fs.mkdirSync("deliverables/home-peter", { recursive: true });
 try {
-  for (const width of [320, 390, 768, 1440]) {
+  for (const width of [320, 390, 640, 768, 1440]) {
     for (const theme of ["light", "dark"]) {
       const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce" });
       await context.addInitScript(t => localStorage.setItem("bg-theme", t), theme);
@@ -39,5 +39,5 @@ try {
       await context.close();
     }
   }
-  console.log("PASS: disposable homepage preview, copy, centering, no overflow, CTA, theme toggle, current-home regression at 4 widths × 2 modes");
+  console.log("PASS: disposable homepage preview, copy, centering, no overflow, CTA, theme toggle, current-home regression at 5 widths × 2 modes");
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
