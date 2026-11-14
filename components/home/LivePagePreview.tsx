@@ -8,6 +8,8 @@ import { basePath } from "@/lib/site";
 
 const Appearance = React.createContext("");
 const ProfileLayout = React.createContext("");
+export type GuidePreviewMode = "thumbnail" | "full";
+export const GuidePreviewModeContext = React.createContext<GuidePreviewMode>("thumbnail");
 const width = 1280;
 const height = 720;
 
@@ -61,6 +63,8 @@ const Loaded = React.createContext<() => void>(() => {});
 export function LivePagePreview({ href, title, as = "visitor" }: PreviewProps) {
   const host = React.useRef<HTMLSpanElement>(null);
   const appearance = React.useContext(Appearance);
+  const mode = React.useContext(GuidePreviewModeContext);
+  const [pageHeight, setPageHeight] = React.useState(height);
   const savedTemplate = React.useContext(ProfileLayout);
   const template = /^\/(?:p|profile|preview\/(?:profile-editor|profiles|gigster-journey))(?:\/|$)/.test(href) ? savedTemplate : undefined;
   const [nearby, setNearby] = React.useState(false);
@@ -86,15 +90,17 @@ export function LivePagePreview({ href, title, as = "visitor" }: PreviewProps) {
   React.useEffect(() => {
     const me = slot.current;
     if (me?.mounted) { me.loading = true; }
-  }, [appearance, template]);
+  }, [appearance, template, mode]);
   const loaded = React.useCallback(() => { const me = slot.current; if (me && me.loading) { me.loading = false; pump(); } }, []);
 
   return (
     <span ref={host} inert aria-hidden="true"
-      className="pointer-events-none relative block aspect-video w-full overflow-hidden rounded-lg bg-surface-sunken">
+      data-guide-preview-mode={mode}
+      className="pointer-events-none relative block w-full overflow-hidden rounded-lg bg-surface-sunken"
+      style={mode === "full" && scale > 0 ? { height: Math.ceil(pageHeight * scale) } : { aspectRatio: `${width} / ${height}` }}>
       {nearby && scale > 0 && appearance && (
         <Loaded.Provider value={loaded}>
-          <PreviewFrame key={`${appearance}/${template ?? ""}`} template={template} href={href} as={as} title={title} scale={scale} />
+          <PreviewFrame key={`${appearance}/${template ?? ""}/${mode}`} template={template} href={href} as={as} title={title} scale={scale} mode={mode} onHeight={setPageHeight} />
         </Loaded.Provider>
       )}
     </span>
@@ -106,12 +112,38 @@ function showsPage(frame: HTMLIFrameElement) {
   catch { return false; }
 }
 
-function PreviewFrame({ href, as, title, scale, template }: PreviewProps & { scale: number; template?: string }) {
+function PreviewFrame({ href, as, title, scale, template, mode, onHeight }: PreviewProps & { scale: number; template?: string; mode: GuidePreviewMode; onHeight: (height: number) => void }) {
   const [status, setStatus] = React.useState<"loading" | "ready" | "unavailable">("loading");
+  const [documentHeight, setDocumentHeight] = React.useState(height);
   const frame = React.useRef<HTMLIFrameElement>(null);
   const done = React.useContext(Loaded);
   // Ready or not, a settled frame frees its loading place for the next card.
   React.useEffect(() => { if (status !== "loading") done(); }, [status, done]);
+  React.useEffect(() => {
+    if (status !== "ready") return;
+    const doc = frame.current?.contentDocument;
+    if (!doc?.body) return;
+    let paint = 0;
+    const measure = () => {
+      const next = Math.max(height, doc.documentElement.scrollHeight, doc.body.scrollHeight);
+      setDocumentHeight(next);
+      onHeight(next);
+    };
+    const schedule = () => { cancelAnimationFrame(paint); paint = requestAnimationFrame(measure); };
+    const observer = new ResizeObserver(schedule);
+    const observeContent = () => {
+      observer.observe(doc.documentElement);
+      observer.observe(doc.body);
+      for (const el of doc.querySelectorAll("body > *, main > *, header, footer, img, iframe")) observer.observe(el);
+    };
+    // Deferred sample content can overflow an unchanged viewport-sized body. Watch the content too.
+    const mutations = new MutationObserver(() => { observeContent(); schedule(); });
+    mutations.observe(doc.body, { childList: true, subtree: true, characterData: true });
+    doc.addEventListener("load", schedule, true);
+    observeContent();
+    measure();
+    return () => { cancelAnimationFrame(paint); observer.disconnect(); mutations.disconnect(); doc.removeEventListener("load", schedule, true); };
+  }, [status, onHeight]);
   React.useEffect(() => {
     const el = frame.current;
     if (!el) return;
@@ -126,9 +158,10 @@ function PreviewFrame({ href, as, title, scale, template }: PreviewProps & { sca
     <>
       {status === "unavailable" && <span className="absolute inset-0 grid place-items-center px-2 text-center text-caption text-ink-muted">Preview unavailable</span>}
       {status === "loading" && <span className="absolute inset-0 animate-pulse bg-surface-hover motion-reduce:animate-none" />}
-      <iframe ref={frame} data-guide-thumbnail="" data-profile-template={template} name={`bg-preview:${as}`} src={`${basePath}${href}`} title={`Preview of ${title}`} tabIndex={-1}
+      {/* A passive frame must not make its parent jump when the browser resolves a fragment anchor. */}
+      <iframe ref={frame} data-guide-thumbnail="" data-profile-template={template} name={`bg-preview:${as}`} src={`${basePath}${href.split("#")[0]}`} title={`Preview of ${title}`} tabIndex={-1}
         className={cx("absolute top-0 left-0 origin-top-left max-w-none border-0", status !== "ready" && "opacity-0")}
-        style={{ width, height, transform: `scale(${scale})` }}
+        style={{ width, height: mode === "full" ? documentHeight : height, transform: `scale(${scale})` }}
         onLoad={(event) => {
           const el = event.currentTarget;
           if (!showsPage(el)) setStatus("unavailable");
