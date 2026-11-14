@@ -52,6 +52,7 @@ function destination(next: string | null, role: "owner" | "gigster") {
   const fallback = role === "owner" ? "/owners/" : "/profile/";
   if (!next || !next.startsWith("/") || next.startsWith("//") || next.includes("\\")) return fallback;
   const local = basePath && (next === basePath || next.startsWith(`${basePath}/`)) ? next.slice(basePath.length) || "/" : next;
+  if (!local.startsWith("/") || local.startsWith("//") || local.includes("\\")) return fallback;
   const path = local.split(/[?#]/)[0].replace(/\/+$/, "");
   return path === "/login" || path === "/join" || (role === "owner" && (path === "/profile" || path.startsWith("/profile/"))) ? fallback : local;
 }

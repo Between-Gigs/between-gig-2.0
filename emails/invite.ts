@@ -52,6 +52,6 @@ export function invite({ inviteUrl }: InviteProps, ctx: EmailContext = defaultCo
     subject: c.subject,
     preheader: c.preheader,
     text,
-    html: craftLayout({ title: c.subject, preheader: c.preheader, body, reason: INVITE_REASON, ctx, unsubscribe: INVITE_UNSUBSCRIBE, lightOnly: true }),
+    html: craftLayout({ title: c.subject, preheader: c.preheader, body, reason: INVITE_REASON, ctx, unsubscribe: INVITE_UNSUBSCRIBE, lightOnly: true, center: true }),
   };
 }

@@ -77,12 +77,12 @@ export async function flow({ browser, base, outDir }) {
       await expectText("doesn't match");
       const code = await page.evaluate(() => window.bgSample.peekCode("riley.park@example.com"));
       await page.getByLabel("6-digit code").fill(code);
-      await page.waitForURL(/\/profile\/?$/);
-      await expectText("Let's build your profile");
+      await page.waitForURL(/\/profile\/canvas\/?$/);
+      await expectText("How I can help");
     })
     && await step("builder-about", async () => {
       // Start your profile now opens Edit on your profile; this flow walks the step-by-step questionnaire.
-      await page.getByRole("link", { name: "Start your profile" }).waitFor();
+      await page.waitForURL(/\/profile\/canvas\/?$/);
       // The questionnaire isn't linked any more (editing happens on the page), but its route still works.
       await page.goto(`${base}/profile/edit/`);
       await page.locator("[data-step='0']").waitFor();
