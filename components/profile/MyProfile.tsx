@@ -2,6 +2,8 @@
 import { Badge, Button, Skeleton, cx, useToast } from "@ds/components";
 import { ArrowRight, ChevronDown, ChevronUp, Copy, Eye, FilePen, Hourglass, MessageSquareWarning, PencilLine, Share2, Sparkles } from "lucide-react";
 import * as React from "react";
+import { useRouter } from "next/navigation";
+import { needsProfileEditor } from "@/lib/profile/entry";
 import { useLook } from "@/components/site/LookSync";
 import { useProfileTemplate } from "@/lib/profile/use-profile-template";
 import { Icon3D } from "@/components/ui/Icon3D";
@@ -29,6 +31,7 @@ const when = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-US", 
  * card clients see in search. The search card can open a full-width, read-only preview below both columns.
  */
 export function MyProfile() {
+  const router = useRouter();
   const look = useLook();
   const warm = look !== "swiss";
   /* Editorial (the gold standard, Justin's Flow p3): ruled sections and serif heads, no tinted cards or 3D art. */
@@ -52,7 +55,10 @@ export function MyProfile() {
     return () => { current = false; };
   }, [session?.personId]);
 
-  if (!session || loadedId !== session.personId || !s) {
+  const openEditor = !!session && loadedId === session.personId && !!s && needsProfileEditor(s, profile !== null);
+  React.useEffect(() => { if (openEditor) router.replace("/profile/canvas/"); }, [openEditor, router]);
+
+  if (!session || loadedId !== session.personId || !s || openEditor) {
     return <Page decor="corners"><div aria-busy="true" aria-label="Loading your profile" className="grid gap-4"><Skeleton className="h-10 w-1/3" /><Skeleton shape="block" className="h-24" /><Skeleton shape="block" className="h-96" /></div></Page>;
   }
 
@@ -60,8 +66,9 @@ export function MyProfile() {
   const first = person.name.split(" ")[0] || "there";
   // Show what's submitted when there is something submitted; before that, the working draft.
   const fields = profile?.fields ?? s.fields;
-  const started = !!fields && s.completeness > 0;
-  const state = !started || !fields ? "new" : person.status;
+  const started = !!fields && (s.completeness > 0 || !needsProfileEditor(s, false));
+  const reviewed = !!profile || ["submitted", "changes_requested", "approved"].includes(person.status);
+  const state = reviewed ? person.status : !started || !fields ? "new" : person.status;
 
   const nextStep = state === "approved" && fields
     ? <Live person={person} warm={warm} ruled={ruled} />
