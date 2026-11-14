@@ -63,8 +63,7 @@ export async function flow({ browser, base, outDir }) {
     })
     && await step("sign-out", async () => {
       await page.goto(`${base}/preview/`);
-      await page.getByRole("button", { name: /Account:/ }).click();
-      await page.getByRole("menuitem", { name: "Log out" }).click();
+      await page.getByRole("navigation", { name: "Preview workspace", exact: true }).getByRole("button", { name: "Log out", exact: true }).click();
       await page.waitForURL(/\/login\/\?signedOut=1/);
       await expectText("You're logged out");
     })
@@ -170,17 +169,19 @@ export async function flow({ browser, base, outDir }) {
       await page.evaluate(() => window.bgSample.signInAs("invited"));
       // The two-step call-sheet form now lives only on the pre-Green Room draft (13 Nov 2026); the live page links to /join/.
       await page.goto(`${base}/preview/drafts/professionals-v1/`);
-      await page.getByRole("button", { name: "I offer this service: Interior styling" }).click();
-      await expectText("Interested in offering: Interior Styling");
-      await page.getByRole("button", { name: "Get on the call sheet" }).last().click();
-      await expectText("Enter your email address");
-      await page.getByLabel("Email").fill("new.gigster@example.com");
-      await page.getByLabel("ZIP code").fill("90026");
-      await page.getByRole("dialog").getByRole("button", { name: "Get on the call sheet" }).click();
-      await expectText("You're on the list.");
-      await page.getByLabel("What would you offer?").fill("Room styling and sourcing between shoots.");
-      await page.getByRole("button", { name: "Save optional details" }).click();
-      await expectText("Thank you for joining!");
+      const draft = page.frameLocator('iframe[data-admin-page-preview]');
+      const expectDraft = text => draft.getByText(text, { exact: false }).first().waitFor();
+      await draft.getByRole("button", { name: "I offer this service: Interior styling" }).click();
+      await expectDraft("Interested in offering: Interior Styling");
+      await draft.getByRole("button", { name: "Get on the call sheet" }).last().click();
+      await expectDraft("Enter your email address");
+      await draft.getByLabel("Email").fill("new.gigster@example.com");
+      await draft.getByLabel("ZIP code").fill("90026");
+      await draft.getByRole("dialog").getByRole("button", { name: "Get on the call sheet" }).click();
+      await expectDraft("You're on the list.");
+      await draft.getByLabel("What would you offer?").fill("Room styling and sourcing between shoots.");
+      await draft.getByRole("button", { name: "Save optional details" }).click();
+      await expectDraft("Thank you for joining!");
     })
     && await step("join-calls-to-action", async () => {
       // Coming soon and For professionals: every call to action goes straight to sign-up and says where it goes.

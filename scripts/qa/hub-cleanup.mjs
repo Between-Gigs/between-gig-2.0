@@ -27,7 +27,7 @@ try {
     }
     const scratchpad = page.locator('section[aria-labelledby="scratchpad-h"]');
     assert.equal(await scratchpad.getByRole("link", { name: /Draft homepage/ }).getAttribute("href"), `${base}/preview/drafts/home-peter/`);
-    assert.equal(await scratchpad.getByRole("link", { name: /Home once we open/ }).getAttribute("href"), `${base}/proposals/home/`);
+    assert.equal(await scratchpad.getByRole("link", { name: /Home once we open/ }).getAttribute("href"), `${base}/preview/page/?path=${encodeURIComponent("/proposals/home/")}`);
     assert.equal(await page.locator('section[aria-labelledby="public-h"] a[href$="/proposals/home/"]').count(), 0);
     if (width === 1440 && theme === "light") {
       const report = [];
@@ -55,7 +55,7 @@ try {
     const journey = page.locator('section[aria-labelledby="journey-h"]');
     assert.equal(await page.locator('main a[href$="/preview/gigster-journey/account/"]').count(), 0, "alternate account prototype is absent from Hub cards and shortcuts");
     assert.equal(await journey.getByRole("link", { name: /^Invite email/ }).getAttribute("href"), `${base}/emails/invite/`);
-    assert.equal(await journey.getByRole("link", { name: /^Sign up/ }).getAttribute("href"), `${base}/join/`);
+    assert.equal(await journey.getByRole("link", { name: /^Sign up/ }).getAttribute("href"), `${base}/preview/page/?path=${encodeURIComponent("/join/")}`);
     for (const [title, route, expected] of [
       ["Edit your profile", "/profile/canvas/", "How I can help"],
       ["Profile submitted", "/profile/submitted/", "Profile submitted."],

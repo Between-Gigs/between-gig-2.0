@@ -18,6 +18,7 @@ import { Icon3D } from "@/components/ui/Icon3D";
 import type { Icon3DName } from "@/lib/icons3d";
 import { asset, basePath } from "@/lib/site";
 import { SampleAuthNotice } from "@/components/auth/SampleAuthNotice";
+import { publicPreviewHref } from "@/lib/admin-preview";
 
 const invitePage = `/join/?invite=${DEMO_TOKENS.valid}`;
 
@@ -107,7 +108,7 @@ function GuideCard({ title, body, href, as, onClick, tag, step, view }: {
       </span>
       {onClick
         ? <button type="button" onClick={onClick} className={action}>{label}</button>
-        : <Link href={href} className={action}>{label}</Link>}
+        : <Link href={publicPreviewHref(href, basePath)} className={action}>{label}</Link>}
     </div>
   );
 }

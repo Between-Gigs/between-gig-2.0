@@ -64,7 +64,7 @@ function useSections() {
   const preview = React.useContext(ModeContext) === "preview";
   if (!preview) return sections;
   return sections.filter(group => ["Overview", "Previews", "Studio"].includes(group.title)).map(group => group.title !== "Overview" ? group : {
-    ...group, items: group.items.map(item => item.label !== "Dashboard" ? item : { ...item, hint: "Sign-in required", fullPage: basePath === "/hub" }),
+    ...group, items: group.items.map(item => item.label !== "Dashboard" ? item : { ...item, hint: "Owner access required", fullPage: basePath === "/hub" }),
   });
 }
 

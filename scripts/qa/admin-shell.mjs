@@ -45,6 +45,16 @@ try {
     assert.deepEqual(violations, []);
     await page.screenshot({ path: `deliverables/admin-shell/${look}-${width}-${theme}.png`, fullPage: true });
     if (look === "editorial" && [320, 1440].includes(width)) {
+      await page.goto(`${url}/hub/`); await page.waitForFunction(() => !!window.bgSample);
+      const beforePreview = await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2"))?.session ?? null);
+      await page.getByRole("region", { name: "The Gigster journey", exact: true }).getByRole("link", { name: /^Sign up/ }).click();
+      await page.getByText("Read-only sample preview. Open the standalone page to use its forms and navigation.", { exact: true }).waitFor();
+      const publicFrame = page.frameLocator('iframe[data-admin-page-preview]');
+      await publicFrame.getByText("Sample account preview", { exact: true }).waitFor();
+      assert.equal(await publicFrame.locator("html").getAttribute("data-guide-thumbnail"), "");
+      assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2"))?.session ?? null), beforePreview);
+      assert.ok((await page.getByRole("link", { name: "Open standalone page", exact: true }).getAttribute("href")).endsWith(`${base}/join/`));
+      assert.equal(await page.locator("[data-admin-shell]").count(), 1);
       // Owner UI persists across dashboard and preview navigation without duplicate frames or authority changes.
       await page.evaluate(() => window.bgSample.signInAs("owner")); await page.goto(`${url}/owners/`);
       await page.locator('[data-admin-shell="owner"]').waitFor();
@@ -70,6 +80,9 @@ try {
       await page.screenshot({ path: `deliverables/admin-shell/draft-${width}-${theme}.png`, fullPage: true });
       await page.goto(standaloneHref); await page.getByText("who need your expertise.", { exact: true }).waitFor();
       await page.waitForFunction(() => !document.querySelector("[data-admin-shell]"));
+      assert.equal(await page.locator('iframe[data-admin-page-preview]').count(), 0);
+      await page.goto(`${url}/preview/page/?path=${encodeURIComponent("/owners/")}`);
+      await page.getByRole("alert").getByText(/External URLs and private management routes cannot be embedded/).waitFor();
       assert.equal(await page.locator('iframe[data-admin-page-preview]').count(), 0);
       // Non-owner guards stay intact, while public visitor pages retain their original chrome.
       await page.goto(`${url}/hub/`); await page.waitForFunction(() => !!window.bgSample); await page.evaluate(() => window.bgSample.signInAs("gigster:grace-liu"));
