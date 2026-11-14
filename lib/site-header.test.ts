@@ -38,7 +38,35 @@ describe("public header authentication states", () => {
     const signIn = html.match(/<a href="\/login\/"[^>]+>/)?.[0] ?? "";
     expect(signIn).toContain("min-h-11");
     expect(signIn).not.toContain("hidden");
-    expect(html).toContain("swiss:md:col-span-9");
+    // Signed out, the Los Angeles Call Sheet sits in the middle of the bar (Justin, 14 Nov 2026).
+    expect(html).toContain("data-header-title");
+    expect(html).toContain("Los Angeles Call Sheet");
+    expect(html).toContain("swiss:md:col-span-3");
+  });
+  it("offers a separate Sign up next to Sign in, except on the sign-up page", () => {
+    for (const pathname of ["/", "/login/", "/professionals/", "/crew-call/"]) {
+      state.pathname = pathname;
+      const html = render();
+      expect(html.match(/href="\/join\/"[^>]*data-header-signup/g)).toHaveLength(1);
+      expect(html).toContain(">Sign up</a>");
+    }
+    state.pathname = "/join/";
+    expect(render()).not.toContain("data-header-signup");
+    state.pathname = "/";
+    state.session = { role: "gigster", name: "Test", email: "test@example.com" };
+    expect(render()).not.toContain("data-header-signup");
+    state.session = null;
+    state.loading = true;
+    expect(render()).not.toContain("data-header-signup");
+  });
+  it("shows the Call Sheet title only to signed-out visitors", () => {
+    state.loading = true;
+    expect(render()).not.toContain("data-header-title");
+    state.loading = false;
+    state.session = { role: "gigster", name: "Test", email: "test@example.com" };
+    expect(render()).not.toContain("data-header-title");
+    state.session = null;
+    expect(render({ app: true })).not.toContain("data-header-title");
   });
   it("does not flash sign-in while session loads", () => {
     state.loading = true;

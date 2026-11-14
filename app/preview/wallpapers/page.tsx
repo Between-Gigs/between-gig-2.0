@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { share } from "@/lib/og";
 import Link from "next/link";
 import { ArrowLeft, Download, Maximize2 } from "lucide-react";
 import { Page } from "@/components/site/Page";
 import { asset } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = { ...share("preview-wallpapers"),
   title: "Wallpapers & background art",
   description: "Download the Between Gigs craft invitation and Crew Call film set backgrounds.",
   robots: { index: false, follow: false },

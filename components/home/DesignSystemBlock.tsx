@@ -4,7 +4,8 @@ import { ArrowRight } from "lucide-react";
 import { selectLook, setUnstyled, useLook, useUnstyled } from "@/components/site/LookSync";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { lookIds, looks } from "@/lib/look";
-import { LivePagePreview } from "./LivePagePreview";
+import { useContext } from "react";
+import { GuidePreviewModeContext, LivePagePreview } from "./LivePagePreview";
 
 /**
  * The design system on the preview hub. The preview is the live design system page, so it always shows the theme in
@@ -12,13 +13,14 @@ import { LivePagePreview } from "./LivePagePreview";
  */
 export function DesignSystemBlock() {
   const current = useLook();
+  const mode = useContext(GuidePreviewModeContext);
   const plain = useUnstyled();
   return (
     <div className="mt-6 grid gap-6 lg:grid-cols-12 lg:items-center">
-      <div className="lg:col-span-7">
+      <div className={mode === "list" ? "max-w-xs lg:col-span-4" : "lg:col-span-7"}>
         <LivePagePreview href="/preview/design-system/#foundations" title="Design system" />
       </div>
-      <div className="grid content-start gap-4 lg:col-span-5">
+      <div className={cx("grid content-start gap-4", mode === "list" ? "lg:col-span-8" : "lg:col-span-5")}>
         <div className="grid gap-1">
           <p className="text-eyebrow text-ink-muted uppercase">Theme in use</p>
           <p className="font-display text-display-sm text-ink">{looks[current].name}{plain && <span className="text-ink-muted"> · Unstyled</span>}</p>

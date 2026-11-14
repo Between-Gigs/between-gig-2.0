@@ -35,6 +35,9 @@ export const LIVE_ROUTES = [
   "/owners/", "/owners/review/", "/owners/people/", "/owners/people/maya/", "/owners/waitlist/", "/owners/staff/", "/preview-access/",
 ];
 
+/** SEO metadata routes (app/robots.ts, app/sitemap.ts), live on every build. */
+export const LIVE_METADATA = ["/robots.txt", "/sitemap.xml"];
+
 /** Top-level public/ folders the live pages and the emails use. Any other must be in INTERNAL. */
 export const PUBLIC_LIVE = ["art", "cursors", "email", "fonts", "img", "og"];
 

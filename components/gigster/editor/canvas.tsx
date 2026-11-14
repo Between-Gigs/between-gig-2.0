@@ -367,19 +367,56 @@ export function CanvasSamples({ d, set }: SectionProps) {
     } catch { setProblem("We couldn't read that photo. Try another one."); }
   };
   const choose = (at: number | null) => { replacing.current = at; input.current?.click(); };
+  // Order (Justin, 14 Nov 2026): drag a photo by its handle onto another place, or focus the handle and use the arrow
+  // keys. The first photo shows first on the profile.
+  const tiles = React.useRef<(HTMLElement | null)[]>([]);
+  const [dragging, setDragging] = React.useState<number | null>(null);
+  const [said, setSaid] = React.useState("");
+  const move = (from: number, to: number) => { const next = [...samples]; const [x] = next.splice(from, 1); next.splice(to, 0, x); set("workSamples")(next); };
+  const drag = (e: React.PointerEvent) => {
+    if (dragging === null) return;
+    const to = tiles.current.findIndex((el, j) => {
+      if (!el || j >= samples.length) return false;
+      const r = el.getBoundingClientRect();
+      return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+    });
+    if (to >= 0 && to !== dragging) { move(dragging, to); setDragging(to); }
+  };
+  const drop = () => { if (dragging !== null) setSaid(`Moved to position ${dragging + 1} of ${samples.length}.`); setDragging(null); };
+  const key = (e: React.KeyboardEvent, i: number) => {
+    const j = e.key === "ArrowLeft" || e.key === "ArrowUp" ? i - 1 : e.key === "ArrowRight" || e.key === "ArrowDown" ? i + 1 : -1;
+    if (j < 0 || j >= samples.length) return;
+    e.preventDefault(); move(i, j); setSaid(`Moved to position ${j + 1} of ${samples.length}.`);
+    requestAnimationFrame(() => document.getElementById(`sample-grip-${j}`)?.focus());
+  };
   return (
     <section id="sec-work" aria-labelledby="sec-work-h" className="grid scroll-mt-40 gap-5">
-      <H id="sec-work-h" tag={samples.length ? `${samples.length} of ${MAX_SAMPLES}` : `Optional · up to ${MAX_SAMPLES}`}>Work samples</H>
+      <div className="grid gap-2">
+        <H id="sec-work-h" tag={samples.length ? `${samples.length} of ${MAX_SAMPLES}` : `Optional · up to ${MAX_SAMPLES}`}>Work samples</H>
+        {samples.length > 1 && <p id="samples-hint" className="text-body-md text-ink-muted">Drag a photo by its handle to change the order. The first one shows first on your profile.</p>}
+      </div>
+      <p aria-live="polite" className="sr-only">{said}</p>
       <input ref={input} type="file" accept="image/*" multiple className="sr-only" tabIndex={-1} aria-label="Add work samples"
         onChange={(e) => { void pick(e.target.files); e.target.value = ""; }} />
       <ul className="grid gap-4 sm:grid-cols-3">
         {Array.from({ length: Math.min(MAX_SAMPLES, Math.max(FIRST_SLOTS, samples.length + 1)) }, (_, i) => {
           const src = samples[i];
           return (
-            <li key={i} className="min-w-0">
+            <li key={i} ref={(el) => { tiles.current[i] = el; }} className="min-w-0">
               {src ? (
-                <figure className="relative aspect-video overflow-hidden rounded-lg border border-line bg-surface">
-                  <img src={src} alt={`Work sample ${i + 1}`} className="size-full object-cover" />
+                <figure className={cx("relative aspect-video overflow-hidden rounded-lg border bg-surface transition-shadow duration-fast",
+                  dragging === i ? "border-ink-brand shadow-lg ring-2 ring-ink-brand" : "border-line")}>
+                  <img src={src} alt={`Work sample ${i + 1}`} draggable={false} className="size-full object-cover" />
+                  {samples.length > 1 && (
+                    <button type="button" id={`sample-grip-${i}`} aria-label={`Move work sample ${i + 1} of ${samples.length}`} aria-describedby="samples-hint"
+                      title="Drag to reorder, or use the arrow keys"
+                      className={cx("absolute top-2 left-2 inline-flex min-h-9 touch-none items-center gap-1 rounded-full bg-surface pr-3 pl-1.5 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus",
+                        dragging === i ? "cursor-grabbing" : "cursor-grab")}
+                      onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDragging(i); }}
+                      onPointerMove={drag} onPointerUp={drop} onPointerCancel={drop} onKeyDown={(e) => key(e, i)}>
+                      <GripVertical aria-hidden="true" className="size-4" />{i + 1}
+                    </button>
+                  )}
                   <span className="absolute inset-x-2 bottom-2 flex justify-end gap-2">
                     <button type="button" aria-label={`Replace work sample ${i + 1}`} onClick={() => choose(i)}
                       className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus"><RefreshCw aria-hidden="true" className="size-4" />Replace</button>

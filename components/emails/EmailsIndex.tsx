@@ -3,7 +3,7 @@ import { EmptyState, SegmentedControl } from "@ds/components";
 import { ArrowRight, ArrowUpRight, Inbox, Mail, Send } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
-import { emailNames, emailTemplates } from "@/emails";
+import { activeEmailNames, emailTemplates } from "@/emails";
 import { data, type OutboxEmail } from "@/lib/data";
 import { AppPage } from "@/components/site/AppPage";
 import { ButtonLink } from "@/components/ui/ButtonLink";
@@ -23,21 +23,21 @@ export function EmailsIndex() {
   React.useEffect(() => {
     void data.emails.outbox().then(setOutbox);
     // Rendered on the client so the logo URLs resolve against this deployment.
-    setThumbs(Object.fromEntries(emailNames.map((n) => [n, renderPreview(n, undefined, "light").html]))); // eslint-disable-line react-hooks/set-state-in-effect
+    setThumbs(Object.fromEntries(activeEmailNames.map((n) => [n, renderPreview(n, undefined, "light").html]))); // eslint-disable-line react-hooks/set-state-in-effect
   }, []);
 
   return (
     <AppPage>
-      <OwnerPage title="Emails" meta={tab === "templates" ? emailNames.length : outbox?.length}
+      <OwnerPage title="Emails" meta={tab === "templates" ? activeEmailNames.length : outbox?.length}
         description="Email template previews and a fictional sample outbox, not live delivery history. Nothing here sends email. Open a template to review it on desktop and phone."
         actions={
           // In the pinned bar, so switching never needs a scroll back up.
           <SegmentedControl label="Show" value={tab} onChange={setTab}
-            options={[{ value: "templates", label: "All emails", icon: <Mail /> }, { value: "outbox", label: `Sample outbox${outbox?.length ? ` (${outbox.length})` : ""}`, icon: <Send /> }]} />
+            options={[{ value: "templates", label: "Active templates", icon: <Mail /> }, { value: "outbox", label: `Sample outbox${outbox?.length ? ` (${outbox.length})` : ""}`, icon: <Send /> }]} />
         }>
           {tab === "templates" ? (
             <ul className="grid items-start gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {emailNames.map((n) => {
+              {activeEmailNames.map((n) => {
                 const t = emailTemplates[n];
                 const sample = renderPreview(n, undefined, "light");
                 return (

@@ -1,14 +1,17 @@
-name: Homepage preview QA
+name: Hub preview QA
 on:
   pull_request:
     paths:
-      - 'app/preview/drafts/home-peter/**'
-      - 'scripts/qa/home-peter.mjs'
-      - '.github/workflows/home-peter-preview.yml'
+      - 'components/home/**'
+      - 'components/emails/EmailsIndex.tsx'
+      - 'emails/index.ts'
+      - 'lib/studio/app-pages.ts'
+      - 'scripts/qa/hub-cleanup.mjs'
+      - '.github/workflows/hub-cleanup.yml'
 permissions:
   contents: read
 jobs:
-  preview:
+  hub:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -21,9 +24,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: CHROMIUM_PATH=$(command -v google-chrome) node scripts/qa/home-peter.mjs
+      - run: CHROMIUM_PATH=$(command -v google-chrome) node scripts/qa/hub-cleanup.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: home-peter-preview
-          path: deliverables/home-peter/
+          name: hub-cleanup-preview
+          path: deliverables/hub-cleanup/
