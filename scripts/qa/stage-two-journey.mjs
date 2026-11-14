@@ -44,6 +44,11 @@ try {
     const about = page.locator("#f-about");
     await about.scrollIntoViewIfNeeded();
     await about.fill(`${(await about.inputValue()).slice(0, 300)} I can plan a project around your schedule.`);
+    // The revised questionnaire requires explicit distance and at least one pricing choice.
+    await page.locator("#f-travel").click();
+    await page.getByRole("option",{name:"Up to 25 miles",exact:true}).click();
+    await page.getByRole("checkbox",{name:"Hourly",exact:true}).check();
+    await page.locator("#f-rate").fill("75");
     await page.getByRole("button", { name: "Submit for review", exact: true }).filter({ visible: true }).first().click();
     await page.getByRole("heading", { name: "Profile submitted." }).waitFor();
     const result = await page.evaluate((slug) => {
