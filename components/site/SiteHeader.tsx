@@ -1,6 +1,6 @@
 "use client";
 import { Avatar, IconButton, Logo, Menu, ThemeToggle, cx, type MenuEntry } from "@ds/components";
-import { LogIn, LogOut, Menu as MenuIcon, PencilLine, UserPlus, UserRound, Users } from "lucide-react";
+import { LogOut, Menu as MenuIcon, PencilLine, UserRound, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
@@ -30,7 +30,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
     ? [{ href: "/profile/canvas/", label: "Gigster Experience" }, { href: "/owners/", label: "Owner Experience" }, { href: "/hub/", label: "Hub" }]
     : session?.role === "gigster"
       ? [{ href: "/profile/", label: "My profile" }, { href: "/profile/canvas/", label: "Edit profile" }]
-      : [{ href: "/professionals/", label: "For professionals" }, { href: "/storyboard/", label: "Storyboard" }, { href: "/hub/", label: "Hub" }]).map(link => ({ ...link, href: basePath === "/hub" && link.href === "/hub/" ? "/" : link.href }));
+      : []).map(link => ({ ...link, href: basePath === "/hub" && link.href === "/hub/" ? "/" : link.href }));
 
   // Only the most specific matching link is current: on /profile/canvas/ that's "Edit profile", not "My profile";
   // on /owners/review/ it's "Review", not "Dashboard".
@@ -48,15 +48,6 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
 
   const displayName = session ? (session.name || session.email).replace(/\s*\(.*\)$/, "") : "";
   const photo = useOwnPhoto(session?.role === "gigster" ? session.personId ?? undefined : undefined, pathname);
-  // Signed out: the public links, then the account actions that make sense on this page (no "Log in" on the log-in
-  // page, no "Create an account" on the sign-up page).
-  const onLogin = pathname.startsWith("/login"), onJoin = pathname.startsWith("/join");
-  const guestMenu: MenuEntry[] = [
-    ...links.map((l) => ({ label: l.label, checked: current(l.href) || undefined, onSelect: () => navigate(l.href) })),
-    ...(onLogin && onJoin ? [] : ["separator" as const]),
-    ...(onLogin ? [] : [{ label: "Log in", icon: <LogIn />, onSelect: () => router.push("/login/") }]),
-    ...(onJoin ? [] : [{ label: "Create an account", icon: <UserPlus />, onSelect: () => router.push("/join/") }]),
-  ];
   const menu: MenuEntry[] = session ? [
     { heading: session.role === "owner" ? "Signed in as owner" : "Signed in" },
     ...(session.role === "owner"
@@ -88,7 +79,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
             ))}
           </nav>
         )}
-        <div className={cx("flex flex-1 items-center justify-end gap-1 sm:gap-2", links.length > 3 ? "swiss:md:col-span-9 swiss:lg:col-span-3" : "swiss:md:col-span-4")}>
+        <div className={cx("flex flex-1 items-center justify-end gap-1 sm:gap-2", links.length > 3 ? "swiss:md:col-span-9 swiss:lg:col-span-3" : links.length === 0 ? "swiss:md:col-span-9" : "swiss:md:col-span-4")}>
           <ExperienceSwitcher className={app ? undefined : "md:hidden"} />
           {/* The theme is picked (Green Room). Only owners/admins, and the Hub, keep the Theme menu for reviewing alternatives. */}
           {(session?.role === "owner" || /^\/(hub|preview)(\/|$)/.test(pathname)) && <><span className="hidden sm:contents"><LookSwitcher /></span><span className="sm:hidden"><LookSwitcher compact /></span></>}
@@ -109,15 +100,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
                 </button>
               } />
           ) : (
-            <>
-              {!onLogin && <Link href="/login/" className="hidden min-h-11 items-center rounded-full px-3 text-label-md text-ink hover:bg-surface-hover swiss:rounded-none swiss:px-0 swiss:font-display swiss:font-semibold swiss:underline-offset-8 swiss:hover:bg-transparent swiss:hover:underline sm:inline-flex">Log in</Link>}
-              <Menu align="end" items={guestMenu}
-                trigger={
-                  <button type="button" aria-label="Menu" className="grid size-11 place-items-center rounded-full ring-2 ring-line transition-shadow duration-fast hover:ring-ink-brand aria-expanded:ring-ink-brand swiss:rounded-none swiss:ring-line-strong swiss:md:hidden">
-                    <span aria-hidden="true" className="grid size-8 place-items-center rounded-full bg-surface-selected text-ink-brand swiss:rounded-none swiss:bg-transparent swiss:text-ink"><UserRound className="size-4" /></span>
-                  </button>
-                } />
-            </>
+            <Link href="/login/" className="inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-label-md text-ink hover:bg-surface-hover swiss:rounded-none swiss:px-0 swiss:font-display swiss:font-semibold swiss:underline-offset-8 swiss:hover:bg-transparent swiss:hover:underline">Sign in</Link>
           )}
         </div>
       </div>
