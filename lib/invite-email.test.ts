@@ -5,7 +5,7 @@ import { renderPreview } from "@/components/emails/preview";
 const props = { inviteUrl: "https://example.test/join/?invite=sample&source=email", email: "sample@example.test" };
 
 describe("canonical Stage 2 invitation", () => {
-  it("keeps the approved copy order with one primary action and removes extra claims", () => {
+  it("keeps the approved copy order with matching hero and body actions and removes extra claims", () => {
     const email = invite(props);
     const phrases = [INVITE_COPY.lead, INVITE_COPY.opening, INVITE_COPY.stage, INVITE_COPY.introduction,
       `${INVITE_COPY.nextTitle} ${INVITE_COPY.next}`, INVITE_COPY.ready, INVITE_COPY.cta.toUpperCase(), INVITE_COPY.closing];
@@ -15,7 +15,9 @@ describe("canonical Stage 2 invitation", () => {
       expect(next, phrase).toBeGreaterThan(position);
       position = next;
     }
-    expect(email.html.match(/>Create your profile/g)).toHaveLength(1);
+    expect(email.html.match(/>Create your profile/g)).toHaveLength(2);
+    expect(email.text.split(props.inviteUrl)).toHaveLength(3);
+    expect(email.html.match(/href="https:\/\/example.test\/join\/\?invite=sample&amp;source=email"/g)).toHaveLength(2);
     expect(email.html).toContain("?invite=sample&amp;source=email");
     expect(email.html).toContain(`<strong>${INVITE_COPY.stage}</strong>`);
     expect(email.html).toContain(`<strong>${INVITE_COPY.nextTitle}</strong> ${INVITE_COPY.next}`);

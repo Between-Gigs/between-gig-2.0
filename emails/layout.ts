@@ -106,7 +106,7 @@ a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important
 .e-k-pad{padding-left:22px!important;padding-right:22px!important}
 .e-k-h2{font-size:23px!important;line-height:29px!important}
 .e-invite-scene{height:130.75vw!important}
-.e-invite-center{padding:64px 19% 120px!important}
+.e-invite-center{padding:44px 19% 64px!important}
 .e-invite-title{font-size:31px!important;line-height:34px!important;margin-bottom:16px!important}
 .e-invite-lead{font-size:14px!important;line-height:21px!important}
 .e-invite-eyebrow{margin-top:22px!important}
@@ -115,18 +115,23 @@ a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important
 .e-k-h1{font-size:31px!important;line-height:35px!important}
 .e-k-card{padding:30px 16px 24px!important}
 .e-k-pad{padding-left:16px!important;padding-right:16px!important}
-.e-invite-center{padding:48px 18% 96px!important}
+.e-invite-center{padding:44px 18% 60px!important}
+.e-invite-button{max-width:160px!important}
+.e-invite-action{padding-top:18px!important}
 .e-invite-title{font-size:26px!important;line-height:29px!important}
 .e-invite-lead{font-size:13px!important;line-height:19px!important}
 .e-invite-eyebrow{margin-top:18px!important}
 }
 @media (max-width:300px){
-.e-invite-center{padding:24px 20% 46px!important}
+.e-invite-center{padding:36px 20% 42px!important}
+.e-invite-button{max-width:130px!important}
+.e-invite-button-link{padding:13px 6px!important;font-size:12px!important;line-height:18px!important}
+.e-invite-action{padding-top:10px!important}
 .e-invite-logo{width:88px!important;height:28px!important}
-.e-invite-eyebrow{margin:16px 0 8px!important}
-.e-invite-rule{margin-bottom:14px!important}
-.e-invite-title{font-size:21px!important;line-height:24px!important;margin-bottom:12px!important}
-.e-invite-lead{font-size:12px!important;line-height:18px!important;margin-left:10px!important;margin-right:0!important}
+.e-invite-eyebrow{margin:6px 0 8px!important}
+.e-invite-rule{margin-bottom:8px!important}
+.e-invite-title{font-size:21px!important;line-height:22px!important;margin-bottom:6px!important}
+.e-invite-lead{font-size:12px!important;line-height:16px!important;margin-left:10px!important;margin-right:0!important}
 }
 ${lightOnly ? "" : `@media (prefers-color-scheme:dark){${darkCss}}\n${ogsc}`}
 </style>
