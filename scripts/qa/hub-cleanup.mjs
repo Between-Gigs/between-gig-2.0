@@ -116,7 +116,10 @@ try {
     const devices = page.locator('section[aria-labelledby="journey-h"]').getByRole("radiogroup", { name: "The Gigster journey preview device", exact: true });
     await devices.getByRole("radio", { name: "Mobile", exact: true }).click();
     const mobileCard = page.locator('section[aria-labelledby="journey-h"] li').filter({ has: page.getByRole("button", { name: /^Profile submitted/ }) });
-    await mobileCard.scrollIntoViewIfNeeded();
+    // Device selection changes frame aspect ratios. Settle layout, then expose the actual frame host to its lazy queue.
+    await mobileCard.locator('[data-guide-preview-device="mobile"]').waitFor();
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await mobileCard.locator("[data-guide-preview-mode]").evaluate(el => el.scrollIntoView({ block: "center", behavior: "instant" }));
     await page.waitForFunction(() => {
       const frame = document.querySelector('iframe[title="Preview of Profile submitted"]');
       return frame?.contentDocument?.documentElement?.hasAttribute("data-guide-ready") && frame.contentWindow.innerWidth === 390;

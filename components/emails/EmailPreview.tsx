@@ -61,8 +61,8 @@ function Preview({ name }: { name: EmailTemplate }) {
       {/* The owner pages' slim bar: pinned while you scroll, with its one action in reach. */}
       <OwnerPage title={t.label} description={t.when}
         breadcrumbs={<Breadcrumbs items={[{ label: "Emails", href: `${basePath}/emails/` }, { label: t.label }]} />}
-        actions={email && <Button size="sm" iconEnd={<Copy />} onClick={() => copy(email.html, "HTML")}>Copy HTML</Button>}>
-      {!queued && name === "invite" && <Banner tone="info" title="Start the walkthrough here">This is the invite Riley Park receives. Press Create your profile in the email to continue as Riley.</Banner>}
+        actions={email && <Button size="sm" iconEnd={<Copy />} onClick={() => copy(email.html, name === "invite" ? "Preview HTML" : "HTML")}>{name === "invite" ? "Copy preview HTML" : "Copy HTML"}</Button>}>
+      {!queued && name === "invite" && <Banner tone="info" title="Sample invitation · nothing sent">Press Create your profile to continue the sample walkthrough. Unsubscribe is inactive here; delivered emails receive a recipient-specific unsubscribe link.</Banner>}
       {queued && <Banner tone="info" title="From the sample outbox">Showing the email queued for {queued.to}. Nothing was sent.</Banner>}
 
       <div className="grid gap-6 lg:grid-cols-12">
@@ -91,13 +91,13 @@ function Preview({ name }: { name: EmailTemplate }) {
               options={[{ value: "light", label: "Light", icon: <Sun /> }, { value: "dark", label: "Dark", icon: <Moon /> }]} />
             <SegmentedControl label="Screen width" value={width} onChange={(v) => setWidth(v as keyof typeof widths)}
               options={[{ value: "desktop", label: "Desktop", icon: <Monitor /> }, { value: "mobile", label: "Phone", icon: <Smartphone /> }]} />
-            <p className="text-body-sm text-ink-subtle">Dark is what Apple Mail and Outlook.com show in dark mode. Gmail keeps the light version.</p>
+            <p className="text-body-sm text-ink-subtle">This browser preview simulates the template’s theme rules. Email apps may recolor messages differently, including Gmail and Outlook; actual inbox rendering can vary.</p>
           </section>
           <section aria-labelledby="notes-h" className={brand ? "rounded-lg border border-line bg-surface p-5" : "border-t-4 border-line-strong pt-4"}>
-            <h2 id="notes-h" className="font-display text-heading-md text-ink">Built for every inbox</h2>
+            <h2 id="notes-h" className="font-display text-heading-md text-ink">Email format</h2>
             <ul className="mt-2 grid gap-1.5 text-body-sm text-ink-muted">
               <li>Tables and inline styles, 600px wide</li>
-              <li>Bulletproof button for Outlook desktop</li>
+              <li>Button with an Outlook spacing fallback</li>
               <li>Logo as PNG with alt text</li>
               <li>Plain-text twin for every send</li>
             </ul>

@@ -1,7 +1,7 @@
 /*
  * The "craft" look shared by the invite and the profile-submitted confirmation (Flow p1 and p6): a flat-lay of the
  * tools of the trade frames a cream card with the logo, a spaced eyebrow, a mint rule and a serif headline, then
- * warm paper below. Light in every client and theme, so it carries no dark-mode classes.
+ * warm paper below. Its artwork uses a light palette; email clients may still recolor HTML in dark mode.
  * Responsive: on wide screens the photo frames the card (a background image, with a sand colour where a client hides
  * backgrounds, e.g. Outlook on Windows); on phones the frame's padding drops and a strip of the same photo sits above
  * the card instead, so the photo is never just a sliver. The e-k-* classes live in ./layout's stylesheet.
@@ -45,10 +45,17 @@ export const craftSignOff = (text: string, mt = 22) =>
   `<p style="margin:${mt}px 0 0;font-family:${SANS};font-size:12px;line-height:18px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${k.ink}">${esc(text)}</p>`;
 
 /** The photo frame around the cream card, with logo, eyebrow and rule; `inner` follows the rule. */
-export function craftHero({ eyebrow, inner, ctx }: { eyebrow: string; inner: string; ctx: EmailContext }) {
+export function craftHero({ eyebrow, inner, ctx, openPaper = false }: { eyebrow: string; inner: string; ctx: EmailContext; openPaper?: boolean }) {
   const frame = `${ctx.assetBase}/email/craft-invitation-portrait.jpg`;
   const strip = `${ctx.assetBase}/email/craft-invitation-desktop.jpg`;
   const logo = `${ctx.assetBase}/email/between-gigs-wide-on-light.png`;
+  if (openPaper) return `<table ${T} class="e-invite-scene" width="100%" height="784" bgcolor="${k.cream}" background="${esc(frame)}" style="height:784px;background-color:${k.cream};background-image:url('${esc(frame)}');background-size:100% 100%;background-position:center;background-repeat:no-repeat">
+<tr><td class="e-invite-center" align="center" valign="top" style="padding:110px 118px 230px;font-family:${SANS};text-align:center">
+<img class="e-invite-logo" src="${esc(logo)}" width="112" height="35" alt="Between Gigs" style="display:block;margin:0 auto;width:112px;height:35px;border:0;color:${k.ink};font-size:18px;font-weight:600">
+<p class="e-invite-eyebrow" style="margin:28px 0 10px;font-size:11px;line-height:14px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:${k.muted}">${esc(eyebrow)}</p>
+<div class="e-invite-rule" style="margin:0 auto 22px;width:28px;height:2px;line-height:2px;font-size:1px;background-color:${k.rule}">&nbsp;</div>
+${inner}
+</td></tr></table>`;
   return `<!--[if !mso]><!--><div class="e-k-strip" style="display:none;max-height:0;overflow:hidden;mso-hide:all"><img src="${esc(strip)}" width="600" alt="" style="display:block;width:100%;height:auto;border:0"></div><!--<![endif]-->
 <table ${T} width="100%" bgcolor="${k.sand}" background="${esc(frame)}" style="background-color:${k.sand};background-image:url('${esc(frame)}');background-size:cover;background-position:center">
 <tr><td class="e-k-frame" align="center" style="padding:88px 60px">
@@ -68,5 +75,5 @@ export const craftPaper = (inner: string, pad = "40px 56px 36px") =>
 <tr><td class="e-k-pad" style="padding:${pad};font-family:${SANS}">${inner}</td></tr></table>`;
 
 /** The shared shell, set for the craft look: no logo row (the card has its own), warm canvas, edge to edge on phones. */
-export const craftLayout = ({ title, preheader, body, reason, ctx }: { title: string; preheader: string; body: string; reason: string; ctx: EmailContext }) =>
-  layout({ title, preheader, body, reason, ctx, header: false, edge: true, paper: { canvas: k.canvas, line: k.line }, font: { family: SANS, href: FONT_HREF } });
+export const craftLayout = ({ title, preheader, body, reason, ctx, unsubscribe, lightOnly }: { title: string; preheader: string; body: string; reason: string; ctx: EmailContext; unsubscribe?: string; lightOnly?: boolean }) =>
+  layout({ title, preheader, body, reason, ctx, unsubscribe, lightOnly, header: false, edge: true, paper: { canvas: k.canvas, line: k.line }, font: { family: SANS, href: FONT_HREF } });

@@ -34,7 +34,7 @@ const gigsters = [
 type SectionArt = { icon: Icon3DName; tint: string };
 const groups: { id: string; art: SectionArt; title: string; body: string; pages: { href: string; title: string; body: string; as?: string }[] }[] = [
   { id: "journey", art: { icon: "memo", tint: "bg-tint-peach" }, title: "The Gigster journey", body: "The invite, signing in and the profile clients see.", pages: [
-    { href: "/preview/gigster-journey/", title: "Stage 2 invitation journey", body: "Try the revised invitation, account setup, profile edit and review handoff." },
+    { href: "/preview/gigster-journey/account/", title: "Stage 2 account preview", body: "Try account setup, profile edit and the review handoff." },
     { href: "/emails/invite/", title: "Invite email", body: "“Your craft. More possibilities.” and its plain-text version." },
     { href: "/join/", title: "Sign up", body: "“Bring your craft beyond the set.” Create an account in one step." },
     { href: "/login/", title: "Log in", body: "Email code sign-in, for Gigsters and owners." },
@@ -247,7 +247,7 @@ function Guide() {
             </span>
             Sample profiles
           </Link>
-          <Link href="/preview/gigster-journey/" className={shortcut}>Stage 2 journey</Link>
+          <Link href="/preview/gigster-journey/account/" className={shortcut}>Stage 2 account</Link>
           <Link href="/preview/profile-editor/" className={shortcut}>Profile editor</Link>
           <Link href="/preview/wallpapers/" className={shortcut}>Wallpapers</Link>
           <ThemeBadge />

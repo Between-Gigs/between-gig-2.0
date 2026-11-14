@@ -62,12 +62,13 @@ const ogsc = darkCss.trim().split("\n").map((rule) => {
  * (Google Fonts CSS URL) and sets its stack on the body and footer. All optional: without them every email renders
  * exactly as before.
  */
-export function layout({ title, preheader, body, reason, ctx, header = true, paper, edge = false, center = false, radius, font }: { title: string; preheader: string; body: string; reason: string; ctx: EmailContext; header?: boolean; paper?: { canvas: string; line: string }; edge?: boolean; center?: boolean; radius?: number; font?: { family: string; href: string } }) {
+export function layout({ title, preheader, body, reason, ctx, header = true, paper, edge = false, center = false, radius, font, unsubscribe, lightOnly = false }: { title: string; preheader: string; body: string; reason: string; ctx: EmailContext; header?: boolean; paper?: { canvas: string; line: string }; edge?: boolean; center?: boolean; radius?: number; font?: { family: string; href: string }; unsubscribe?: string; lightOnly?: boolean }) {
   const canvas = paper?.canvas ?? light.bg;
   const cardLine = paper?.line ?? light.line;
   const ui = font?.family ?? FONT_UI;
   const align = center ? "text-align:center;" : "";
   const site = ctx.siteUrl;
+  const schemes = lightOnly ? "light" : "light dark";
   const logo = (theme: "light" | "dark") => `${ctx.assetBase}/email/between-gigs-wide-on-${theme}.png`;
   // Pads the preheader so clients don't pull body text into the inbox preview.
   const spacer = "&#847;&zwnj;&nbsp;".repeat(60);
@@ -79,13 +80,13 @@ export function layout({ title, preheader, body, reason, ctx, header = true, pap
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="x-apple-disable-message-reformatting">
 <meta name="format-detection" content="telephone=no,date=no,address=no,email=no,url=no">
-<meta name="color-scheme" content="light dark">
-<meta name="supported-color-schemes" content="light dark">
+<meta name="color-scheme" content="${schemes}">
+<meta name="supported-color-schemes" content="${schemes}">
 <title>${esc(title)}</title>
 <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Sora:wght@600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 ${font ? `<link href="${esc(font.href)}" rel="stylesheet">\n` : ""}<style>
-:root{color-scheme:light dark;supported-color-schemes:light dark}
+:root{color-scheme:${schemes};supported-color-schemes:${schemes}}
 body{margin:0;padding:0;width:100%!important;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
 table{border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0}
 img{border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic}
@@ -104,14 +105,30 @@ a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important
 .e-k-h1{font-size:36px!important;line-height:40px!important}
 .e-k-pad{padding-left:22px!important;padding-right:22px!important}
 .e-k-h2{font-size:23px!important;line-height:29px!important}
+.e-invite-scene{height:130.75vw!important}
+.e-invite-center{padding:64px 19% 120px!important}
+.e-invite-title{font-size:31px!important;line-height:34px!important;margin-bottom:16px!important}
+.e-invite-lead{font-size:14px!important;line-height:21px!important}
+.e-invite-eyebrow{margin-top:22px!important}
 }
 @media (max-width:360px){
 .e-k-h1{font-size:31px!important;line-height:35px!important}
 .e-k-card{padding:30px 16px 24px!important}
 .e-k-pad{padding-left:16px!important;padding-right:16px!important}
+.e-invite-center{padding:48px 18% 96px!important}
+.e-invite-title{font-size:26px!important;line-height:29px!important}
+.e-invite-lead{font-size:13px!important;line-height:19px!important}
+.e-invite-eyebrow{margin-top:18px!important}
 }
-@media (prefers-color-scheme:dark){${darkCss}}
-${ogsc}
+@media (max-width:300px){
+.e-invite-center{padding:24px 20% 46px!important}
+.e-invite-logo{width:88px!important;height:28px!important}
+.e-invite-eyebrow{margin:16px 0 8px!important}
+.e-invite-rule{margin-bottom:14px!important}
+.e-invite-title{font-size:21px!important;line-height:24px!important;margin-bottom:12px!important}
+.e-invite-lead{font-size:12px!important;line-height:18px!important;margin-left:10px!important;margin-right:0!important}
+}
+${lightOnly ? "" : `@media (prefers-color-scheme:dark){${darkCss}}\n${ogsc}`}
 </style>
 </head>
 <body class="e-body" style="margin:0;padding:0;background-color:${canvas};color:${light.ink};font-family:${ui}">
@@ -132,7 +149,7 @@ ${body}
 <tr><td class="e-pad"${center ? ' align="center"' : ""} style="padding:24px 16px 8px;${align}font-family:${ui};font-size:12px;line-height:18px;color:${light.inkSubtle}">
 <p class="e-subtle" style="margin:0 0 8px;color:${light.inkSubtle}">${esc(reason)}</p>
 <p class="e-subtle" style="margin:0 0 8px;color:${light.inkSubtle}">${esc(FOOTER_ADDRESS_LINE)}</p>
-<p class="e-subtle" style="margin:0;color:${light.inkSubtle}"><a class="e-link" href="mailto:hello@between-gigs.com" style="color:${light.link}">Contact us</a> &nbsp;·&nbsp; <a class="e-link" href="${esc(site)}/privacy/" style="color:${light.link}">Privacy</a> &nbsp;·&nbsp; <a class="e-link" href="mailto:hello@between-gigs.com?subject=Unsubscribe%20from%20Between%20Gigs%20updates" style="color:${light.link}">Unsubscribe</a></p>
+${unsubscribe ? `<p class="e-subtle" style="margin:0;color:${light.inkSubtle}"><a data-email-unsubscribe class="e-link" href="${esc(unsubscribe)}" style="color:${light.link}">Unsubscribe</a> &nbsp;·&nbsp; <a class="e-link" href="https://between-gigs.com/privacy" style="color:${light.link}">Privacy</a> &nbsp;·&nbsp; <a class="e-link" href="mailto:hello@between-gigs.com" style="color:${light.link}">Contact support</a></p>` : `<p class="e-subtle" style="margin:0;color:${light.inkSubtle}"><a class="e-link" href="mailto:hello@between-gigs.com" style="color:${light.link}">Contact us</a> &nbsp;·&nbsp; <a class="e-link" href="${esc(site)}/privacy/" style="color:${light.link}">Privacy</a> &nbsp;·&nbsp; <a class="e-link" href="mailto:hello@between-gigs.com?subject=Unsubscribe%20from%20Between%20Gigs%20updates" style="color:${light.link}">Unsubscribe</a></p>`}
 </td></tr>
 </table>
 <!--[if mso]></td></tr></table><![endif]-->
@@ -191,8 +208,8 @@ export function signature(lines: string[] = [SIGN_OFF]) {
 export const spacer = (h: number) => `<div style="height:${h}px;line-height:${h}px;font-size:1px">&nbsp;</div>`;
 
 /** The plain-text twin's footer. */
-export const textFooter = (reason: string, site: string) =>
-  `—\n${reason}\n${FOOTER_ADDRESS_LINE}\nContact us: hello@between-gigs.com\nPrivacy: ${site}/privacy/\nUnsubscribe: email hello@between-gigs.com with the subject "Unsubscribe from Between Gigs updates".`;
+export const textFooter = (reason: string, site: string, unsubscribe?: string) =>
+  `—\n${reason}\n${FOOTER_ADDRESS_LINE}\n${unsubscribe ? `Unsubscribe: ${unsubscribe}\nPrivacy: https://between-gigs.com/privacy\nContact support: hello@between-gigs.com` : `Contact us: hello@between-gigs.com\nPrivacy: ${site}/privacy/\nUnsubscribe: email hello@between-gigs.com with the subject "Unsubscribe from Between Gigs updates".`}`;
 
 /** A full-width image inside the card, optionally linked. Width/height attributes keep Outlook from blowing it up. */
 export function image({ src, alt, width = 512, height, href, caption }: { src: string; alt: string; width?: number; height: number; href?: string; caption?: string }) {
