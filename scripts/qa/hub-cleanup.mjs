@@ -101,6 +101,7 @@ try {
       return { fits: false, viewport: el.style.height, content: el.contentDocument.documentElement.scrollHeight };
     });
     assert.ok(fitted.fits, `full page fits measured iframe: ${JSON.stringify(fitted)}`);
+    await page.evaluate(() => scrollBy(0, -120));
     await submittedCard.screenshot({ path: `deliverables/hub-cleanup/submitted-${width}-${theme}.png` });
     await page.reload();
     await page.waitForFunction(() => document.querySelector('section[aria-labelledby="journey-h"] [role="radio"][aria-checked="true"]')?.textContent.includes("Full height"));
@@ -111,6 +112,8 @@ try {
     assert.deepEqual(violations, [], "Hub accessibility");
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "Hub fits viewport");
     await scratchpad.scrollIntoViewIfNeeded();
+    await scratchpad.frameLocator("iframe").locator('[data-preview-title]').waitFor({ state: "attached" });
+    await page.evaluate(() => scrollBy(0, -120));
     await scratchpad.screenshot({ path: `deliverables/hub-cleanup/scratchpad-${width}-${theme}.png` });
     await scratchpad.getByRole("link", { name: /Draft homepage/ }).click();
     await page.locator('[data-preview-title]').waitFor();

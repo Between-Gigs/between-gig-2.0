@@ -82,6 +82,7 @@ function GuideCard({ title, body, href, as, onClick, tag, step, view }: {
   title: string; body: string; href: string; as?: string; onClick?: () => void; tag?: Role; step?: string; view: GuideView;
 }) {
   const cards = useLook() !== "swiss";
+  const previewMode = React.useContext(GuidePreviewModeContext);
   const list = view === "list";
   const badge = tag && <span className={cards ? cx("inline-flex rounded-full px-2.5 py-0.5 text-label-sm text-tint-ink", roleTint[tag]) : "inline-flex bg-bg px-2 py-1 text-eyebrow text-ink uppercase"}>{step ?? tag}</span>;
   const label = (
@@ -96,10 +97,10 @@ function GuideCard({ title, body, href, as, onClick, tag, step, view }: {
   );
   const cls = list
     ? "row-lift group flex w-full items-center gap-4 border-t border-line py-3 text-left hover:bg-surface-hover card-layout:rounded-xl card-layout:border card-layout:bg-surface card-layout:p-2.5 card-layout:pr-4"
-    : "group grid h-full w-full content-start gap-3 rounded-xl border border-line bg-surface-raised p-4 text-left shadow-sm card-layout:bg-surface card-layout:p-3 swiss:border-0 swiss:border-t-4 swiss:border-line-strong swiss:bg-transparent swiss:p-0 swiss:pt-3";
+    : "group grid w-full content-start gap-3 rounded-xl border border-line bg-surface-raised p-4 text-left shadow-sm card-layout:bg-surface card-layout:p-3 swiss:border-0 swiss:border-t-4 swiss:border-line-strong swiss:bg-transparent swiss:p-0 swiss:pt-3";
   const action = "flex min-w-0 flex-1 items-start justify-between gap-3 text-left after:absolute after:inset-0 after:rounded-xl focus-visible:after:outline-2 focus-visible:after:outline-focus";
   return (
-    <div className={cx("relative", cls)}>
+    <div className={cx("relative", cls, !list && previewMode === "thumbnail" && "h-full")}>
       <span className={cx("relative block min-w-0 shrink-0", list && "w-28 sm:w-40")}>
         <LivePagePreview href={href} as={as} title={title} />
         {badge && !list && <span className="pointer-events-none absolute top-0 left-0 card-layout:top-2 card-layout:left-2">{badge}</span>}
