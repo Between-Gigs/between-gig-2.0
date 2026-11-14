@@ -48,52 +48,66 @@ function blobOf(dataUrl: string) {
 
 type Crop = { z: number; x: number; y: number };
 
-/** The image's size in viewport units at zoom z: it always covers the square. */
-const size = (i: HTMLImageElement, z: number) => { const a = i.width / i.height; return a >= 1 ? { w: z * a, h: z } : { w: z, h: z / a }; };
+/**
+ * The image's size at zoom z, in units of the frame's width: it always covers the frame (width 1, height 1 / aspect).
+ * `aspect` is the frame's width / height: 1 for the profile photo, 16 / 9 for a work sample thumbnail.
+ */
+const size = (i: HTMLImageElement, z: number, aspect = 1) => {
+  const a = i.width / i.height;
+  return a >= aspect ? { w: (z / aspect) * a, h: z / aspect } : { w: z, h: z / a };
+};
 
 /**
- * Square crop: drag to move, the slider (or + / −) to zoom, arrow keys to nudge. Positions are in viewport units
- * (the square is 1 × 1), so the maths doesn't depend on its size on screen. Saves an 800px square JPEG.
+ * Crop to a frame: drag to move, the slider (or + / −) to zoom, arrow keys to nudge. Positions are in units of the
+ * frame's width, so the maths doesn't depend on its size on screen. Saves a JPEG `out` pixels wide in the frame's
+ * shape. The square profile photo shows the search card's band; other frames show thirds lines to line things up.
  */
-function PhotoCropper({ src, onCancel, onSave }: { src: string; onCancel: () => void; onSave: (url: string) => void }) {
+export function PhotoCropper({ src, onCancel, onSave, aspect = 1, out = MAX, title = "Crop your photo",
+  description = "Drag to move it, zoom to frame your face. Clients see the square on your profile; search cards show the dashed band.", saveLabel = "Use this photo" }: {
+  src: string; onCancel: () => void; onSave: (url: string) => void; aspect?: number; out?: number; title?: string; description?: string; saveLabel?: string;
+}) {
   const [img, setImg] = React.useState<HTMLImageElement | null>(null);
   const [c, setC] = React.useState<Crop>({ z: 1, x: 0, y: 0 });
   const box = React.useRef<HTMLDivElement>(null);
   const drag = React.useRef<{ px: number; py: number; x: number; y: number } | null>(null);
+  const fh = 1 / aspect; // the frame's height, in frame widths
   React.useEffect(() => {
     let live = true;
     void loadImage(src).then((i) => {
       if (!live) return;
       setImg(i);
-      const { w, h } = size(i, 1);
-      setC({ z: 1, x: (1 - w) / 2, y: (1 - h) / 2 }); // centred to start
+      const { w, h } = size(i, 1, aspect);
+      setC({ z: 1, x: (1 - w) / 2, y: (fh - h) / 2 }); // centred to start
     });
     return () => { live = false; };
-  }, [src]);
-  const clamp = (i: HTMLImageElement, k: Crop): Crop => { const { w, h } = size(i, k.z); return { z: k.z, x: Math.min(0, Math.max(1 - w, k.x)), y: Math.min(0, Math.max(1 - h, k.y)) }; };
+  }, [src, aspect, fh]);
+  const clamp = (i: HTMLImageElement, k: Crop): Crop => { const { w, h } = size(i, k.z, aspect); return { z: k.z, x: Math.min(0, Math.max(1 - w, k.x)), y: Math.min(0, Math.max(fh - h, k.y)) }; };
   const zoomTo = (z: number) => {
     if (!img) return;
     setC((k) => {
-      const a = size(img, k.z), b = size(img, z);
-      const cx = (0.5 - k.x) / a.w, cy = (0.5 - k.y) / a.h; // keep the centre where it is
-      return clamp(img, { z, x: 0.5 - cx * b.w, y: 0.5 - cy * b.h });
+      const a = size(img, k.z, aspect), b = size(img, z, aspect);
+      const cx = (0.5 - k.x) / a.w, cy = (fh / 2 - k.y) / a.h; // keep the centre where it is
+      return clamp(img, { z, x: 0.5 - cx * b.w, y: fh / 2 - cy * b.h });
     });
   };
   const save = () => {
     if (!img) return;
-    const { w, h } = size(img, c.z);
+    const { w, h } = size(img, c.z, aspect);
     const canvas = document.createElement("canvas");
-    canvas.width = MAX; canvas.height = MAX;
-    canvas.getContext("2d")?.drawImage(img, (-c.x / w) * img.width, (-c.y / h) * img.height, img.width / w, img.height / h, 0, 0, MAX, MAX);
+    canvas.width = out; canvas.height = Math.round(out / aspect);
+    canvas.getContext("2d")?.drawImage(img, (-c.x / w) * img.width, (-c.y / h) * img.height, img.width / w, (img.height * fh) / h, 0, 0, canvas.width, canvas.height);
     onSave(canvas.toDataURL("image/jpeg", 0.86));
   };
-  const s = img ? size(img, c.z) : { w: 1, h: 1 };
+  const s = img ? size(img, c.z, aspect) : { w: 1, h: fh };
+  const square = aspect === 1;
   return (
-    <Modal open onClose={onCancel} title="Crop your photo" description="Drag to move it, zoom to frame your face. Clients see the square on your profile; search cards show the dashed band."
-      footer={<><Button variant="ghost" onClick={onCancel}>Cancel</Button><Button variant="primary" iconStart={<Check />} disabled={!img} onClick={save}>Use this photo</Button></>}>
+    <Modal open onClose={onCancel} title={title} description={description}
+      footer={<><Button variant="ghost" onClick={onCancel}>Cancel</Button><Button variant="primary" iconStart={<Check />} disabled={!img} onClick={save}>{saveLabel}</Button></>}>
       <div className="grid gap-4">
         <div ref={box} role="application" tabIndex={0} aria-label="Photo position. Drag, or use the arrow keys to move it."
-          className="relative mx-auto aspect-square w-full max-w-80 cursor-grab touch-none overflow-hidden bg-surface-sunken outline-none select-none focus-visible:ring-2 focus-visible:ring-ink-brand active:cursor-grabbing"
+          className={cx("relative mx-auto w-full cursor-grab touch-none overflow-hidden bg-surface-sunken outline-none select-none focus-visible:ring-2 focus-visible:ring-ink-brand active:cursor-grabbing",
+            square ? "max-w-80" : "rounded-lg")}
+          style={{ aspectRatio: String(aspect) }}
           onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); drag.current = { px: e.clientX, py: e.clientY, x: c.x, y: c.y }; }}
           onPointerMove={(e) => {
             const d = drag.current, v = box.current?.clientWidth;
@@ -109,9 +123,15 @@ function PhotoCropper({ src, onCancel, onSave }: { src: string; onCancel: () => 
             if (e.key === "-") zoomTo(Math.max(1, c.z - 0.1));
           }}>
           {img && <img src={src} alt="" draggable={false} className="pointer-events-none absolute max-w-none"
-            style={{ width: `${s.w * 100}%`, height: `${s.h * 100}%`, left: `${c.x * 100}%`, top: `${c.y * 100}%` }} />}
-          {/* The 16:9 band a search card shows. */}
-          <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 border-y-2 border-dashed border-ink-on-brand/70" style={{ top: "21.875%", bottom: "21.875%" }} />
+            style={{ width: `${s.w * 100}%`, height: `${(s.h / fh) * 100}%`, left: `${c.x * 100}%`, top: `${(c.y / fh) * 100}%` }} />}
+          {square
+            // The 16:9 band a search card shows.
+            ? <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 border-y-2 border-dashed border-ink-on-brand/70" style={{ top: "21.875%", bottom: "21.875%" }} />
+            // Crop lines: the frame's edge and its thirds, to line the photo up.
+            : <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-white/80 ring-inset">
+                {[1, 2].map((n) => <span key={`v${n}`} className="absolute inset-y-0 w-px bg-white/60" style={{ left: `${(n * 100) / 3}%` }} />)}
+                {[1, 2].map((n) => <span key={`h${n}`} className="absolute inset-x-0 h-px bg-white/60" style={{ top: `${(n * 100) / 3}%` }} />)}
+              </span>}
         </div>
         <Slider label="Zoom" min={1} max={3} step={0.01} value={c.z} onChange={zoomTo} format={(v) => `${Math.round(v * 100)}%`} />
       </div>

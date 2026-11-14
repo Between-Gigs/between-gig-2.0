@@ -9,7 +9,7 @@
  */
 import { Button, Field, Input, RadioGroup, Select, Switch, Textarea } from "@ds/components";
 import { cx } from "@ds/components/cx";
-import { Camera, GripVertical, Lock, MapPin, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { Camera, Crop as CropIcon, GripVertical, Lock, MapPin, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { data } from "@/lib/data";
 import { laServiceAreas, onSetSkills, serviceChoices } from "@/lib/data/taxonomy";
@@ -18,9 +18,8 @@ import { serviceDescription } from "@/lib/profile/service-descriptions";
 import { stageTwoLimits } from "@/lib/profile/stage-two";
 import { ABOUT_MAX, DATES_MAX, DEPARTMENT_MAX, MAX_SERVICES, NAME_MAX, SERVICE_LINE_MAX, TITLE_MAX, hasRate } from "@/lib/profile/validate";
 import { Credits } from "@/components/builder/ProfileBuilder";
-import { PhotoPicker } from "@/components/profile/PhotoPicker";
+import { PhotoCropper, PhotoPicker } from "@/components/profile/PhotoPicker";
 import { DateField } from "@/components/ui/DateField";
-import { WORK_SHOWN, workGrid, workTile } from "@/lib/profile/work-layout";
 import { GroupError, Pills, type SectionProps } from "./ui";
 import { takeHome } from "./sections";
 
@@ -368,6 +367,18 @@ export function CanvasSamples({ d, set }: SectionProps) {
     } catch { setProblem("We couldn't read that photo. Try another one."); }
   };
   const choose = (at: number | null) => { replacing.current = at; input.current?.click(); };
+  // Fit (Justin, 14 Nov 2026: "all we needed was the ability to adjust the fit"): Adjust opens a cropper in the
+  // thumbnail's own 16:9 shape, with crop lines. The upload it came from is kept for this visit, keyed by the
+  // cropped result, so adjusting again can bring back what an earlier crop cut off.
+  const originals = React.useRef(new Map<string, string>());
+  const [fitting, setFitting] = React.useState<{ i: number; src: string } | null>(null);
+  const adjust = (i: number) => setFitting({ i, src: originals.current.get(samples[i]) ?? samples[i] });
+  const saveFit = (url: string) => {
+    if (!fitting) return;
+    originals.current.set(url, fitting.src);
+    set("workSamples")(samples.map((x, j) => (j === fitting.i ? url : x)));
+    setFitting(null);
+  };
   // Order (Justin, 14 Nov 2026): drag a photo by its handle onto another place, or focus the handle and use the arrow
   // keys. The first photo shows first on the profile.
   const tiles = React.useRef<(HTMLElement | null)[]>([]);
@@ -390,92 +401,61 @@ export function CanvasSamples({ d, set }: SectionProps) {
     e.preventDefault(); move(i, j); setSaid(`Moved to position ${j + 1} of ${samples.length}.`);
     requestAnimationFrame(() => document.getElementById(`sample-grip-${j}`)?.focus());
   };
-  const remove = (i: number) => set("workSamples")(samples.filter((_, j) => j !== i));
-  const gripProps = (i: number) => ({
-    onPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => { e.currentTarget.setPointerCapture(e.pointerId); setDragging(i); },
-    onPointerMove: drag, onPointerUp: drop, onPointerCancel: drop, onKeyDown: (e: React.KeyboardEvent) => key(e, i),
-  });
   return (
     <section id="sec-work" aria-labelledby="sec-work-h" className="grid scroll-mt-40 gap-5">
       <div className="grid gap-2">
         <H id="sec-work-h" tag={samples.length ? `${samples.length} of ${MAX_SAMPLES}` : `Optional · up to ${MAX_SAMPLES}`}>Work samples</H>
-        {samples.length > 0 && <p id="samples-hint" className="max-w-2xl text-body-md text-ink-muted">Shown and cropped exactly as on your profile. {samples.length > 1 ? "Drag a photo by its handle to change the order: the first one is the large one." : "Add more to fill the layout."}</p>}
+        {samples.length > 0 && <p id="samples-hint" className="text-body-md text-ink-muted">{samples.length > 1 ? "Drag a photo by its handle to change the order. The first one shows first on your profile. " : ""}Use Adjust to choose how each photo fits its frame.</p>}
       </div>
       <p aria-live="polite" className="sr-only">{said}</p>
       <input ref={input} type="file" accept="image/*" multiple className="sr-only" tabIndex={-1} aria-label="Add work samples"
         onChange={(e) => { void pick(e.target.files); e.target.value = ""; }} />
-      {samples.length === 0 ? (
-        // Nothing yet: three quiet slots, the first one labelled.
-        <ul className="grid gap-4 sm:grid-cols-3">
-          {Array.from({ length: FIRST_SLOTS }, (_, i) => (
-            <li key={i} className="min-w-0"><AddSlot active={i === 0} onClick={() => choose(null)} /></li>
-          ))}
-        </ul>
-      ) : (
-        <div className="grid gap-3 sm:gap-6">
-          {/* The first photos sit in the same frames as on the profile, each cropped exactly as clients will see it. */}
-          <ul className={workGrid}>
-            {samples.slice(0, WORK_SHOWN).map((src, i) => (
-              <li key={i} ref={(el) => { tiles.current[i] = el; }} className={cx("relative min-w-0", workTile(i, Math.min(samples.length, WORK_SHOWN)))}>
-                <SampleTile src={src} i={i} count={samples.length} dragging={dragging === i} grip={gripProps(i)} onReplace={() => choose(i)} onRemove={() => remove(i)} />
-              </li>
-            ))}
-          </ul>
-          {(samples.length > WORK_SHOWN || samples.length < MAX_SAMPLES) && (
-            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-6">
-              {samples.slice(WORK_SHOWN).map((src, k) => {
-                const i = WORK_SHOWN + k;
-                return (
-                  <li key={i} ref={(el) => { tiles.current[i] = el; }} className="relative aspect-video min-w-0">
-                    <SampleTile src={src} i={i} count={samples.length} dragging={dragging === i} grip={gripProps(i)} onReplace={() => choose(i)} onRemove={() => remove(i)} note="In “Show all photos”" />
-                  </li>
-                );
-              })}
-              {samples.length < MAX_SAMPLES && <li className="min-w-0"><AddSlot active onClick={() => choose(null)} /></li>}
-            </ul>
-          )}
-        </div>
-      )}
+      <ul className="grid gap-4 sm:grid-cols-3">
+        {Array.from({ length: Math.min(MAX_SAMPLES, Math.max(FIRST_SLOTS, samples.length + 1)) }, (_, i) => {
+          const src = samples[i];
+          return (
+            <li key={i} ref={(el) => { tiles.current[i] = el; }} className="min-w-0">
+              {src ? (
+                <figure className={cx("relative aspect-video overflow-hidden rounded-lg border bg-surface transition-shadow duration-fast",
+                  dragging === i ? "border-ink-brand shadow-lg ring-2 ring-ink-brand" : "border-line")}>
+                  <img src={src} alt={`Work sample ${i + 1}`} draggable={false} className="size-full object-cover" />
+                  {samples.length > 1 && (
+                    <button type="button" id={`sample-grip-${i}`} aria-label={`Move work sample ${i + 1} of ${samples.length}`} aria-describedby="samples-hint"
+                      title="Drag to reorder, or use the arrow keys"
+                      className={cx("absolute top-2 left-2 inline-flex min-h-9 touch-none items-center gap-1 rounded-full bg-surface pr-3 pl-1.5 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus",
+                        dragging === i ? "cursor-grabbing" : "cursor-grab")}
+                      onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDragging(i); }}
+                      onPointerMove={drag} onPointerUp={drop} onPointerCancel={drop} onKeyDown={(e) => key(e, i)}>
+                      <GripVertical aria-hidden="true" className="size-4" />{i + 1}
+                    </button>
+                  )}
+                  <span className="absolute inset-x-2 bottom-2 flex justify-end gap-2">
+                    <button type="button" aria-label={`Adjust the fit of work sample ${i + 1}`} title="Adjust the fit" onClick={() => adjust(i)}
+                      className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><CropIcon aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">Adjust</span></button>
+                    <button type="button" aria-label={`Replace work sample ${i + 1}`} title="Replace" onClick={() => choose(i)}
+                      className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><RefreshCw aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">Replace</span></button>
+                    <button type="button" aria-label={`Remove work sample ${i + 1}`} title="Remove" onClick={() => set("workSamples")(samples.filter((_, j) => j !== i))}
+                      className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><X aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">Remove</span></button>
+                  </span>
+                </figure>
+              ) : (
+                <button type="button" onClick={() => choose(null)} aria-label={i === samples.length ? undefined : "Add a work sample"} disabled={i > samples.length}
+                  className="grid aspect-video w-full place-content-center justify-items-center gap-2 rounded-lg border-2 border-dashed border-line-dashed bg-surface/60 text-ink transition-colors duration-fast hover:border-ink-brand hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-default disabled:hover:border-line-dashed disabled:hover:bg-surface/60">
+                  <Camera aria-hidden="true" className={cx("size-7", i === samples.length ? "text-ink" : "text-ink-subtle")} strokeWidth={1.5} />
+                  {i === samples.length && <span className="flex items-center gap-1.5 text-body-md"><Plus aria-hidden="true" className="size-4" />Add a work sample</span>}
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
       {problem && <p className="text-body-sm text-danger">{problem}</p>}
-    </section>
-  );
-}
-
-/** One work sample in its frame: the crop clients see, the order handle, Replace and Remove. */
-function SampleTile({ src, i, count, dragging, grip, onReplace, onRemove, note }: {
-  src: string; i: number; count: number; dragging: boolean; note?: string;
-  grip: React.ButtonHTMLAttributes<HTMLButtonElement>; onReplace: () => void; onRemove: () => void;
-}) {
-  const action = "inline-flex size-11 items-center justify-center gap-1.5 rounded-full bg-surface text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:size-auto sm:min-h-9 sm:px-3";
-  return (
-    <figure className={cx("absolute inset-0 overflow-hidden rounded-lg border bg-surface transition-shadow duration-fast",
-      dragging ? "z-10 border-ink-brand shadow-lg ring-2 ring-ink-brand" : "border-line")}>
-      <img src={src} alt={`Work sample ${i + 1}`} draggable={false} className="size-full object-cover" />
-      {count > 1 && (
-        <button type="button" id={`sample-grip-${i}`} aria-label={`Move work sample ${i + 1} of ${count}`} aria-describedby="samples-hint"
-          title="Drag to reorder, or use the arrow keys" {...grip}
-          className={cx("absolute top-2 left-2 inline-flex min-h-9 touch-none items-center gap-1 rounded-full bg-surface pr-3 pl-1.5 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus",
-            dragging ? "cursor-grabbing" : "cursor-grab")}>
-          <GripVertical aria-hidden="true" className="size-4" />{i + 1}
-        </button>
+      {fitting && (
+        <PhotoCropper src={fitting.src} aspect={16 / 9} out={1200}
+          title="Adjust the fit" description="Drag to move the photo, zoom to choose what shows. The frame is the thumbnail's own shape."
+          saveLabel="Save fit" onCancel={() => setFitting(null)} onSave={saveFit} />
       )}
-      {note && <figcaption className="absolute top-2 right-2 rounded-full bg-surface/90 px-2.5 py-1 text-caption text-ink-muted">{note}</figcaption>}
-      <span className="absolute inset-x-2 bottom-2 flex justify-end gap-2">
-        <button type="button" aria-label={`Replace work sample ${i + 1}`} title="Replace" onClick={onReplace} className={action}><RefreshCw aria-hidden="true" className="size-4" /><span className="hidden sm:inline">Replace</span></button>
-        <button type="button" aria-label={`Remove work sample ${i + 1}`} title="Remove" onClick={onRemove} className={action}><X aria-hidden="true" className="size-4" /><span className="hidden sm:inline">Remove</span></button>
-      </span>
-    </figure>
-  );
-}
-
-/** An empty slot: "Add a work sample" on the next one, quiet on the rest. */
-function AddSlot({ active, onClick }: { active: boolean; onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} aria-label={active ? undefined : "Add a work sample"} disabled={!active}
-      className="grid aspect-video w-full place-content-center justify-items-center gap-2 rounded-lg border-2 border-dashed border-line-dashed bg-surface/60 text-ink transition-colors duration-fast hover:border-ink-brand hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-default disabled:hover:border-line-dashed disabled:hover:bg-surface/60">
-      <Camera aria-hidden="true" className={cx("size-7", active ? "text-ink" : "text-ink-subtle")} strokeWidth={1.5} />
-      {active && <span className="flex items-center gap-1.5 text-body-md"><Plus aria-hidden="true" className="size-4" />Add a work sample</span>}
-    </button>
+    </section>
   );
 }
 

@@ -1,6 +1,5 @@
 "use client";
 import { Accordion, Button, Field, Input, Modal, Select, Textarea, cx, useToast } from "@ds/components";
-import { WORK_SHOWN, workGrid, workTile } from "@/lib/profile/work-layout";
 import { ArrowRight, Check, ChevronLeft, ChevronRight, CircleDashed, Heart, Info, MapPin, MessageSquare, Share } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -282,7 +281,8 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
     </section>
   );
 
-  const shownPhotos = portfolio.slice(0, WORK_SHOWN);
+  const shownPhotos = portfolio.slice(0, 4);
+  const tile = ["col-span-6 aspect-4/3 sm:col-span-4 sm:row-span-2 sm:aspect-auto", "col-span-3 aspect-6/5 sm:col-span-2", "col-span-3 aspect-6/5 sm:col-span-2", "col-span-6 aspect-5/2"];
 
   const body: Record<ProfileSectionId, false | { title: string; meta?: string; content: React.ReactNode }> = {
     about: (show || !!f.about.trim()) && {
@@ -314,9 +314,9 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
       title: "Work", meta: `${portfolio.length} photos`,
       content: (
         <>
-          <ul className={workGrid}>
+          <ul className="grid grid-cols-6 gap-3 sm:gap-6">
             {shownPhotos.map((it, i) => (
-              <li key={it.src} className={cx("relative", workTile(i, shownPhotos.length))}>
+              <li key={it.src} className={cx("relative", shownPhotos.length === 1 ? "col-span-6 aspect-video" : tile[i])}>
                 <button type="button" onClick={() => onPhoto(i)} aria-label={`Open image: ${it.caption}`} className="group absolute inset-0 block overflow-hidden">
                   <img src={asset(it.src)} alt="" loading="lazy" className="absolute inset-0 size-full object-cover transition duration-base group-hover:scale-105 motion-reduce:transition-none" />
                 </button>
