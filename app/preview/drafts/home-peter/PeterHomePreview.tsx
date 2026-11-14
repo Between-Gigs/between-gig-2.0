@@ -30,7 +30,7 @@ export function PeterHomePreview() {
   return (
     <div className="flex min-h-dvh flex-col bg-bg text-ink">
       <header className="relative z-sticky border-b border-line bg-bg shadow-sm">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 items-center gap-x-2 gap-y-0 sm:grid-cols-[1fr_auto_1fr] px-4 py-2 sm:gap-x-3 sm:px-6">
+        <div className="mx-auto grid max-w-7xl grid-cols-2 items-center gap-x-2 gap-y-0 sm:grid-cols-3 px-4 py-2 sm:gap-x-3 sm:px-6">
           <Link href="/" aria-label="Between Gigs home" className="inline-flex min-h-11 w-fit items-center rounded-md">
             <Logo height={28} className="hidden lg:block" />
             <Logo layout="mark" height={28} className="lg:hidden" />
@@ -65,7 +65,7 @@ export function PeterHomePreview() {
                 </a>
                 <p className="text-body-md font-semibold italic">It’s free to join!</p>
               </div>
-              <div className="grid w-full max-w-3xl justify-items-center gap-1 sm:mt-1 md:max-w-[55%] lg:max-w-xl" data-preview-connection>
+              <div className="grid w-full max-w-3xl justify-items-center gap-1 sm:mt-1 md:max-w-sm lg:max-w-xl" data-preview-connection>
                 <p className="flex max-w-full items-center justify-center gap-3 text-body-md font-bold italic leading-relaxed sm:gap-5 sm:text-body-lg">
                   <span aria-hidden="true" className="h-px w-4 shrink-0 bg-accent-gold lg:w-16" />
                   <span>Let us connect you to</span>
