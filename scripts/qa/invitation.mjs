@@ -33,9 +33,14 @@ try {
     assert.ok(geometry.ratio > 1.15 && geometry.ratio < 1.5, `scene preserves artwork proportions: ${geometry.ratio}`);
     assert.ok(geometry.content.every(rect => rect.left > .10 && rect.right < .90), "live hero type stays inside the artwork center");
     if (!blocked) {
-      await page.locator("iframe").evaluate((el, source) => { el.contentWindow.eval(source); }, fs.readFileSync("node_modules/axe-core/axe.min.js", "utf8"));
-      const violations = await frame.locator("body").evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } })).violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) })));
+      // Run the actual email HTML in an isolated QA document: the product iframe intentionally blocks scripts.
+      const emailPage = await context.newPage();
+      await emailPage.setViewportSize({ width: await page.locator("iframe").evaluate(el => el.clientWidth), height: 900 });
+      await emailPage.setContent(await frame.locator("html").evaluate(el => el.outerHTML));
+      await emailPage.addScriptTag({ content: fs.readFileSync("node_modules/axe-core/axe.min.js", "utf8") });
+      const violations = await emailPage.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } })).violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) })));
       assert.deepEqual(violations, [], "email keyboard/contrast/accessibility");
+      await emailPage.close();
     }
     const cta = frame.getByRole("link", { name: /^Create your profile/ });
     assert.match(await cta.getAttribute("href"), /\/join\/\?invite=/);
