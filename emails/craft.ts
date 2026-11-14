@@ -75,5 +75,5 @@ export const craftPaper = (inner: string, pad = "40px 56px 36px") =>
 <tr><td class="e-k-pad" style="padding:${pad};font-family:${SANS}">${inner}</td></tr></table>`;
 
 /** The shared shell, set for the craft look: no logo row (the card has its own), warm canvas, edge to edge on phones. */
-export const craftLayout = ({ title, preheader, body, reason, ctx, unsubscribe, lightOnly }: { title: string; preheader: string; body: string; reason: string; ctx: EmailContext; unsubscribe?: string; lightOnly?: boolean }) =>
-  layout({ title, preheader, body, reason, ctx, unsubscribe, lightOnly, header: false, edge: true, paper: { canvas: k.canvas, line: k.line }, font: { family: SANS, href: FONT_HREF } });
+export const craftLayout = ({ title, preheader, body, reason, ctx, unsubscribe, lightOnly, center }: { title: string; preheader: string; body: string; reason: string; ctx: EmailContext; unsubscribe?: string; lightOnly?: boolean; center?: boolean }) =>
+  layout({ title, preheader, body, reason, ctx, unsubscribe, lightOnly, center, header: false, edge: true, paper: { canvas: k.canvas, line: k.line }, font: { family: SANS, href: FONT_HREF } });
