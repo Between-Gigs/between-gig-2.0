@@ -41,6 +41,20 @@ try {
   const hosted = await serve(path.join(isolated, "out"), { base: basePath });
   server = hosted.server;
   browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? "/opt/pw-browsers/chromium" });
+  // The guide's preview documents are inert: its real-account escape links must be usable on the parent.
+  const guideContext = await browser.newContext();
+  await guideContext.route("**/*", route => new URL(route.request().url()).hostname === "127.0.0.1" ? route.continue() : route.abort());
+  const guidePage = await guideContext.newPage(); await guidePage.goto(`${hosted.url}/hub/`);
+  const journey = guidePage.getByRole("region", { name: "The Gigster journey", exact: true });
+  await journey.getByText("Sample account preview", { exact: true }).waitFor();
+  const realJoin = journey.getByRole("link", { name: "Real account sign up", exact: true });
+  assert.equal(await realJoin.getAttribute("href"), "https://test.between-gigs.com/join/");
+  await realJoin.focus(); assert.equal(await realJoin.evaluate(el => el === document.activeElement), true);
+  await guidePage.goto(`${hosted.url}/join/`);
+  await guidePage.getByRole("form", { name: "Mock native Clerk signup" }).waitFor();
+  assert.equal(await guidePage.getByText("Sample account preview", { exact: true }).count(), 0);
+  await guideContext.close();
+  console.log("Clerk-enabled Hub guide has accessible sample-auth guidance; direct real signup is not mislabeled.");
   for (const [index, password] of ["Qa82!xKz", "Qa-longer-password!48"].entries()) {
     const context = await browser.newContext({ viewport: { width: index === 0 ? 390 : 1440, height: 900 }, reducedMotion: "reduce" });
     // The mock lives in the isolated build. Refuse external requests even if the alias were accidentally absent.

@@ -6,8 +6,10 @@ import { realAccountLinks } from "@/lib/auth/preview-links";
 import { basePath } from "@/lib/site";
 
 /** Explain the existing demo, without enabling an identity provider or depicting a fake Google action. */
-export function SampleAuthNotice() {
-  if (data.kind !== "sample" || clerkEnabled) return null;
+export function SampleAuthNotice({ passiveGuide = false }: { passiveGuide?: boolean }) {
+  // Hub frames always use isolated fictional sessions, including on Clerk-enabled Pages.
+  // Keep this explanation and its real-entry links accessible outside their inert documents.
+  if (data.kind !== "sample" || (!passiveGuide && clerkEnabled)) return null;
   const links = realAccountLinks(basePath);
   return <Banner tone="info" title="Sample account preview" className="mb-5">
     <p>These forms use fictional profiles stored in this browser. They do not sign in to a real account or run Google authentication.</p>

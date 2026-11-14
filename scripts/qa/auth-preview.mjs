@@ -37,4 +37,11 @@ try {
     await context.close();
     console.log(`PASS: truthful auth preview ${look}/${width}/${theme}: explicit sample behavior, real-entry links, no fake Google or Clerk load, keyboard/axe/fit`);
   }
+  const guide = await browser.newPage(); await guide.goto(`${url}/hub/`);
+  const journey = guide.getByRole("region", { name: "The Gigster journey", exact: true });
+  await journey.getByText("Sample account preview", { exact: true }).waitFor();
+  const realJoin = journey.getByRole("link", { name: "Real account sign up", exact: true });
+  assert.equal(await realJoin.getAttribute("href"), `${base === "/hub" ? "" : "https://test.between-gigs.com"}/join/`);
+  await realJoin.focus(); assert.equal(await realJoin.evaluate(el => el === document.activeElement), true);
+  await guide.close(); console.log("PASS: parent Hub guide exposes accessible real-account links outside inert frames.");
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }

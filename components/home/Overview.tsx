@@ -17,6 +17,7 @@ import { useLook } from "@/components/site/LookSync";
 import { Icon3D } from "@/components/ui/Icon3D";
 import type { Icon3DName } from "@/lib/icons3d";
 import { asset, basePath } from "@/lib/site";
+import { SampleAuthNotice } from "@/components/auth/SampleAuthNotice";
 
 const invitePage = `/join/?invite=${DEMO_TOKENS.valid}`;
 
@@ -323,6 +324,7 @@ function Guide() {
         )}
         {groups.map((gr, gi) => (
           <Section key={gr.id} art={gr.art} n={String(gi + (data.demo ? 4 : 3)).padStart(2, "0")} id={`${gr.id}-h`} title={gr.title} body={gr.body}>
+            {gr.id === "journey" && <SampleAuthNotice passiveGuide />}
             <PreviewItems columns={gr.pages.length}>
               {gr.pages.map((pg) => <li key={pg.href}><GuideCard view={view} title={pg.title} body={pg.body} href={pg.href} as={pg.as} onClick={pg.as ? () => void openSamplePage(pg.as!, pg.href) : undefined} /></li>)}
             </PreviewItems>
