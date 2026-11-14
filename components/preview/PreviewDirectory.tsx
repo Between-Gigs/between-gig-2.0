@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Page } from "@/components/site/Page";
 import { basePath } from "@/lib/site";
+import { publicPreviewHref } from "@/lib/admin-preview";
 
 /** Read-only navigation into existing sample forms and journeys; no production editor or send action. */
 export function PreviewDirectory({ kind }: { kind: "forms" | "funnels" }) {
@@ -21,7 +22,7 @@ export function PreviewDirectory({ kind }: { kind: "forms" | "funnels" }) {
     <h1 className="mt-4 font-display text-display-sm text-ink">{kind === "forms" ? "Form previews" : "Funnel previews"}</h1>
     <p className="mt-3 max-w-2xl text-body-lg text-ink-muted">Explore existing previews with fictional sample data. No real accounts or messages are created here.</p>
     <ul className="mt-8 grid gap-4 sm:grid-cols-2">
-      {items.map(item => <li key={item.title}><Link href={item.href} className="group flex h-full min-h-11 items-start justify-between gap-4 rounded-xl border border-line bg-surface p-5 hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus">
+      {items.map(item => <li key={item.title}><Link href={publicPreviewHref(item.href, basePath)} className="group flex h-full min-h-11 items-start justify-between gap-4 rounded-xl border border-line bg-surface p-5 hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus">
         <span className="grid gap-2"><span className="font-display text-heading-md text-ink">{item.title}</span><span className="text-body-md text-ink-muted">{item.text}</span></span><ArrowRight aria-hidden="true" className="size-5 shrink-0 text-ink" />
       </Link></li>)}
     </ul>

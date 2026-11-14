@@ -36,6 +36,10 @@ try {
     nav = await openNav(); await nav.getByRole("link", { name: "Forms", exact: true }).click();
     await page.getByRole("heading", { name: "Form previews", exact: true }).waitFor();
     assert.equal(await page.evaluate(() => window.qaAdminNode === document.querySelector("[data-admin-shell]")), true);
+    await page.getByRole("link", { name: /^Profile sign up/ }).click();
+    await page.getByText("Read-only sample preview. Open the standalone page to use its forms and navigation.", { exact: true }).waitFor();
+    assert.equal(await page.evaluate(() => window.qaAdminNode === document.querySelector("[data-admin-shell]")), true, "form catalog visitor links retain the shell");
+    assert.ok((await page.getByRole("link", { name: "Open standalone page", exact: true }).getAttribute("href")).endsWith(`${base}/join/`));
     nav = await openNav(); await nav.getByRole("link", { name: "Social Previews", exact: true }).click();
     await page.getByRole("heading", { name: "Social Previews", exact: true }).waitFor();
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
