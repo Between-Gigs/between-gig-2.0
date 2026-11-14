@@ -23,7 +23,7 @@ export function AuthStageTemplate({ eyebrow, title, lead, children, className }:
   className?: string;
 }) {
   return (
-    <section className="relative isolate overflow-hidden bg-bg">
+    <section className="relative isolate flex flex-1 flex-col overflow-hidden bg-bg">
       {/* lg and up: the landscape still life covers the stage. Below lg: the portrait one frames the top of the page
           (scissors, flowers, lens, photos) and fades into the paper, so the card's lower half sits on plain paper. */}
       {[false, true].map((dark) => (
@@ -33,7 +33,7 @@ export function AuthStageTemplate({ eyebrow, title, lead, children, className }:
             className={cx("absolute inset-x-0 top-0 -z-10 aspect-3/4 w-full object-cover mask-b-from-30% mask-b-to-75% sm:mask-b-from-45% sm:mask-b-to-100% lg:inset-y-0 lg:aspect-auto lg:h-full lg:mask-none", dark ? "hidden dark:block" : "dark:hidden")} />
         </picture>
       ))}
-      <div className="grid w-full gap-10 px-4 pt-40 pb-12 sm:px-6 sm:pt-72 sm:pb-16 lg:min-h-180 lg:grid-cols-20 lg:items-center lg:gap-0 lg:px-0 lg:py-20">
+      <div className="grid w-full flex-1 gap-10 px-4 pt-40 pb-12 sm:px-6 sm:pt-72 sm:pb-16 lg:min-h-180 lg:grid-cols-20 lg:items-center lg:gap-0 lg:px-0 lg:py-20">
         <aside aria-label="Welcome to Between Gigs" className="mx-auto grid w-full max-w-sm content-start gap-5 sm:max-w-lg sm:gap-6 lg:col-span-9 lg:col-start-3 lg:mx-0 lg:max-w-none lg:gap-7 lg:pr-10 xl:col-span-8 xl:col-start-4">
           <Eyebrow rule className="gap-4">{eyebrow}</Eyebrow>
           <Heading level="h1" as="p" className="max-[22rem]:text-display-sm sm:text-display-lg xl:text-display-xl">{title}</Heading>
