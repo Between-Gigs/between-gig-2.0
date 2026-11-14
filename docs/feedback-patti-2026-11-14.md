@@ -10,6 +10,8 @@ Release target: Railway test and GitHub Pages; production remains a separate lat
 
 ## Acceptance checklist (57 items)
 
+Implementation status: drafted on this branch. Unchecked items are not yet accepted as complete; live/backend and browser verification are recorded in docs/handoff/patti-review-2026-11-14.md.
+
 - [ ] **01 · Home / signup** — Make FOUNDING GIGSTERS a little bigger.
 
 - [ ] **02 · Signup** — Remove: First, create or verify your sign-in with Clerk. Then confirm your name and agree… (redundant).

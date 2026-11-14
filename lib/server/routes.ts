@@ -11,6 +11,7 @@
  */
 import type { PeopleQuery, ProfileFields, ReviewNoteInput, SketchKind, WaitlistQuery } from "@/lib/data/types";
 import { randomBytes } from "node:crypto";
+import { cleanReviewFields } from "@/lib/profile/review";
 import { blankFields } from "@/lib/data/fields";
 import { CompanyOsError, companyOs, configFromEnv, type CompanyOs, type Credential } from "./companyos";
 import * as gigs from "./gigs";
@@ -40,6 +41,11 @@ export function cleanFields(v: unknown): ProfileFields {
     else if (Array.isArray(d) && Array.isArray(x)) out[k] = x.filter((e): e is string => typeof e === "string").slice(0, 50).map((e) => e.slice(0, 400));
   }
   if (Array.isArray(input.creditPins)) out.creditPins = input.creditPins.slice(0, 50).map((e) => e !== false);
+  for (const k of ["title", "personalityQuestion", "personality", "resumeUrl", "bookingMobile", "bookingMinimum", "earliestStart", "hireableJobs"] as const) if (typeof input[k] === "string") out[k] = input[k].slice(0, 600);
+  if (input.serviceLines && typeof input.serviceLines === "object" && !Array.isArray(input.serviceLines)) out.serviceLines = Object.fromEntries(Object.entries(input.serviceLines).filter(([k,v])=>typeof v==="string" && k.length<=100).slice(0,5).map(([k,v])=>[k,String(v).slice(0,120)]));
+  const reviewed = cleanReviewFields(input);
+  if (Array.isArray(input.showcase) && input.showcase.length !== reviewed.showcase?.length) throw new CompanyOsError(422,"invalid_showcase","Use valid uploaded media or HTTPS links for each showcase item.");
+  Object.assign(out, reviewed);
   return out as unknown as ProfileFields;
 }
 

@@ -6,6 +6,7 @@
  */
 import { craftOf } from "@/lib/profile/department";
 import { completeness } from "@/lib/profile/validate";
+import { validateReviewGigster } from "@/lib/profile/validate";
 import { fromProfile, toProfile, type ProfileItem } from "@/lib/data/companyos/fields";
 import { personStatuses, inviteStatuses } from "@/lib/data/types";
 import type {
@@ -318,8 +319,14 @@ const keyOf = (i: { kind?: unknown; value?: unknown }) => `${String(i.kind)}\u00
 /** Company OS has the editor's tenant fields (title, service lines, personality): set once the recipe is applied. */
 const profileExtras = () => process.env.COMPANY_OS_PROFILE_EXTRAS === "1";
 
-export function draftOps(personId: string, fields: ProfileFields, existing: { profile?: Row; items: Row[] }, extras = profileExtras()): BatchOp[] {
-  const { data, items } = toProfile(fields, { extras });
+export function draftOps(personId: string, fields: ProfileFields, existing: { profile?: Row; items: Row[] }, extras = profileExtras(), review = process.env.COMPANY_OS_PROFILE_REVIEW === "1"): BatchOp[] {
+  const { data, items } = toProfile(fields, { extras, review });
+  if (review) {
+    const current = data.private_details as Record<string,unknown>;
+    const previous = existing.profile?.data.private_details as Record<string,unknown> | undefined;
+    const old = previous ? Object.fromEntries(Object.entries(previous).filter(([k])=>!["notice_version","consent_recorded_at","phone_at_consent"].includes(k))) : {};
+    data.private_details = JSON.stringify(old) === JSON.stringify(current) ? previous ?? {} : { ...current, notice_version:"contact-preferences@2026-11-14", consent_recorded_at:new Date().toISOString(), phone_at_consent: fields.bookingMobile ?? "" };
+  }
   if (!existing.profile) {
     return [
       { op: "create", entity: "profile", data: { ...data, person: personId } },
@@ -330,7 +337,7 @@ export function draftOps(personId: string, fields: ProfileFields, existing: { pr
   const old = existing.profile.data;
   // Compared with the stored profile as 2.0 reads it: a value 2.0 shows as its nearest (work mode "remote" as on site)
   // goes back only if the person changed that answer, so no stored value is lost and no edit is made by accident.
-  const shown = toProfile(fromProfile(old, itemsOf(existing.items), fields.photo), { extras }).data;
+  const shown = toProfile(fromProfile(old, itemsOf(existing.items), fields.photo), { extras, review }).data;
   const changed: Record<string, unknown> = {};
   // An empty object (no service lines) is as unset as an empty string.
   const blank = (v: unknown) => v == null || v === "" || (typeof v === "object" && !Array.isArray(v) && !Object.keys(v as object).length);
@@ -373,6 +380,7 @@ export async function saveDraft(ctx: Ctx, personId: string, input: ProfileFields
   }
   // Removing the photo deletes it, on a draft only: a submitted or live profile needs one, so it's replaced by uploading.
   if (!fields.photo && own.photo && own.profile?.data.status === "draft") await ctx.cos.remove(ctx.cred, "file", own.photo.id);
+  if (process.env.COMPANY_OS_PROFILE_REVIEW === "1" && (await session(ctx))?.personId === personId) await ctx.cos.setEmailPreference(ctx.cred, fields.marketingEmailConsent === true);
   const after = await ownProfile(ctx, personId);
   return { personId, fields: after.profile ? fieldsFrom(after) : fields, step: 0, savedAt: after.profile ? iso(after.profile.updatedAt) : nowIso() };
 }
@@ -380,6 +388,7 @@ export async function saveDraft(ctx: Ctx, personId: string, input: ProfileFields
 export async function submit(ctx: Ctx, personId: string) {
   const own = await ownProfile(ctx, personId);
   if (!own.profile) throw new CompanyOsError(422, "profile_incomplete", "nothing to submit");
+  if (process.env.COMPANY_OS_PROFILE_REVIEW === "1" && Object.keys(validateReviewGigster(fieldsFrom(own))).length) throw new CompanyOsError(422, "profile_incomplete", "Finish the required profile answers before submitting.");
   // Already with the team or live: nothing to send (an edit to a live profile has already sent it back, N-09).
   if (own.profile.data.status !== "submitted" && own.profile.data.status !== "approved") await ctx.cos.patch(ctx.cred, "profile", own.profile.id, { status: "submitted" });
   const summary = await getPerson(ctx, personId);
@@ -555,7 +564,7 @@ async function sendInvite(ctx: Ctx, personId: string, email: string): Promise<"i
     if (e instanceof CompanyOsError && e.code === "already_signed_up") return "signed_up";
     throw e;
   }
-  const log = await ctx.cos.create(ctx.cred, "comms_log", { deliver: true, channel: "email", recipient: personId, message_key: "invite", vars: { invite_url: url } });
+  const log = await ctx.cos.create(ctx.cred, "comms_log", { deliver: true, channel: "email", category: "marketing", recipient: personId, message_key: "invite", vars: { invite_url: url } });
   if (log?.data?.status === "failed") throw new CompanyOsError(502, "invite_email_failed");
   return "invited";
 }

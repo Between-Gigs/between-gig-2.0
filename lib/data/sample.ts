@@ -6,7 +6,7 @@
 import { renderEmail } from "@/emails";
 import { featuredPeople } from "./featured-people";
 import { craftOf } from "@/lib/profile/department";
-import { LIVE_FIELDS, NAME_MAX, completeness, contentChanged, pinnedCredits, validateAll } from "@/lib/profile/validate";
+import { LIVE_FIELDS, NAME_MAX, completeness, contentChanged, pinnedCredits, validateAll, validateReviewGigster } from "@/lib/profile/validate";
 import { absoluteUrl } from "@/lib/site";
 import { blankFields, buildActivity, buildSeed, buildWaitlist, DEMO_TOKENS, SAMPLE_OWNER, seedPeople, type SeedState } from "./seed";
 import type { DataSource } from "./source";
@@ -174,6 +174,10 @@ const withAvailability = (to: ProfileFields, from: ProfileFields): ProfileFields
 function publicOf(person: Person, profile: Profile): { person: Person; profile: Profile } {
   const f = { ...profile.fields };
   delete f.bookingMobile;
+  delete f.contactChannels;
+  delete f.bookingContactConsent;
+  delete f.marketingEmailConsent;
+  delete f.insuranceNotes;
   const credits = pinnedCredits(f);
   return {
     person: { id: person.id, email: "", name: person.name, slug: person.slug, status: "approved", waitlistZip: "", waitlistCategory: "", invitedAt: "", updatedAt: person.updatedAt, ...(person.sample ? { sample: true } : {}) },
@@ -482,7 +486,7 @@ export const sampleSource: DataSource = {
       const person = state.people.find((p) => p.id === personId);
       const draft = state.drafts.find((d) => d.personId === personId);
       if (!person || !draft) throw new Error("Nothing to submit");
-      if (Object.keys(validateAll(draft.fields)).length) throw new Error("The profile has fields that need attention");
+      if (Object.keys(draft.fields.rateOptions !== undefined ? validateReviewGigster(draft.fields) : validateAll(draft.fields)).length) throw new Error("The profile has fields that need attention");
       const t = now();
       const previous = state.profiles.find((p) => p.personId === personId);
       // Sending replaces the version the team has (and, for a live profile, takes it off the site until it's approved

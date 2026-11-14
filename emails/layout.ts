@@ -154,7 +154,7 @@ ${body}
 <tr><td class="e-pad"${center ? ' align="center"' : ""} style="padding:24px 16px 8px;${align}font-family:${ui};font-size:12px;line-height:18px;color:${light.inkSubtle}">
 <p class="e-subtle" style="margin:0 0 8px;color:${light.inkSubtle}">${esc(reason)}</p>
 <p class="e-subtle" style="margin:0 0 8px;color:${light.inkSubtle}">${esc(FOOTER_ADDRESS_LINE)}</p>
-${unsubscribe ? `<p class="e-subtle" style="margin:0;color:${light.inkSubtle}"><a data-email-unsubscribe class="e-link" href="${esc(unsubscribe)}" style="color:${light.link}">Unsubscribe</a> &nbsp;·&nbsp; <a class="e-link" href="https://between-gigs.com/privacy" style="color:${light.link}">Privacy</a> &nbsp;·&nbsp; <a class="e-link" href="mailto:hello@between-gigs.com" style="color:${light.link}">Contact support</a></p>` : `<p class="e-subtle" style="margin:0;color:${light.inkSubtle}"><a class="e-link" href="mailto:hello@between-gigs.com" style="color:${light.link}">Contact us</a> &nbsp;·&nbsp; <a class="e-link" href="${esc(site)}/privacy/" style="color:${light.link}">Privacy</a> &nbsp;·&nbsp; <a class="e-link" href="mailto:hello@between-gigs.com?subject=Unsubscribe%20from%20Between%20Gigs%20updates" style="color:${light.link}">Unsubscribe</a></p>`}
+${unsubscribe ? `<p class="e-subtle" style="margin:0;color:${light.inkSubtle}"><a data-email-unsubscribe class="e-link" href="${esc(unsubscribe)}" style="color:${light.link}">Unsubscribe</a> &nbsp;·&nbsp; <a class="e-link" href="${esc(site)}/privacy/" style="color:${light.link}">Privacy</a> &nbsp;·&nbsp; <a class="e-link" href="mailto:hello@between-gigs.com" style="color:${light.link}">Contact support</a></p>` : `<p class="e-subtle" style="margin:0;color:${light.inkSubtle}"><a class="e-link" href="mailto:hello@between-gigs.com" style="color:${light.link}">Contact us</a> &nbsp;·&nbsp; <a class="e-link" href="${esc(site)}/privacy/" style="color:${light.link}">Privacy</a> &nbsp;·&nbsp; <a class="e-link" href="mailto:hello@between-gigs.com?subject=Unsubscribe%20from%20Between%20Gigs%20updates" style="color:${light.link}">Unsubscribe</a></p>`}
 </td></tr>
 </table>
 <!--[if mso]></td></tr></table><![endif]-->
@@ -214,7 +214,7 @@ export const spacer = (h: number) => `<div style="height:${h}px;line-height:${h}
 
 /** The plain-text twin's footer. */
 export const textFooter = (reason: string, site: string, unsubscribe?: string) =>
-  `—\n${reason}\n${FOOTER_ADDRESS_LINE}\n${unsubscribe ? `Unsubscribe: ${unsubscribe}\nPrivacy: https://between-gigs.com/privacy\nContact support: hello@between-gigs.com` : `Contact us: hello@between-gigs.com\nPrivacy: ${site}/privacy/\nUnsubscribe: email hello@between-gigs.com with the subject "Unsubscribe from Between Gigs updates".`}`;
+  `—\n${reason}\n${FOOTER_ADDRESS_LINE}\n${unsubscribe ? `Unsubscribe: ${unsubscribe}\nPrivacy: ${site}/privacy/\nContact support: hello@between-gigs.com` : `Contact us: hello@between-gigs.com\nPrivacy: ${site}/privacy/\nUnsubscribe: email hello@between-gigs.com with the subject "Unsubscribe from Between Gigs updates".`}`;
 
 /** A full-width image inside the card, optionally linked. Width/height attributes keep Outlook from blowing it up. */
 export function image({ src, alt, width = 512, height, href, caption }: { src: string; alt: string; width?: number; height: number; href?: string; caption?: string }) {

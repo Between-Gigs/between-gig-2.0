@@ -3,6 +3,7 @@
  * `home_city` and `services_other`) and its `profile_item` lists. Option values are the recipe's keys, made from the
  * taxonomy labels by `optionKey`; `fromProfile` reads them back. Mapping table: Company OS docs/customers/between-gigs/gap-analysis.md §13.4.
  */
+import { publicReviewDetails, privateReviewDetails, REVIEW_PUBLIC_FIELD, REVIEW_PRIVATE_FIELD, REVIEW_PUBLIC_KEYS, REVIEW_PRIVATE_KEYS, cleanReviewFields } from "@/lib/profile/review";
 import { laServiceAreas, offSetServices, onSetSkills } from "../taxonomy.ts";
 import type { InsuranceAnswer, MonthStatus, ProfileFields, RateBasis, WorkMode } from "../types.ts";
 
@@ -37,7 +38,7 @@ function extrasOf(f: ProfileFields): Record<string, unknown> {
 }
 
 /** The profile's data (without `person`, `status` or the photo) and its items, in 2.0's order. */
-export function toProfile(f: ProfileFields, opts: { extras?: boolean } = {}): { data: Record<string, unknown>; items: ProfileItem[] } {
+export function toProfile(f: ProfileFields, opts: { extras?: boolean; review?: boolean } = {}): { data: Record<string, unknown>; items: ProfileItem[] } {
   const years = f.years.trim() === "" ? NaN : Number(f.years);
   const data: Record<string, unknown> = {
     display_name: f.name.trim(),
@@ -61,13 +62,14 @@ export function toProfile(f: ProfileFields, opts: { extras?: boolean } = {}): { 
     work_mode: mode[f.mode],
     services_other: f.other.trim(),
     ...(opts.extras ? extrasOf(f) : {}),
+    ...(opts.review ? { [REVIEW_PUBLIC_FIELD]: publicReviewDetails(f), [REVIEW_PRIVATE_FIELD]: privateReviewDetails(f) } : {}),
   };
   const credits = f.credits
     .map((value, i) => ({ value: value.trim(), visible: f.creditPins?.[i] !== false }))
     .filter((c) => c.value)
     .map((c, position) => ({ kind: "credit" as const, value: c.value, position, visible: c.visible }));
   const list = (kind: ProfileItem["kind"], labels: string[]) => labels.map((label, position) => ({ kind, value: optionKey(label), position }));
-  const items: ProfileItem[] = [...credits, ...list("skill", f.skills), ...list("service", f.services), ...(f.market === "la" ? list("area", f.areas) : [])];
+  const items: ProfileItem[] = [...credits, ...list("skill", opts.review ? f.skills.filter(s => onSetSkills.includes(s)) : f.skills), ...list("service", f.services), ...(f.market === "la" ? list("area", f.areas) : [])];
   return { data, items };
 }
 
@@ -113,6 +115,7 @@ export function fromProfile(data: Record<string, unknown>, items: ProfileItem[],
     transport: text(data.transport),
     mode: invert(mode)[text(data.work_mode)] ?? "on-site",
     ...extrasFrom(data),
+    ...reviewFrom(data),
   };
 }
 
@@ -128,5 +131,17 @@ function extrasFrom(data: Record<string, unknown>): Partial<ProfileFields> {
     const lines = Object.fromEntries(Object.entries(raw).filter(([, v]) => typeof v === "string" && v));
     if (Object.keys(lines).length) out.serviceLines = lines as Record<string, string>;
   }
+  return out;
+}
+
+function reviewFrom(data: Record<string, unknown>): Partial<ProfileFields> {
+  const raw = data[REVIEW_PUBLIC_FIELD], priv = data[REVIEW_PRIVATE_FIELD];
+  const pub = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string,unknown> : {};
+  const p = priv && typeof priv === "object" && !Array.isArray(priv) ? priv as Record<string,unknown> : {};
+  const out: Partial<ProfileFields> = { ...cleanReviewFields(Object.fromEntries(REVIEW_PUBLIC_KEYS.map(k=>[k,pub[k]]).filter(([,v])=>v!==undefined))), ...cleanReviewFields(Object.fromEntries(REVIEW_PRIVATE_KEYS.map(k=>[k,p[k]]).filter(([,v])=>v!==undefined))) };
+  for (const k of ["title","personalityQuestion","personality","resumeUrl","earliestStart","hireableJobs"] as const) if (typeof pub[k] === "string") out[k] = pub[k].slice(0,600);
+  if (Array.isArray(pub.skills)) out.skills = pub.skills.filter((s):s is string=>typeof s==="string").slice(0,20);
+  if (pub.serviceLines && typeof pub.serviceLines === "object" && !Array.isArray(pub.serviceLines)) out.serviceLines = Object.fromEntries(Object.entries(pub.serviceLines).filter(([,v])=>typeof v==="string")) as Record<string,string>;
+  if (typeof p.bookingMobile === "string") out.bookingMobile = p.bookingMobile.slice(0,32);
   return out;
 }

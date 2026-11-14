@@ -10,7 +10,7 @@ await p.goto(url + "/profile/canvas/"); await p.waitForLoadState("networkidle");
 // add three images through the file input
 const png = (c) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="${c}"/></svg>`);
 const have = await p.locator("#sec-work img").count();
-if (have < 3) await p.locator('#sec-work input[type=file]').setInputFiles(["#c33", "#3c3", "#33c"].slice(0, 3 - have).map((c, i) => ({ name: `s${i}.svg`, mimeType: "image/svg+xml", buffer: png(c) })));
+if (have < 3) await p.locator('#sec-work input[aria-label="Upload showcase image or video"]').setInputFiles(["#c33", "#3c3", "#33c"].slice(0, 3 - have).map((c, i) => ({ name: `s${i}.svg`, mimeType: "image/svg+xml", buffer: png(c) })));
 await p.waitForTimeout(1000);
 const srcs = () => p.locator("#sec-work figure img").evaluateAll((els) => els.map((e) => e.src.slice(-24)));
 const before = await srcs();

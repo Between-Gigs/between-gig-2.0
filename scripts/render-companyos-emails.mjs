@@ -14,13 +14,14 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { register } from "node:module";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const [target, flag] = process.argv.slice(2);
 if (!target) { console.error("usage: render-companyos-emails.mjs <company-os checkout> [--check]"); process.exit(2); }
 const dir = resolve(target, "deploy/recipes/between-gigs/emails");
 if (!existsSync(dir)) { console.error(`not a Company OS checkout: ${dir} is missing`); process.exit(2); }
 
-const root = new URL("..", import.meta.url).pathname;
+const root = fileURLToPath(new URL("..", import.meta.url));
 // Node 22 runs the templates' TypeScript itself (type stripping); this hook adds what the bundler normally does:
 // "@/…" is the repository root, and an import without an extension is its .ts file.
 register("data:text/javascript," + encodeURIComponent(`
@@ -35,8 +36,8 @@ register("data:text/javascript," + encodeURIComponent(`
     }
     return next(spec, context);
   }`));
-const { emailTemplates } = await import(join(root, "emails/index.ts"));
-const { FOOTER_ADDRESS_LINE } = await import(join(root, "emails/config.ts"));
+const { emailTemplates } = await import(pathToFileURL(join(root, "emails/index.ts")).href);
+const { FOOTER_ADDRESS_LINE } = await import(pathToFileURL(join(root, "emails/config.ts")).href);
 
 const BASE = "{{links.base}}";
 const ctx = { assetBase: BASE, siteUrl: BASE };
@@ -56,7 +57,9 @@ const uncounted = (t) => t.replace("have one suggestion before", "have a few sug
 for (const [name, p] of Object.entries(props)) {
   const raw = emailTemplates[name].render(p, ctx);
   const r = name === "changes-requested" ? { ...raw, html: uncounted(raw.html), text: uncounted(raw.text) } : raw;
-  out[`${name}.html`] = r.html;
+  // Inert preview markers are not send-time markup. The legacy background attribute carries the image;
+  // keep placeholders out of CSS, which Company OS deliberately refuses.
+  out[`${name}.html`] = r.html.replace(/\sdata-email-unsubscribe(?=[\s>])/g, "").replace(/background-image:url\('[^']*\{\{links\.base\}\}[^']*'\);?/g, "");
   out[`${name}.txt`] = r.text;
 }
 // Any earlier "Between Gigs · <address>" footer line becomes the current one.

@@ -10,6 +10,7 @@ import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/d
 import { locationLabel } from "@/lib/profile/location";
 import { absoluteUrl, asset } from "@/lib/site";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
+import { ShowcaseGallery } from "./ShowcaseMedia";
 import { hasRate, pinnedCredits } from "@/lib/profile/validate";
 import { useLook } from "@/components/site/LookSync";
 import type { ProfileSectionId } from "@/lib/profile/template";
@@ -80,7 +81,7 @@ function profileContent({ person, fields: f, extras, mode, draft = false, part }
     unseen: mode === "public" && data.kind === "live",
     sample: !!person.sample, helps: extras?.helps ?? [],
     // The Gigster's own work samples come first; the fictional sample people keep their curated portfolio.
-    portfolio: (f.workSamples ?? []).filter(Boolean).length ? (f.workSamples ?? []).filter(Boolean).map((src, i) => ({ src, caption: `Work sample ${i + 1}` })) : extras?.portfolio ?? [],
+    portfolio: f.showcase?.length ? [] : (f.workSamples ?? []).filter(Boolean).length ? (f.workSamples ?? []).filter(Boolean).map((src, i) => ({ src, caption: `Work sample ${i + 1}` })) : extras?.portfolio ?? [],
     resumeUrl: /^https?:\/\//.test(f.resumeUrl ?? "") ? f.resumeUrl! : "",
     rate: priced ? `$${f.rate}/${basisShort[f.basis]}` : null,
     where: f.market === "la" ? (f.areas.length ? locationLabel(f) : "") : locationLabel(f),
@@ -123,6 +124,8 @@ export function ProfileView(props: Props) {
 
       <Layout {...props} {...model} sections={sections} ids={ids} saved={saved} onSave={() => setSaved(!saved)}
         onShare={share} onPhoto={setLightbox} onRequest={() => setRequest(true)} />
+      {fields.showcase && <ShowcaseGallery items={fields.showcase} />}
+      {(fields.rateOptions?.length || fields.linkedin) && <div className="mt-6 grid gap-2 border-t border-line pt-6 text-body-md text-ink">{fields.rateOptions?.includes("hourly") && <p>Hourly: {fields.hourlyRate ? "$" + fields.hourlyRate + " / hour" : "Rate on request"}{fields.minimumHours ? " · " + fields.minimumHours + " hour minimum" : ""}</p>}{fields.rateOptions?.includes("project") && <p>By Project: {fields.projectMinimum ? "from $" + fields.projectMinimum : "Price agreed per project"}</p>}{fields.travelBeyondLA && <p>Willing to travel beyond Los Angeles.</p>}{/^https:\/\/(www\.)?linkedin\.com\/in\//.test(fields.linkedin ?? "") && <a className="underline" href={fields.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn profile ↗</a>}</div>}
       <Lightbox name={fields.name} items={model.portfolio} index={lightbox} onIndex={setLightbox} />
       <RequestModal first={model.callName} open={request} onClose={() => setRequest(false)} />
     </div>

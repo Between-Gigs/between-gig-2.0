@@ -7,29 +7,25 @@
  * opens its field. Patti's and Peter's corrections to that mockup are applied: "Your name" (not "public name"), up to
  * five services with their standard description, the film and TV questions, 1 of 4 personality questions, and no "0%".
  */
-import { Button, Field, Input, RadioGroup, Select, Switch, Textarea } from "@ds/components";
+import { Button, Checkbox, Field, Input, RadioGroup, Select, Switch, Textarea } from "@ds/components";
 import { cx } from "@ds/components/cx";
-import { Camera, Crop as CropIcon, GripVertical, Lock, MapPin, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import * as React from "react";
 import { data } from "@/lib/data";
-import { laServiceAreas, onSetSkills, serviceChoices } from "@/lib/data/taxonomy";
+import { serviceChoices } from "@/lib/data/taxonomy";
 import { personalityQuestions } from "@/lib/profile/personality";
 import { serviceDescription } from "@/lib/profile/service-descriptions";
 import { stageTwoLimits } from "@/lib/profile/stage-two";
-import { ABOUT_MAX, DATES_MAX, DEPARTMENT_MAX, MAX_SERVICES, NAME_MAX, SERVICE_LINE_MAX, TITLE_MAX, hasRate } from "@/lib/profile/validate";
+import { ABOUT_MAX, DATES_MAX, MAX_SERVICES, NAME_MAX, SERVICE_LINE_MAX, TITLE_MAX } from "@/lib/profile/validate";
 import { Credits } from "@/components/builder/ProfileBuilder";
 import { PhotoPicker } from "@/components/profile/PhotoPicker";
-import { FittedImg } from "@/components/profile/FittedImg";
-import { withFit, type Fit } from "@/lib/profile/work-fit";
-import { FitCropper } from "./FitCropper";
 import { DateField } from "@/components/ui/DateField";
 import { GroupError, Pills, type SectionProps } from "./ui";
-import { takeHome } from "./sections";
+import { ReviewLocation, RateFields, SkillTags, ContactFields } from "./ReviewControls";
+import { ShowcaseEditor } from "./ShowcaseEditor";
 
 const quickDates = ["Weekday mornings", "Weekday evenings", "Weekends", "Most days", "Between shoots, ask me"];
 /** Up to five work samples; three slots show at first and another appears as each fills. */
-const MAX_SAMPLES = 5;
-const FIRST_SLOTS = 3;
 
 /** A serif section heading, large like the mockup's, with an optional quiet tag ("· Optional"). */
 function H({ id, children, tag, size = "lg" }: { id: string; children: React.ReactNode; tag?: string; size?: "lg" | "md" }) {
@@ -82,10 +78,9 @@ function InPlace({ id, label, value, placeholder, onChange, maxLength, size, err
 }
 
 /** Photo, name, title and where: the top of the page, as clients will see it. */
-export function CanvasIdentity({ d, set, errors, personId, confirmPhoto, required }: SectionProps & {
+export function CanvasIdentity({ d, set, errors, personId, confirmPhoto }: SectionProps & {
   personId: string; required: (field: string) => boolean; confirmPhoto: (go: () => void) => void;
 }) {
-  const [whereOpen, openWhere] = useOpen(!!(d.zip || d.travel || d.areas.length || d.market === "other" || errors.zip || errors.areas || errors.otherCity || errors.travel));
   return (
     <section id="sec-identity" aria-label="About you" className="grid scroll-mt-40 gap-8 md:grid-cols-12 md:gap-10">
       <div className="min-w-0 md:col-span-4">
@@ -94,34 +89,7 @@ export function CanvasIdentity({ d, set, errors, personId, confirmPhoto, require
       <div className="grid min-w-0 content-start gap-4 md:col-span-8 md:pt-4">
         <InPlace id="f-name" label="Your name" size="name" value={d.name} placeholder="Your name" maxLength={NAME_MAX} autoComplete="name" error={errors.name} onChange={set("name")} />
         <InPlace id="f-title" label="Your professional title (optional)" size="title" value={d.title ?? ""} placeholder="Add your professional title" maxLength={TITLE_MAX} error={errors.title} onChange={set("title")} />
-        <div id="sec-where" className="grid scroll-mt-40 gap-3">
-          {whereOpen ? (
-            <div className="grid gap-4 rounded-lg border border-line bg-surface p-4 sm:p-5">
-              <RadioGroup name="f-market" label="Where you're based" orientation="horizontal" value={d.market} onChange={(v) => set("market")(v as typeof d.market)}
-                options={[{ value: "la", label: "Los Angeles" }, { value: "other", label: "Somewhere else" }]} />
-              <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
-                <Field label="ZIP or postal code" optional={!required("zip")} error={errors.zip}>
-                  <Input id="f-zip" inputMode="numeric" autoComplete="postal-code" value={d.zip} start={<MapPin />} placeholder="90026"
-                    onChange={(e) => set("zip")(e.target.value.replace(/\D/g, "").slice(0, 5))} />
-                </Field>
-                <Field label="Travel radius" optional={!required("travel")} error={errors.travel}>
-                  <Input id="f-travel" value={d.travel} placeholder="e.g. Up to 15 miles" onChange={(e) => set("travel")(e.target.value.slice(0, 80))} />
-                </Field>
-              </div>
-              {d.market === "other"
-                ? <Field label="City / region and country" optional={!required("location")} error={errors.otherCity} hint="Los Angeles is the launch market. Your profile is held for a future market.">
-                    <Input id="f-otherCity" value={d.otherCity} onChange={(e) => set("otherCity")(e.target.value)} />
-                  </Field>
-                : <div className="grid gap-2">
-                    <p className="text-label-md text-ink">Areas you serve{!required("location") && <span className="ml-2 text-body-sm font-normal text-ink-subtle">Optional</span>}</p>
-                    <Pills label="Areas you serve" options={laServiceAreas} isOn={(o) => d.areas.includes(o)}
-                      onToggle={(o) => set("areas")(d.areas.includes(o) ? d.areas.filter((a) => a !== o) : [...d.areas, o])} />
-                    <GroupError id="f-areas-error">{errors.areas}</GroupError>
-                  </div>}
-            </div>
-          ) : <AddLink onClick={openWhere}>ZIP or postal code &amp; travel radius</AddLink>}
-          <p className="text-body-sm text-ink-muted italic">Your home address stays private.</p>
-        </div>
+        <ReviewLocation d={d} set={set} errors={errors} />
       </div>
     </section>
   );
@@ -133,7 +101,9 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
   const [adding, setAdding] = React.useState(false);
   const lines = d.serviceLines ?? {};
   const rows = d.services;
-  const showBlank = rows.length === 0 || (adding && rows.length < MAX_SERVICES);
+  const [otherOpen, setOtherOpen] = React.useState(!!d.other.trim());
+  const count = rows.length + (d.other.trim() || otherOpen ? 1 : 0);
+  const showBlank = count < MAX_SERVICES && (rows.length === 0 && !otherOpen || adding);
   const setLine = (service: string, text: string) => set("serviceLines")({ ...lines, [service]: text.slice(0, SERVICE_LINE_MAX) });
   const replace = (i: number, next: string) => {
     const prev = rows[i];
@@ -149,12 +119,11 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
     set("services")(rows.filter((_, j) => j !== i));
     set("serviceLines")(nextLines);
   };
-  const [otherOpen, setOtherOpen] = React.useState(!!d.other.trim());
   const OTHER = "__other";
   const optionsFor = (current?: string) => [
     ...choices.filter((c) => c === current || !rows.includes(c)).map((c) => ({ value: c, label: c })),
     // Not on the list: the team reviews a new service before it shows (it is stored as "Something else").
-    ...(current === undefined && !otherOpen ? [{ value: OTHER, label: "Something else: name your own" }] : []),
+    ...(current === undefined && !otherOpen ? [{ value: OTHER, label: "Other — name your service" }] : []),
   ];
   // "Something else" holds the service's name on its first line and what they'd do after it.
   const [otherName = "", ...otherRest] = d.other.split("\n");
@@ -189,8 +158,9 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
     <section id="sec-help" aria-labelledby="sec-help-h" className="grid min-w-0 scroll-mt-40 content-start gap-5">
       <div className="grid gap-2">
         <H id="sec-help-h">How I can help</H>
-        <p id="services-hint" className="max-w-xl text-body-md text-ink-muted">The most important part of your profile. Name a service, then say in one line what a customer can hire you to do. One clear service is enough to start.{rows.length > 1 && " Drag the grip to put your main service first."}</p>
+        <p id="services-hint" className="max-w-xl text-body-md text-ink-muted">The most important part of your profile. Choose a service, then say in one line what a customer can hire you to do. One clear service is enough to start. Five is the maximum.{rows.length > 1 && " Drag the grip to put your main service first."}</p>
       </div>
+      {!otherOpen && count < MAX_SERVICES && <div><Button variant="secondary" iconStart={<Plus />} onClick={()=>pickNew(OTHER)}>Other — name your service</Button></div>}
       <ol className="grid gap-5">
         {rows.map((s, i) => {
           const standard = serviceDescription(s);
@@ -220,11 +190,11 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
                 </div>
                 <div className="grid min-w-0 gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
                   <label htmlFor={`f-line-${i}`} className="text-body-md text-ink">What can a customer hire you to do?</label>
+                  <p className="text-body-sm text-ink-muted italic">Example: Hang artwork and style a room for a party.</p>
                   <Textarea id={`f-line-${i}`} rows={2} showCount maxLength={SERVICE_LINE_MAX} value={line} invalid={!!lineError}
-                    placeholder="I'll sort your wardrobe and set up a closet you can keep organized."
+                    placeholder="Describe what a customer can hire you to do."
                     onChange={(e) => setLine(s, e.target.value)} />
-                  {lineError ? <p className="text-body-sm text-danger">{lineError}</p>
-                    : <p className="text-body-sm text-ink-muted italic">Example: Hang artwork and style a room for a party.</p>}
+                  {lineError && <p className="text-body-sm text-danger">{lineError}</p>}
                 </div>
               </div>
               {standard && <p className="text-body-sm text-ink-muted"><span className="font-semibold text-ink">Standard description</span> · the same for everyone who offers it: {standard}</p>}
@@ -238,7 +208,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
             <div className="grid gap-4 sm:grid-cols-12 sm:gap-0">
               <div className="flex items-start gap-1 sm:col-span-5 sm:pr-5">
                 <div className="grid min-w-0 flex-1 gap-1.5">
-                  <label htmlFor="f-other" className="text-body-md text-ink">Your own service</label>
+                  <label htmlFor="f-other" className="text-body-md text-ink">Name of the Service</label>
                   <Input id="f-other" value={otherName} maxLength={60} placeholder="e.g. Web design"
                     onChange={(e) => setOther(e.target.value.replace(/\n/g, " "), otherLine)} />
                 </div>
@@ -248,12 +218,13 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
               <div className="grid min-w-0 gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
                 <label htmlFor="f-other-line" className="text-body-md text-ink">What can a customer hire you to do?</label>
                 <Textarea id="f-other-line" rows={2} showCount maxLength={SERVICE_LINE_MAX} value={otherLine}
-                  placeholder="I'll design and build a simple website for your business."
+                  placeholder="Describe what a customer can hire you to do."
                   onChange={(e) => setOther(otherName, e.target.value)} />
                 <p className="text-body-sm text-ink-muted italic">Example: Hang artwork and style a room for a party.</p>
               </div>
             </div>
-            <p className="text-body-sm text-ink-muted">Not on the list? The Between Gigs team reviews new services before they show on your profile.</p>
+            <p className="text-body-sm text-ink-muted">The Between Gigs team reviews new services before they show on your profile.</p>
+            <GroupError id="f-other-error">{errors.other}</GroupError>
           </li>
         )}
         {showBlank && (
@@ -273,8 +244,8 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
       </ol>
       <p role="status" aria-live="polite" className="sr-only">{said}</p>
       <GroupError id="f-services-error">{rows.length ? errors.services : undefined}</GroupError>
-      {!showBlank && (rows.length < MAX_SERVICES
-        ? <div><Button variant="secondary" iconStart={<Plus />} onClick={() => setAdding(true)}>Add another service <span className="text-ink-muted">· {rows.length} of {MAX_SERVICES}</span></Button></div>
+      {!showBlank && (count < MAX_SERVICES
+        ? <div><Button variant="secondary" iconStart={<Plus />} onClick={() => setAdding(true)}>Add another service <span className="text-ink-muted">· {count} of {MAX_SERVICES}</span></Button></div>
         : <p className="text-body-sm text-ink-muted">That&apos;s the most: {MAX_SERVICES} services. Remove one to add another.</p>)}
     </section>
   );
@@ -282,34 +253,15 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
 
 /** Rates and availability, in the narrow column beside How I can help. */
 export function CanvasRates({ d, set, errors, required }: SectionProps & { required: (field: string) => boolean }) {
-  const priced = hasRate(d.rate);
-  const basis = d.basis === "day" ? "day" : d.basis;
   const [datesOpen, openDates] = useOpen(!!(d.dates || errors.dates));
   const [startOpen, openStart] = useOpen(!!(d.earliestStart || errors.earliestStart));
   const available = d.monthStatus !== "away";
   return (
     <section id="sec-rates" aria-labelledby="sec-rates-h" className="grid min-w-0 scroll-mt-40 content-start gap-4">
       <H id="sec-rates-h">Rates</H>
-      <RadioGroup name="f-basis" label="How you charge" value={basis} onChange={(v) => set("basis")(v as typeof d.basis)}
-        options={[{ value: "hourly", label: "Hourly rate" }, { value: "project", label: "Starting project price" }, ...(d.basis === "day" ? [{ value: "day", label: "Day rate" }] : [])]} />
-      <p className="text-body-sm text-ink-muted">{basis === "project" ? "A flat fee per project; you quote each project's final price before it's booked." : "For your time and skills on a client's project. Materials and travel are agreed first."}</p>
-      <div className="grid gap-1.5">
-        <label htmlFor="f-rate" className="sr-only">{basis === "hourly" ? "Amount per hour" : basis === "day" ? "Amount per day" : "Starting price per project"}{required("rate") ? "" : " (optional)"}</label>
-        <Input id="f-rate" inputMode="numeric" value={d.rate} placeholder="Amount" invalid={!!errors.rate} start={<span className="text-label-md">$</span>} end={<span className="text-label-sm text-ink-subtle">USD</span>}
-          onChange={(e) => set("rate")(e.target.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 4))} />
-        {errors.rate && <p className="text-body-sm text-danger">{errors.rate}</p>}
-        <p role="status" aria-live="polite" className="text-body-sm text-ink-muted">
-          {priced ? <>You&apos;d receive <b className="font-semibold text-ink">{takeHome(d.rate)}</b> {basis === "hourly" ? "an hour" : basis === "day" ? "a day" : "for a project at this price"} after the 10% Between Gigs fee.</>
-            : "Leave it empty to show “Rate on request”."}
-        </p>
-      </div>
-      <div className="grid gap-1.5">
-        <label htmlFor="f-minimum" className="sr-only">Minimum booking (optional)</label>
-        <Input id="f-minimum" maxLength={stageTwoLimits.bookingMinimum} value={d.bookingMinimum ?? ""} placeholder="Minimum booking, if any" invalid={!!errors.bookingMinimum}
-          onChange={(e) => set("bookingMinimum")(e.target.value.slice(0, stageTwoLimits.bookingMinimum))} />
-      </div>
-      <div id="sec-availability" className="grid scroll-mt-40 gap-3 pt-2">
-        <Switch id="f-monthStatus" label="Available for work" description={d.month ? `This month · ${d.month}` : undefined} checked={available}
+      <RateFields d={d} set={set} errors={errors} />
+      <div id="sec-availability" className="mt-6 grid scroll-mt-40 gap-4 border-t border-line-strong pt-6">
+        <Switch id="f-monthStatus" label="Available for work" checked={available}
           onChange={(on) => set("monthStatus")(on ? "available" : "away")} />
         {available && (
           <div role="group" aria-label="How available" className="flex flex-wrap gap-2">
@@ -317,7 +269,7 @@ export function CanvasRates({ d, set, errors, required }: SectionProps & { requi
               <button key={v} type="button" aria-pressed={d.monthStatus === v} onClick={() => set("monthStatus")(v)}
                 className={cx("inline-flex min-h-9 items-center rounded-full border px-3 text-label-sm font-semibold transition-colors duration-fast focus-visible:outline-2 focus-visible:outline-focus",
                   d.monthStatus === v ? "border-action bg-action text-on-action" : "border-line-strong text-ink hover:bg-surface-hover")}>
-                {v === "available" ? "Fully available" : "Limited"}
+                {v === "available" ? "Fully available" : "Limited Availability"}
               </button>
             ))}
           </div>
@@ -341,152 +293,26 @@ export function CanvasRates({ d, set, errors, required }: SectionProps & { requi
 }
 
 /** A photo, made small enough to keep in the browser (the sample) or send with the profile. */
-async function resize(file: File, max = 1200): Promise<string> {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise<HTMLImageElement>((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fail; i.src = url; });
-    const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
-    const c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
-    c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
-    return c.toDataURL("image/jpeg", 0.82);
-  } finally { URL.revokeObjectURL(url); }
-}
 
 /** "Work samples · Optional": three slots to start, up to five; the next empty one is labelled. */
-export function CanvasSamples({ d, set }: SectionProps) {
-  const samples = (d.workSamples ?? []).filter(Boolean);
-  const input = React.useRef<HTMLInputElement>(null);
-  // Which filled slot the next chosen photo replaces; null adds new ones.
-  const replacing = React.useRef<number | null>(null);
-  const [problem, setProblem] = React.useState("");
-  const pick = async (files: FileList | null) => {
-    const at = replacing.current; replacing.current = null;
-    const list = [...(files ?? [])].filter((f) => f.type.startsWith("image/")).slice(0, at === null ? MAX_SAMPLES - samples.length : 1);
-    if (!list.length) return;
-    try {
-      setProblem("");
-      const added = await Promise.all(list.map((f) => resize(f)));
-      set("workSamples")(at === null ? [...samples, ...added].slice(0, MAX_SAMPLES) : samples.map((x, j) => (j === at ? added[0] : x)));
-    } catch { setProblem("We couldn't read that photo. Try another one."); }
-  };
-  const choose = (at: number | null) => { replacing.current = at; input.current?.click(); };
-  // Fit (Justin, 14 Nov 2026): Adjust shows the whole photo with the thumbnail's frame over it; saving stores only
-  // the alignment on the photo's link (lib/profile/work-fit.ts), so the lightbox still opens the whole image.
-  const [fitting, setFitting] = React.useState<number | null>(null);
-  const saveFit = (fit: Fit) => {
-    if (fitting === null) return;
-    set("workSamples")(samples.map((x, j) => (j === fitting ? withFit(x, fit) : x)));
-    setFitting(null);
-  };
-  // Order (Justin, 14 Nov 2026): drag a photo by its handle onto another place, or focus the handle and use the arrow
-  // keys. The first photo shows first on the profile.
-  const tiles = React.useRef<(HTMLElement | null)[]>([]);
-  const [dragging, setDragging] = React.useState<number | null>(null);
-  const [said, setSaid] = React.useState("");
-  const move = (from: number, to: number) => { const next = [...samples]; const [x] = next.splice(from, 1); next.splice(to, 0, x); set("workSamples")(next); };
-  const drag = (e: React.PointerEvent) => {
-    if (dragging === null) return;
-    const to = tiles.current.findIndex((el, j) => {
-      if (!el || j >= samples.length) return false;
-      const r = el.getBoundingClientRect();
-      return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
-    });
-    if (to >= 0 && to !== dragging) { move(dragging, to); setDragging(to); }
-  };
-  const drop = () => { if (dragging !== null) setSaid(`Moved to position ${dragging + 1} of ${samples.length}.`); setDragging(null); };
-  const key = (e: React.KeyboardEvent, i: number) => {
-    const j = e.key === "ArrowLeft" || e.key === "ArrowUp" ? i - 1 : e.key === "ArrowRight" || e.key === "ArrowDown" ? i + 1 : -1;
-    if (j < 0 || j >= samples.length) return;
-    e.preventDefault(); move(i, j); setSaid(`Moved to position ${j + 1} of ${samples.length}.`);
-    requestAnimationFrame(() => document.getElementById(`sample-grip-${j}`)?.focus());
-  };
-  return (
-    <section id="sec-work" aria-labelledby="sec-work-h" className="grid scroll-mt-40 gap-5">
-      <div className="grid gap-2">
-        <H id="sec-work-h" tag={samples.length ? `${samples.length} of ${MAX_SAMPLES}` : `Optional · up to ${MAX_SAMPLES}`}>Work samples</H>
-        {samples.length > 0 && <p id="samples-hint" className="text-body-md text-ink-muted">{samples.length > 1 ? "Drag a photo by its handle to change the order. The first one shows first on your profile. " : ""}Use Adjust to choose how each photo fits its frame.</p>}
-      </div>
-      <p aria-live="polite" className="sr-only">{said}</p>
-      <input ref={input} type="file" accept="image/*" multiple className="sr-only" tabIndex={-1} aria-label="Add work samples"
-        onChange={(e) => { void pick(e.target.files); e.target.value = ""; }} />
-      <ul className="grid gap-4 sm:grid-cols-3">
-        {Array.from({ length: Math.min(MAX_SAMPLES, Math.max(FIRST_SLOTS, samples.length + 1)) }, (_, i) => {
-          const src = samples[i];
-          return (
-            <li key={i} ref={(el) => { tiles.current[i] = el; }} className="min-w-0">
-              {src ? (
-                <figure className={cx("relative aspect-video overflow-hidden rounded-lg border bg-surface transition-shadow duration-fast",
-                  dragging === i ? "border-ink-brand shadow-lg ring-2 ring-ink-brand" : "border-line")}>
-                  <FittedImg sample={src} alt={`Work sample ${i + 1}`} />
-                  {samples.length > 1 && (
-                    <button type="button" id={`sample-grip-${i}`} aria-label={`Move work sample ${i + 1} of ${samples.length}`} aria-describedby="samples-hint"
-                      title="Drag to reorder, or use the arrow keys"
-                      className={cx("absolute top-2 left-2 inline-flex min-h-9 touch-none items-center gap-1 rounded-full bg-surface pr-3 pl-1.5 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus",
-                        dragging === i ? "cursor-grabbing" : "cursor-grab")}
-                      onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDragging(i); }}
-                      onPointerMove={drag} onPointerUp={drop} onPointerCancel={drop} onKeyDown={(e) => key(e, i)}>
-                      <GripVertical aria-hidden="true" className="size-4" />{i + 1}
-                    </button>
-                  )}
-                  <span className="absolute inset-x-2 bottom-2 flex justify-end gap-2">
-                    <button type="button" aria-label={`Adjust the fit of work sample ${i + 1}`} title="Adjust the fit" onClick={() => setFitting(i)}
-                      className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><CropIcon aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">Adjust</span></button>
-                    <button type="button" aria-label={`Replace work sample ${i + 1}`} title="Replace" onClick={() => choose(i)}
-                      className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><RefreshCw aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">Replace</span></button>
-                    <button type="button" aria-label={`Remove work sample ${i + 1}`} title="Remove" onClick={() => set("workSamples")(samples.filter((_, j) => j !== i))}
-                      className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><X aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">Remove</span></button>
-                  </span>
-                </figure>
-              ) : (
-                <button type="button" onClick={() => choose(null)} aria-label={i === samples.length ? undefined : "Add a work sample"} disabled={i > samples.length}
-                  className="grid aspect-video w-full place-content-center justify-items-center gap-2 rounded-lg border-2 border-dashed border-line-dashed bg-surface/60 text-ink transition-colors duration-fast hover:border-ink-brand hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-default disabled:hover:border-line-dashed disabled:hover:bg-surface/60">
-                  <Camera aria-hidden="true" className={cx("size-7", i === samples.length ? "text-ink" : "text-ink-subtle")} strokeWidth={1.5} />
-                  {i === samples.length && <span className="flex items-center gap-1.5 text-body-md"><Plus aria-hidden="true" className="size-4" />Add a work sample</span>}
-                </button>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      {problem && <p className="text-body-sm text-danger">{problem}</p>}
-      {fitting !== null && samples[fitting] && <FitCropper sample={samples[fitting]} onCancel={() => setFitting(null)} onSave={saveFit} />}
-    </section>
-  );
-}
+export const CanvasSamples = ShowcaseEditor;
 
 /** The three ruled columns: Skills & experience, Credits, and the personality question. */
+export function CanvasExperience({d,set,errors,required}: SectionProps & {required:(field:string)=>boolean}) {
+  return <section id="sec-film" aria-labelledby="sec-film-h" className="grid scroll-mt-40 gap-5"><div className="grid gap-2"><H id="sec-film-h">Skills &amp; experience</H><p className="text-body-md text-ink">What kind of work do you do in the entertainment industry, and how does that experience help you deliver this service?</p></div>
+    <div className="grid gap-8 lg:grid-cols-2"><div className="grid content-start gap-5"><SkillTags d={d} set={set} errors={errors}/><Field label="Years in the Entertainment Industry" optional={!required("years")} error={errors.years}><Input id="f-years" inputMode="numeric" value={d.years} className="max-w-32" onChange={e=>set("years")(e.target.value.replace(/\D/g,"").slice(0,2))}/></Field></div>
+    <Field label="How can customers benefit from your entertainment industry experience?" optional={!required("about")} error={errors.about} hint="For example: “Building sets for film and television. I bring that same craftsmanship, creativity, and attention to detail to custom furniture, home improvements, and special projects.”"><Textarea id="f-about" rows={5} showCount maxLength={ABOUT_MAX} value={d.about} onChange={e=>set("about")(e.target.value)}/></Field></div>
+  </section>;
+}
+
 export function CanvasColumns({ d, set, errors, required }: SectionProps & { required: (field: string) => boolean }) {
-  const [expOpen, openExp] = useOpen(!!(d.position || d.years || d.about || d.skills.length || errors.position || errors.about || errors.years || errors.skills));
   const [credOpen, openCred] = useOpen(!!(d.credits.some((c) => c.trim()) || d.imdb || d.resumeUrl || errors.credits || errors.imdb));
   const [qOpen, openQ] = useOpen(!!(d.personalityQuestion || d.personality || errors.personality || errors.personalityQuestion));
   const question = personalityQuestions.find((q) => q.id === d.personalityQuestion)?.text;
   const col = "grid min-w-0 scroll-mt-40 content-start gap-4";
   return (
-    <div className="grid gap-10 lg:grid-cols-3 lg:gap-0">
-      <section id="sec-film" aria-labelledby="sec-film-h" className={cx(col, "lg:pr-8")}>
-        <H id="sec-film-h" size="md">Skills &amp; experience</H>
-        <p className="text-body-md text-ink">What kind of work do you do in film and television, and how does that experience help you deliver this service?</p>
-        {expOpen ? (
-          <div className="grid gap-4">
-            <Field label="Department or role" optional={!required("position")} error={errors.position}>
-              <Input id="f-position" maxLength={DEPARTMENT_MAX} value={d.position} placeholder="e.g. Costume & wardrobe" onChange={(e) => set("position")(e.target.value.slice(0, DEPARTMENT_MAX))} />
-            </Field>
-            <div className="grid gap-2">
-              <p className="text-label-md text-ink">On-set skills{!required("skills") && <span className="ml-2 text-body-sm font-normal text-ink-subtle">Optional</span>}</p>
-              <Pills label="On-set skills" options={onSetSkills} isOn={(o) => d.skills.includes(o)}
-                onToggle={(o) => { set("skills")(d.skills.includes(o) ? d.skills.filter((s) => s !== o) : [...d.skills, o]); if (!d.position.trim()) set("position")(o); }} />
-              <GroupError id="f-skills-error">{errors.skills}</GroupError>
-            </div>
-            <Field label="Years in film and TV" optional={!required("years")} error={errors.years}>
-              <Input id="f-years" inputMode="numeric" value={d.years} placeholder="e.g. 9" className="max-w-32" onChange={(e) => set("years")(e.target.value.replace(/\D/g, "").slice(0, 2))} />
-            </Field>
-            <Field label="How that experience helps" optional={!required("about")} error={errors.about}
-              hint="e.g. “Nine years in film and TV wardrobe taught me how to pull a look together on a deadline.”">
-              <Textarea id="f-about" rows={5} showCount maxLength={ABOUT_MAX} value={d.about} onChange={(e) => set("about")(e.target.value)} />
-            </Field>
-          </div>
-        ) : <AddLink id="f-about" onClick={openExp}>Add experience</AddLink>}
-      </section>
+    <div className="grid gap-10 lg:grid-cols-2 lg:gap-0">
+
 
       <section id="sec-credits" aria-labelledby="sec-credits-h" className={cx(col, "lg:border-l lg:border-line-strong lg:px-8")}>
         <H id="sec-credits-h" size="md">Credits</H>
@@ -494,9 +320,10 @@ export function CanvasColumns({ d, set, errors, required }: SectionProps & { req
           <div className="grid gap-4">
             <p className="text-body-sm text-ink-muted">Productions you worked on, and your role on each.</p>
             <Credits credits={d.credits} pins={d.creditPins ?? []} error={errors.credits} onChange={(c, p) => { set("credits")(c); set("creditPins")(p); }} />
-            <Field label="IMDb profile link" optional={!required("imdb")} error={errors.imdb} hint="Helps the team confirm your credits. Clients don't see it.">
+            <Field label="IMDb profile link" optional={!required("imdb")} error={errors.imdb} >
               <Input id="f-imdb" type="url" inputMode="url" value={d.imdb} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} />
             </Field>
+            <Field label="LinkedIn profile" optional error={errors.linkedin}><Input id="f-linkedin" type="url" value={d.linkedin ?? ""} maxLength={500} placeholder="https://www.linkedin.com/in/your-name" onChange={(e) => set("linkedin")(e.target.value)} /></Field>
             <Field label="Résumé link" optional hint="A website, Google Drive or Dropbox link. Clients see “View résumé”.">
               <Input id="f-resume" type="url" inputMode="url" value={d.resumeUrl ?? ""} placeholder="https://" onChange={(e) => set("resumeUrl")(e.target.value.trim().slice(0, 300))} />
             </Field>
@@ -505,6 +332,7 @@ export function CanvasColumns({ d, set, errors, required }: SectionProps & { req
       </section>
 
       <section id="sec-personality" aria-labelledby="sec-personality-h" className={cx(col, "lg:border-l lg:border-line-strong lg:pl-8")}>
+        <p className="text-body-sm text-ink-muted">Let your potential clients get to know you better.</p>
         <H id="sec-personality-h" size="md">{question ?? "A question about you"}</H>
         {qOpen ? (
           <div className="grid gap-4">
@@ -520,7 +348,7 @@ export function CanvasColumns({ d, set, errors, required }: SectionProps & { req
           </div>
         ) : (
           <>
-            <p className="text-body-md text-ink">Pick one of four questions and answer it. It shows at the end of your profile.</p>
+            <p className="text-body-md text-ink">Pick one of four questions and answer it.</p>
             <AddLink onClick={openQ}>Add your answer</AddLink>
           </>
         )}
@@ -530,56 +358,16 @@ export function CanvasColumns({ d, set, errors, required }: SectionProps & { req
 }
 
 /** "Details · Optional": what the profile's Details block shows (languages and how they work), asked right here. */
-export function CanvasDetails({ d, set }: SectionProps) {
-  const filled = !!(d.languages.trim() || d.tools.trim() || d.transport.trim() || d.mode !== "on-site" || d.insurance !== "private");
-  const [open, openIt] = useOpen(filled);
-  return (
-    <section id="sec-details" aria-labelledby="sec-details-h" className="grid scroll-mt-40 gap-5">
-      <H id="sec-details-h" tag="Optional" size="md">Details</H>
-      {!open ? (
-        <div className="grid gap-1">
-          <AddLink id="f-details-open" onClick={() => { openIt(); requestAnimationFrame(() => document.getElementById("f-languages")?.focus()); }}>Add languages and how you work</AddLink>
-          <p className="text-body-sm text-ink-muted">Languages you speak, on site or at your studio, transport and tools. They show under Details on your profile.</p>
-        </div>
-      ) : (
-        <div className="grid gap-x-10 gap-y-5 md:grid-cols-2">
-          <Field label="Languages" optional><Input id="f-languages" value={d.languages} placeholder="e.g. English, Spanish" maxLength={120} onChange={(e) => set("languages")(e.target.value)} /></Field>
-          <RadioGroup name="f-mode" label="How you work" value={d.mode} onChange={(v) => set("mode")(v as typeof d.mode)}
-            options={[{ value: "on-site", label: "On site, at the client's place" }, { value: "studio", label: "At my studio" }, { value: "both", label: "Both" }]} />
-          <Field label="Transport" optional><Input id="f-transport" value={d.transport} placeholder="e.g. Car, can carry a rolling rack" maxLength={120} onChange={(e) => set("transport")(e.target.value)} /></Field>
-          <Field label="Tools and equipment" optional><Input id="f-tools" value={d.tools} placeholder="e.g. Steamer, sewing kit, garment bags" maxLength={160} onChange={(e) => set("tools")(e.target.value)} /></Field>
-          <RadioGroup name="f-insurance" label={<>Insurance <span className="font-normal text-ink-subtle">· optional, self-reported</span></>} value={d.insurance} onChange={(v) => set("insurance")(v as typeof d.insurance)}
-            options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance yet" }]} />
-        </div>
-      )}
-    </section>
-  );
+export function CanvasDetails({d,set,errors}:SectionProps){
+  const atClient=d.mode==="on-site"||d.mode==="both", atBusiness=d.mode==="studio"||d.mode==="both";
+  const choose=(client:boolean,business:boolean)=>set("mode")(client&&business?"both":business?"studio":"on-site");
+  return <section id="sec-details" aria-labelledby="sec-details-h" className="grid scroll-mt-40 gap-5"><H id="sec-details-h" size="md" tag="Optional">Details</H>
+    <div className="grid gap-x-10 gap-y-6 md:grid-cols-2"><Field label="Languages" optional><Input id="f-languages" value={d.languages} maxLength={120} placeholder="e.g. English, Spanish" onChange={e=>set("languages")(e.target.value)}/></Field>
+    <fieldset className="grid gap-3"><legend className="mb-3 text-label-md text-ink">Where you work · select all that apply</legend><Checkbox label="On Site, at the client’s location." checked={atClient} onChange={e=>choose(e.target.checked,atBusiness)}/><Checkbox label="At my office, studio or other place of business" checked={atBusiness} onChange={e=>choose(atClient,e.target.checked)}/></fieldset>
+    <Field label="Tools and equipment" optional error={errors.tools} hint="For example: Special Cameras, Lighting Kit, Box Truck, Makeup kit, etc. Up to five lines."><Textarea id="f-tools" rows={4} maxLength={600} value={d.tools} onChange={e=>set("tools")(e.target.value.split(/\r?\n/).slice(0,5).join("\n"))}/></Field>
+    <div className="grid content-start gap-4"><RadioGroup name="f-insurance" label="Insurance · optional, self-reported" value={d.insurance} onChange={v=>set("insurance")(v as typeof d.insurance)} options={[{value:"private",label:"Prefer to discuss privately"},{value:"yes",label:"I have liability insurance"},{value:"no",label:"No insurance yet"}]}/>{d.insurance==="yes"&&<Field label="Describe your liability insurance" optional hint="Describe the type of coverage. Please don’t include policy numbers or other sensitive details."><Textarea id="f-insuranceNotes" rows={3} maxLength={400} showCount value={d.insuranceNotes??""} onChange={e=>set("insuranceNotes")(e.target.value)}/></Field>}</div>
+    </div></section>;
 }
 
 /** The private booking contact: one strip, never on the public profile. */
-export function CanvasContact({ d, set, errors, email }: SectionProps & { email: string }) {
-  const [open, setOpen] = React.useState(!!(d.bookingMobile || errors.bookingMobile));
-  return (
-    <section id="sec-contact" aria-labelledby="sec-contact-h" className="grid scroll-mt-40 gap-4">
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <h2 id="sec-contact-h" className="flex items-center gap-2 text-label-lg font-semibold text-ink"><Lock aria-hidden="true" className="size-5 shrink-0" />Private booking contact</h2>
-        <span aria-hidden="true" className="hidden h-6 w-px bg-line-strong sm:block" />
-        {!open && <AddLink id="f-mobile" onClick={() => setOpen(true)}>Add email &amp; mobile</AddLink>}
-        <span aria-hidden="true" className="hidden h-6 w-px bg-line-strong sm:block" />
-        <p className="text-body-sm text-ink-muted">Used for booking notifications. Hidden from your public profile.</p>
-      </div>
-      {open && (
-        <div className="grid gap-4 sm:max-w-2xl sm:grid-cols-2">
-          <Field label="Mobile number" optional error={errors.bookingMobile}>
-            <Input id="f-mobile" type="tel" inputMode="tel" autoComplete="tel" maxLength={stageTwoLimits.bookingMobile} value={d.bookingMobile ?? ""}
-              placeholder="+1 213 555 0123" onChange={(e) => set("bookingMobile")(e.target.value.slice(0, stageTwoLimits.bookingMobile))} />
-          </Field>
-          <div className="grid content-start gap-1.5">
-            <p className="text-label-md text-ink">Email</p>
-            <p className="flex min-h-10 items-center break-all text-body-md text-ink-muted">{email || "Your account email"}</p>
-          </div>
-        </div>
-      )}
-    </section>
-  );
-}
+export const CanvasContact = ContactFields;

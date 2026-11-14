@@ -42,7 +42,7 @@ export const craftRule = (margin = "26px auto 14px", width = "100%") =>
 
 /** The spaced, capitalised team sign-off. */
 export const craftSignOff = (text: string, mt = 22, center = false) =>
-  `<p style="margin:${mt}px 0 0;${center ? "text-align:center;" : ""}font-family:${SANS};font-size:12px;line-height:18px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${k.ink}">${esc(text)}</p>`;
+  `<p style="margin:${mt}px 0 0;${center ? "text-align:center;" : ""}font-family:${SANS};font-size:12px;line-height:18px;font-weight:700;letter-spacing:0.04em;color:${k.ink}">${esc(text)}</p>`;
 
 /** The photo frame around the cream card, with logo, eyebrow and rule; `inner` follows the rule. */
 export function craftHero({ eyebrow, inner, ctx, openPaper = false }: { eyebrow: string; inner: string; ctx: EmailContext; openPaper?: boolean }) {
@@ -52,7 +52,7 @@ export function craftHero({ eyebrow, inner, ctx, openPaper = false }: { eyebrow:
   if (openPaper) return `<table ${T} class="e-invite-scene" width="100%" height="784" bgcolor="${k.cream}" background="${esc(frame)}" style="height:784px;background-color:${k.cream};background-image:url('${esc(frame)}');background-size:100% 100%;background-position:center;background-repeat:no-repeat">
 <tr><td class="e-invite-center" align="center" valign="top" style="padding:110px 118px 230px;font-family:${SANS};text-align:center">
 <img class="e-invite-logo" src="${esc(logo)}" width="112" height="35" alt="Between Gigs" style="display:block;margin:0 auto;width:112px;height:35px;border:0;color:${k.ink};font-size:18px;font-weight:600">
-<p class="e-invite-eyebrow" style="margin:28px 0 10px;font-size:11px;line-height:14px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:${k.muted}">${esc(eyebrow)}</p>
+<p class="e-invite-eyebrow" style="margin:28px 0 10px;font-size:13px;line-height:18px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:${k.muted}">${esc(eyebrow)}</p>
 <div class="e-invite-rule" style="margin:0 auto 22px;width:28px;height:2px;line-height:2px;font-size:1px;background-color:${k.rule}">&nbsp;</div>
 ${inner}
 </td></tr></table>`;

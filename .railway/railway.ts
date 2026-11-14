@@ -42,6 +42,7 @@ export default defineRailway((ctx) => {
       // Read: public reads (the public profile pages). Submit: the public forms only.
       COMPANY_OS_READ_TOKEN: preserve(),
       COMPANY_OS_SUBMIT_TOKEN: preserve(),
+      COMPANY_OS_PROFILE_REVIEW: preserve(),
       // This service's public origin: Clerk session tokens must have been issued to it (`azp`).
       APP_URL: preserve(),
       // Signs the preview's cookie, and on test the gate's (lib/server/preview.ts, lib/security/test-gate.ts).

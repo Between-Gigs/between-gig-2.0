@@ -162,7 +162,7 @@ export function ForProfessionals() {
         <div className="mx-auto grid max-w-4xl justify-items-start sm:justify-items-center px-4 py-16 sm:px-6 md:py-24">
           <div className="grid justify-items-start sm:justify-items-center gap-5 rounded-2xl bg-bg/85 px-5 py-8 text-left sm:text-center shadow-sm backdrop-blur-sm sm:px-10 lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-none dark:bg-bg/80 dark:lg:bg-transparent">
             <Eyebrow rule className="sm:justify-items-center!">Join the community</Eyebrow>
-            <Heading level="display-l" id="final-h" className="max-w-2xl max-sm:text-display-sm">Get discovered, get hired, and keep creating.</Heading>
+            <Heading level="display-l" id="final-h" className="max-w-2xl max-sm:text-heading-lg max-[22rem]:text-heading-md sm:text-display-sm lg:text-display-md xl:text-display-lg"><span className="whitespace-nowrap">Get discovered, get hired,</span><br />and keep creating.</Heading>
             <JoinCta className="mt-2" />
             <TextLink href="/storyboard/" kind="arrow" className="font-medium text-ink-muted">See it in the Storyboard</TextLink>
           </div>

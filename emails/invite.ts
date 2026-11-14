@@ -10,19 +10,19 @@ export interface InviteProps {
 }
 
 export const INVITE_REASON = "You’re receiving this message because you requested to join the Call Sheet.";
-export const INVITE_UNSUBSCRIBE = "{{{RESEND_UNSUBSCRIBE_URL}}}";
+export const INVITE_UNSUBSCRIBE = "{{links.unsubscribe}}";
 
 export const INVITE_COPY = {
   subject: "You're invited to Between Gigs",
   preheader: "Welcome to Stage 2: Building our Gigster community!",
   eyebrow: "You're invited",
   title: ["Your craft.", "More possibilities."],
-  lead: "Your skills have value beyond the set. Let us help you put them to work.",
+  lead: "Your skills have value beyond the set.\nLet us help you put them to work.",
   opening: "We’ve been hard at work behind the scenes, and we’re excited to take the next step with you!",
   stage: "Welcome to Stage 2: Building our Gigster community!",
   introduction: "Now it’s time to introduce yourself! Create your profile by sharing your professional experience, the skills and services you offer, and where you're available to work.",
   nextTitle: "What happens next?",
-  next: "Once you’ve signed up, you’ll be part of our founding Gigster community. We’ll keep you updated as we prepare to introduce your services to the public and begin connecting you with new opportunities.",
+  next: "Once you’ve signed up, you’ll be part of our founding Gigster community. We’ll keep you updated as we prepare to introduce your services to the public and begin connecting you with new opportunities in the coming weeks.",
   ready: "Ready to get started?",
   cta: "Create your profile",
   closing: "We’re thrilled to have you on this journey with us!",
@@ -31,8 +31,8 @@ export const INVITE_COPY = {
 export function invite({ inviteUrl }: InviteProps, ctx: EmailContext = defaultContext): RenderedEmail {
   const c = INVITE_COPY;
   const hero = [
-    craftTitle(c.title).replace('class="e-k-h1"', 'class="e-k-h1 e-invite-title"'),
-    `<p class="e-invite-lead" style="margin:0 auto;max-width:420px;font-family:${SANS};font-size:17px;line-height:26px;color:${k.ink}">${esc(c.lead)}</p>`,
+    craftTitle(c.title).replace('class="e-k-h1"', 'class="e-k-h1 e-invite-title"').replace("font-size:46px;line-height:48px", "font-size:50px;line-height:52px"),
+    `<p class="e-invite-lead" style="margin:0 auto;max-width:420px;font-family:${SANS};font-size:17px;line-height:26px;color:${k.ink}">${esc(c.lead).replace("\n", "<br>")}</p>`,
     `<div class="e-invite-action" style="padding-top:24px">${craftButton(inviteUrl, c.cta, { hero: true })}</div>`,
   ].join("\n");
   const details = [

@@ -71,7 +71,25 @@ export type WorkMode = "on-site" | "studio" | "both";
  * The questionnaire (profile builder), field for field. Fields and copy follow the design system's
  * GigsterOnboarding template (the client's prototype C).
  */
+export interface ShowcaseItem {
+  id: string;
+  kind: "image" | "video";
+  url: string;
+  thumbnail?: string;
+  description?: string;
+}
 export interface ProfileFields {
+  travelBeyondLA?: boolean;
+  rateOptions?: ("hourly" | "project")[];
+  hourlyRate?: string;
+  projectMinimum?: string;
+  minimumHours?: string;
+  linkedin?: string;
+  insuranceNotes?: string;
+  contactChannels?: ("sms" | "phone" | "whatsapp")[];
+  bookingContactConsent?: boolean;
+  marketingEmailConsent?: boolean;
+  showcase?: ShowcaseItem[];
   /** A data URL in the sample (resized to 480px); a storage URL in production. */
   photo: string;
   name: string;

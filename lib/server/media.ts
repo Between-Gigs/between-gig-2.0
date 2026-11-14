@@ -8,7 +8,7 @@ import { CompanyOsError, companyOs, configFromEnv, type CompanyOs } from "./comp
 import { bearer } from "./routes";
 
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const IMAGE = new Set(["image/jpeg", "image/png", "image/webp", "image/heic"]);
+const IMAGE = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "video/mp4"]);
 
 const notFound = () => new Response("Not found", { status: 404, headers: { "content-type": "text/plain", "x-content-type-options": "nosniff", "cache-control": "no-store" } });
 
@@ -34,13 +34,17 @@ export async function media(req: Request, id: string, deps: { cos?: CompanyOs } 
     try { link = (await cos.publicFileUrl(id)).url; visibility = "public"; } catch (e) { if (!(e instanceof CompanyOsError)) throw e; }
   }
   if (!link) return notFound();
-  const upstream = await cos.getBytes(link).catch(() => null);
+  const range = req.headers.get("range");
+  if (range && !/^bytes=\d*-\d*$/.test(range)) return new Response(null, { status: 416 });
+  const upstream = await cos.getBytes(link, range ?? undefined).catch(() => null);
   if (!upstream?.ok || !upstream.body) return notFound();
   const type = (upstream.headers.get("content-type") ?? "").split(";")[0]!.trim().toLowerCase();
   return new Response(upstream.body, {
-    status: 200,
+    status: upstream.status === 206 ? 206 : 200,
     headers: {
       "content-type": IMAGE.has(type) ? type : "application/octet-stream",
+      ...(upstream.headers.get("content-range") ? { "content-range": upstream.headers.get("content-range")! } : {}),
+      ...(type === "video/mp4" ? { "accept-ranges": "bytes" } : {}),
       "x-content-type-options": "nosniff",
       "content-security-policy": "default-src 'none'; sandbox",
       "cache-control": visibility === "public" ? "public, max-age=300" : "private, max-age=60",

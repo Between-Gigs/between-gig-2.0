@@ -1,0 +1,7 @@
+import { beforeEach, it, expect } from "vitest";
+import { sampleSource as source } from "./sample";
+import { completeFields } from "./contract/fixtures";
+beforeEach(() => source.demo!.reset());
+it("submits a project-only new profile without service areas and preserves private contact choices", async () => { const r = await source.auth.register({ email: "patti-review@example.test", name: "Review Crew", acceptTerms: true }); if (!r.ok)
+    throw Error(r.error); const fields = { ...completeFields("Review Crew", "img/people/maya.jpg"), areas: [], travel: "Up to 15 miles", rateOptions: ["project"] as "project"[], rate: "", services: ["Interior Styling"], serviceLines: { "Interior Styling": "Style a room" }, bookingMobile: "+12135550123", contactChannels: ["phone"] as "phone"[], bookingContactConsent: true, marketingEmailConsent: false }; await source.profiles.saveDraft(r.person.id, fields, 0); const submitted = await source.profiles.submit(r.person.id); await source.owners.approve(r.person.id); const pub = await source.people.getPublic(submitted.person.slug); expect(pub.profile?.fields.rateOptions).toEqual(["project"]); for (const field of ["bookingMobile", "bookingContactConsent", "marketingEmailConsent", "contactChannels"])
+    expect(pub.profile?.fields).not.toHaveProperty(field); });

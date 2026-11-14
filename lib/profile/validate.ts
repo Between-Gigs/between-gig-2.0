@@ -1,4 +1,5 @@
 import type { ProfileFields, ProfileSection, ReviewNote } from "@/lib/data/types";
+import { reviewErrors, validPostalCode } from "./review";
 import { stageTwoLimits, startDateLabel } from "./stage-two";
 import { profileFieldParts, readProfileTemplate, requiredProfileParts, type ProfileFieldRule, type ProfilePartId, type ProfileTemplate } from "./template";
 export type { ProfilePartId } from "./template";
@@ -43,7 +44,8 @@ export function contentChanged(a: ProfileFields, b: ProfileFields): boolean {
     for (const key of Object.keys(stageTwoLimits) as (keyof typeof stageTwoLimits)[]) {
       if (!f[key]) delete rest[key];
     }
-    return JSON.stringify(rest, Object.keys(rest).sort());
+    const stable = (value: unknown): unknown => Array.isArray(value) ? value.map(stable) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,stable(v)])) : value;
+    return JSON.stringify(stable(rest));
   };
   return norm(a) !== norm(b);
 }
@@ -116,7 +118,7 @@ export function validateStep(step: number, d: ProfileFields, template = readProf
     if (d.services.some((s) => (d.serviceLines?.[s]?.trim().length ?? 0) > SERVICE_LINE_MAX)) e.serviceLines = `Keep each line to ${SERVICE_LINE_MAX} characters.`;
   }
   if (step === 2) {
-    if (d.zip && !/^\d{5}$/.test(d.zip)) e.zip = missingAnswer.zip;
+    if (d.zip && !validPostalCode(d.market, d.zip)) e.zip = d.market === "la" ? missingAnswer.zip : "Enter a valid ZIP or postal code.";
     if (d.dates.trim().length > DATES_MAX) e.dates = `Keep the dates to ${DATES_MAX} characters.`;
   }
   if (step === 3 && d.about.length > ABOUT_MAX) e.about = `Keep About me to ${ABOUT_MAX} characters. It's ${d.about.length} now.`;
@@ -144,8 +146,20 @@ export function validateGigster(d: ProfileFields, template = readProfileTemplate
   return e;
 }
 
+export function validateReviewGigster(d: ProfileFields, template = readProfileTemplate()): FieldErrors {
+  const effective = { ...template, required: template.required.filter(k => !["position", "location", "rate"].includes(k)) };
+  const e = Object.assign({}, ...Object.values(validateAll(d, effective)), reviewErrors(d));
+  if (d.other.trim() && (d.other.split("\n").length < 2 || !d.other.split("\n")[0].trim() || !d.other.split("\n").slice(1).join(" ").trim())) e.other = "Name your service and describe what a customer can hire you to do.";
+  if (!d.services.length && !d.other.trim()) e.services = "Choose at least one service or describe Other.";
+  if (d.services.some(s => !d.serviceLines?.[s]?.trim())) e.serviceLines = "Add one line about what a customer can hire you to do for each service.";
+  if (d.market === "other" && !d.otherCity.trim()) e.otherCity = "Enter your city, region and country.";
+  if (d.personality?.trim() && !d.personalityQuestion) e.personalityQuestion = "Choose the question you’re answering.";
+  return e;
+}
+
 /** How the editor names each field in its "things to finish" list. */
 export const gigsterFieldLabel: Partial<Record<keyof ProfileFields, string>> = {
+  travel: "Travel radius", rateOptions: "How you charge", hourlyRate: "Hourly amount", projectMinimum: "Minimum project price", minimumHours: "Minimum hours", linkedin: "LinkedIn profile", bookingContactConsent: "Booking and project contact permission",
   photo: "Profile photo", name: "Your name", services: "How I can help", serviceLines: "What you'll do", dates: "When you're usually free",
   monthStatus: "This month", areas: "Where you work", zip: "ZIP code", otherCity: "Where you work", position: "Your film and TV work",
   skills: "On-set skills", years: "Years in film and TV", about: "How that experience helps", credits: "Credits", imdb: "IMDb link",
@@ -162,9 +176,9 @@ export const gigsterItems = [
   { id: "experience", label: "How that experience helps", fields: ["about"] },
   { id: "credits", label: "A credit", fields: ["credits", "imdb"] },
   { id: "title", label: "A professional title", fields: ["title"] },
-  { id: "rate", label: "Your rate and minimum", fields: ["rate", "basis", "bookingMinimum"] },
+  { id: "rate", label: "How you charge", fields: ["rate", "basis", "bookingMinimum", "rateOptions", "hourlyRate", "projectMinimum", "minimumHours"] },
   { id: "personality", label: "A personality question", fields: ["personality", "personalityQuestion"] },
-  { id: "contact", label: "Private booking contact", fields: ["bookingMobile"] },
+  { id: "contact", label: "Contact Information", fields: ["bookingMobile", "bookingContactConsent", "contactChannels", "marketingEmailConsent"] },
 ] as const satisfies readonly { id: string; label: string; fields: readonly (keyof ProfileFields)[] }[];
 export type GigsterItemId = (typeof gigsterItems)[number]["id"];
 
@@ -194,13 +208,17 @@ function itemFilled(id: GigsterItemId, d: ProfileFields): boolean {
  * required when the editor always asks for it (photo, name, a service) or when the profile template requires any of
  * its fields; otherwise it can come later.
  */
-export function gigsterChecklist(d: ProfileFields, template = readProfileTemplate()) {
-  const errors = validateGigster(d, template);
-  const always: GigsterItemId[] = ["services"];
+export function gigsterChecklist(d: ProfileFields, template = readProfileTemplate(), review = false) {
+  const errors = review ? validateReviewGigster(d, template) : validateGigster(d, template);
+  const always: GigsterItemId[] = review ? ["services", "where", "rate"] : ["services"];
   const out = gigsterItems.map((item) => {
     const required = always.includes(item.id) || item.fields.some((f) => (template.required as readonly string[]).includes(f === "areas" || f === "otherCity" ? "location" : f));
     const invalid = item.fields.some((f) => errors[f]);
-    return { id: item.id, label: item.label, required, done: !invalid && itemFilled(item.id, d) };
+    let filled = itemFilled(item.id, d);
+    if (review && item.id === "where") filled = validPostalCode(d.market,d.zip) && !!d.travel && (d.market === "la" || !!d.otherCity.trim());
+    if (review && item.id === "services") filled = (d.services.length > 0 || !!d.other.trim()) && d.services.every(s=>!!d.serviceLines?.[s]?.trim());
+    if (review && item.id === "rate") filled = !errors.rateOptions && !errors.hourlyRate && !errors.projectMinimum;
+    return { id: item.id, label: item.label, required, done: !invalid && filled };
   });
   return { required: out.filter((i) => i.required), optional: out.filter((i) => !i.required), errors };
 }

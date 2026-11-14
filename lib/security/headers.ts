@@ -39,7 +39,8 @@ export function contentSecurityPolicy({ nonce, clerkPublishableKey, dev = false 
     "script-src": ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...clerk, CLOUDFLARE_CHALLENGES, CLERK_PROTECT, ...(dev ? ["'unsafe-eval'"] : [])],
     // Clerk's components inject their CSS at runtime.
     "style-src": ["'self'", "'unsafe-inline'"],
-    "img-src": ["'self'", "data:", "blob:", "https://img.clerk.com"],
+    "img-src": ["'self'", "data:", "blob:", "https://img.clerk.com", "https:"],
+    "media-src": ["'self'", "blob:", "https:"],
     "font-src": ["'self'", "data:"],
     "connect-src": ["'self'", ...clerk, `${CLERK_PROTECT}:*`],
     "frame-src": ["'self'", CLOUDFLARE_CHALLENGES, CLERK_PROTECT],

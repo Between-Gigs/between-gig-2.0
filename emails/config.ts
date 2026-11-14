@@ -26,4 +26,4 @@ export const REVIEW_TIME = "within 3\u00a0business days";
 export const VETTING_NOTE: string | null = null;
 
 /** How the Gigster emails sign off (Peter, Nov 2026: "we're part of a community, not a cold machine"). */
-export const SIGN_OFF = "YOUR BETWEEN GIGS TEAM";
+export const SIGN_OFF = "The Between Gigs Team";

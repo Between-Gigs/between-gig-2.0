@@ -16,7 +16,7 @@ import { data, type Person, type ProfileFields, type ProfileSection } from "@/li
 import { DataError, sendNow } from "@/lib/data/api";
 import { useRequireRole } from "@/lib/guard";
 import { useProfileTemplate } from "@/lib/profile/use-profile-template";
-import { contentChanged, fieldLabel, gigsterChecklist, gigsterFieldLabel, gigsterItemOf, gigsterItems, readNotes, sectionLabel, validateGigster, type FieldErrors, type GigsterItemId } from "@/lib/profile/validate";
+import { contentChanged, fieldLabel, gigsterChecklist, gigsterFieldLabel, gigsterItemOf, gigsterItems, readNotes, sectionLabel, validateGigster, validateReviewGigster, type FieldErrors, type GigsterItemId } from "@/lib/profile/validate";
 import { SaveIndicator, type SaveState } from "@/components/builder/ProfileBuilder";
 import { Alert } from "@/components/ds/molecules";
 import { Heading, Text } from "@/components/ds/atoms";
@@ -26,7 +26,10 @@ import { ProfileView } from "@/components/profile/ProfileView";
 import { Page } from "@/components/site/Page";
 import { markArea } from "@/lib/split-area";
 import { Checklist, type ChecklistItem } from "./Checklist";
-import { CanvasColumns, CanvasContact, CanvasDetails, CanvasHelp, CanvasIdentity, CanvasRates, CanvasSamples } from "./canvas";
+import * as updatedCanvas from "./canvas";
+import * as legacyCanvas from "./LegacyCanvas";
+import { PROFILE_REVIEW_ENABLED } from "@/lib/profile/review";
+const { CanvasColumns, CanvasContact, CanvasDetails, CanvasHelp, CanvasIdentity, CanvasRates, CanvasSamples } = PROFILE_REVIEW_ENABLED ? updatedCanvas : legacyCanvas;
 import type { Setter } from "./ui";
 
 markArea("bg-split:dashboard");
@@ -41,7 +44,7 @@ const dayOf = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-US",
 /** Where each checklist item lives on the page: the field to focus. */
 const ITEM_TARGET: Record<GigsterItemId, string> = {
   photo: "sec-identity", name: "f-name", title: "f-title", where: "sec-where", services: "sec-help", rate: "f-rate", availability: "f-dates",
-  film: "f-position", experience: "f-about", credits: "f-credits", personality: "sec-personality", contact: "f-mobile",
+  film: "f-skills", experience: "f-about", credits: "f-credits", personality: "sec-personality", contact: "f-mobile",
 };
 /** The team's review notes are per questionnaire section; this is where each one is answered here. */
 /** The team picks a section of the old builder; name it as this editor does. */
@@ -122,7 +125,7 @@ function Editor({ personId }: { personId: string }) {
 
   const flush = React.useCallback(async () => {
     const fields = latest.current;
-    if (!fields || !dirty.current) return;
+    if (!fields || !dirty.current) return true;
     dirty.current = false;
     const keys = [...touched.current];
     touched.current.clear();
@@ -137,10 +140,12 @@ function Editor({ personId }: { personId: string }) {
       if (theirs) setD((cur) => (cur ? { ...merged, ...pick(cur, touched.current) } : cur));
       setSave(dirty.current ? { status: "saving" } : { status: "saved", at: saved.savedAt });
       void refresh();
+      return true;
     } catch {
       dirty.current = true;
       keys.forEach((k) => touched.current.add(k));
       setSave({ status: "error" });
+      return false;
     }
   }, [personId, refresh]);
 
@@ -177,7 +182,7 @@ function Editor({ personId }: { personId: string }) {
     });
   }, [personId, refresh]);
 
-  const checklist = React.useMemo(() => (d ? gigsterChecklist(d, template) : null), [d, template]);
+  const checklist = React.useMemo(() => (d ? gigsterChecklist(d, template, PROFILE_REVIEW_ENABLED) : null), [d, template]);
   if (!person || !d || !checklist) return <EditorSkeleton />;
 
   const set: Setter = (k) => (v) => live.guard(k, () => {
@@ -209,7 +214,7 @@ function Editor({ personId }: { personId: string }) {
   const switchView = (v: View) => { setView(v); window.scrollTo({ top: 0 }); };
 
   const submit = async () => {
-    const found = validateGigster(d, template);
+    const found = PROFILE_REVIEW_ENABLED ? validateReviewGigster(d, template) : validateGigster(d, template);
     if (Object.keys(found).length) {
       setErrors(found);
       setSummary(true);
@@ -219,7 +224,7 @@ function Editor({ personId }: { personId: string }) {
     }
     setSubmitting(true);
     dirty.current = true;
-    await flush();
+    if (!(await flush())) { toast({ message: "Your draft couldn’t be saved. Please retry before submitting.", tone: "danger" }); setSubmitting(false); return; }
     try {
       await data.profiles.submit(personId);
       router.push("/profile/submitted/");
@@ -231,7 +236,7 @@ function Editor({ personId }: { personId: string }) {
   };
 
   // It saves as you go; Save draft saves now and says so (Justin's bar: "Private draft · Preview · Save draft").
-  const saveDraft = () => { dirty.current = true; void flush().then(() => toast({ message: "Draft saved", tone: "success" })); };
+  const saveDraft = () => { dirty.current = true; void flush().then((saved) => { if (saved) toast({ message: "Draft saved", tone: "success" }); }); };
 
   const sendButton = (size: "md" | "lg", full = false) => nothingToSend
     ? <Link href="/profile/submitted/" className={cx("inline-flex min-h-11 items-center justify-center gap-2 text-label-md font-semibold text-ink underline underline-offset-4", full && "w-full")}>
@@ -327,6 +332,7 @@ function Editor({ personId }: { personId: string }) {
 
           {/* The profile itself is the form (Justin's Flow p3 design): ruled rows, serif headings, "+ Add" to open a field. */}
           <CanvasIdentity d={d} set={set} errors={errors} personId={personId} required={required} confirmPhoto={(go) => live.guard("photo", go)} />
+          {PROFILE_REVIEW_ENABLED && <div className="border-t border-line-strong pt-10"><updatedCanvas.CanvasExperience d={d} set={set} errors={errors} required={required} /></div>}
           <div className="grid gap-12 border-t border-line-strong pt-10 lg:grid-cols-12 lg:gap-0">
             <div className="min-w-0 lg:col-span-8 lg:pr-10"><CanvasHelp d={d} set={set} errors={errors} /></div>
             <div className="min-w-0 lg:col-span-4 lg:border-l lg:border-line-strong lg:pl-10"><CanvasRates d={d} set={set} errors={errors} required={required} /></div>

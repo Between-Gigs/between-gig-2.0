@@ -125,6 +125,7 @@ jobs:
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_DATA_SOURCE: api
+          NEXT_PUBLIC_PROFILE_REVIEW: ${{ vars.PROFILE_REVIEW_ENABLED }}
           NEXT_PUBLIC_SITE_ORIGIN: ${{ vars.APP_URL }}
         run: pnpm build:server && pnpm build:preview && pnpm check:server
 
@@ -143,12 +144,13 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           APP_URL: ${{ vars.APP_URL }}
+          COMPANY_OS_PROFILE_REVIEW: ${{ vars.PROFILE_REVIEW_ENABLED }}
           COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
           TEST_GATE_PASSPHRASE: ${{ secrets.TEST_GATE_PASSPHRASE }}
           COOKIE_SIGNING_SECRET: ${{ secrets.COOKIE_SIGNING_SECRET }}
         run: |
-          for name in APP_URL COMPANY_OS_READ_TOKEN COMPANY_OS_SUBMIT_TOKEN TEST_GATE_PASSPHRASE COOKIE_SIGNING_SECRET; do
+          for name in APP_URL COMPANY_OS_PROFILE_REVIEW COMPANY_OS_READ_TOKEN COMPANY_OS_SUBMIT_TOKEN TEST_GATE_PASSPHRASE COOKIE_SIGNING_SECRET; do
             printf '%s' "${!name}" | railway variable set "$name" --stdin --service "$SERVICE" --environment "$RAILWAY_ENV" --skip-deploys
           done
 

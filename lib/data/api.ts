@@ -38,7 +38,7 @@ const memoryStorage = (): Pick<Storage, "getItem" | "setItem"> => {
   return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => void m.set(k, v) };
 };
 
-export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenProvider(get: () => Promise<string | null>): void; token(): Promise<string | null> } {
+export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenProvider(get: () => Promise<string | null>): void; token(): Promise<string | null>; uploadWork(file: File): Promise<string> } {
   const base = opts.baseUrl ?? basePath;
   const doFetch = opts.fetch ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
   let getToken = opts.getToken ?? (async () => null);
@@ -96,6 +96,11 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
     setTokenProvider(get) { getToken = get; lastToken = null; changed(); },
     /** The current session token, for a call that isn't a DataSource method (/preview-access/). */
     token: () => getToken(),
+    async uploadWork(file) {
+      const session = await call<Awaited<ReturnType<DataSource["auth"]["session"]>>>("auth.session");
+      if (!session?.personId) throw new DataError(401,"unauthorized");
+      return inOrder(session.personId,()=>send("profiles/uploadWork",{method:"POST",headers:{"content-type":file.type},body:file}) as Promise<string>);
+    },
 
     people: {
       list: (query) => call("people.list", [query ?? {}]),
