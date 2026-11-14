@@ -32,6 +32,12 @@ try {
       assert.ok(secondLine.y >= firstLine.y + firstLine.height, "connection wording stays on separate rows");
       const header = page.locator("header");
       assert.equal(await header.getByRole("link", { name: "Between Gigs home" }).getAttribute("href"), "/");
+      const headerBox = await header.boundingBox();
+      assert.ok(headerBox.height <= (width >= 640 ? 65 : 90), "compact header");
+      const switchBox = await header.getByRole("switch", { name: "Night mode" }).boundingBox();
+      assert.equal(switchBox.height, 32, "native small switch height, not stretched");
+      if (width >= 640) assert.ok(title.y < headerBox.y + 40, "tablet title stays in first row");
+      assert.equal(await connection.evaluate(el => getComputedStyle(el).backgroundColor), "rgba(0, 0, 0, 0)", "no text backing panel");
       const main = page.locator("main");
       const button = main.getByRole("link", { name: "Create your Gigster profile" });
       assert.equal(await button.getAttribute("href"), "/join/");
