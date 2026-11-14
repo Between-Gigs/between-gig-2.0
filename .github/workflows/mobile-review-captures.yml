@@ -25,10 +25,8 @@ jobs:
           (async () => {
             const browser = await chromium.launch();
             const targets = [
-              ['home', 'https://between-gigs.github.io/between-gig-2.0/'],
-              ['professionals', 'https://between-gigs.github.io/between-gig-2.0/professionals/'],
               ['signup', 'https://between-gigs.github.io/between-gig-2.0/join/'],
-              ['login', 'https://test.between-gigs.com/login/']
+              ['pages-login', 'https://between-gigs.github.io/between-gig-2.0/login/']
             ];
             fs.mkdirSync('captures', {recursive:true});
             const report = [];
@@ -39,7 +37,7 @@ jobs:
               await page.evaluate(() => document.fonts.ready);
               await page.waitForTimeout(2500);
               const body = await page.locator('body').innerText();
-              const info = {name, requestedUrl:url, url:page.url(), observedAt:new Date().toISOString(),status:response?.status(),viewport:{width:390,height:844}, title:await page.title(), gateSuspected:/testing password|enter.*password.*preview|site password/i.test(body),frames:[]};
+              const info = {name, requestedUrl:url, url:page.url(), observedAt:new Date().toISOString(),status:response?.status(),viewport:{width:390,height:844}, title:await page.title(), gateSuspected:response?.status()===401 || /testing password|passphrase|enter.*password.*preview|site password/i.test(body),frames:[]};
               let previous = -1;
               for(let n=0;n<70;n++){
                 const geometry = await page.evaluate(() => ({x:scrollX,y:scrollY,height:innerHeight,width:innerWidth,documentHeight:document.documentElement.scrollHeight,scrollWidth:document.documentElement.scrollWidth}));
