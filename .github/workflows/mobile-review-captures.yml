@@ -1,0 +1,69 @@
+name: Anonymous mobile review captures
+on:
+  push:
+    branches: [qa/mobile-review-captures-20261114]
+    paths: [.github/workflows/mobile-review-captures.yml]
+permissions: {}
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Prepare isolated browser
+        run: |
+          mkdir -p /tmp/bg-review
+          cd /tmp/bg-review
+          npm init -y
+          npm install --ignore-scripts --save-exact playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Capture anonymous live pages
+        working-directory: /tmp/bg-review
+        run: |
+          cat > capture.cjs <<'JS'
+          const { chromium } = require('playwright');
+          const fs = require('fs');
+          (async () => {
+            const browser = await chromium.launch();
+            const targets = [
+              ['home', 'https://between-gigs.github.io/between-gig-2.0/'],
+              ['professionals', 'https://between-gigs.github.io/between-gig-2.0/professionals/'],
+              ['signup', 'https://between-gigs.github.io/between-gig-2.0/join/'],
+              ['login', 'https://test.between-gigs.com/login/']
+            ];
+            fs.mkdirSync('captures', {recursive:true});
+            const report = [];
+            for (const [name,url] of targets) {
+              const context = await browser.newContext({viewport:{width:390,height:844}, deviceScaleFactor:1, isMobile:true, hasTouch:true});
+              const page = await context.newPage();
+              const response = await page.goto(url,{waitUntil:'networkidle',timeout:60000}).catch(async () => null);
+              await page.evaluate(() => document.fonts.ready);
+              await page.waitForTimeout(2500);
+              const body = await page.locator('body').innerText();
+              const info = {name, requestedUrl:url, url:page.url(), observedAt:new Date().toISOString(),status:response?.status(),viewport:{width:390,height:844}, title:await page.title(), gateSuspected:/testing password|enter.*password.*preview|site password/i.test(body),frames:[]};
+              let previous = -1;
+              for(let n=0;n<70;n++){
+                const geometry = await page.evaluate(() => ({x:scrollX,y:scrollY,height:innerHeight,width:innerWidth,documentHeight:document.documentElement.scrollHeight,scrollWidth:document.documentElement.scrollWidth}));
+                if(geometry.y===previous)break;
+                previous=geometry.y;
+                const filename = name+'-'+String(n).padStart(3,'0')+'.png';
+                await page.screenshot({path:'captures/'+filename,fullPage:false,animations:'disabled'});
+                info.frames.push({filename,...geometry});
+                if(geometry.y+geometry.height>=geometry.documentHeight-1)break;
+                await page.evaluate(() => window.scrollBy(0,720));
+                await page.waitForTimeout(350);
+              }
+              fs.writeFileSync('captures/'+name+'-metadata.json',JSON.stringify(info,null,2));
+              report.push(info);
+              await context.close();
+            }
+            fs.writeFileSync('captures/manifest.json',JSON.stringify(report,null,2));
+            await browser.close();
+          })().catch(error=>{console.error(error);process.exit(1)});
+          JS
+          node capture.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: genuine-mobile-review-captures
+          path: /tmp/bg-review/captures/
+          retention-days: 3
