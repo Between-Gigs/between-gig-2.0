@@ -11,9 +11,9 @@ export const JOIN_LABEL = "Create your Gigster profile";
 export const REASONS = ["You set your rates.", "Choose your projects.", "Decide when you're available."] as const;
 
 /** The join button: primary, large, "Create your Gigster profile →". */
-export function JoinButton({ label = JOIN_LABEL, className }: { label?: string; className?: string }) {
+export function JoinButton({ label = JOIN_LABEL, href = JOIN_HREF, className }: { label?: string; href?: string; className?: string }) {
   return (
-    <ButtonLink href={JOIN_HREF} variant="primary" size="lg" iconEnd={<ArrowRight aria-hidden="true" />} className={cx("h-14! px-7! text-heading-sm! [&_svg]:size-5!", className)}>
+    <ButtonLink href={href} variant="primary" size="lg" iconEnd={<ArrowRight aria-hidden="true" />} className={cx("h-14! px-7! text-heading-sm! [&_svg]:size-5!", className)}>
       {label}
     </ButtonLink>
   );

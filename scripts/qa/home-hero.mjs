@@ -61,5 +61,20 @@ try {
       await context.close();
     }
   }
-  console.log("PASS: homepage hero copy, line breaks, CTA, centred header title, theme toggle, no overflow at 7 widths × 2 modes");
+  // Signed in: the hero's button leads to the person's own page instead of sign-up, and "free to join" steps aside.
+  for (const [role, who, label, href] of [["gigster", "maya", "Go to my profile", "/profile/"], ["owner", undefined, "Go to the dashboard", "/owners/"]]) {
+    const context = await browser.newContext({ viewport: { width: 390, height: 900 } });
+    const page = await context.newPage();
+    await page.goto(base + "/");
+    await page.waitForFunction(() => "bgSample" in window);
+    await page.evaluate(([r, w]) => window.bgSample.reset().then(() => window.bgSample.signInAs(r, w)), [role, who]);
+    await page.goto(base + "/");
+    const cta = page.locator("main").getByRole("link", { name: label });
+    await cta.waitFor();
+    assert.equal(await cta.getAttribute("href"), href, `${role} hero button`);
+    assert.equal(await page.locator("main").getByRole("link", { name: "Create your Gigster profile" }).count(), 0);
+    assert.equal(await page.locator("main").getByText("It’s free to join!", { exact: true }).count(), 0);
+    await context.close();
+  }
+  console.log("PASS: homepage hero copy, line breaks, CTA, centred header title, theme toggle, no overflow at 7 widths × 2 modes; signed-in Gigster and owner buttons");
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }

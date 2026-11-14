@@ -10,6 +10,7 @@ import { Logo } from "@ds/components";
 import { PhotoStage } from "@/components/ds/organisms";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { useSession } from "@/lib/session";
 import { JoinButton } from "./JoinCta";
 
 export const STILL_LIFE = { image: "/art/stage/still-life-desktop.jpg", portrait: "/art/stage/still-life-portrait.jpg" } as const;
@@ -18,6 +19,11 @@ export const STILL_LIFE = { image: "/art/stage/still-life-desktop.jpg", portrait
 const Rule = ({ className = "w-8 sm:w-12" }: { className?: string }) => <span aria-hidden="true" className={`h-px shrink-0 bg-accent-gold ${className}`} />;
 
 export function ComingSoon() {
+  // Someone already signed in gets their own way in instead of the sign-up button (Anowar, 14 Nov 2026). Visitors,
+  // and everyone while the session is still being read, see the client's "Create your Gigster profile".
+  const { session, loading } = useSession();
+  const member = loading ? null : session;
+  const cta = member ? (member.role === "owner" ? { href: "/owners/", label: "Go to the dashboard" } : { href: "/profile/", label: "Go to my profile" }) : null;
   return (
     <div className="flex min-h-dvh flex-col overflow-x-clip bg-bg text-ink">
       <SiteHeader />
@@ -38,8 +44,8 @@ export function ComingSoon() {
                 Put your behind-the-scenes skills to work beyond the set.
               </p>
               <div className="mt-6 grid justify-items-center gap-2.5">
-                <JoinButton className="max-w-full rounded-full! shadow-md md:h-16! md:px-10! md:text-body-lg! font-semibold!" />
-                <p className="text-body-md font-bold italic text-ink sm:text-body-lg md:text-heading-md">It&rsquo;s free to join!</p>
+                <JoinButton {...cta} className="max-w-full rounded-full! shadow-md md:h-16! md:px-10! md:text-body-lg! font-semibold!" />
+                {!member && <p className="text-body-md font-bold italic text-ink sm:text-body-lg md:text-heading-md">It&rsquo;s free to join!</p>}
               </div>
               <div data-home-connection className="mt-6 grid justify-items-center gap-0.5 text-body-lg leading-snug max-xs:text-body-md text-ink md:text-heading-lg">
                 <p className="flex items-center gap-3 font-medium italic max-xs:gap-2 sm:gap-5"><Rule className="w-6 max-xs:w-4 sm:w-14" />Let us connect you to<Rule className="w-6 max-xs:w-4 sm:w-14" /></p>
