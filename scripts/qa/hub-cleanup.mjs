@@ -27,6 +27,28 @@ try {
     }
     const scratchpad = page.locator('section[aria-labelledby="scratchpad-h"]');
     assert.equal(await scratchpad.getByRole("link", { name: /Draft homepage/ }).getAttribute("href"), `${base}/preview/drafts/home-peter/`);
+    if (width === 1440 && theme === "light") {
+      const report = [];
+      const hosts = page.locator("[data-guide-preview-mode]");
+      const count = await hosts.count();
+      for (let index = 0; index < count; index++) {
+        const host = hosts.nth(index);
+        await host.scrollIntoViewIfNeeded();
+        const iframe = host.locator("iframe");
+        await iframe.waitFor();
+        const frame = host.frameLocator("iframe");
+        await frame.locator("html[data-guide-ready]").waitFor({ state: "attached" });
+        await frame.locator("main h1").first().waitFor({ state: "attached" });
+        const actual = await iframe.evaluate(el => ({ title: el.title, source: new URL(el.src).pathname,
+          path: el.contentWindow.location.pathname, heading: el.contentDocument.querySelector("main h1")?.textContent,
+          identity: el.contentWindow.name }));
+        assert.equal(actual.path, actual.source, `${actual.title} stays on its intended route`);
+        assert.notEqual(actual.heading, "Owners only", `${actual.title} renders content rather than an owner gate`);
+        report.push(actual);
+      }
+      fs.writeFileSync("deliverables/hub-cleanup/rendered-catalog.json", JSON.stringify(report, null, 2));
+      console.log(`PASS: inspected all ${count} rendered Hub preview routes and headings`);
+    }
     const outerSession = await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2") ?? "null")?.session ?? null);
     const journey = page.locator('section[aria-labelledby="journey-h"]');
     for (const [title, route, expected] of [
@@ -44,6 +66,9 @@ try {
       assert.ok(await frame.locator("body").evaluate(el => !el.innerText.includes("Loading your profile")), "preview content loaded");
     }
     assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2") ?? "null")?.session ?? null), outerSession, "thumbnails preserve viewing account");
+    const staffCard = page.locator('section[aria-labelledby="tools-h"] li').filter({ has: page.getByRole("button", { name: /^Staff & access/ }) });
+    await staffCard.scrollIntoViewIfNeeded();
+    await staffCard.frameLocator("iframe").locator("main h1").filter({ hasText: /^Staff$/ }).waitFor({ state: "attached" });
     const group = journey.getByRole("radiogroup", { name: "The Gigster journey previews" });
     const full = group.getByRole("radio", { name: "Full height", exact: true });
     const box = await full.boundingBox();
@@ -96,6 +121,16 @@ try {
       await page.goto(`${url}/emails/${name}/`);
       await page.frameLocator("iframe").locator("body").waitFor();
       assert.ok((await page.frameLocator("iframe").locator("body").innerText()).length > 100, "retired direct URL remains recoverable");
+    }
+    if (width === 390 && theme === "light") {
+      for (const [title, path] of [["Edit your profile", "/profile/canvas/"], ["Profile submitted", "/profile/submitted/"]]) {
+        await page.goto(`${url}/hub/`);
+        await page.locator('section[aria-labelledby="journey-h"]').getByRole("button", { name: new RegExp(`^${title}`) }).click();
+        await page.waitForURL(location => location.pathname === `${base}${path}`);
+        await page.waitForFunction(() => Boolean(window.bgSample));
+        assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).session.role), "gigster");
+        if (title === "Profile submitted") await page.getByRole("heading", { name: "Profile submitted.", exact: true }).waitFor();
+      }
     }
     await context.close();
     console.log(`PASS: Hub cleanup ${width}px/${theme}: rendered profile previews, scoped full-height controls, keyboard/axe, archive recovery and Scratchpad`);
