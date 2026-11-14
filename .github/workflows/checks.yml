@@ -36,6 +36,7 @@ jobs:
           node scripts/qa/auth-flow.mjs
           node scripts/qa/profile-entry.mjs
           node scripts/qa/hub-staff.mjs
+          node scripts/qa/owner-sidebar.mjs
           node scripts/qa/signed-out-navigation.mjs
           node scripts/qa/home-hero.mjs
           node scripts/qa/sample-order.mjs
