@@ -54,7 +54,7 @@ const groups: { id: string; art: SectionArt; title: string; body: string; pages:
     { href: "/preview/wallpapers/", title: "Wallpapers & background art", body: "Download the invitation artwork and Call Sheet backgrounds." },
     { href: "/preview/footers/", title: "Footer photos", body: "Four photo bands for the footer, on the real footer, to pick one." },
     { href: "/workspace/", title: "Workspace", body: "Every project in one shell: switcher, ⌘K, folders, and each page inside it." },
-    { href: "/owners/staff/", title: "Staff & access", body: "Manage invitations, multiple roles and access rules in the sample dashboard." },
+    { href: "/owners/staff/", as: "owner", title: "Staff & access", body: "Manage invitations, multiple roles and access rules in the sample dashboard." },
     { href: "/studio/", title: "Studio", body: "A page designer with a CMS: tables, galleries, kanban, lists and calendars." },
     { href: "/preview/curtain/", title: "Curtain tuner", body: "Tune the home page curtain live and copy your favourite settings." },
     { href: "/preview/cursors/", title: "Mouse effects", body: "Try five mouse effects and pick one for the site." },
@@ -179,6 +179,11 @@ function Guide() {
   const view: GuideView = "grid";
   const toast = useToast();
   const asGigster = async (id: string, go: string) => { await data.demo?.signInAs("gigster", id); router.push(go); };
+  const openSamplePage = async (as: string, go: string) => {
+    if (as === "owner") await data.demo?.signInAs("owner");
+    else if (as.startsWith("gigster:")) await data.demo?.signInAs("gigster", as.slice("gigster:".length));
+    router.push(go);
+  };
   const asVisitor = async () => { await data.auth.signOut(); router.push(basePath === "/hub" ? "/home/" : "/"); };
   const reset = async () => { await data.demo?.reset(); toast({ message: "Sample data reset", tone: "success" }); };
   const startInvite = async () => {
@@ -279,7 +284,7 @@ function Guide() {
         {groups.map((gr, gi) => (
           <Section key={gr.id} art={gr.art} n={String(gi + (data.demo ? 4 : 3)).padStart(2, "0")} id={`${gr.id}-h`} title={gr.title} body={gr.body}>
             <ul className={listClass(view, gr.pages.length)}>
-              {gr.pages.map((pg) => <li key={pg.href}><GuideCard view={view} title={pg.title} body={pg.body} href={pg.href} as={pg.as} onClick={pg.as?.startsWith("gigster:") ? () => void asGigster(pg.as!.slice("gigster:".length), pg.href) : undefined} /></li>)}
+              {gr.pages.map((pg) => <li key={pg.href}><GuideCard view={view} title={pg.title} body={pg.body} href={pg.href} as={pg.as} onClick={pg.as ? () => void openSamplePage(pg.as!, pg.href) : undefined} /></li>)}
             </ul>
           </Section>
         ))}
