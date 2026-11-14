@@ -47,7 +47,6 @@ const groups: { id: string; art: SectionArt; title: string; body: string; pages:
     { href: "/professionals/", title: "For professionals", body: "Why join, with every button going straight to sign-up." },
     { href: "/storyboard/", title: "The Storyboard", body: "The interactive sketchbook and its forms." },
     { href: "/crew-call/", title: "Crew Call", body: "Hollywood talent at your service: the client-side call sheet." },
-    { href: "/proposals/home/", title: "Home once we open", body: "Three proposals: visitor, Gigster, owner." },
   ] },
   { id: "tools", art: { icon: "toolbox", tint: "bg-tint-butter" }, title: "Studio and design tools", body: "For the team: the workspace, the page designer and the effects.", pages: [
     { href: "/preview/profile-editor/", title: "Gigster profile editor", body: "Choose required fields, arrange the form and adjust the profile page." },
@@ -66,6 +65,7 @@ const groups: { id: string; art: SectionArt; title: string; body: string; pages:
   ] },
   { id: "scratchpad", art: { icon: "memo", tint: "bg-tint-peach" }, title: "Scratchpad", body: "Current work in progress, separate from the live site.", pages: [
     { href: "/preview/drafts/home-peter/", title: "Draft homepage", body: "The current homepage direction, with the original artwork and working light/dark switch." },
+    { href: "/proposals/home/", title: "Home once we open", body: "Three proposals: visitor, Gigster, owner." },
   ] },
 ];
 

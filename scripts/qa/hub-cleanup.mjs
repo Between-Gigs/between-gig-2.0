@@ -27,6 +27,8 @@ try {
     }
     const scratchpad = page.locator('section[aria-labelledby="scratchpad-h"]');
     assert.equal(await scratchpad.getByRole("link", { name: /Draft homepage/ }).getAttribute("href"), `${base}/preview/drafts/home-peter/`);
+    assert.equal(await scratchpad.getByRole("link", { name: /Home once we open/ }).getAttribute("href"), `${base}/proposals/home/`);
+    assert.equal(await page.locator('section[aria-labelledby="public-h"] a[href$="/proposals/home/"]').count(), 0);
     if (width === 1440 && theme === "light") {
       const report = [];
       const hosts = page.locator("[data-guide-preview-mode]");
