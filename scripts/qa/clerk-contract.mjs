@@ -112,6 +112,7 @@ try {
     await page.goto(`${hosted.url}/login/?next=${encodeURIComponent(`${basePath}//outside.example/`)}`);
     await page.waitForURL(new RegExp(`${basePath}/profile/canvas/$`));
     assert.equal(new URL(page.url()).origin, new URL(hosted.url).origin, "base-prefixed protocol-relative next is rejected");
+    await page.getByText("How I can help", { exact: false }).first().waitFor();
     await page.getByRole("button", { name: /Account: New Account/ }).click();
     await page.getByRole("menuitem", { name: "Log out", exact: true }).click();
     await page.waitForURL((url) => url.pathname === `${basePath}/login/`);
