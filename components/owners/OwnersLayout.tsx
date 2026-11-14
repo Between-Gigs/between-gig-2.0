@@ -1,6 +1,6 @@
 "use client";
 import { useSession } from "@/lib/session";
-import { OwnerFrame } from "./OwnerShell";
+import { OwnerFrame, useInOwnerFrame } from "./OwnerShell";
 import { markArea } from "@/lib/split-area";
 
 markArea("bg-split:dashboard");
@@ -11,6 +11,8 @@ markArea("bg-split:dashboard");
  */
 export function OwnersLayout({ children }: { children: React.ReactNode }) {
   const { session, loading } = useSession();
+  const inFrame = useInOwnerFrame();
+  if (inFrame) return <>{children}</>;
   if (loading || session?.role === "owner") return <OwnerFrame>{children}</OwnerFrame>;
   return <>{children}</>;
 }

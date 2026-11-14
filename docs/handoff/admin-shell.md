@@ -1,0 +1,11 @@
+# Persistent preview workspace
+
+The isolated sample export keeps one admin frame mounted while navigating owner pages, Hub, `/preview/` tools and the email gallery. The existing owner layout and email wrapper recognize the shared frame instead of nesting another sidebar or main landmark. Catalogue pages use the frame's header and content scroller. Sidebar section/rail preferences, responsive drawers and their normal role-aware account actions remain available.
+
+Opening a preview never grants an owner role. Non-owner preview visitors get Overview, Previews and Studio navigation, with no owner counts or people-management search. Dashboard remains an ordinary guarded destination; from embedded `/hub` it returns to the real application's `/owners/` with full document navigation. Owners keep the full menu. Actual visitor routes, auth, profile/editor workflows, permissions and provider settings are unchanged.
+
+Draft pages and footer comparisons demonstrate public chrome inside a separate viewport, retaining their own header, footer, artwork and controls. The inner document bypasses the outer preview frame by its same-origin frame attribute; it cannot recursively frame itself. `preview=standalone` is honored only on these already-public review routes, for an explicit standalone view. It changes no authorization or protected content. Passive Hub thumbnails and the existing workspace embeds bypass the new outer shell as well.
+
+The live server aliases the sample-only root wrapper to a plain server component. Public Page uses a lightweight frame context, preserving the existing public/dashboard code split and sample-data boundary. Full server and live-bundle checks are required before release.
+
+Coordination baseline: main `1adf0f2`, including the independent profile-editor copy change. This work avoids the profile editor, invitation copy/art and public SiteHeader/SiteFooter source. Recheck main and overlapping files before integration. QA uses fresh fictional contexts only; it covers read-only and owner navigation, stable shell DOM, mobile drawers, one main landmark, faithful draft/standalone rendering and theme switch, non-owner guards, unchanged public chrome, axe/contrast and both themes at 320–1440px.

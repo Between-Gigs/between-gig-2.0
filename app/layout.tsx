@@ -4,6 +4,7 @@ import { LookSync } from "@/components/site/LookSync";
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Providers } from "@/components/site/Providers";
+import { AdminRoutes } from "@/components/site/AdminRoutes";
 import { share, siteOrigin } from "@/lib/og";
 import "./globals.css";
 
@@ -45,7 +46,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="bg-bg text-ink">
-        <Providers><LookSync />{children}</Providers>
+        <Providers><LookSync /><AdminRoutes>{children}</AdminRoutes></Providers>
       </body>
     </html>
   );

@@ -153,7 +153,7 @@ try {
     await page.evaluate(() => scrollBy(0, -120));
     await scratchpad.screenshot({ path: `deliverables/hub-cleanup/scratchpad-${width}-${theme}.png` });
     await scratchpad.getByRole("link", { name: /Draft homepage/ }).click();
-    await page.locator('[data-preview-title]').waitFor();
+    await page.frameLocator('iframe[data-admin-page-preview]').locator('[data-preview-title]').waitFor();
     assert.equal(await page.locator('meta[name="robots"]').getAttribute("content"), "noindex, nofollow");
     await page.goto(`${url}/emails/`);
     assert.equal(await page.locator('main a[href$="/emails/welcome/"], main a[href$="/emails/coming-soon/"]').count(), 0, "retired templates absent from active email list");

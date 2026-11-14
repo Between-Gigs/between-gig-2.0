@@ -25,7 +25,11 @@ const config: NextConfig = {
   trailingSlash: true,
   images: { unoptimized: true },
   reactStrictMode: true,
-  ...(live && { turbopack: { resolveAlias: { "@/lib/data/selected": "./lib/data/selected.live.ts", "@/lib/staff/selected": "./lib/staff/selected.live.ts" } } }),
+  ...((live || server) && { turbopack: { resolveAlias: {
+    ...(live && { "@/lib/data/selected": "./lib/data/selected.live.ts", "@/lib/staff/selected": "./lib/staff/selected.live.ts" }),
+    // The persistent preview frame belongs to the isolated sample export, not the public site's bundle.
+    ...(server && { "@/components/site/AdminRoutes": "./components/site/AdminRoutes.server.tsx" }),
+  } } }),
   ...(server && {
     // *.server.ts(x) files exist only in this build (proxy.server.ts, F1's route handlers): the export never sees them.
     pageExtensions: ["tsx", "ts", "jsx", "js", "server.tsx", "server.ts"],
