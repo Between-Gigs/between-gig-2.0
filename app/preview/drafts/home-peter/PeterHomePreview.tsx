@@ -65,7 +65,7 @@ export function PeterHomePreview() {
                 </a>
                 <p className="text-body-md font-semibold italic">It’s free to join!</p>
               </div>
-              <div className="grid w-full max-w-3xl justify-items-center gap-1 sm:mt-1" data-preview-connection>
+              <div className="grid w-full max-w-3xl justify-items-center gap-1 sm:mt-1 md:rounded-xl md:bg-bg/90 md:px-5 md:py-3 md:backdrop-blur-sm" data-preview-connection>
                 <p className="flex max-w-full items-center justify-center gap-3 text-body-md font-bold italic leading-relaxed sm:gap-5 sm:text-body-lg">
                   <span aria-hidden="true" className="h-px w-4 shrink-0 bg-accent-gold sm:w-16" />
                   <span>Let us connect you to</span>
