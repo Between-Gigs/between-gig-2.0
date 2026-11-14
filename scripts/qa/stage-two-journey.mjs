@@ -16,9 +16,11 @@ try {
     const page = await context.newPage();
     page.setDefaultTimeout(15000);
     await page.goto(`${url}/preview/gigster-journey/`);
-    const invitation = page.getByRole("article");
-    assert.equal(await invitation.getByRole("link").count(), 1);
-    await invitation.getByRole("link", { name: "Create your profile" }).click();
+    await page.waitForURL(location => location.pathname.endsWith("/emails/invite/"));
+    const invitation = page.frameLocator("iframe");
+    assert.equal(await invitation.getByRole("link", { name: /^Create your profile/ }).count(), 1);
+    // The canonical email starts the normal invite/signup flow. Keep testing the separate account experiment too.
+    await page.goto(`${url}/preview/gigster-journey/account/`);
     await page.getByRole("combobox", { name: "Profile example" }).click();
     await page.getByRole("option", { name, exact: true }).click();
     // The list closes and the choice re-renders the form; tick the box only once that has settled.
