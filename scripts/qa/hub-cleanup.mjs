@@ -53,6 +53,9 @@ try {
     }
     const outerSession = await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2") ?? "null")?.session ?? null);
     const journey = page.locator('section[aria-labelledby="journey-h"]');
+    assert.equal(await page.locator('main a[href$="/preview/gigster-journey/account/"]').count(), 0, "alternate account prototype is absent from Hub cards and shortcuts");
+    assert.equal(await journey.getByRole("link", { name: /^Invite email/ }).getAttribute("href"), `${base}/emails/invite/`);
+    assert.equal(await journey.getByRole("link", { name: /^Sign up/ }).getAttribute("href"), `${base}/join/`);
     for (const [title, route, expected] of [
       ["Edit your profile", "/profile/canvas/", "How I can help"],
       ["Profile submitted", "/profile/submitted/", "Profile submitted."],
