@@ -45,10 +45,17 @@ export const craftSignOff = (text: string, mt = 22) =>
   `<p style="margin:${mt}px 0 0;font-family:${SANS};font-size:12px;line-height:18px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${k.ink}">${esc(text)}</p>`;
 
 /** The photo frame around the cream card, with logo, eyebrow and rule; `inner` follows the rule. */
-export function craftHero({ eyebrow, inner, ctx }: { eyebrow: string; inner: string; ctx: EmailContext }) {
+export function craftHero({ eyebrow, inner, ctx, openPaper = false }: { eyebrow: string; inner: string; ctx: EmailContext; openPaper?: boolean }) {
   const frame = `${ctx.assetBase}/email/craft-invitation-portrait.jpg`;
   const strip = `${ctx.assetBase}/email/craft-invitation-desktop.jpg`;
   const logo = `${ctx.assetBase}/email/between-gigs-wide-on-light.png`;
+  if (openPaper) return `<table ${T} class="e-invite-scene" width="100%" height="784" bgcolor="${k.cream}" background="${esc(frame)}" style="height:784px;background-color:${k.cream};background-image:url('${esc(frame)}');background-size:100% 100%;background-position:center;background-repeat:no-repeat">
+<tr><td class="e-invite-center" align="center" valign="top" style="padding:110px 118px 230px;font-family:${SANS};text-align:center">
+<img class="e-invite-logo" src="${esc(logo)}" width="112" height="35" alt="Between Gigs" style="display:block;margin:0 auto;width:112px;height:35px;border:0;color:${k.ink};font-size:18px;font-weight:600">
+<p class="e-invite-eyebrow" style="margin:28px 0 10px;font-size:11px;line-height:14px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:${k.muted}">${esc(eyebrow)}</p>
+<div class="e-invite-rule" style="margin:0 auto 22px;width:28px;height:2px;line-height:2px;font-size:1px;background-color:${k.rule}">&nbsp;</div>
+${inner}
+</td></tr></table>`;
   return `<!--[if !mso]><!--><div class="e-k-strip" style="display:none;max-height:0;overflow:hidden;mso-hide:all"><img src="${esc(strip)}" width="600" alt="" style="display:block;width:100%;height:auto;border:0"></div><!--<![endif]-->
 <table ${T} width="100%" bgcolor="${k.sand}" background="${esc(frame)}" style="background-color:${k.sand};background-image:url('${esc(frame)}');background-size:cover;background-position:center">
 <tr><td class="e-k-frame" align="center" style="padding:88px 60px">

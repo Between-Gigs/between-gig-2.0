@@ -25,6 +25,15 @@ describe("canonical Stage 2 invitation", () => {
     }
   });
 
+  it("places live hero text directly on the existing clear-center wallpaper", () => {
+    const html = invite(props).html;
+    expect(html).toContain('class="e-invite-scene"');
+    expect(html).toContain('/email/craft-invitation-portrait.jpg');
+    expect(html).not.toContain('class="e-k-card"');
+    expect(html).not.toContain('class="e-k-strip"');
+    expect(html).not.toContain("DESIGN CONCEPT");
+  });
+
   it("retains Resend's send-time macro and the verified footer without a personal token", () => {
     const email = invite(props);
     expect(email.html).toContain(`href="${INVITE_UNSUBSCRIBE}"`);

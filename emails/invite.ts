@@ -31,8 +31,8 @@ export const INVITE_COPY = {
 export function invite({ inviteUrl }: InviteProps, ctx: EmailContext = defaultContext): RenderedEmail {
   const c = INVITE_COPY;
   const hero = [
-    craftTitle(c.title),
-    `<p style="margin:0 auto;max-width:420px;font-family:${SANS};font-size:17px;line-height:26px;color:${k.ink}">${esc(c.lead)}</p>`,
+    craftTitle(c.title).replace('class="e-k-h1"', 'class="e-k-h1 e-invite-title"'),
+    `<p class="e-invite-lead" style="margin:0 auto;max-width:420px;font-family:${SANS};font-size:17px;line-height:26px;color:${k.ink}">${esc(c.lead)}</p>`,
   ].join("\n");
   const details = [
     craftP(esc(c.opening), { size: 16, mb: 20, color: k.ink }),
@@ -44,7 +44,7 @@ export function invite({ inviteUrl }: InviteProps, ctx: EmailContext = defaultCo
     `<div style="padding-top:24px">${craftP(esc(c.closing), { size: 16, color: k.ink })}</div>`,
     craftSignOff(SIGN_OFF),
   ].join("\n");
-  const body = craftHero({ eyebrow: c.eyebrow, inner: hero, ctx }) + craftPaper(details);
+  const body = craftHero({ eyebrow: c.eyebrow, inner: hero, ctx, openPaper: true }) + craftPaper(details);
   const text = `${c.subject}\n\n${c.eyebrow.toUpperCase()}\n\n${c.title.join(" ")}\n\n${c.lead}\n\n${c.opening}\n\n${c.stage}\n\n${c.introduction}\n\n${c.nextTitle} ${c.next}\n\n${c.ready}\n\n${c.cta.toUpperCase()}:\n${inviteUrl}\n\n${c.closing}\n\n${SIGN_OFF}\n\n${textFooter(INVITE_REASON, ctx.siteUrl, INVITE_UNSUBSCRIBE)}`;
   return {
     subject: c.subject,

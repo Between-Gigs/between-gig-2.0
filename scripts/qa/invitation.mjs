@@ -8,7 +8,7 @@ const { server, url } = await serve("out", { base: process.env.NEXT_PUBLIC_BASE_
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? "/usr/bin/chromium" });
 fs.mkdirSync("deliverables/invitation", { recursive: true });
 try {
-  for (const width of [390, 768, 1440]) for (const theme of ["light", "dark"]) for (const blocked of [false, true]) {
+  for (const width of [320, 390, 768, 1440]) for (const theme of ["light", "dark"]) for (const blocked of [false, true]) {
     const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: theme, reducedMotion: "reduce" });
     await context.addInitScript(t => localStorage.setItem("bg-theme", t), theme);
     if (blocked) await context.route(/\/email\/.*\.(?:png|jpg|webp)/, route => route.abort());
@@ -17,6 +17,26 @@ try {
     const frame = page.frameLocator("iframe");
     await frame.getByRole("heading", { name: "Your craft. More possibilities." }).waitFor();
     assert.equal(await frame.getByRole("link", { name: /^Create your profile/ }).count(), 1);
+    assert.equal(await frame.locator(".e-k-card").count(), 0, "hero has no white content card");
+    const scene = frame.locator(".e-invite-scene");
+    await frame.locator("body").evaluate(async () => { await document.fonts.ready; });
+    await scene.screenshot({ path: `deliverables/invitation/hero-${width}-${theme}${blocked ? "-images-blocked" : ""}.png` });
+    await frame.locator("body").evaluate(async () => { await document.fonts.ready; });
+    await frame.locator("body").evaluate(() => { window.scrollTo(0, 0); });
+    const geometry = await scene.evaluate(el => {
+      const box = el.getBoundingClientRect();
+      return { ratio: box.height / box.width, content: [...el.querySelectorAll("h1, .e-invite-lead")].map(node => {
+        const range = document.createRange(); range.selectNodeContents(node);
+        return [...range.getClientRects()].map(rect => ({ left: (rect.left - box.left) / box.width, right: (rect.right - box.left) / box.width }));
+      }).flat() };
+    });
+    assert.ok(geometry.ratio > 1.15 && geometry.ratio < 1.5, `scene preserves artwork proportions: ${geometry.ratio}`);
+    assert.ok(geometry.content.every(rect => rect.left > .10 && rect.right < .90), "live hero type stays inside the artwork center");
+    if (!blocked) {
+      await page.locator("iframe").evaluate((el, source) => { el.contentWindow.eval(source); }, fs.readFileSync("node_modules/axe-core/axe.min.js", "utf8"));
+      const violations = await frame.locator("body").evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } })).violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) })));
+      assert.deepEqual(violations, [], "email keyboard/contrast/accessibility");
+    }
     const cta = frame.getByRole("link", { name: /^Create your profile/ });
     assert.match(await cta.getAttribute("href"), /\/join\/\?invite=/);
     await cta.focus();
@@ -41,5 +61,5 @@ try {
     assert.equal(await page.getByRole("link", { name: "1 · Invitation" }).getAttribute("href"), `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/emails/invite/`);
     await context.close();
   }
-  console.log("PASS: canonical invitation, copy, footer, keyboard CTA, light intent in both themes, images-blocked fallback, legacy alias and account stage at 390/768/1440px (12 layouts)");
+  console.log("PASS: canonical invitation, copy, footer, keyboard CTA, light intent in both themes, images-blocked fallback, legacy alias and account stage at 320/390/768/1440px (16 layouts)");
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
