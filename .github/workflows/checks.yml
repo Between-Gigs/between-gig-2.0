@@ -35,6 +35,7 @@ jobs:
         run: |
           node scripts/qa/auth-flow.mjs
           node scripts/qa/hub-staff.mjs
+          node scripts/qa/signed-out-navigation.mjs
           pnpm qa:flow
           node scripts/qa/funnel-cohort.mjs
       - name: Build Pages configuration with Clerk
