@@ -60,13 +60,6 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
   return (
     // Swiss (product screens): the same row on a 12-column grid from md (logo · links · account), closed by a 4px ink rule.
     <header className={cx("sticky top-0 embedded:hidden! z-sticky border-b border-line shadow-md" /* a clear drop shadow (client, 13 Nov 2026) */, app ? "bg-surface" : "bg-bg swiss:border-b-0 swiss:shadow-none")}>
-      {/* Phones, signed out: the Call Sheet as a slim forest band across the top, ruled in gold like the Coming soon
-          seal, so the row below keeps just the logo, Day/Night, Sign in and Sign up. */}
-      {!app && !loading && !session && (
-        <p data-header-title className="flex items-center justify-center gap-3 bg-surface-brand px-4 py-1.5 font-display text-label-md font-semibold tracking-wide text-ink-on-brand sm:hidden">
-          <span aria-hidden="true" className="h-px w-6 bg-accent-gold" />Los Angeles Call Sheet<span aria-hidden="true" className="h-px w-6 bg-accent-gold" />
-        </p>
-      )}
       <div className={cx("mx-auto px-4 sm:px-6", app ? "max-w-none lg:px-5" : "max-w-7xl")}>
       <div className={cx("flex h-16 items-center gap-2 sm:gap-4 lg:h-20", app ? "h-16! gap-2" : "swiss:border-b-4 swiss:border-line-strong swiss:md:grid swiss:md:grid-cols-12 swiss:md:gap-x-6")}>
         {onOpenNav && <IconButton label="Open owner menu" variant="ghost" icon={<MenuIcon />} onClick={onOpenNav} className="lg:hidden" />}
@@ -125,6 +118,13 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
         </div>
       </div>
       </div>
+      {/* Phones, signed out: the Call Sheet as a slim forest band under the bar (Justin, 14 Nov 2026), ruled in gold like
+          the Coming soon seal, so the bar keeps just the logo, Day/Night, Sign in and Sign up. */}
+      {!app && !loading && !session && (
+        <p data-header-title className="flex items-center justify-center gap-3 bg-surface-brand px-4 py-1.5 font-display text-label-md font-semibold tracking-wide text-ink-on-brand sm:hidden">
+          <span aria-hidden="true" className="h-px w-6 bg-accent-gold" />Los Angeles Call Sheet<span aria-hidden="true" className="h-px w-6 bg-accent-gold" />
+        </p>
+      )}
     </header>
   );
 }

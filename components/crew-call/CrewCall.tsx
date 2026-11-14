@@ -11,7 +11,6 @@ import * as React from "react";
 import { comingSoon, hero, services, testimonials, type CrewIcon } from "@/lib/crew-call";
 import { asset } from "@/lib/site";
 import { crewCallDark } from "@/lib/wallpaper-theme";
-import { ThemedImg } from "@/components/ui/ThemedImg";
 import { Planner, type PlannerTopic } from "@/components/funnel/Storyboard";
 import { Page } from "@/components/site/Page";
 
@@ -34,20 +33,22 @@ const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matc
  * service filled in.
  */
 /** One Crew Call service, as in Justin's design: the patch and serif title, one line, "View service", and the
- * still-life object fading in at the right edge. The whole tile opens the request form. */
+ * still-life object fading in at the right edge. The whole tile opens the request form.
+ * Dark mode (Justin, 14 Nov 2026: "the images didn't need to change"): the tile stays a light card with the original
+ * photo, and its text keeps the forest colours, so it reads like the light design on the dark page. */
 function CrewTile({ title, line, badge, object, onOpen }: { title: string; line: string; badge: string; object: string; onOpen: () => void }) {
   return (
     <button type="button" onClick={onOpen}
-      className="group relative flex h-full min-h-32 w-full overflow-hidden rounded-md border border-line-strong bg-surface text-left shadow-xs transition-shadow duration-fast hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
-      <ThemedImg src={object} width={180} height={165}
+      className="group relative flex h-full min-h-32 w-full overflow-hidden rounded-md border border-line-strong bg-surface text-left shadow-xs transition-shadow duration-fast hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus dark:border-sage-300 dark:bg-sage-0">
+      <img src={asset(object)} alt="" width={180} height={165} loading="lazy" decoding="async"
         className="absolute inset-y-0 right-0 h-full w-2/5 object-cover object-right mask-l-from-60% mask-l-to-100%" />
       <span className="relative grid w-3/5 min-w-0 content-start gap-2 p-3 pr-1">
         <span className="flex items-center gap-2.5">
           <img src={asset(badge)} alt="" width={96} height={96} className="size-12 shrink-0" />
-          <span className="font-serif text-heading-lg leading-none font-bold text-balance text-ink-deep">{title}</span>
+          <span className="font-serif text-heading-lg leading-none font-bold text-balance text-ink-deep dark:text-forest-800">{title}</span>
         </span>
-        <span className="text-body-sm text-ink">{line}</span>
-        <span className="mt-auto inline-flex w-fit items-center gap-1 text-label-md font-semibold text-ink underline underline-offset-4 group-hover:text-ink-brand">View service<ArrowUpRight aria-hidden="true" className="size-4" /></span>
+        <span className="text-body-sm text-ink dark:text-forest-900">{line}</span>
+        <span className="mt-auto inline-flex w-fit items-center gap-1 text-label-md font-semibold text-ink underline underline-offset-4 group-hover:text-ink-brand dark:text-forest-800 dark:group-hover:text-forest-600">View service<ArrowUpRight aria-hidden="true" className="size-4" /></span>
       </span>
     </button>
   );
