@@ -22,7 +22,7 @@ const invitePage = `/join/?invite=${DEMO_TOKENS.valid}`;
 
 /** One sample Gigster per stage, in journey order, so every screen a Gigster sees is one click away. */
 const gigsters = [
-  { id: "grace-liu", name: "Grace", stage: "Not started", state: "Account created, profile not started", go: "/profile/" },
+  { id: "grace-liu", name: "Grace", stage: "Not started", state: "Account created, profile not started", go: "/profile/canvas/" },
   { id: "ava-sinclair", name: "Ava", stage: "Blank page", state: "A blank profile, filled in on the page", go: "/profile/canvas/" },
   { id: "elena-petrova", name: "Elena", stage: "Draft", state: "Half done, editing on the page", go: "/profile/canvas/" },
   { id: "imani-carter", name: "Imani", stage: "Submitted", state: "Waiting for the team's review", go: "/profile/" },

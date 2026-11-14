@@ -96,7 +96,7 @@ try {
     for (const suffix of ["", "#/sso-callback"]) {
       await page.goto("about:blank"); // cold callback, not same-document hash navigation
       await page.goto(`${hosted.url}/join/${suffix}`);
-      if (suffix) await page.waitForURL(new RegExp(`${basePath}/profile/$`));
+      if (suffix) await page.waitForURL(new RegExp(`${basePath}/profile/canvas/$`));
       else await page.getByRole("heading", { name: "You're already signed in" }).waitFor();
       assert.equal(await page.evaluate(() => window.qaSignedInSignupMounts ?? 0), 0);
       assert.equal(await page.getByRole("form", { name: "Mock native Clerk signup" }).count(), 0);
@@ -105,10 +105,14 @@ try {
     // Native SignIn cannot render for an existing single-session user. Cold /login
     // must route through app state, even with a stale self-returning next URL.
     await page.goto(`${hosted.url}/login/?next=${encodeURIComponent(`${basePath}/login/`)}`);
-    await page.waitForURL(new RegExp(`${basePath}/profile/$`));
+    await page.waitForURL(new RegExp(`${basePath}/profile/canvas/$`));
     await page.getByRole("button", { name: /Account: New Account/ }).waitFor();
     assert.equal(await page.evaluate(() => window.qaSignedInWidgetMounts ?? 0), 0);
     assert.equal(await page.getByRole("form", { name: "Mock native Clerk login" }).count(), 0);
+    await page.goto(`${hosted.url}/login/?next=${encodeURIComponent(`${basePath}//outside.example/`)}`);
+    await page.waitForURL(new RegExp(`${basePath}/profile/canvas/$`));
+    assert.equal(new URL(page.url()).origin, new URL(hosted.url).origin, "base-prefixed protocol-relative next is rejected");
+    await page.getByText("How I can help", { exact: false }).first().waitFor();
     await page.getByRole("button", { name: /Account: New Account/ }).click();
     await page.getByRole("menuitem", { name: "Log out", exact: true }).click();
     await page.waitForURL((url) => url.pathname === `${basePath}/login/`);
@@ -118,7 +122,7 @@ try {
     await page.getByRole("alert").getByText("Incorrect email or password", { exact: true }).waitFor();
     await page.getByLabel("Login password").fill(password);
     await page.getByRole("button", { name: "Sign in to test account" }).click();
-    await page.waitForURL(new RegExp(`${basePath}/profile/(edit/)?$`));
+    await page.waitForURL(new RegExp(`${basePath}/profile/canvas/$`));
     await page.getByRole("button", { name: /Account: New Account/ }).waitFor();
     const returning = await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")));
     assert.equal(returning.session.personId, personId);
