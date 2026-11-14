@@ -338,8 +338,9 @@ function Editor({ personId }: { personId: string }) {
 
           <section aria-labelledby="next-h" className="grid gap-4 border-t border-line-strong pt-8 sm:flex sm:items-center sm:justify-between sm:gap-6">
             <div className="grid gap-1">
-              <h2 id="next-h" className="font-display text-heading-lg text-ink">{nothingToSend ? (status === "approved" ? "Your page is live" : "Your profile is with the team") : "Ready? Preview it, then submit."}</h2>
-              <p className="text-body-md text-ink-muted">{nothingToSend ? (status === "approved" ? "Availability saves as you go. Edit anything else and you can send it for review here." : "Changes you make here save as you go. We'll email you when there's an update.") : "See your page as clients will, then send it to the Between Gigs team. It stays private during review."}</p>
+              <h2 id="next-h" className="font-display text-heading-lg text-ink">{nothingToSend ? (status === "approved" ? "Your page is live" : "Your profile is with the team") : "You’re Almost There!"}</h2>
+              <p className="text-body-md text-ink-muted">{nothingToSend ? (status === "approved" ? "Availability saves as you go. Edit anything else and you can send it for review here." : "Changes you make here save as you go. We'll email you when there's an update.") : "Preview your profile to see how it will appear to potential customers. Once you’re happy with it, submit it to the Between Gigs team for review."}</p>
+              {!nothingToSend && <p className="text-body-md text-ink-muted">Your profile will remain private until it’s approved and we’re ready to make it public.</p>}
             </div>
             <div className="flex flex-wrap gap-2 sm:shrink-0">
               <Button variant="secondary" size="lg" iconStart={<Eye />} onClick={() => switchView("preview")}>Preview</Button>
