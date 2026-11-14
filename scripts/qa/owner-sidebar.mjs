@@ -25,7 +25,7 @@ try {
     await nav.getByRole("button", { name: "Collapse Previews section", exact: true }).waitFor();
     const overview = nav.locator('[data-owner-section="Overview"]');
     assert.deepEqual(await overview.getByRole("link").allTextContents(), ["Dashboard", "Hub"]);
-    for (const [name, href] of [["Page Previews", "/preview/#journey-h"], ["Email Previews", "/emails/"], ["Forms", "/preview/forms/"], ["Funnels", "/preview/funnels/"], ["Design System", "/preview/design-system/"], ["Wallpapers", "/preview/wallpapers/"]]) {
+    for (const [name, href] of [["Page Previews", "/preview/#journey-h"], ["Social Previews", "/preview/social/"], ["Email Previews", "/emails/"], ["Forms", "/preview/forms/"], ["Funnels", "/preview/funnels/"], ["Design System", "/preview/design-system/"], ["Wallpapers", "/preview/wallpapers/"]]) {
       assert.equal(await nav.getByRole("link", { name, exact: true }).getAttribute("href"), `${base}${href}`);
     }
     assert.equal(await nav.getByRole("link", { name: "Wallpapers", exact: true }).getByText("Wallpapers", { exact: true }).isVisible(), true, "drawer labels remain visible with a collapsed-rail preference");

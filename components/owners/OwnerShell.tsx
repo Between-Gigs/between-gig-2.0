@@ -44,6 +44,7 @@ const sections: { title: string; items: Item[] }[] = [
   { title: "Team", items: [{ href: "/owners/staff/", label: "Staff", icon: Users, art: "handshake" }] },
   { title: "Previews", items: [
     previewItem("/preview/#journey-h", "Page Previews", LayoutDashboard, "framed_picture"),
+    previewItem("/preview/social/", "Social Previews", ImageIcon, "framed_picture"),
     { ...ownerEmailPreview(data.kind), label: "Email Previews", icon: Mail, art: "envelope" },
     previewItem("/preview/forms/", "Forms", ListChecks, "clipboard"),
     previewItem("/preview/funnels/", "Funnels", Route, "film_frames"),
