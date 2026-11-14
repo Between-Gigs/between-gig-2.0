@@ -8,10 +8,11 @@ import { basePath } from "@/lib/site";
 
 const Appearance = React.createContext("");
 const ProfileLayout = React.createContext("");
-export type GuidePreviewMode = "thumbnail" | "full";
+export type GuidePreviewMode = "thumbnail" | "list" | "full";
+export type GuidePreviewDevice = "desktop" | "mobile";
+export const GuidePreviewDeviceContext = React.createContext<GuidePreviewDevice>("desktop");
+const devices: Record<GuidePreviewDevice, { width: number; height: number }> = { desktop: { width: 1280, height: 720 }, mobile: { width: 390, height: 844 } };
 export const GuidePreviewModeContext = React.createContext<GuidePreviewMode>("thumbnail");
-const width = 1280;
-const height = 720;
 
 /** Visible frames pick up appearance changes, including components that read Day/Night only on mount. */
 export function GuidePreviews({ children }: { children: React.ReactNode }) {
@@ -64,6 +65,8 @@ export function LivePagePreview({ href, title, as = "visitor" }: PreviewProps) {
   const host = React.useRef<HTMLSpanElement>(null);
   const appearance = React.useContext(Appearance);
   const mode = React.useContext(GuidePreviewModeContext);
+  const device = React.useContext(GuidePreviewDeviceContext);
+  const { width, height } = devices[device];
   const [pageHeight, setPageHeight] = React.useState(height);
   const savedTemplate = React.useContext(ProfileLayout);
   const template = /^\/(?:p|profile|preview\/(?:profile-editor|profiles|gigster-journey))(?:\/|$)/.test(href) ? savedTemplate : undefined;
@@ -76,31 +79,36 @@ export function LivePagePreview({ href, title, as = "visitor" }: PreviewProps) {
     const me: Slot = { visible: false, mounted: false, loading: false, seen: 0, set: setNearby };
     slot.current = me; slots.add(me);
     let dwell = 0;
-    const resize = new ResizeObserver(([entry]) => setScale(entry.contentRect.width / width));
-    resize.observe(el);
     const visibility = new IntersectionObserver(([entry]) => {
       window.clearTimeout(dwell);
       if (entry.isIntersecting) dwell = window.setTimeout(() => { me.visible = true; me.seen = performance.now(); pump(); }, DWELL_MS);
       else if (me.visible) { me.visible = false; me.seen = performance.now(); pump(); }
     }, { rootMargin: "100px 0px" });
     visibility.observe(el);
-    return () => { window.clearTimeout(dwell); visibility.disconnect(); resize.disconnect(); slots.delete(me); pump(); };
+    return () => { window.clearTimeout(dwell); visibility.disconnect(); slots.delete(me); pump(); };
   }, []);
+  React.useEffect(() => {
+    const el = host.current;
+    if (!el) return;
+    const resize = new ResizeObserver(([entry]) => setScale(entry.contentRect.width / width));
+    resize.observe(el);
+    return () => resize.disconnect();
+  }, [width]);
   // When the appearance changes every frame reloads: they queue again.
   React.useEffect(() => {
     const me = slot.current;
     if (me?.mounted) { me.loading = true; }
-  }, [appearance, template, mode]);
+  }, [appearance, template, mode, device]);
   const loaded = React.useCallback(() => { const me = slot.current; if (me && me.loading) { me.loading = false; pump(); } }, []);
 
   return (
     <span ref={host} inert aria-hidden="true"
-      data-guide-preview-mode={mode}
+      data-guide-preview-mode={mode} data-guide-preview-device={device}
       className="pointer-events-none relative block w-full overflow-hidden rounded-lg bg-surface-sunken"
-      style={mode === "full" && scale > 0 ? { height: Math.ceil(pageHeight * scale) } : { aspectRatio: `${width} / ${height}` }}>
+      style={mode === "full" && scale > 0 ? { height: Math.ceil(Math.max(height, pageHeight) * scale) } : { aspectRatio: `${width} / ${height}` }}>
       {nearby && scale > 0 && appearance && (
         <Loaded.Provider value={loaded}>
-          <PreviewFrame key={`${appearance}/${template ?? ""}/${mode}`} template={template} href={href} as={as} title={title} scale={scale} mode={mode} onHeight={setPageHeight} />
+          <PreviewFrame key={`${appearance}/${template ?? ""}/${mode}/${device}`} template={template} href={href} as={as} title={title} scale={scale} mode={mode} device={device} onHeight={setPageHeight} />
         </Loaded.Provider>
       )}
     </span>
@@ -112,7 +120,8 @@ function showsPage(frame: HTMLIFrameElement) {
   catch { return false; }
 }
 
-function PreviewFrame({ href, as, title, scale, template, mode, onHeight }: PreviewProps & { scale: number; template?: string; mode: GuidePreviewMode; onHeight: (height: number) => void }) {
+function PreviewFrame({ href, as, title, scale, template, mode, device, onHeight }: PreviewProps & { scale: number; template?: string; mode: GuidePreviewMode; device: GuidePreviewDevice; onHeight: (height: number) => void }) {
+  const { width, height } = devices[device];
   const [status, setStatus] = React.useState<"loading" | "ready" | "unavailable">("loading");
   const [documentHeight, setDocumentHeight] = React.useState(height);
   const frame = React.useRef<HTMLIFrameElement>(null);
@@ -143,7 +152,7 @@ function PreviewFrame({ href, as, title, scale, template, mode, onHeight }: Prev
     observeContent();
     measure();
     return () => { cancelAnimationFrame(paint); observer.disconnect(); mutations.disconnect(); doc.removeEventListener("load", schedule, true); };
-  }, [status, onHeight]);
+  }, [status, onHeight, height]);
   React.useEffect(() => {
     const el = frame.current;
     if (!el) return;
