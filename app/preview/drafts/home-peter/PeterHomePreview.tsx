@@ -30,16 +30,16 @@ export function PeterHomePreview() {
   return (
     <div className="flex min-h-dvh flex-col bg-bg text-ink">
       <header className="relative z-sticky border-b border-line bg-bg shadow-sm">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 items-center gap-2 lg:grid-cols-3 px-4 py-3 sm:gap-4 sm:px-6 lg:py-5">
+        <div className="mx-auto grid max-w-7xl grid-cols-2 items-center gap-x-2 gap-y-0 sm:grid-cols-[1fr_auto_1fr] px-4 py-2 sm:gap-x-3 sm:px-6">
           <Link href="/" aria-label="Between Gigs home" className="inline-flex min-h-11 w-fit items-center rounded-md">
-            <Logo height={28} className="hidden md:block" />
-            <Logo layout="mark" height={28} className="md:hidden" />
+            <Logo height={28} className="hidden lg:block" />
+            <Logo layout="mark" height={28} className="lg:hidden" />
           </Link>
-          <p className="order-3 col-span-2 min-w-0 max-w-full break-words pb-1 text-center font-display text-heading-sm lg:order-none lg:col-span-1 lg:pb-0 font-semibold leading-tight sm:text-heading-md" data-preview-title>
+          <p className="order-3 col-span-2 min-w-0 max-w-full break-words text-center font-display text-heading-sm sm:order-none sm:col-span-1 font-semibold leading-tight" data-preview-title>
             Los Angeles Call Sheet
           </p>
           <div className="flex items-center justify-end gap-1 sm:gap-2">
-            <ThemeToggle theme={theme} onChange={changeTheme} size="sm" showLabel={false} className="min-h-11" />
+            <ThemeToggle theme={theme} onChange={changeTheme} size="sm" showLabel={false} />
             <a href={joinHref} className="inline-flex min-h-11 shrink-0 items-center rounded-full px-2 text-label-sm font-medium hover:bg-surface-hover sm:px-3 sm:text-label-md">Join / Sign in</a>
           </div>
         </div>
@@ -65,11 +65,11 @@ export function PeterHomePreview() {
                 </a>
                 <p className="text-body-md font-semibold italic">It’s free to join!</p>
               </div>
-              <div className="grid w-full max-w-3xl justify-items-center gap-1 sm:mt-1 md:rounded-xl md:bg-bg/90 md:px-5 md:py-3 md:backdrop-blur-sm" data-preview-connection>
+              <div className="grid w-full max-w-3xl justify-items-center gap-1 sm:mt-1 md:max-w-[55%] lg:max-w-xl" data-preview-connection>
                 <p className="flex max-w-full items-center justify-center gap-3 text-body-md font-bold italic leading-relaxed sm:gap-5 sm:text-body-lg">
-                  <span aria-hidden="true" className="h-px w-4 shrink-0 bg-accent-gold sm:w-16" />
+                  <span aria-hidden="true" className="h-px w-4 shrink-0 bg-accent-gold lg:w-16" />
                   <span>Let us connect you to</span>
-                  <span aria-hidden="true" className="h-px w-4 shrink-0 bg-accent-gold sm:w-16" />
+                  <span aria-hidden="true" className="h-px w-4 shrink-0 bg-accent-gold lg:w-16" />
                 </p>
                 <p className="text-body-lg font-semibold leading-relaxed">businesses and individuals who need your expertise.</p>
               </div>
