@@ -18,7 +18,7 @@ try {
     await page.goto(`${url}/preview/gigster-journey/`);
     await page.waitForURL(location => location.pathname.endsWith("/emails/invite/"));
     const invitation = page.frameLocator("iframe");
-    assert.equal(await invitation.getByRole("link", { name: /^Create your profile/ }).count(), 1);
+    assert.equal(await invitation.getByRole("link", { name: /^Create your profile/ }).count(), 2);
     // The canonical email starts the normal invite/signup flow. Keep testing the separate account experiment too.
     await page.goto(`${url}/preview/gigster-journey/account/`);
     await page.getByRole("combobox", { name: "Profile example" }).click();
