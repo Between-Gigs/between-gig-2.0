@@ -12,7 +12,7 @@ import { ThemeBadge } from "@/components/site/ThemeBadge";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { DEMO_TOKENS } from "@/lib/data/fields";
 import { DesignSystemBlock } from "./DesignSystemBlock";
-import { GuidePreviews, LivePagePreview } from "./LivePagePreview";
+import { GuidePreviews, GuidePreviewModeContext, LivePagePreview, type GuidePreviewMode } from "./LivePagePreview";
 import { useLook } from "@/components/site/LookSync";
 import { Icon3D } from "@/components/ui/Icon3D";
 import type { Icon3DName } from "@/lib/icons3d";
@@ -32,14 +32,14 @@ const gigsters = [
 
 /** Every linked page is also its own live preview. */
 type SectionArt = { icon: Icon3DName; tint: string };
-const groups: { id: string; art: SectionArt; title: string; body: string; pages: { href: string; title: string; body: string }[] }[] = [
+const groups: { id: string; art: SectionArt; title: string; body: string; pages: { href: string; title: string; body: string; as?: string }[] }[] = [
   { id: "journey", art: { icon: "memo", tint: "bg-tint-peach" }, title: "The Gigster journey", body: "The invite, signing in and the profile clients see.", pages: [
     { href: "/preview/gigster-journey/", title: "Stage 2 invitation journey", body: "Try the revised invitation, account setup, profile edit and review handoff." },
     { href: "/emails/invite/", title: "Invite email", body: "“Your craft. More possibilities.” and its plain-text version." },
     { href: "/join/", title: "Sign up", body: "“Bring your craft beyond the set.” Create an account in one step." },
     { href: "/login/", title: "Log in", body: "Email code sign-in, for Gigsters and owners." },
-    { href: "/profile/canvas/", title: "Edit your profile", body: "How I can help first, what's required to submit, then Preview and Submit for review." },
-    { href: "/profile/submitted/", title: "Profile submitted", body: "In review: what happens next, and your profile stays private." },
+    { href: "/profile/canvas/", as: "gigster:elena-petrova", title: "Edit your profile", body: "How I can help first, what's required to submit, then Preview and Submit for review." },
+    { href: "/profile/submitted/", as: "gigster:imani-carter", title: "Profile submitted", body: "In review: what happens next, and your profile stays private." },
     { href: "/emails/", title: "Every email", body: "All the emails, and the sample outbox." },
   ] },
   { id: "public", art: { icon: "clapper_board", tint: "bg-tint-mint-soft" }, title: "The public site", body: "What visitors and clients see today, and once we open.", pages: [
@@ -50,12 +50,11 @@ const groups: { id: string; art: SectionArt; title: string; body: string; pages:
     { href: "/proposals/home/", title: "Home once we open", body: "Three proposals: visitor, Gigster, owner." },
   ] },
   { id: "tools", art: { icon: "toolbox", tint: "bg-tint-butter" }, title: "Studio and design tools", body: "For the team: the workspace, the page designer and the effects.", pages: [
-    { href: "/preview/design-system/", title: "Design system", body: "Every theme side by side, Styled or Unstyled, and each atom, molecule, organism and template live." },
     { href: "/preview/profile-editor/", title: "Gigster profile editor", body: "Choose required fields, arrange the form and adjust the profile page." },
     { href: "/preview/wallpapers/", title: "Wallpapers & background art", body: "Download the invitation artwork and Call Sheet backgrounds." },
     { href: "/preview/footers/", title: "Footer photos", body: "Four photo bands for the footer, on the real footer, to pick one." },
     { href: "/workspace/", title: "Workspace", body: "Every project in one shell: switcher, ⌘K, folders, and each page inside it." },
-    { href: "/owners/staff/", title: "Staff & access", body: "Manage invitations, multiple roles and access rules in the sample dashboard." },
+    { href: "/owners/staff/", as: "owner", title: "Staff & access", body: "Manage invitations, multiple roles and access rules in the sample dashboard." },
     { href: "/studio/", title: "Studio", body: "A page designer with a CMS: tables, galleries, kanban, lists and calendars." },
     { href: "/preview/curtain/", title: "Curtain tuner", body: "Tune the home page curtain live and copy your favourite settings." },
     { href: "/preview/cursors/", title: "Mouse effects", body: "Try five mouse effects and pick one for the site." },
@@ -64,9 +63,9 @@ const groups: { id: string; art: SectionArt; title: string; body: string; pages:
     { href: "/preview/drafts/coming-soon-v1/", title: "Coming soon · v1", body: "The call-sheet home with its two-step form." },
     { href: "/preview/drafts/coming-soon-v2/", title: "Coming soon · v2", body: "The Green Room home with the Los Angeles Call Sheet headline." },
     { href: "/preview/drafts/professionals-v1/", title: "For professionals · v1", body: "The earlier long page and its call-sheet form." },
-    { href: "/preview/drafts/join-v1/", title: "Sign up · v1", body: "The previous create-account layout." },
-    { href: "/preview/drafts/login-v1/", title: "Log in · v1", body: "The previous log-in layout." },
-    { href: "/preview/drafts/profile-editor-v1/", title: "Profile editor · v1", body: "The edit-on-page profile editor before the rebuild." },
+  ] },
+  { id: "scratchpad", art: { icon: "memo", tint: "bg-tint-peach" }, title: "Scratchpad", body: "Current work in progress, separate from the live site.", pages: [
+    { href: "/preview/drafts/home-peter/", title: "Draft homepage", body: "The current homepage direction, with the original artwork and working light/dark switch." },
   ] },
 ];
 
@@ -74,7 +73,6 @@ type GuideView = "grid" | "list";
 /** The one mint block's button: forest on mint, in both themes. */
 const onMint = "justify-between! gap-6! bg-forest-950! text-white! hover:bg-forest-800!";
 const shortcut = "inline-flex min-h-11 items-center rounded-md text-label-md text-ink underline decoration-line-strong underline-offset-4 hover:text-ink-brand";
-const VIEW_KEY = "bg2-guide-view";
 /** Role tags: small uppercase labels, so the role grid reads at a glance. */
 const roleTint = { Owner: "bg-tint-peach", Invited: "bg-tint-butter", Gigster: "bg-tint-mint-soft", Visitor: "bg-tint-sky" } as const;
 type Role = keyof typeof roleTint;
@@ -84,6 +82,7 @@ function GuideCard({ title, body, href, as, onClick, tag, step, view }: {
   title: string; body: string; href: string; as?: string; onClick?: () => void; tag?: Role; step?: string; view: GuideView;
 }) {
   const cards = useLook() !== "swiss";
+  const previewMode = React.useContext(GuidePreviewModeContext);
   const list = view === "list";
   const badge = tag && <span className={cards ? cx("inline-flex rounded-full px-2.5 py-0.5 text-label-sm text-tint-ink", roleTint[tag]) : "inline-flex bg-bg px-2 py-1 text-eyebrow text-ink uppercase"}>{step ?? tag}</span>;
   const label = (
@@ -98,10 +97,10 @@ function GuideCard({ title, body, href, as, onClick, tag, step, view }: {
   );
   const cls = list
     ? "row-lift group flex w-full items-center gap-4 border-t border-line py-3 text-left hover:bg-surface-hover card-layout:rounded-xl card-layout:border card-layout:bg-surface card-layout:p-2.5 card-layout:pr-4"
-    : "group grid h-full w-full content-start gap-3 rounded-xl border border-line bg-surface-raised p-4 text-left shadow-sm card-layout:bg-surface card-layout:p-3 swiss:border-0 swiss:border-t-4 swiss:border-line-strong swiss:bg-transparent swiss:p-0 swiss:pt-3";
+    : "group grid w-full content-start gap-3 rounded-xl border border-line bg-surface-raised p-4 text-left shadow-sm card-layout:bg-surface card-layout:p-3 swiss:border-0 swiss:border-t-4 swiss:border-line-strong swiss:bg-transparent swiss:p-0 swiss:pt-3";
   const action = "flex min-w-0 flex-1 items-start justify-between gap-3 text-left after:absolute after:inset-0 after:rounded-xl focus-visible:after:outline-2 focus-visible:after:outline-focus";
   return (
-    <div className={cx("relative", cls)}>
+    <div className={cx("relative", cls, !list && previewMode === "thumbnail" && "h-full")}>
       <span className={cx("relative block min-w-0 shrink-0", list && "w-28 sm:w-40")}>
         <LivePagePreview href={href} as={as} title={title} />
         {badge && !list && <span className="pointer-events-none absolute top-0 left-0 card-layout:top-2 card-layout:left-2">{badge}</span>}
@@ -133,25 +132,38 @@ function SectionHead({ id, icon, title, body, tint, children }: { id: string; ic
 /** A numbered Swiss section: the label column (number, heading, one line, any controls) on the left, content on the right. */
 function Section({ n, id, title, body, aside, art, children }: { art?: SectionArt; n: string; id: string; title: string; body: string; aside?: React.ReactNode; children: React.ReactNode }) {
   const cards = useLook() !== "swiss";
-  if (cards && !art) return <section aria-labelledby={id}><h2 id={id} className="sr-only">{title}</h2>{children}</section>;
-  if (cards && art) {
-    return (
-      <section aria-labelledby={id} className={cx("grid gap-6 rounded-2xl border border-line bg-surface p-6 sm:p-8", id === "roles-h" ? "mt-14" : "mt-6")}>
-        <SectionHead id={id} title={title} body={body} icon={art.icon} tint={art.tint}>{aside}</SectionHead>
-        {children}
-      </section>
-    );
-  }
-  return (
-    <section aria-labelledby={id} className="mt-16 grid gap-x-6 gap-y-6 border-t-4 border-line-strong pt-4 lg:mt-20 lg:grid-cols-12">
+  const [mode, setMode] = React.useState<GuidePreviewMode>("thumbnail");
+  const key = `bg2-guide-preview:${id}`;
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem(key);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (saved === "thumbnail" || saved === "full") setMode(saved);
+    } catch { /* restricted storage: keep this section's default */ }
+  }, [key]);
+  const changeMode = (value: string) => {
+    if (value !== "thumbnail" && value !== "full") return;
+    setMode(value);
+    try { localStorage.setItem(key, value); } catch { /* this visit still works */ }
+  };
+  const controls = <div className="flex flex-wrap items-center gap-3">
+    {aside}
+    <SegmentedControl label={`${title} previews`} size="sm" className="[&_button]:min-h-11" value={mode} onChange={changeMode}
+      options={[{ value: "thumbnail", label: "Thumbnails", icon: <LayoutGrid /> }, { value: "full", label: "Full height", icon: <List /> }]} />
+  </div>;
+  const heading = art ? <SectionHead id={id} title={title} body={body} icon={art.icon} tint={art.tint}>{controls}</SectionHead>
+    : <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 id={id} className="font-display text-heading-lg text-ink">{title}</h2><p className="mt-1 max-w-2xl text-body-md text-ink-muted">{body}</p></div>{controls}</div>;
+  return <GuidePreviewModeContext.Provider value={mode}>
+    {cards ? <section aria-labelledby={id} className={cx("grid gap-6 rounded-2xl border border-line bg-surface p-6 sm:p-8", id === "journey-steps-h" ? "mb-6" : "mt-6")}>
+      {heading}{children}
+    </section> : <section aria-labelledby={id} className="mt-16 grid gap-x-6 gap-y-6 border-t-4 border-line-strong pt-4 lg:mt-20 lg:grid-cols-12">
       <div className="grid content-start gap-3 lg:col-span-3">
         <h2 id={id} className="grid gap-2 font-display text-heading-lg text-ink"><span className="text-label-sm tabular-nums">{n}</span>{title}</h2>
-        <p className="max-w-md text-body-md text-ink-muted">{body}</p>
-        {aside}
+        <p className="max-w-md text-body-md text-ink-muted">{body}</p>{controls}
       </div>
       <div className="min-w-0 lg:col-span-9">{children}</div>
-    </section>
-  );
+    </section>}
+  </GuidePreviewModeContext.Provider>;
 }
 
 /**
@@ -165,17 +177,14 @@ export function Overview() {
 function Guide() {
   const cards = useLook() !== "swiss";
   const router = useRouter();
-  const [view, setView] = React.useState<GuideView>("grid");
-  React.useEffect(() => {
-    try { const v = localStorage.getItem(VIEW_KEY); if (v === "grid" || v === "list") setView(v); } catch { /* ignore */ } // eslint-disable-line react-hooks/set-state-in-effect
-  }, []);
-  const changeView = (v: string) => { setView(v as GuideView); try { localStorage.setItem(VIEW_KEY, v); } catch { /* ignore */ } };
-  const viewSwitch = (
-    <SegmentedControl label="View" size="sm" value={view} onChange={changeView}
-      options={[{ value: "grid", label: "Grid", icon: <LayoutGrid /> }, { value: "list", label: "List", icon: <List /> }]} />
-  );
+  const view: GuideView = "grid";
   const toast = useToast();
   const asGigster = async (id: string, go: string) => { await data.demo?.signInAs("gigster", id); router.push(go); };
+  const openSamplePage = async (as: string, go: string) => {
+    if (as === "owner") await data.demo?.signInAs("owner");
+    else if (as.startsWith("gigster:")) await data.demo?.signInAs("gigster", as.slice("gigster:".length));
+    router.push(go);
+  };
   const asVisitor = async () => { await data.auth.signOut(); router.push(basePath === "/hub" ? "/home/" : "/"); };
   const reset = async () => { await data.demo?.reset(); toast({ message: "Sample data reset", tone: "success" }); };
   const startInvite = async () => {
@@ -205,7 +214,6 @@ function Guide() {
             </span>
             Sample profiles
           </Link>
-          <Link href="/preview/design-system/" className={shortcut}>Design system</Link>
           <Link href="/preview/gigster-journey/" className={shortcut}>Stage 2 journey</Link>
           <Link href="/preview/profile-editor/" className={shortcut}>Profile editor</Link>
           <Link href="/preview/wallpapers/" className={shortcut}>Wallpapers</Link>
@@ -248,11 +256,7 @@ function Guide() {
             })}
           </ol>
         </Section>
-        <Section art={{ icon: "artist_palette", tint: "bg-tint-butter" }} n="02" id="design-system-h" title="Design system"
-          body="The theme in use, live. Switch themes or Unstyled here and every preview on this page follows.">
-          <DesignSystemBlock />
-        </Section>
-        <Section art={{ icon: "briefcase", tint: "bg-tint-sage" }} n="03" id="sample-profiles-h" title="Completed Gigster profiles"
+        <Section art={{ icon: "briefcase", tint: "bg-tint-sage" }} n="02" id="sample-profiles-h" title="Sample Gigster Profiles"
           body="See how four entertainment professionals turn their craft into services you can hire them for."
           aside={<ButtonLink size="sm" href="/preview/profiles/" iconEnd={<ArrowRight />}>Compare all four</ButtonLink>}>
           <ul className={listClass(view, 4)}>
@@ -262,8 +266,8 @@ function Guide() {
           </ul>
         </Section>
         {data.demo && (
-          <Section art={{ icon: "admission_tickets", tint: "bg-tint-sky" }} n="04" id="roles-h" title="Try every role" body="Step into the sample as anyone. No sign-in needed: it uses the fictional sample accounts, kept in this browser."
-            aside={<div className="flex flex-wrap items-center gap-2 pt-2">{viewSwitch}<Button size="sm" variant="ghost" iconStart={<RotateCcw />} onClick={reset}>Reset sample data</Button></div>}>
+          <Section art={{ icon: "admission_tickets", tint: "bg-tint-sky" }} n="03" id="roles-h" title="Try every role" body="Step into the sample as anyone. No sign-in needed: it uses the fictional sample accounts, kept in this browser."
+            aside={<div className="flex flex-wrap items-center gap-2 pt-2"><Button size="sm" variant="ghost" iconStart={<RotateCcw />} onClick={reset}>Reset sample data</Button></div>}>
             <h3 className="text-eyebrow text-ink-muted uppercase">Team and start</h3>
             <ul className={cx("mt-4", listClass(view, 3))}>
               <li><GuideCard view={view} href="/owners/" as="owner" tag="Owner" title="Open as owner" body="Dashboard, review queue, people, waitlist." onClick={startOwner} /></li>
@@ -279,13 +283,16 @@ function Guide() {
           </Section>
         )}
         {groups.map((gr, gi) => (
-          <Section key={gr.id} art={gr.art} n={String(gi + (data.demo ? 5 : 4)).padStart(2, "0")} id={`${gr.id}-h`} title={gr.title} body={gr.body}
-            aside={!data.demo && gi === 0 ? <div className="pt-2">{viewSwitch}</div> : undefined}>
+          <Section key={gr.id} art={gr.art} n={String(gi + (data.demo ? 4 : 3)).padStart(2, "0")} id={`${gr.id}-h`} title={gr.title} body={gr.body}>
             <ul className={listClass(view, gr.pages.length)}>
-              {gr.pages.map((pg) => <li key={pg.href}><GuideCard view={view} title={pg.title} body={pg.body} href={pg.href} /></li>)}
+              {gr.pages.map((pg) => <li key={pg.href}><GuideCard view={view} title={pg.title} body={pg.body} href={pg.href} as={pg.as} onClick={pg.as ? () => void openSamplePage(pg.as!, pg.href) : undefined} /></li>)}
             </ul>
           </Section>
         ))}
+        <Section art={{ icon: "artist_palette", tint: "bg-tint-butter" }} n={String(groups.length + (data.demo ? 4 : 3)).padStart(2, "0")} id="design-system-h" title="Design system"
+          body="The theme in use, live. Switch themes or Unstyled here and every preview on this page follows.">
+          <DesignSystemBlock />
+        </Section>
         <p className="mt-16 border-t border-line pt-4 text-body-sm text-ink-muted card-layout:mt-6 card-layout:border-0">Names shown are illustrative samples for this draft.</p>
       </div>
     </Page>

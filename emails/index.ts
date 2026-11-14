@@ -64,6 +64,10 @@ export const emailTemplates = {
 
 export const emailNames = Object.keys(emailTemplates) as EmailTemplate[];
 
+/** Retired from active discovery only. Keep renderers, URLs and historical outbox records recoverable. */
+export const retiredEmailNames: readonly EmailTemplate[] = ["welcome", "coming-soon"];
+export const activeEmailNames = emailNames.filter(name => !retiredEmailNames.includes(name));
+
 /** Renders any template from loose props (the outbox stores them as strings). Missing props fall back to the sample. */
 export function renderEmail(name: EmailTemplate, props: Record<string, string> = {}, ctx: EmailContext = defaultContext): RenderedEmail {
   const t = emailTemplates[name];
