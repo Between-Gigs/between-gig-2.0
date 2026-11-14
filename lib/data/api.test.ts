@@ -42,3 +42,24 @@ describe("lib/data/api.ts", () => {
     expect(seen[2]).toMatchObject({ auth: "Bearer token-2", keepalive: false });
   });
 });
+
+describe("live authentication session notifications", () => {
+  const session = { personId: "p", email: "test@example.test", role: "gigster", name: "Test", startedAt: "2026-01-01", via: "clerk" };
+  for (const operation of ["syncExternal", "signUp"] as const) {
+    it(`${operation} refreshes existing subscribers without dropping the resolved session`, async () => {
+      let sessionReads = 0;
+      const api = createApiSource({ fetch: (async (url) => {
+        if (String(url).includes("auth/session/")) { sessionReads++; return Response.json({ result: null }); }
+        return Response.json({ result: { ok: true, session, created: false } });
+      }) as typeof fetch });
+      let observed = await api.auth.session();
+      let refreshed: Promise<void> = Promise.resolve();
+      api.auth.onChange(() => { refreshed = api.auth.session().then(s => { observed = s; }); });
+      if (operation === "syncExternal") await api.auth.syncExternal({ email: session.email });
+      else await api.auth.signUp!({ name: "Test", acceptedTerms: true });
+      await refreshed;
+      expect(observed).toEqual(session);
+      expect(sessionReads).toBe(1);
+    });
+  }
+});
