@@ -97,18 +97,21 @@ try {
         && Number(frame.style.height.replace("px", "")) > 720
         && Number(frame.style.height.replace("px", "")) >= frame.contentDocument.documentElement.scrollHeight - 1;
     });
-    const fitted = await submitted.evaluate(async el => {
-      let stable = 0, previous = 0;
-      for (let attempt = 0; attempt < 300; attempt++) {
-        await new Promise(resolve => requestAnimationFrame(resolve));
-        const content = el.contentDocument.documentElement.scrollHeight;
-        const viewport = Number(el.style.height.replace("px", ""));
-        stable = viewport >= content - 1 && content === previous ? stable + 1 : 0;
-        if (stable >= 5) return { fits: true, viewport, content };
-        previous = content;
-      }
-      return { fits: false, viewport: el.style.height, content: el.contentDocument.documentElement.scrollHeight };
+    // The cache may replace a frame as the content scroller settles. Inspect the mounted node each time,
+    // keeping the target visible, instead of retaining an evicted iframe across animation frames.
+    await submittedCard.locator("[data-guide-preview-mode]").evaluate(el => el.scrollIntoView({ block: "center", behavior: "instant" }));
+    const fitHandle = await page.waitForFunction(() => {
+      const frame = document.querySelector('iframe[title="Preview of Profile submitted"]');
+      const doc = frame?.contentDocument;
+      if (!doc?.documentElement.hasAttribute("data-guide-ready")) { window.qaSubmittedFit = null; return false; }
+      const content = doc.documentElement.scrollHeight;
+      const viewport = Number(frame.style.height.replace("px", ""));
+      const previous = window.qaSubmittedFit;
+      const stable = previous?.frame === frame && previous?.content === content && viewport >= content - 1 ? previous.stable + 1 : 0;
+      window.qaSubmittedFit = { frame, content, stable };
+      return stable >= 5 ? { fits: true, viewport, content } : false;
     });
+    const fitted = await fitHandle.jsonValue(); await fitHandle.dispose();
     assert.ok(fitted.fits, `full page fits measured iframe: ${JSON.stringify(fitted)}`);
     await page.evaluate(() => scrollBy(0, -120));
     await submittedCard.screenshot({ path: `deliverables/hub-cleanup/submitted-${width}-${theme}.png` });
