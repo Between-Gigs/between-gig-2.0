@@ -17,7 +17,7 @@ export const INVITE_COPY = {
   preheader: "Welcome to Stage 2: Building our Gigster community!",
   eyebrow: "You're invited",
   title: ["Your craft.", "More possibilities."],
-  lead: "We're inviting film and TV professionals in Los Angeles to become founding Gigsters and put their skills to work on paid local projects.",
+  lead: "Your skills have value beyond the set. Let us help you put them to work.",
   opening: "We’ve been hard at work behind the scenes, and we’re excited to take the next step with you!",
   stage: "Welcome to Stage 2: Building our Gigster community!",
   introduction: "Now it’s time to introduce yourself! Create your profile by sharing your professional experience, the skills and services you offer, and where you're available to work.",
