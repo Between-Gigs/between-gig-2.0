@@ -118,12 +118,18 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
       verifyCode: async () => ({ ok: false, error: "no-code" }),
       async syncExternal(identity) {
         const r = await call<Awaited<ReturnType<DataSource["auth"]["syncExternal"]>>>("auth.syncExternal", [{ email: identity.email }]);
+        // Publish the resolved session to mounted consumers without invalidating it.
+        // Otherwise login can remain on “Opening your profile” with a stale null session.
         sessionCache = { at: Date.now(), value: Promise.resolve(r.ok ? r.session : null) };
+        if (r.ok) for (const listener of listeners) listener();
         return r;
       },
       async signUp(input) {
         const r = await send("auth/signup", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: input.name, acceptedTerms: true }) }) as Awaited<ReturnType<DataSource["auth"]["syncExternal"]>>;
+        // Publish the resolved session to mounted consumers without invalidating it.
+        // Otherwise login can remain on “Opening your profile” with a stale null session.
         sessionCache = { at: Date.now(), value: Promise.resolve(r.ok ? r.session : null) };
+        if (r.ok) for (const listener of listeners) listener();
         return r;
       },
       async signOut() { lastToken = null; changed(); },
