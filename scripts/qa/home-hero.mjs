@@ -46,12 +46,12 @@ try {
       assert.ok(box.height >= 44 && box.x >= 0 && box.x + box.width <= width, "CTA fits and has a touch target");
       // Signed out: the Los Angeles Call Sheet is centred in the header and fits.
       const header = page.locator("header").first();
-      const title = header.locator("[data-header-title]");
+      const title = header.locator("[data-header-title]:visible");
       assert.equal(await title.count(), 1);
       const t = await title.boundingBox();
       assert.ok(t.x >= 0 && t.x + t.width <= width, "header title stays in the viewport");
       if (width >= 640) assert.ok(Math.abs(t.x + t.width / 2 - width / 2) < 4, `${width} header title centred`);
-      assert.ok((await header.boundingBox()).height <= 81, "header keeps its height");
+      assert.ok((await header.boundingBox()).height <= (width >= 640 ? 81 : 100), "header keeps its height");
       await page.screenshot({ path: `deliverables/home-hero/${width}-${theme}.png`, fullPage: true });
       const toggle = header.getByRole("switch").first();
       await toggle.click();

@@ -27,8 +27,8 @@ export function ComingSoon() {
             {/* Phones get a soft panel so the copy reads over the still life; from md the photo frames it on its own. */}
             <div className="grid justify-items-center rounded-2xl bg-bg/90 px-5 py-8 max-xs:px-4 text-center shadow-sm backdrop-blur-sm sm:px-10 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none dark:bg-bg/85 dark:md:bg-transparent">
               {/* An announcement shaped like the art's seal, not a disabled button. */}
-              <p className="inline-flex items-center gap-4 rounded-full bg-surface-brand px-6 py-2.5 text-label-md font-bold tracking-widest text-ink-on-brand uppercase shadow-md ring-1 ring-accent-gold/40 sm:gap-6 sm:px-10 sm:py-3 sm:text-body-lg">
-                <Rule className="w-6 sm:w-12" />Coming soon<Rule className="w-6 sm:w-12" />
+              <p className="inline-flex items-center gap-4 rounded-full bg-surface-brand px-6 py-2.5 whitespace-nowrap max-xs:gap-2.5 max-xs:px-4 text-label-md font-bold tracking-widest text-ink-on-brand uppercase shadow-md ring-1 ring-accent-gold/40 sm:gap-6 sm:px-10 sm:py-3 sm:text-body-lg">
+                <Rule className="w-6 max-xs:w-4 sm:w-12" />Coming soon<Rule className="w-6 max-xs:w-4 sm:w-12" />
               </p>
               <p className="mt-5 max-w-xl text-label-sm font-bold tracking-widest text-balance text-ink uppercase sm:text-label-md">Extraordinary talent. Everyday solutions.</p>
               <h1 id="home-title" className="mt-4 w-full max-w-md sm:max-w-lg">

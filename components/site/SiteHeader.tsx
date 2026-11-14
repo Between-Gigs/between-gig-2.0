@@ -61,15 +61,14 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
     // Swiss (product screens): the same row on a 12-column grid from md (logo · links · account), closed by a 4px ink rule.
     <header className={cx("sticky top-0 embedded:hidden! z-sticky border-b border-line shadow-md" /* a clear drop shadow (client, 13 Nov 2026) */, app ? "bg-surface" : "bg-bg swiss:border-b-0 swiss:shadow-none")}>
       <div className={cx("mx-auto px-4 sm:px-6", app ? "max-w-none lg:px-5" : "max-w-7xl")}>
-      <div className={cx("flex min-h-16 flex-wrap items-center gap-x-4 gap-y-0.5 pt-2 sm:h-16 sm:flex-nowrap sm:pt-0 lg:h-20", app ? "h-16! flex-nowrap! gap-2 pt-0!" : "swiss:border-b-4 swiss:border-line-strong swiss:md:grid swiss:md:grid-cols-12 swiss:md:gap-x-6")}>
+      <div className={cx("flex h-16 items-center gap-2 sm:gap-4 lg:h-20", app ? "h-16! gap-2" : "swiss:border-b-4 swiss:border-line-strong swiss:md:grid swiss:md:grid-cols-12 swiss:md:gap-x-6")}>
         {onOpenNav && <IconButton label="Open owner menu" variant="ghost" icon={<MenuIcon />} onClick={onOpenNav} className="lg:hidden" />}
         <div className="flex flex-1 items-center swiss:md:col-span-3">
           <Link href="/" aria-label="Between Gigs home" className="inline-flex min-h-11 shrink-0 items-center rounded-md"><Logo height={28} className="hidden sm:block" /><Logo layout="mark" height={28} className="sm:hidden" /></Link>
         </div>
-        {/* Signed out: the Los Angeles Call Sheet sits in the middle of the bar (Justin, 14 Nov 2026); on phones it takes a
-            slim centred row under the logo and buttons, so Sign in and Sign up both fit. */}
+        {/* Signed out, from sm: the Los Angeles Call Sheet in the middle of the bar (Justin, 14 Nov 2026). */}
         {!app && !loading && !session && (
-          <p data-header-title className="order-last basis-full pb-2 text-center font-display text-label-md leading-tight font-semibold text-ink sm:order-none sm:basis-auto sm:shrink-0 sm:pb-0 sm:text-heading-sm swiss:md:col-span-6">
+          <p data-header-title className="hidden shrink-0 text-center font-display text-heading-sm leading-tight font-semibold text-ink sm:block swiss:md:col-span-6">
             Los Angeles Call Sheet
           </p>
         )}
@@ -119,6 +118,13 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
         </div>
       </div>
       </div>
+      {/* Phones, signed out: the Call Sheet as a slim forest band under the bar (Justin, 14 Nov 2026), ruled in gold like
+          the Coming soon seal, so the bar keeps just the logo, Day/Night, Sign in and Sign up. */}
+      {!app && !loading && !session && (
+        <p data-header-title className="flex items-center justify-center gap-3 bg-surface-brand px-4 py-1.5 font-display text-label-md font-semibold tracking-wide text-ink-on-brand sm:hidden">
+          <span aria-hidden="true" className="h-px w-6 bg-accent-gold" />Los Angeles Call Sheet<span aria-hidden="true" className="h-px w-6 bg-accent-gold" />
+        </p>
+      )}
     </header>
   );
 }
