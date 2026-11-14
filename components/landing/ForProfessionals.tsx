@@ -14,7 +14,6 @@ import { Eyebrow, Heading, Text, TextLink } from "@/components/ds/atoms";
 import { PhotoStage } from "@/components/ds/organisms";
 import { Founders } from "@/components/funnel/parts";
 import { benefits, faqs, profiles, services } from "@/components/funnel/professionals-content";
-import { ExampleProfileLink, usePublishedExamples } from "@/components/profile/ExampleProfileLink";
 import { Page } from "@/components/site/Page";
 import { asset } from "@/lib/site";
 import { STILL_LIFE } from "./ComingSoon";
@@ -32,7 +31,6 @@ function JoinLink({ children, label }: { children: React.ReactNode; label?: stri
 }
 
 export function ForProfessionals() {
-  const examples = usePublishedExamples();
   return (
     <Page bare>
       {/* Hero */}
@@ -123,7 +121,6 @@ export function ForProfessionals() {
                     </dl>
                     <div className="flex flex-wrap items-center gap-x-6">
                       <JoinLink label={`Create a profile like ${p.name}'s: go to sign-up`}>Create a profile like this</JoinLink>
-                      <ExampleProfileLink example={p} handle={examples?.find(({ person }) => person.id === p.id)?.person.slug} />
                     </div>
                   </div>
                 </article>
