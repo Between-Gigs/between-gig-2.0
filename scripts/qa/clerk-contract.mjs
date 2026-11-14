@@ -62,17 +62,17 @@ try {
     await page.getByRole("button", { name: "Create test account" }).click();
     await page.getByRole("button", { name: "Verify test email", exact: true }).waitFor();
     assert.equal(await page.evaluate(() => localStorage.getItem("qa-clerk-active")), null, "unverified identity must not become an app session");
-    assert.equal(await page.evaluate((email) => JSON.parse(localStorage.getItem("bg2-sample-v2")).people.some((p) => p.email === email), email), false);
+    assert.equal(await page.evaluate((email) => (JSON.parse(localStorage.getItem("bg2-sample-v2"))?.people ?? []).some((p) => p.email === email), email), false);
     await page.getByRole("button", { name: "Verify test email", exact: true }).click();
     await page.waitForURL(new RegExp(`${basePath}/join/$`));
     await page.getByRole("heading", { name: "Finish your account setup", exact: true }).waitFor();
     assert.equal(await page.evaluate(() => window.qaSignedInSignupMounts ?? 0), 0);
     // Identity exists now; app registration must not exist until explicit consent.
     assert.equal(await page.evaluate(() => !!JSON.parse(localStorage.getItem("qa-clerk-active"))), true);
-    assert.equal(await page.evaluate((email) => JSON.parse(localStorage.getItem("bg2-sample-v2")).people.some((p) => p.email === email), email), false);
+    assert.equal(await page.evaluate((email) => (JSON.parse(localStorage.getItem("bg2-sample-v2"))?.people ?? []).some((p) => p.email === email), email), false);
     await page.getByRole("button", { name: "Finish setup", exact: true }).click();
     await page.getByText("Agree to the Terms and Privacy Policy to continue.", { exact: true }).waitFor();
-    assert.equal(await page.evaluate((email) => JSON.parse(localStorage.getItem("bg2-sample-v2")).people.some((p) => p.email === email), email), false);
+    assert.equal(await page.evaluate((email) => (JSON.parse(localStorage.getItem("bg2-sample-v2"))?.people ?? []).some((p) => p.email === email), email), false);
     // A callback reload must preserve the same identity and keep consent unchecked.
     await page.reload();
     await page.getByRole("heading", { name: "Finish your account setup", exact: true }).waitFor();
@@ -141,7 +141,7 @@ try {
     assert.equal(await page.evaluate(() => window.qaSignedInWidgetMounts ?? 0), 0);
     assert.equal(await page.getByLabel("Email", { exact: true }).inputValue(), "existing-google@example.test");
     assert.equal(await page.getByLabel("Email", { exact: true }).isEditable(), false);
-    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).people.some((p) => p.email === "existing-google@example.test")), false);
+    assert.equal(await page.evaluate(() => (JSON.parse(localStorage.getItem("bg2-sample-v2"))?.people ?? []).some((p) => p.email === "existing-google@example.test")), false);
     await page.getByRole("button", { name: "Finish setup", exact: true }).click();
     await page.getByText("Agree to the Terms and Privacy Policy to continue.", { exact: true }).waitFor();
     await page.getByRole("checkbox").check();
@@ -158,7 +158,7 @@ try {
     await page.getByRole("button", { name: "Use a different account", exact: true }).click();
     await page.waitForURL((url) => url.pathname === `${basePath}/login/`);
     assert.equal(await page.evaluate(() => localStorage.getItem("qa-clerk-active")), null);
-    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).people.some((p) => p.email === "existing-google@example.test")), false);
+    assert.equal(await page.evaluate(() => (JSON.parse(localStorage.getItem("bg2-sample-v2"))?.people ?? []).some((p) => p.email === "existing-google@example.test")), false);
     await context.close();
     const social = await browser.newContext();
     await social.route("**/*", (r) => new URL(r.request().url()).hostname === "127.0.0.1" ? r.continue() : r.abort());
