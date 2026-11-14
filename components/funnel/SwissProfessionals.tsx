@@ -2,7 +2,6 @@ import { Accordion, Button, cx } from "@ds/components";
 import { Reveal } from "@ds/motion";
 import { ArrowUpRight, CalendarClock, ChevronDown, Clapperboard, Tag } from "lucide-react";
 import Link from "next/link";
-import { ExampleProfileLink, usePublishedExamples } from "@/components/profile/ExampleProfileLink";
 import { asset } from "@/lib/site";
 import { CallSheetButton, Founders, Horizon, SectionHeading } from "./parts";
 import { benefits, faqs, heroArt, profiles, services, type JoinCallSheet } from "./professionals-content";
@@ -16,7 +15,6 @@ function Right({ children, className }: { children: React.ReactNode; className?:
 }
 
 export function SwissProfessionals({ join }: { join: JoinCallSheet }) {
-  const examples = usePublishedExamples();
   return (
     <>
       {/* Hero: a square forest block on the grid. */}
@@ -132,7 +130,6 @@ export function SwissProfessionals({ join }: { join: JoinCallSheet }) {
                     <div className="flex gap-2"><dt><Tag className="mt-0.5 size-4 text-ink-subtle" aria-label="Pricing" /></dt><dd className="text-label-md text-ink tabular-nums">{p.pricing}</dd></div>
                     <div className="flex gap-2"><dt><CalendarClock className="mt-0.5 size-4 text-ink-subtle" aria-label="Availability" /></dt><dd className="text-ink-muted">{p.availability}</dd></div>
                   </dl>
-                  <ExampleProfileLink example={p} handle={examples?.find(({ person }) => person.id === p.id)?.person.slug} />
                 </article>
               </li>
             ))}
