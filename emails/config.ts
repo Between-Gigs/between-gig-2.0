@@ -4,12 +4,10 @@
  */
 
 /**
- * Where Between Gigs is, in every footer. The street address that was here (11766 Wilshire Blvd) was a stand-in nobody
- * recognised, so it's gone: an email shouldn't print an address that isn't the company's. CAN-SPAM asks commercial
- * email (the invite) for a valid postal address: when Between Gigs has one (a street address, P.O. box or registered
- * private mailbox), put it here in full, e.g. "123 Main St · Los Angeles, CA 90000".
+ * Office mailing address confirmed by the owner, 14 Nov 2026, and present in the November 3 Call Sheet broadcast.
+ * Keep this setting shared by HTML and plain text; no recipient-specific unsubscribe token belongs here.
  */
-export const MAILING_ADDRESS = "Los Angeles, California";
+export const MAILING_ADDRESS = "11766 Wilshire Blvd, Los Angeles, CA 90025";
 
 /** The footer's address line: "Between Gigs · <address>". */
 export const FOOTER_ADDRESS_LINE = `Between Gigs · ${MAILING_ADDRESS}`;

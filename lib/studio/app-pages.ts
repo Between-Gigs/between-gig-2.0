@@ -63,7 +63,7 @@ export const appPages: AppPage[] = [
   { id: "preview-guide", lane: "tools", title: "Preview guide", path: "/preview/", text: "Try every role, with thumbnails, in grid or list.", files: ["components/home/Overview.tsx"], calls: ["demo.signInAs", "auth.signOut"] },
   { id: "preview-profiles", lane: "tools", title: "Sample Gigster profiles", path: "/preview/profiles/", text: "Compare Simone, Luis, Renee and Devon, then open their profiles or editors.", files: ["components/profile/ExampleProfiles.tsx", "lib/professional-examples.ts"], calls: ["people.get", "demo.signInAs"] },
   { id: "preview-profile-editor", lane: "tools", title: "Gigster profile editor", path: "/preview/profile-editor/", text: "Configure required fields, form order and public sections, then share a review link.", files: ["components/profile/ProfileTemplateEditor.tsx", "lib/profile/template.ts"], calls: [] },
-  { id: "preview-journey", lane: "tools", title: "Stage 2 invitation journey", path: "/preview/gigster-journey/", text: "Preview the Stage 2 invitation and account setup.", files: ["components/journey/JourneyInvitation.tsx", "components/journey/JourneyAccount.tsx"], calls: [] },
+  { id: "preview-journey", lane: "tools", title: "Stage 2 account preview", path: "/preview/gigster-journey/account/", text: "Preview account setup, profile editing and review. The invitation is the canonical invite email.", files: ["components/journey/JourneyAccount.tsx"], calls: [] },
   { id: "preview-wallpapers", lane: "tools", title: "Wallpapers & background art", path: "/preview/wallpapers/", text: "Download the original craft invitation and Crew Call backgrounds.", files: ["app/preview/wallpapers/page.tsx"], calls: [] },
 ];
 

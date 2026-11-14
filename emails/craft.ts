@@ -1,7 +1,7 @@
 /*
  * The "craft" look shared by the invite and the profile-submitted confirmation (Flow p1 and p6): a flat-lay of the
  * tools of the trade frames a cream card with the logo, a spaced eyebrow, a mint rule and a serif headline, then
- * warm paper below. Light in every client and theme, so it carries no dark-mode classes.
+ * warm paper below. Its artwork uses a light palette; email clients may still recolor HTML in dark mode.
  * Responsive: on wide screens the photo frames the card (a background image, with a sand colour where a client hides
  * backgrounds, e.g. Outlook on Windows); on phones the frame's padding drops and a strip of the same photo sits above
  * the card instead, so the photo is never just a sliver. The e-k-* classes live in ./layout's stylesheet.
@@ -68,5 +68,5 @@ export const craftPaper = (inner: string, pad = "40px 56px 36px") =>
 <tr><td class="e-k-pad" style="padding:${pad};font-family:${SANS}">${inner}</td></tr></table>`;
 
 /** The shared shell, set for the craft look: no logo row (the card has its own), warm canvas, edge to edge on phones. */
-export const craftLayout = ({ title, preheader, body, reason, ctx }: { title: string; preheader: string; body: string; reason: string; ctx: EmailContext }) =>
-  layout({ title, preheader, body, reason, ctx, header: false, edge: true, paper: { canvas: k.canvas, line: k.line }, font: { family: SANS, href: FONT_HREF } });
+export const craftLayout = ({ title, preheader, body, reason, ctx, unsubscribe, lightOnly }: { title: string; preheader: string; body: string; reason: string; ctx: EmailContext; unsubscribe?: string; lightOnly?: boolean }) =>
+  layout({ title, preheader, body, reason, ctx, unsubscribe, lightOnly, header: false, edge: true, paper: { canvas: k.canvas, line: k.line }, font: { family: SANS, href: FONT_HREF } });
