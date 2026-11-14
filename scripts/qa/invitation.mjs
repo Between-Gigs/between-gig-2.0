@@ -32,6 +32,7 @@ try {
     assert.equal(await frame.locator('meta[name="color-scheme"]').getAttribute("content"), "light");
     await page.getByRole("radio", { name: "Dark", exact: true }).click();
     assert.equal(await frame.locator('meta[name="color-scheme"]').getAttribute("content"), "light");
+    await page.evaluate(() => scrollTo(0, 0));
     await page.screenshot({ path: `deliverables/invitation/${width}-${theme}${blocked ? "-images-blocked" : ""}.png`, fullPage: true });
     await page.goto(`${url}/preview/gigster-journey/?source=legacy#invite`);
     await page.waitForURL(location => location.pathname.endsWith("/emails/invite/") && location.searchParams.get("source") === "legacy" && location.hash === "#invite");
