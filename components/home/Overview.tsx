@@ -127,10 +127,12 @@ function StepPreview({ title, body, href, as, onClick, step, tag, children }: { 
 
 function SectionHead({ id, icon, title, body, tint, children }: { id: string; icon: Icon3DName; title: string; body: string; tint: string; children?: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
-      <div className="flex items-center gap-4">
+    // From xl the controls always sit on the right, level with the title; long descriptions wrap instead of pushing
+    // them underneath (Anowar, 14 Nov 2026: as on The Gigster journey, also on Sample Gigster Profiles).
+    <div className="flex flex-wrap items-end justify-between gap-3 xl:flex-nowrap xl:items-center xl:gap-8">
+      <div className="flex min-w-0 items-center gap-4 xl:flex-1">
         <span aria-hidden="true" className={cx("grid size-14 shrink-0 place-items-center rounded-xl", tint)}><Icon3D name={icon} className="size-9" /></span>
-        <div>
+        <div className="min-w-0">
           <h2 id={id} className="font-display text-heading-lg text-ink">{title}</h2>
           <p className="mt-0.5 max-w-2xl text-body-md text-ink-muted">{body}</p>
         </div>
@@ -160,7 +162,7 @@ function Section({ n, id, title, body, aside, art, children }: { art?: SectionAr
     setMode(value);
     try { localStorage.setItem(key, value); } catch { /* this visit still works */ }
   };
-  const controls = <div className="flex flex-wrap items-center gap-3">
+  const controls = <div className="flex flex-wrap items-center gap-3 xl:shrink-0 xl:flex-nowrap">
     {aside}
     <SegmentedControl label={`${title} previews`} size="sm" className="max-w-full flex-wrap [&_button]:min-h-11" value={mode} onChange={changeMode}
       options={[{ value: "thumbnail", label: "Thumbnails", icon: <LayoutGrid /> }, { value: "list", label: "List", icon: <List /> }, { value: "full", label: "Full height", icon: <List /> }]} />
@@ -169,7 +171,7 @@ function Section({ n, id, title, body, aside, art, children }: { art?: SectionAr
       options={[{ value: "desktop", label: "Desktop", icon: <Monitor /> }, { value: "mobile", label: "Mobile", icon: <Smartphone /> }]} />
   </div>;
   const heading = art ? <SectionHead id={id} title={title} body={body} icon={art.icon} tint={art.tint}>{controls}</SectionHead>
-    : <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 id={id} className="font-display text-heading-lg text-ink">{title}</h2><p className="mt-1 max-w-2xl text-body-md text-ink-muted">{body}</p></div>{controls}</div>;
+    : <div className="flex flex-wrap items-end justify-between gap-3 xl:flex-nowrap xl:items-center xl:gap-8"><div className="min-w-0 xl:flex-1"><h2 id={id} className="font-display text-heading-lg text-ink">{title}</h2><p className="mt-1 max-w-2xl text-body-md text-ink-muted">{body}</p></div>{controls}</div>;
   return <GuidePreviewModeContext.Provider value={mode}><GuidePreviewDeviceContext.Provider value={device}>
     {cards ? <section aria-labelledby={id} className={cx("grid gap-6 rounded-2xl border border-line bg-surface p-6 sm:p-8", id === "journey-steps-h" ? "mb-6" : "mt-6")}>
       {heading}{children}
