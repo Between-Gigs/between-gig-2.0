@@ -17,7 +17,7 @@ try {
       await page.evaluate(() => document.fonts.ready);
       assert.equal(await page.locator('meta[name="robots"]').getAttribute("content"), "noindex, nofollow");
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${width} overflow`);
-      for (const text of ["Coming soon", "It’s free to join!", "Put your behind-the-scenes skills to work beyond the set.", "Let us connect you to", "businesses and individuals who need your expertise."]) {
+      for (const text of ["Coming soon", "It’s free to join!", "Put your behind-the-scenes skills to work beyond the set.", "Let us connect you to", "businesses and individuals", "who need your expertise."]) {
         assert.equal(await page.getByText(text, { exact: true }).count(), 1);
       }
       const title = await page.locator("[data-preview-title]").boundingBox();
@@ -27,9 +27,22 @@ try {
       const connection = page.locator("[data-preview-connection]");
       assert.equal(await connection.locator('[aria-hidden="true"]').count(), 2);
       const lines = connection.locator("p");
-      const firstLine = await lines.nth(0).boundingBox();
-      const secondLine = await lines.nth(1).boundingBox();
-      assert.ok(secondLine.y >= firstLine.y + firstLine.height, "connection wording stays on separate rows");
+      assert.equal(await lines.count(), 3, "exactly three connection rows");
+      let previousBottom = 0;
+      for (let i = 0; i < 3; i++) {
+        const line = lines.nth(i);
+        const box = await line.boundingBox();
+        assert.ok(box.y >= previousBottom, "connection wording stays on separate rows");
+        previousBottom = box.y + box.height;
+        const style = await line.evaluate(el => {
+          const range = document.createRange();
+          range.selectNodeContents(el.querySelector('span:not([aria-hidden])') ?? el);
+          return { weight: getComputedStyle(el).fontWeight, rows: range.getClientRects().length };
+        });
+        assert.equal(style.rows, 1, `${width} connection row ${i + 1} does not wrap`);
+        assert.equal(style.weight, i === 2 ? "700" : "400", "only final connection line is bold");
+        assert.ok(box.x >= 0 && box.x + box.width <= width, "connection row fits viewport");
+      }
       const header = page.locator("header");
       assert.equal(await header.getByRole("link", { name: "Between Gigs home" }).getAttribute("href"), "/");
       const headerBox = await header.boundingBox();

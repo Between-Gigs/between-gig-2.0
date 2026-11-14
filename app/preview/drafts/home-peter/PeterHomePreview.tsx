@@ -66,12 +66,13 @@ export function PeterHomePreview() {
                 <p className="text-body-md font-semibold italic">It’s free to join!</p>
               </div>
               <div className="grid w-full max-w-3xl justify-items-center gap-1 sm:mt-1 md:max-w-sm lg:max-w-xl" data-preview-connection>
-                <p className="flex max-w-full items-center justify-center gap-3 text-body-md font-bold italic leading-relaxed sm:gap-5 sm:text-body-lg">
+                <p className="flex max-w-full items-center justify-center gap-1 text-body-md font-normal italic leading-relaxed sm:gap-5 sm:text-body-lg">
                   <span aria-hidden="true" className="h-px w-4 shrink-0 bg-accent-gold lg:w-16" />
                   <span>Let us connect you to</span>
                   <span aria-hidden="true" className="h-px w-4 shrink-0 bg-accent-gold lg:w-16" />
                 </p>
-                <p className="text-body-lg font-semibold leading-relaxed">businesses and individuals who need your expertise.</p>
+                <p className="text-body-md font-normal leading-relaxed sm:text-body-lg">businesses and individuals</p>
+                <p className="text-body-md font-bold leading-relaxed sm:text-body-lg">who need your expertise.</p>
               </div>
             </div>
           </div>
