@@ -18,7 +18,10 @@ import { serviceDescription } from "@/lib/profile/service-descriptions";
 import { stageTwoLimits } from "@/lib/profile/stage-two";
 import { ABOUT_MAX, DATES_MAX, DEPARTMENT_MAX, MAX_SERVICES, NAME_MAX, SERVICE_LINE_MAX, TITLE_MAX, hasRate } from "@/lib/profile/validate";
 import { Credits } from "@/components/builder/ProfileBuilder";
-import { PhotoCropper, PhotoPicker } from "@/components/profile/PhotoPicker";
+import { PhotoPicker } from "@/components/profile/PhotoPicker";
+import { FittedImg } from "@/components/profile/FittedImg";
+import { withFit, type Fit } from "@/lib/profile/work-fit";
+import { FitCropper } from "./FitCropper";
 import { DateField } from "@/components/ui/DateField";
 import { GroupError, Pills, type SectionProps } from "./ui";
 import { takeHome } from "./sections";
@@ -367,16 +370,12 @@ export function CanvasSamples({ d, set }: SectionProps) {
     } catch { setProblem("We couldn't read that photo. Try another one."); }
   };
   const choose = (at: number | null) => { replacing.current = at; input.current?.click(); };
-  // Fit (Justin, 14 Nov 2026: "all we needed was the ability to adjust the fit"): Adjust opens a cropper in the
-  // thumbnail's own 16:9 shape, with crop lines. The upload it came from is kept for this visit, keyed by the
-  // cropped result, so adjusting again can bring back what an earlier crop cut off.
-  const originals = React.useRef(new Map<string, string>());
-  const [fitting, setFitting] = React.useState<{ i: number; src: string } | null>(null);
-  const adjust = (i: number) => setFitting({ i, src: originals.current.get(samples[i]) ?? samples[i] });
-  const saveFit = (url: string) => {
-    if (!fitting) return;
-    originals.current.set(url, fitting.src);
-    set("workSamples")(samples.map((x, j) => (j === fitting.i ? url : x)));
+  // Fit (Justin, 14 Nov 2026): Adjust shows the whole photo with the thumbnail's frame over it; saving stores only
+  // the alignment on the photo's link (lib/profile/work-fit.ts), so the lightbox still opens the whole image.
+  const [fitting, setFitting] = React.useState<number | null>(null);
+  const saveFit = (fit: Fit) => {
+    if (fitting === null) return;
+    set("workSamples")(samples.map((x, j) => (j === fitting ? withFit(x, fit) : x)));
     setFitting(null);
   };
   // Order (Justin, 14 Nov 2026): drag a photo by its handle onto another place, or focus the handle and use the arrow
@@ -418,7 +417,7 @@ export function CanvasSamples({ d, set }: SectionProps) {
               {src ? (
                 <figure className={cx("relative aspect-video overflow-hidden rounded-lg border bg-surface transition-shadow duration-fast",
                   dragging === i ? "border-ink-brand shadow-lg ring-2 ring-ink-brand" : "border-line")}>
-                  <img src={src} alt={`Work sample ${i + 1}`} draggable={false} className="size-full object-cover" />
+                  <FittedImg sample={src} alt={`Work sample ${i + 1}`} />
                   {samples.length > 1 && (
                     <button type="button" id={`sample-grip-${i}`} aria-label={`Move work sample ${i + 1} of ${samples.length}`} aria-describedby="samples-hint"
                       title="Drag to reorder, or use the arrow keys"
@@ -430,7 +429,7 @@ export function CanvasSamples({ d, set }: SectionProps) {
                     </button>
                   )}
                   <span className="absolute inset-x-2 bottom-2 flex justify-end gap-2">
-                    <button type="button" aria-label={`Adjust the fit of work sample ${i + 1}`} title="Adjust the fit" onClick={() => adjust(i)}
+                    <button type="button" aria-label={`Adjust the fit of work sample ${i + 1}`} title="Adjust the fit" onClick={() => setFitting(i)}
                       className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><CropIcon aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">Adjust</span></button>
                     <button type="button" aria-label={`Replace work sample ${i + 1}`} title="Replace" onClick={() => choose(i)}
                       className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><RefreshCw aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">Replace</span></button>
@@ -450,11 +449,7 @@ export function CanvasSamples({ d, set }: SectionProps) {
         })}
       </ul>
       {problem && <p className="text-body-sm text-danger">{problem}</p>}
-      {fitting && (
-        <PhotoCropper src={fitting.src} aspect={16 / 9} out={1200}
-          title="Adjust the fit" description="Drag to move the photo, zoom to choose what shows. The frame is the thumbnail's own shape."
-          saveLabel="Save fit" onCancel={() => setFitting(null)} onSave={saveFit} />
-      )}
+      {fitting !== null && samples[fitting] && <FitCropper sample={samples[fitting]} onCancel={() => setFitting(null)} onSave={saveFit} />}
     </section>
   );
 }

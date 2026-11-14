@@ -9,6 +9,7 @@
  * same: only the presentation changes.
  */
 import { Accordion, Button, cx } from "@ds/components";
+import { FittedImg } from "@/components/profile/FittedImg";
 import { BadgeCheck, BriefcaseBusiness, Heart, Info, Languages, Share } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -19,7 +20,6 @@ import { personalityQuestionText } from "@/lib/profile/personality";
 import { serviceDescription } from "@/lib/profile/service-descriptions";
 import { startDateLabel } from "@/lib/profile/stage-two";
 import { hasRate } from "@/lib/profile/validate";
-import { asset } from "@/lib/site";
 import type { ProfileSectionId } from "@/lib/profile/template";
 import { Divider, Heading, Quote, Status, Text } from "../atoms";
 import { RateBlock, SectionHeading } from "../molecules";
@@ -212,7 +212,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
           {portfolio.slice(0, 5).map((it, i) => (
             <li key={it.src} className="min-w-0">
               <button type="button" onClick={() => onPhoto(i)} aria-label={`Open image: ${it.caption}`} className="group relative block aspect-4/3 w-full overflow-hidden rounded-lg bg-surface-sunken">
-                <img src={asset(it.src)} alt="" loading="lazy" className="absolute inset-0 size-full object-cover transition duration-base group-hover:scale-105" />
+                <FittedImg sample={it.src} loading="lazy" imgClassName="transition duration-base group-hover:scale-105" />
               </button>
             </li>
           ))}

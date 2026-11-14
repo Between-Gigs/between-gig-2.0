@@ -1,5 +1,6 @@
 "use client";
 import { PublicBookingDetails } from "./PublicBookingDetails";
+import { FittedImg } from "@/components/profile/FittedImg";
 import { data } from "@/lib/data";
 import { Accordion, Button, cx } from "@ds/components";
 import { ArrowRight, Check, Heart, Info, Share } from "lucide-react";
@@ -10,7 +11,6 @@ import { Icon3D } from "@/components/ui/Icon3D";
 import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/data/taxonomy";
 import { craftIcon, iconTint, type Icon3DName } from "@/lib/icons3d";
 import { hasRate } from "@/lib/profile/validate";
-import { asset } from "@/lib/site";
 import type { ProfileLayoutProps } from "./ProfileView";
 
 /** A small pill on the identity panel. */
@@ -169,7 +169,7 @@ export function WarmProfile({ person, fields: f, mode, embedded, similar = [], d
           {portfolio.slice(0, 4).map((it, i) => (
             <li key={it.src} className="w-4/5 shrink-0 snap-start sm:w-auto">
               <button type="button" onClick={() => onPhoto(i)} aria-label={`Open image: ${it.caption}`} className="group relative block aspect-video w-full overflow-hidden rounded-lg">
-                <img src={asset(it.src)} alt="" loading="lazy" className="absolute inset-0 size-full object-cover transition duration-base group-hover:scale-105" />
+                <FittedImg sample={it.src} loading="lazy" imgClassName="transition duration-base group-hover:scale-105" />
               </button>
             </li>
           ))}

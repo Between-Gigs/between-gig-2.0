@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { parseSample } from "@/lib/profile/work-fit";
 import Link from "next/link";
 import { Accordion, Button } from "@ds/components";
 import { ArrowRight, BadgeCheck, BriefcaseBusiness, Camera, Clapperboard, ClipboardList,
@@ -63,7 +64,7 @@ export function ModernProfile({ person, fields: f, mode, embedded, draft, part, 
       </div>, "The services you'd offer clients between gigs", "block"),
     work: portfolio.length > 0 && <><ul className="modern-work">{portfolio.slice(0, 4).map((item, i) => (
       <li key={item.src}><button type="button" onClick={() => onPhoto(i)} aria-label={`Open image: ${item.caption}`}>
-        <img src={asset(item.src)} alt="" loading="lazy" /><small>{String(i + 1).padStart(2, "0")}</small>
+        <img src={asset(parseSample(item.src).src)} alt="" loading="lazy" /><small>{String(i + 1).padStart(2, "0")}</small>
       </button></li>))}</ul>
       <div className="mt-3 flex flex-wrap items-center gap-3"><Button size="sm" variant="secondary" onClick={() => onPhoto(0)}>Show all {portfolio.length} photos</Button>
         {sample && <p className="text-body-sm text-ink-muted">Concept images showing the kind of work to discuss, not completed client projects.</p>}</div></>,

@@ -1,5 +1,7 @@
 "use client";
 import { Accordion, Button, Field, Input, Modal, Select, Textarea, cx, useToast } from "@ds/components";
+import { FittedImg } from "@/components/profile/FittedImg";
+import { parseSample } from "@/lib/profile/work-fit";
 import { ArrowRight, Check, ChevronLeft, ChevronRight, CircleDashed, Heart, Info, MapPin, MessageSquare, Share } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -318,7 +320,7 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
             {shownPhotos.map((it, i) => (
               <li key={it.src} className={cx("relative", shownPhotos.length === 1 ? "col-span-6 aspect-video" : tile[i])}>
                 <button type="button" onClick={() => onPhoto(i)} aria-label={`Open image: ${it.caption}`} className="group absolute inset-0 block overflow-hidden">
-                  <img src={asset(it.src)} alt="" loading="lazy" className="absolute inset-0 size-full object-cover transition duration-base group-hover:scale-105 motion-reduce:transition-none" />
+                  <FittedImg sample={it.src} loading="lazy" imgClassName="transition duration-base group-hover:scale-105 motion-reduce:transition-none" />
                 </button>
               </li>
             ))}
@@ -518,7 +520,8 @@ function Lightbox({ name, items, index, onIndex }: { name: string; items: { src:
     <Modal open={index !== null} onClose={() => onIndex(null)} size="lg" title={it?.caption ?? ""} description={`${name} · image ${index === null ? "" : index + 1} of ${n}`}>
       {it && (
         <div className="grid gap-3">
-          <img key={it.src} src={asset(it.src)} alt={it.caption} className="aspect-video w-full object-cover" />
+          {/* The whole photo at its own ratio: thumbnails may show an aligned part, the lightbox never crops. */}
+          <img key={it.src} src={asset(parseSample(it.src).src)} alt={it.caption} className="mx-auto block h-auto max-h-120 w-auto max-w-full rounded-md" />
           <div className="flex items-center justify-between">
             <Button variant="secondary" size="md" iconStart={<ChevronLeft />} onClick={() => onIndex(((index ?? 0) - 1 + n) % n)}>Previous</Button>
             <span className="text-label-sm text-ink-muted tabular-nums">{(index ?? 0) + 1} / {n}</span>
