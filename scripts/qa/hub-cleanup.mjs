@@ -1,0 +1,103 @@
+// Actual rendered Hub previews, scoped controls and recoverable email history. No external actions.
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import { chromium } from "playwright-core";
+import { serve } from "./serve.mjs";
+
+const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+const { server, url } = await serve("out", { base });
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? "/usr/bin/chromium" });
+fs.mkdirSync("deliverables/hub-cleanup", { recursive: true });
+try {
+  for (const width of [390, 768, 1440]) for (const theme of ["light", "dark"]) {
+    const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: theme, reducedMotion: "reduce" });
+    await context.addInitScript(t => localStorage.setItem("bg-theme", t), theme);
+    const origin = new URL(url).origin;
+    await context.route("**/*", route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    const page = await context.newPage();
+    page.setDefaultTimeout(20000);
+    await page.goto(`${url}/hub/`);
+    await page.waitForFunction(() => Boolean(window.bgSample));
+    assert.equal(await page.getByRole("heading", { name: "Sample Gigster Profiles", exact: true }).count(), 1);
+    const sections = await page.locator('main section[aria-labelledby]').evaluateAll(elements => elements.map(el => el.getAttribute("aria-labelledby")));
+    assert.equal(sections.at(-1), "design-system-h", "Design system is last");
+    const previous = page.locator('section[aria-labelledby="drafts-h"]');
+    for (const path of ["join-v1", "login-v1", "profile-editor-v1"]) {
+      assert.equal(await previous.locator(`a[href*="/${path}/"]`).count(), 0);
+    }
+    const scratchpad = page.locator('section[aria-labelledby="scratchpad-h"]');
+    assert.equal(await scratchpad.getByRole("link", { name: /Draft homepage/ }).getAttribute("href"), `${base}/preview/drafts/home-peter/`);
+    const outerSession = await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2") ?? "null")?.session ?? null);
+    const journey = page.locator('section[aria-labelledby="journey-h"]');
+    for (const [title, route, expected] of [
+      ["Edit your profile", "/profile/canvas/", "How I can help"],
+      ["Profile submitted", "/profile/submitted/", "Profile submitted."],
+    ]) {
+      const card = journey.locator("li").filter({ has: page.getByRole("button", { name: new RegExp(`^${title}`) }) });
+      await card.scrollIntoViewIfNeeded();
+      const frame = card.frameLocator(`iframe[title="Preview of ${title}"]`);
+      await frame.locator("html[data-guide-ready]").waitFor({ state: "attached" });
+      await frame.getByText(expected, { exact: false }).first().waitFor({ state: "attached" });
+      const actualRoute = await frame.locator("html").evaluate(() => location.pathname);
+      assert.equal(actualRoute, `${base}${route}`, "protected thumbnail renders requested route, not login");
+      assert.equal(await frame.locator("html").evaluate(() => window.name.startsWith("bg-preview:gigster:")), true);
+      assert.ok(await frame.locator("body").evaluate(el => !el.innerText.includes("Loading your profile")), "preview content loaded");
+    }
+    assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2") ?? "null")?.session ?? null), outerSession, "thumbnails preserve viewing account");
+    const group = journey.getByRole("radiogroup", { name: "The Gigster journey previews" });
+    const full = group.getByRole("radio", { name: "Full height", exact: true });
+    const box = await full.boundingBox();
+    assert.ok(box.height >= 44, "preview controls have phone touch targets");
+    await group.getByRole("radio", { name: "Thumbnails", exact: true }).focus();
+    await page.keyboard.press("ArrowRight");
+    assert.equal(await full.getAttribute("aria-checked"), "true", "arrow keys select section view");
+    assert.equal(await page.locator('section[aria-labelledby="public-h"] [data-guide-preview-mode="full"]').count(), 0, "neighbor section stays in thumbnail mode");
+    const submitted = journey.locator('iframe[title="Preview of Profile submitted"]');
+    const submittedCard = journey.locator("li").filter({ has: page.getByRole("button", { name: /^Profile submitted/ }) });
+    await submittedCard.scrollIntoViewIfNeeded();
+    await submitted.waitFor();
+    await submittedCard.frameLocator('iframe[title="Preview of Profile submitted"]').locator("h1").filter({ hasText: "Profile submitted." }).waitFor({ state: "attached" });
+    await page.waitForFunction(() => {
+      const frame = document.querySelector('iframe[title="Preview of Profile submitted"]');
+      return frame?.contentDocument?.documentElement.hasAttribute("data-guide-ready")
+        && Number(frame.style.height.replace("px", "")) > 720
+        && Number(frame.style.height.replace("px", "")) >= frame.contentDocument.documentElement.scrollHeight - 1;
+    });
+    const fitted = await submitted.evaluate(async el => {
+      let stable = 0, previous = 0;
+      for (let attempt = 0; attempt < 300; attempt++) {
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        const content = el.contentDocument.documentElement.scrollHeight;
+        const viewport = Number(el.style.height.replace("px", ""));
+        stable = viewport >= content - 1 && content === previous ? stable + 1 : 0;
+        if (stable >= 5) return { fits: true, viewport, content };
+        previous = content;
+      }
+      return { fits: false, viewport: el.style.height, content: el.contentDocument.documentElement.scrollHeight };
+    });
+    assert.ok(fitted.fits, `full page fits measured iframe: ${JSON.stringify(fitted)}`);
+    await submittedCard.screenshot({ path: `deliverables/hub-cleanup/submitted-${width}-${theme}.png` });
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector('section[aria-labelledby="journey-h"] [role="radio"][aria-checked="true"]')?.textContent.includes("Full height"));
+    assert.equal(await page.locator('section[aria-labelledby="journey-h"]').getByRole("radio", { name: "Full height", exact: true }).getAttribute("aria-checked"), "true", "section preference persists");
+    await page.locator('section[aria-labelledby="journey-h"]').getByRole("radio", { name: "Thumbnails", exact: true }).click();
+    await page.addScriptTag({ content: fs.readFileSync("node_modules/axe-core/axe.min.js", "utf8") });
+    const violations = await page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } })).violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) })));
+    assert.deepEqual(violations, [], "Hub accessibility");
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "Hub fits viewport");
+    await scratchpad.scrollIntoViewIfNeeded();
+    await scratchpad.screenshot({ path: `deliverables/hub-cleanup/scratchpad-${width}-${theme}.png` });
+    await scratchpad.getByRole("link", { name: /Draft homepage/ }).click();
+    await page.locator('[data-preview-title]').waitFor();
+    assert.equal(await page.locator('meta[name="robots"]').getAttribute("content"), "noindex, nofollow");
+    await page.goto(`${url}/emails/`);
+    assert.equal(await page.locator('main a[href$="/emails/welcome/"], main a[href$="/emails/coming-soon/"]').count(), 0, "retired templates absent from active email list");
+    for (const name of ["welcome", "coming-soon"]) {
+      await page.goto(`${url}/emails/${name}/`);
+      await page.frameLocator("iframe").locator("body").waitFor();
+      assert.ok((await page.frameLocator("iframe").locator("body").innerText()).length > 100, "retired direct URL remains recoverable");
+    }
+    await context.close();
+    console.log(`PASS: Hub cleanup ${width}px/${theme}: rendered profile previews, scoped full-height controls, keyboard/axe, archive recovery and Scratchpad`);
+  }
+} finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
