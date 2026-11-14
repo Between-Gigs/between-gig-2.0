@@ -24,11 +24,13 @@ try {
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
       await header.getByRole("link", { name: "Between Gigs home", exact: true }).click();
       await page.waitForURL(base + "/");
+      await page.goto(base + route);
       await page.locator("footer").getByRole("link", { name: "Between Gigs home", exact: true }).click();
       await page.waitForURL(base + "/");
       await page.locator("header").first().getByRole("link", { name: "Sign in", exact: true }).click();
       await page.waitForURL(base + "/login/");
-      await page.getByRole("link", { name: /Create an account/i }).first().waitFor({ state: "visible" });
+      await page.getByRole("link", { name: /Create an account/i }).first().click();
+      await page.waitForURL(base + "/join/");
     }
   }
   await context.close();
