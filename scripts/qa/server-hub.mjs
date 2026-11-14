@@ -25,7 +25,7 @@ try {
     assert.equal(new URL(page.url()).pathname, "/hub/");
     await page.getByRole("heading", { name: "Choose your experience" }).waitFor();
   }
-  await page.getByRole("link", { name: "Wallpapers", exact: true }).click();
+  await page.getByRole("navigation", { name: "Preview workspace", exact: true }).getByRole("link", { name: "Wallpapers", exact: true }).click();
   await page.waitForURL("**/hub/preview/wallpapers/");
   await page.locator("h1").waitFor();
   assert.equal((await page.reload()).status(), 200);

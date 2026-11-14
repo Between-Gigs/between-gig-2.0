@@ -1,0 +1,97 @@
+// Persistent admin chrome, faithful public previews and role boundaries, using fresh fictional contexts only.
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import { chromium } from "playwright-core";
+import { serve } from "./serve.mjs";
+const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+const { server, url } = await serve("out", { base });
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? "/usr/bin/chromium" });
+fs.mkdirSync("deliverables/admin-shell", { recursive: true });
+const cases = ["editorial", "swiss"].flatMap(look => [320, 768, 1440].flatMap(width => ["light", "dark"].map(theme => ({ look, width, theme }))));
+cases.push(...[390, 1440].flatMap(width => ["light", "dark"].map(theme => ({ look: "modern", width, theme }))));
+try {
+  for (const { look, width, theme } of cases) {
+    const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: theme, reducedMotion: "reduce" });
+    await context.addInitScript(({ look, theme }) => { localStorage.setItem("bg2-site-look-v2", look); localStorage.setItem("bg-theme", theme); }, { look, theme });
+    const origin = new URL(url).origin;
+    await context.route("**/*", route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    const page = await context.newPage(); const errors = []; page.on("pageerror", error => errors.push(error.message));
+    await page.goto(`${url}/hub/`); await page.waitForFunction(() => !!window.bgSample);
+    await page.locator('[data-admin-shell="preview"]').waitFor();
+    assert.equal(await page.locator("main").count(), 1); assert.equal(await page.locator("[data-admin-shell] > header").count(), 1);
+    assert.equal(await page.getByRole("navigation", { name: "Explore Between Gigs", exact: true }).count(), 0, "catalogue chrome belongs to the admin frame");
+    assert.notEqual(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2"))?.session?.role), "owner", "opening Hub never grants owner");
+    await page.evaluate(() => { window.qaAdminNode = document.querySelector("[data-admin-shell]"); });
+    const menu = page.getByRole("button", { name: "Open owner menu", exact: true });
+    const openNav = async () => { if (width < 1024) await menu.click(); return width < 1024 ? page.getByRole("dialog", { name: "Preview workspace", exact: true }) : page.getByRole("navigation", { name: "Preview workspace", exact: true }); };
+    let nav = await openNav();
+    assert.equal(await nav.getByRole("link", { name: "People", exact: true }).count(), 0);
+    assert.equal(await nav.getByRole("link", { name: "Review queue", exact: true }).count(), 0);
+    assert.equal(await nav.getByRole("searchbox").count(), 0, "no owner data search in read-only preview navigation");
+    await nav.getByRole("link", { name: "Email Previews", exact: true }).click();
+    await page.getByRole("heading", { name: "Emails", exact: true }).waitFor();
+    assert.equal(await page.evaluate(() => window.qaAdminNode === document.querySelector("[data-admin-shell]")), true);
+    assert.equal(await page.getByRole("dialog").count(), 0, "mobile drawer closes on navigation");
+    assert.equal(await page.locator("[data-admin-shell]").count(), 1); assert.equal(await page.locator("main").count(), 1);
+    nav = await openNav(); await nav.getByRole("link", { name: "Forms", exact: true }).click();
+    await page.getByRole("heading", { name: "Form previews", exact: true }).waitFor();
+    assert.equal(await page.evaluate(() => window.qaAdminNode === document.querySelector("[data-admin-shell]")), true);
+    nav = await openNav(); await nav.getByRole("link", { name: "Social Previews", exact: true }).click();
+    await page.getByRole("heading", { name: "Social Previews", exact: true }).waitFor();
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+    if (width >= 1024) assert.equal(await page.getByRole("navigation", { name: "Preview workspace", exact: true }).locator('[aria-current="page"]').count(), 1);
+    await page.addScriptTag({ content: fs.readFileSync("node_modules/axe-core/axe.min.js", "utf8") });
+    const violations = await page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } })).violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) })));
+    assert.deepEqual(violations, []);
+    await page.screenshot({ path: `deliverables/admin-shell/${look}-${width}-${theme}.png`, fullPage: true });
+    if (look === "editorial" && [320, 1440].includes(width)) {
+      await page.goto(`${url}/hub/`); await page.waitForFunction(() => !!window.bgSample);
+      const beforePreview = await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2"))?.session ?? null);
+      await page.getByRole("region", { name: "The Gigster journey", exact: true }).getByRole("link", { name: /^Sign up/ }).click();
+      await page.getByText("Read-only sample preview. Open the standalone page to use its forms and navigation.", { exact: true }).waitFor();
+      const publicFrame = page.frameLocator('iframe[data-admin-page-preview]');
+      await publicFrame.getByText("Sample account preview", { exact: true }).waitFor();
+      assert.equal(await publicFrame.locator("html").getAttribute("data-guide-thumbnail"), "");
+      assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2"))?.session ?? null), beforePreview);
+      assert.ok((await page.getByRole("link", { name: "Open standalone page", exact: true }).getAttribute("href")).endsWith(`${base}/join/`));
+      assert.equal(await page.locator("[data-admin-shell]").count(), 1);
+      // Owner UI persists across dashboard and preview navigation without duplicate frames or authority changes.
+      await page.evaluate(() => window.bgSample.signInAs("owner")); await page.goto(`${url}/owners/`);
+      await page.locator('[data-admin-shell="owner"]').waitFor();
+      await page.evaluate(() => { window.qaOwnerNode = document.querySelector("[data-admin-shell]"); });
+      if (width < 1024) await menu.click();
+      let ownerNav = width < 1024 ? page.getByRole("dialog", { name: "Owner workspace", exact: true }) : page.getByRole("navigation", { name: "Owner workspace", exact: true });
+      await ownerNav.getByRole("link", { name: "Hub", exact: true }).click();
+      await page.getByRole("heading", { name: "The Gigster journey", exact: true }).waitFor();
+      assert.equal(await page.evaluate(() => window.qaOwnerNode === document.querySelector("[data-admin-shell]")), true);
+      await page.goto(`${url}/preview/drafts/home-peter/`);
+      const frame = page.frameLocator('iframe[data-admin-page-preview]');
+      await frame.getByText("who need your expertise.", { exact: true }).waitFor();
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "owner preview toolbar fits narrow screens");
+      await page.waitForFunction(() => document.querySelector('iframe[data-admin-page-preview]')?.contentDocument?.querySelector('[data-admin-shell]') === null);
+      assert.equal(await frame.locator("header").count(), 1); assert.equal(await frame.locator("footer").count(), 1);
+      assert.equal(await frame.locator("main").count(), 1); assert.equal(await page.locator("main").count(), 1);
+      assert.equal(await frame.locator('iframe[data-admin-page-preview]').count(), 0, "no recursive admin frame");
+      const switcher = frame.getByRole("switch", { name: "Night mode", exact: true });
+      const old = await switcher.getAttribute("aria-checked"); await switcher.click();
+      await page.waitForFunction(old => document.querySelector('iframe[data-admin-page-preview]')?.contentDocument?.querySelector('[role="switch"]')?.getAttribute("aria-checked") !== old, old);
+      const standalone = page.getByRole("link", { name: "Open standalone page", exact: true });
+      const standaloneHref = await standalone.getAttribute("href"); assert.ok(standaloneHref.includes("preview=standalone"));
+      await page.screenshot({ path: `deliverables/admin-shell/draft-${width}-${theme}.png`, fullPage: true });
+      await page.goto(standaloneHref); await page.getByText("who need your expertise.", { exact: true }).waitFor();
+      await page.waitForFunction(() => !document.querySelector("[data-admin-shell]"));
+      assert.equal(await page.locator('iframe[data-admin-page-preview]').count(), 0);
+      await page.goto(`${url}/preview/page/?path=${encodeURIComponent("/owners/")}`);
+      await page.getByRole("alert").getByText(/External URLs and private management routes cannot be embedded/).waitFor();
+      assert.equal(await page.locator('iframe[data-admin-page-preview]').count(), 0);
+      // Non-owner guards stay intact, while public visitor pages retain their original chrome.
+      await page.goto(`${url}/hub/`); await page.waitForFunction(() => !!window.bgSample); await page.evaluate(() => window.bgSample.signInAs("gigster:grace-liu"));
+      await page.goto(`${url}/owners/`); await page.getByText("Owners only", { exact: true }).waitFor();
+      assert.equal(await page.locator("[data-admin-shell]").count(), 0);
+      await page.goto(`${url}/professionals/`);
+      assert.equal(await page.locator("[data-admin-shell]").count(), 0); assert.equal(await page.locator("header").count(), 1); assert.equal(await page.locator("footer").count(), 1);
+    }
+    assert.deepEqual(errors, []); await context.close();
+    console.log(`PASS: persistent admin shell ${look}/${width}/${theme}: navigation, no role elevation, faithful public chrome, fit/axe`);
+  }
+} finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }

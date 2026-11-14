@@ -1,4 +1,6 @@
+"use client";
 import { cx } from "@ds/components/cx";
+import { useInAppFrame } from "./AppFrameContext";
 import { SiteFooter } from "./SiteFooter";
 import { SiteHeader } from "./SiteHeader";
 import { StageProps } from "./StageProps";
@@ -8,6 +10,13 @@ import { StageProps } from "./StageProps";
  * at the page's edges ("bottom": only the bottom-left one, where a top bar of actions would sit on the top piece), behind the content, in Green Room.
  */
 export function Page({ children, className, bare = false, decor = false }: { children: React.ReactNode; className?: string; bare?: boolean; decor?: boolean | "corners" | "bottom" }) {
+  const inFrame = useInAppFrame();
+  if (inFrame) return <div className="flex flex-1 flex-col text-ink">
+    <div className={cx("flex flex-1 flex-col", decor && "relative isolate")}>
+      {decor && <StageProps corners={decor === "corners"} top={decor !== "bottom"} />}
+      <div className={cx("flex-1", className)}>{children}</div>
+    </div>
+  </div>;
   return (
     <div className="flex min-h-dvh flex-col overflow-x-clip bg-bg text-ink">
       <SiteHeader />

@@ -19,6 +19,7 @@ import { SAMPLE_OWNER } from "@/lib/data/fields";
 import { ownerEmailPreview, ownerPreviewLink } from "@/lib/owner-email-preview";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { basePath } from "@/lib/site";
+import { AppFrameContext as FrameContext, useInAppFrame } from "@/components/site/AppFrameContext";
 
 markArea("bg-split:dashboard");
 
@@ -58,6 +59,14 @@ const sections: { title: string; items: Item[] }[] = [
 
 const SECTION_KEY = "bg2-owner-nav-sections";
 const SectionContext = React.createContext<{ closed: string[]; change: (closed: string[]) => void } | null>(null);
+const ModeContext = React.createContext<"owner" | "preview">("owner");
+function useSections() {
+  const preview = React.useContext(ModeContext) === "preview";
+  if (!preview) return sections;
+  return sections.filter(group => ["Overview", "Previews", "Studio"].includes(group.title)).map(group => group.title !== "Overview" ? group : {
+    ...group, items: group.items.map(item => item.label !== "Dashboard" ? item : { ...item, hint: "Owner access required", fullPage: basePath === "/hub" }),
+  });
+}
 
 function countsFrom(d: DashboardSummary): Record<CountKey, number> {
   return { review: d.counts.submitted, people: Object.values(d.counts).reduce((a, b) => a + b, 0), waitlist: d.waitlist.not_invited };
@@ -65,10 +74,8 @@ function countsFrom(d: DashboardSummary): Record<CountKey, number> {
 /** Last known counts, so a remounted sidebar shows numbers straight away instead of blank pills. */
 let lastCounts: Record<CountKey, number> | null = null;
 
-const FrameContext = React.createContext<{ setSection: (s?: string) => void; setFit: (fit: boolean) => void } | null>(null);
-
 /** True inside the owner frame, whose own scroller starts under the header; false on a public page. */
-export const useInOwnerFrame = () => React.useContext(FrameContext) !== null;
+export const useInOwnerFrame = useInAppFrame;
 
 /**
  * Owner pages call this. Inside the persistent owner frame (app/owners/layout.tsx) it only passes the page
@@ -95,14 +102,15 @@ export function OwnerShell({ children, section, fit = false }: { children: React
  * The rail's collapsed state lives on <html data-owner-nav> and is styled with the `nav-collapsed:` variant,
  * so it's right from the first paint; `[` toggles it.
  */
-export function OwnerFrame({ children, section: fixed, fit: fixedFit = false }: { children: React.ReactNode; section?: string; fit?: boolean }) {
+export function OwnerFrame({ children, section: fixed, fit: fixedFit = false, mode = "owner" }: { children: React.ReactNode; section?: string; fit?: boolean; mode?: "owner" | "preview" }) {
   const look = useLook();
   const brand = look !== "swiss";
   const modern = look === "modern";
   const [drawer, setDrawer] = React.useState(false);
   const pathname = usePathname();
   const [section, setSection] = React.useState<string | undefined>(fixed);
-  const [fit, setFit] = React.useState(fixedFit);
+  const [requestedFit, setFit] = React.useState(false);
+  const fit = fixedFit || requestedFit;
   const [counts, setCounts] = React.useState(lastCounts);
   const main = React.useRef<HTMLElement>(null);
   const search = React.useRef<HTMLInputElement>(null);
@@ -122,11 +130,12 @@ export function OwnerFrame({ children, section: fixed, fit: fixedFit = false }: 
 
   // Counts follow the page (approving, inviting and reviewing change them); each page starts at the top.
   React.useEffect(() => {
+    main.current?.scrollTo({ top: 0 });
+    if (mode !== "owner") return;
     let live = true;
     void data.owners.dashboard().then((d) => { lastCounts = countsFrom(d); if (live) setCounts(lastCounts); });
-    main.current?.scrollTo({ top: 0 });
     return () => { live = false; };
-  }, [pathname]);
+  }, [pathname, mode]);
 
   const toggle = React.useCallback((collapse?: boolean) => {
     const root = document.documentElement;
@@ -150,11 +159,11 @@ export function OwnerFrame({ children, section: fixed, fit: fixedFit = false }: 
   const openSearch = () => { toggle(false); requestAnimationFrame(() => search.current?.focus()); };
 
   return (
-    <SectionContext.Provider value={{ closed: closedSections, change: changeSections }}><FrameContext.Provider value={ctx}>
-      <div data-modern-owner={modern ? "" : undefined} className="flex h-dvh flex-col bg-bg text-ink">
-        {modern ? <ModernOwnerToolbar onOpenNav={() => setDrawer(true)} /> : <SiteHeader app onOpenNav={brand ? () => setDrawer(true) : undefined} />}
+    <ModeContext.Provider value={mode}><SectionContext.Provider value={{ closed: closedSections, change: changeSections }}><FrameContext.Provider value={ctx}>
+      <div data-admin-shell={mode} data-modern-owner={modern ? "" : undefined} className="flex h-dvh flex-col bg-bg text-ink max-sm:[&>header>div>div]:gap-1">
+        {modern ? <ModernOwnerToolbar onOpenNav={() => setDrawer(true)} /> : <SiteHeader app onOpenNav={brand || mode === "preview" ? () => setDrawer(true) : undefined} />}
         <div className="flex min-h-0 flex-1">
-          <nav aria-label="Owner workspace" className={cx("hidden embedded:hidden! shrink-0 flex-col border-r border-line lg:flex nav-collapsed:w-18", brand ? "w-66 bg-tint-sand" : "w-60 bg-bg")}>
+          <nav aria-label={mode === "owner" ? "Owner workspace" : "Preview workspace"} className={cx("hidden embedded:hidden! shrink-0 flex-col border-r border-line lg:flex nav-collapsed:w-18", brand ? "w-66 bg-tint-sand" : "w-60 bg-bg")}>
             <Navigation counts={counts} section={section} searchRef={search} onOpenSearch={openSearch}
               toggle={
                 <>
@@ -163,7 +172,7 @@ export function OwnerFrame({ children, section: fixed, fit: fixedFit = false }: 
                 </>
               } />
           </nav>
-          {<Drawer side="left" open={drawer} onClose={() => setDrawer(false)} title="Owner workspace">
+          {<Drawer side="left" open={drawer} onClose={() => setDrawer(false)} title={mode === "owner" ? "Owner workspace" : "Preview workspace"}>
             <CardNavigation drawer counts={counts} section={section} onNavigate={() => setDrawer(false)} />
           </Drawer>}
           <main ref={main} id="main" tabIndex={-1} className={cx("flex min-w-0 flex-1 flex-col overflow-y-auto outline-none", fit && "lg:overflow-hidden")}>
@@ -175,14 +184,16 @@ export function OwnerFrame({ children, section: fixed, fit: fixedFit = false }: 
             {data.kind === "sample" && <p className={cx("mx-auto w-full max-w-7xl shrink-0 3xl:max-w-(--breakpoint-2xl) px-4 text-caption text-ink-muted sm:px-6 lg:px-10", fit ? "pb-6 lg:pb-3" : "pb-6")}>Sample data: everyone shown here is fictional.</p>}
           </main>
         </div>
-        {!brand && <TabBar counts={counts} section={section} onOpenNav={() => setDrawer(true)} />}
+        {!brand && mode === "owner" && <TabBar counts={counts} section={section} onOpenNav={() => setDrawer(true)} />}
       </div>
-    </FrameContext.Provider></SectionContext.Provider>
+    </FrameContext.Provider></SectionContext.Provider></ModeContext.Provider>
   );
 }
 
 /** Where you are ("Owners · People") on the left, who is signed in (square photo, name) on the right, over a thick rule. */
 function TopLine({ section }: { section?: string }) {
+  const sections = useSections();
+  const mode = React.useContext(ModeContext);
   const pathname = usePathname();
   const { session } = useSession();
   const path = pathname.endsWith("/") ? pathname : `${pathname}/`;
@@ -191,14 +202,14 @@ function TopLine({ section }: { section?: string }) {
   const name = session ? (session.name || session.email).replace(/\s*\(.*\)$/, "") : "";
   return (
     <div className="mb-6 flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b-4 border-line-strong pb-2">
-      <p className="min-w-0 flex-1 truncate text-label-sm font-bold tracking-widest text-ink-muted uppercase">Owners{here ? ` · ${here.label}` : ""}</p>
-      <PhoneSearch />
+      <p className="min-w-0 flex-1 truncate text-label-sm font-bold tracking-widest text-ink-muted uppercase">{mode === "owner" ? "Owners" : "Previews"}{here ? ` · ${here.label}` : ""}</p>
+      {mode === "owner" && <PhoneSearch />}
       {session && (
         <span className="flex min-w-0 items-center gap-3">
           {/* Phones: just the photo, so "Owners · Review queue" reads in full. */}
           <span className="grid min-w-0 text-right max-sm:hidden">
             <span className="truncate font-display text-label-md font-extrabold text-ink">{name}</span>
-            <span className="truncate text-caption text-ink-muted">{session.email === SAMPLE_OWNER.email ? "Sample owner" : "Owner"}</span>
+            <span className="truncate text-caption text-ink-muted">{mode === "preview" ? "Preview session" : session.email === SAMPLE_OWNER.email ? "Sample owner" : "Owner"}</span>
           </span>
           <OwnerFace name={name} email={session.email} className="size-11" />
         </span>
@@ -228,10 +239,11 @@ function useFind(onDone?: () => void) {
 
 function ModernOwnerToolbar({ onOpenNav }: { onOpenNav: () => void }) {
   const { q, setQ, find } = useFind();
+  const preview = React.useContext(ModeContext) === "preview";
   return <header className="mo-toolbar embedded:hidden!">
     <IconButton label="Open owner menu" variant="ghost" onClick={onOpenNav} icon={<MenuIcon />} className="lg:hidden" />
     <Link href="/" aria-label="Between Gigs home" className="mo-logo min-w-0"><Logo height={24} className="max-w-full" /></Link>
-    <form role="search" onSubmit={find}><Input type="search" size="sm" aria-label="Search people" placeholder="Search people by name or email…" start={<Search />} value={q} onChange={event => setQ(event.target.value)} /></form>
+    {!preview && <form role="search" onSubmit={find}><Input type="search" size="sm" aria-label="Search people" placeholder="Search people by name or email…" start={<Search />} value={q} onChange={event => setQ(event.target.value)} /></form>}
     <time>{new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</time>
     <ExperienceSwitcher /><LookSwitcher compact /><ThemeToggle size="sm" showLabel={false} />
   </header>;
@@ -240,8 +252,13 @@ function ModernOwnerToolbar({ onOpenNav }: { onOpenNav: () => void }) {
 /** Which nav entry the page is in: the one passed in, else the longest matching href. */
 function useActive(section?: string) {
   const pathname = usePathname();
+  const sections = useSections();
   const path = pathname.endsWith("/") ? pathname : `${pathname}/`;
-  return (i: Item) => !i.disabled && (section ? i.href === section : i.exact ? path === i.href : path.startsWith(i.href));
+  const best = sections.flatMap(group => group.items).filter(item => {
+    const href = item.href.split(/[?#]/)[0];
+    return !item.disabled && (item.exact ? path === href : path.startsWith(href));
+  }).sort((a, b) => b.href.split(/[?#]/)[0].length - a.href.split(/[?#]/)[0].length)[0]?.href;
+  return (i: Item) => !i.disabled && (section ? i.href === section : i.href === best);
 }
 
 /** Signs out; Clerk's sign-out navigates by itself (to /login/?signedOut=1). */
@@ -259,6 +276,7 @@ function CardNavigation({ counts, section, toggle, searchRef, onOpenSearch, onNa
   searchRef?: React.Ref<HTMLInputElement>; onOpenSearch?: () => void; onNavigate?: () => void; drawer?: boolean;
 }) {
   const modern = useLook() === "modern";
+  const preview = React.useContext(ModeContext) === "preview";
   const { q, setQ, find } = useFind(onNavigate);
   const rail = (classes: string) => drawer ? "" : classes;
 
@@ -266,16 +284,16 @@ function CardNavigation({ counts, section, toggle, searchRef, onOpenSearch, onNa
     <div data-modern-rail={modern ? "" : undefined} className={cx("flex min-h-0 flex-1 flex-col gap-4", !drawer && "py-3")}>
       {!drawer && (
         <div className="flex h-9 items-center justify-between gap-2 pr-2 pl-5 nav-collapsed:justify-center nav-collapsed:px-0">
-          <span className="truncate text-label-md text-ink-muted nav-collapsed:hidden">{modern ? <><b className="block text-ink">Owners</b><small>Between Gigs team</small></> : "Owner workspace"}</span>
+          <span className="truncate text-label-md text-ink-muted nav-collapsed:hidden">{preview ? "Preview workspace" : modern ? <><b className="block text-ink">Owners</b><small>Between Gigs team</small></> : "Owner workspace"}</span>
           {toggle}
         </div>
       )}
 
-      {(!modern || drawer) && <form role="search" onSubmit={find} className={cx(!drawer && "px-3", rail("nav-collapsed:hidden"))}>
+      {!preview && (!modern || drawer) && <form role="search" onSubmit={find} className={cx(!drawer && "px-3", rail("nav-collapsed:hidden"))}>
         <Input ref={searchRef} type="search" size="sm" aria-label="Find a person" placeholder="Find a person…" start={<Search />}
           value={q} onChange={(e) => setQ(e.target.value)} />
       </form>}
-      {!drawer && !modern && <div className="hidden justify-center nav-collapsed:flex"><IconButton variant="ghost" label="Find a person" icon={<Search />} onClick={onOpenSearch} /></div>}
+      {!preview && !drawer && !modern && <div className="hidden justify-center nav-collapsed:flex"><IconButton variant="ghost" label="Find a person" icon={<Search />} onClick={onOpenSearch} /></div>}
 
       <div className={cx("no-scrollbar grid min-h-0 flex-1 content-start gap-5 overflow-x-hidden overflow-y-auto", !drawer && "px-3", rail("nav-collapsed:justify-items-center nav-collapsed:gap-3"))}>
         <SidebarSections counts={counts} section={section} onNavigate={onNavigate} drawer={drawer} />
@@ -291,19 +309,20 @@ function OwnerNav({ counts, section, toggle, searchRef, onOpenSearch }: {
   searchRef?: React.Ref<HTMLInputElement>; onOpenSearch?: () => void;
 }) {
   const { q, setQ, find } = useFind();
+  const preview = React.useContext(ModeContext) === "preview";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 py-4">
       <div className="flex h-9 items-center justify-between gap-2 pr-2 pl-4 nav-collapsed:justify-center nav-collapsed:px-0">
-        <span className="truncate text-label-sm font-bold tracking-widest text-ink-muted uppercase nav-collapsed:hidden">Owner workspace</span>
+        <span className="truncate text-label-sm font-bold tracking-widest text-ink-muted uppercase nav-collapsed:hidden">{preview ? "Preview workspace" : "Owner workspace"}</span>
         {toggle}
       </div>
 
-      <form role="search" onSubmit={find} className="px-4 nav-collapsed:hidden">
+      {!preview && <form role="search" onSubmit={find} className="px-4 nav-collapsed:hidden">
         <Input ref={searchRef} type="search" size="sm" aria-label="Find a person" placeholder="Find a person…" start={<Search />}
           value={q} onChange={(e) => setQ(e.target.value)} />
-      </form>
-      <div className="hidden justify-center nav-collapsed:flex"><IconButton variant="ghost" label="Find a person" icon={<Search />} onClick={onOpenSearch} /></div>
+      </form>}
+      {!preview && <div className="hidden justify-center nav-collapsed:flex"><IconButton variant="ghost" label="Find a person" icon={<Search />} onClick={onOpenSearch} /></div>}
 
       <div className="no-scrollbar grid min-h-0 flex-1 content-start overflow-x-hidden overflow-y-auto px-4 nav-collapsed:justify-items-center nav-collapsed:px-0">
         <SidebarSections counts={counts} section={section} />
@@ -315,6 +334,7 @@ function OwnerNav({ counts, section, toggle, searchRef, onOpenSearch }: {
 }
 
 function SidebarSections({ counts, section, onNavigate, drawer = false }: { counts: Record<CountKey, number> | null; section?: string; onNavigate?: () => void; drawer?: boolean }) {
+  const sections = useSections();
   const state = React.useContext(SectionContext)!;
   const active = useActive(section);
   const id = React.useId();
@@ -457,7 +477,7 @@ function NavLink({ item: i, count, active, attention, drawer = false, onNavigate
     }
   };
   if (brand) return (
-    <Link href={i.href} prefetch={i.fullPage ? false : undefined} onClick={navigate} aria-current={active ? "page" : undefined} aria-label={name} title={name}
+    <NavigationLink href={i.href} fullPage={i.fullPage} onClick={navigate} aria-current={active ? "page" : undefined} aria-label={name} title={name}
       className={cx(
         "group flex min-h-12 items-center gap-3 rounded-lg px-3 py-1.5 text-label-md transition-colors duration-fast",
         !drawer && "nav-collapsed:size-12 nav-collapsed:min-h-12 nav-collapsed:justify-center nav-collapsed:p-0",
@@ -480,10 +500,10 @@ function NavLink({ item: i, count, active, attention, drawer = false, onNavigate
           )}
         </span>
       )}
-    </Link>
+    </NavigationLink>
   );
   return (
-    <Link href={i.href} prefetch={i.fullPage ? false : undefined} onClick={navigate} aria-current={active ? "page" : undefined} aria-label={name} title={name}
+    <NavigationLink href={i.href} fullPage={i.fullPage} onClick={navigate} aria-current={active ? "page" : undefined} aria-label={name} title={name}
       className={cx(
         "group flex min-h-12 items-center gap-3 border-b border-line px-2.5 py-1.5 transition-colors duration-fast",
         !drawer && "nav-collapsed:size-12 nav-collapsed:min-h-12 nav-collapsed:justify-center nav-collapsed:p-0",
@@ -503,6 +523,11 @@ function NavLink({ item: i, count, active, attention, drawer = false, onNavigate
           {count !== undefined && (count > 999 ? "999+" : count)}
         </span>
       )}
-    </Link>
+    </NavigationLink>
   );
+}
+
+/** Cross-build destinations are real document links, so modifiers/new tabs also escape the sample base path. */
+function NavigationLink({ href, fullPage, ...props }: Omit<React.ComponentProps<"a">, "href"> & { href: string; fullPage?: boolean }) {
+  return fullPage ? <a href={href} {...props} /> : <Link href={href} {...props} />;
 }

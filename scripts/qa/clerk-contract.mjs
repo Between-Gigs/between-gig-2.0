@@ -50,6 +50,12 @@ try {
   const realJoin = journey.getByRole("link", { name: "Real account sign up", exact: true });
   assert.equal(await realJoin.getAttribute("href"), "https://test.between-gigs.com/join/");
   await realJoin.focus(); assert.equal(await realJoin.evaluate(el => el === document.activeElement), true);
+  const parentSession = await guidePage.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2"))?.session ?? null);
+  await guidePage.goto(`${hosted.url}/preview/page/?path=${encodeURIComponent("/join/")}`);
+  const sampleFrame = guidePage.frameLocator('iframe[data-admin-page-preview]');
+  await sampleFrame.getByText("Sample account preview", { exact: true }).waitFor();
+  assert.equal(await sampleFrame.locator('form[aria-label="Mock native Clerk signup"]').count(), 0, "public-page sample viewer never enables Clerk");
+  assert.deepEqual(await guidePage.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2"))?.session ?? null), parentSession, "sample viewer preserves parent identity");
   await guidePage.goto(`${hosted.url}/join/`);
   await guidePage.getByRole("form", { name: "Mock native Clerk signup" }).waitFor();
   assert.equal(await guidePage.getByText("Sample account preview", { exact: true }).count(), 0);
