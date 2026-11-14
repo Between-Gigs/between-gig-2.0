@@ -46,7 +46,7 @@ export function PeterHomePreview() {
       </header>
       <main id="main" tabIndex={-1} className="flex flex-1 flex-col outline-none">
         <PhotoStage {...STILL_LIFE} className="flex flex-1 items-center" aria-labelledby="peter-home-title">
-          <div className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-8 md:py-20">
+          <div className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-8 md:py-20 md:pb-32">
             <div className="grid justify-items-center gap-6 rounded-2xl bg-bg/90 px-5 py-8 text-center shadow-sm backdrop-blur-sm sm:px-8 md:bg-transparent md:px-0 md:py-0 md:shadow-none md:backdrop-blur-none dark:bg-bg/90 dark:md:bg-transparent">
               {/* Button-shaped announcement, not a misleading disabled call to action. */}
               <p className="inline-flex items-center gap-4 rounded-full border border-line-strong bg-surface-brand px-7 py-3 text-label-md font-semibold uppercase tracking-widest text-ink-on-brand shadow-sm sm:gap-6 sm:px-10">
