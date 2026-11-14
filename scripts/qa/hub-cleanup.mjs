@@ -117,7 +117,7 @@ try {
     await draftCard.locator("[data-guide-preview-mode]").scrollIntoViewIfNeeded();
     await draftCard.locator("iframe").waitFor();
     await draftCard.frameLocator("iframe").locator("html[data-guide-ready]").waitFor({ state: "attached" });
-    await scratchpad.frameLocator("iframe").locator('[data-preview-title]').waitFor({ state: "attached" }).catch(async error => {
+    await draftCard.frameLocator("iframe").locator('[data-preview-title]').waitFor({ state: "attached" }).catch(async error => {
       console.log(await page.locator('[data-guide-preview-mode]').evaluateAll(hosts => hosts.map(host => {
         const frame = host.querySelector("iframe");
         return { text: host.parentElement.parentElement.textContent.slice(0, 80), frame: frame?.title,
