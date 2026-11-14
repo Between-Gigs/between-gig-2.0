@@ -123,16 +123,26 @@ function PreviewFrame({ href, as, title, scale, template, mode, onHeight }: Prev
     if (status !== "ready") return;
     const doc = frame.current?.contentDocument;
     if (!doc?.body) return;
+    let paint = 0;
     const measure = () => {
       const next = Math.max(height, doc.documentElement.scrollHeight, doc.body.scrollHeight);
       setDocumentHeight(next);
       onHeight(next);
     };
-    const observer = new ResizeObserver(measure);
-    observer.observe(doc.body);
-    observer.observe(doc.documentElement);
+    const schedule = () => { cancelAnimationFrame(paint); paint = requestAnimationFrame(measure); };
+    const observer = new ResizeObserver(schedule);
+    const observeContent = () => {
+      observer.observe(doc.documentElement);
+      observer.observe(doc.body);
+      for (const el of doc.querySelectorAll("body > *, main > *, header, footer, img, iframe")) observer.observe(el);
+    };
+    // Deferred sample content can overflow an unchanged viewport-sized body. Watch the content too.
+    const mutations = new MutationObserver(() => { observeContent(); schedule(); });
+    mutations.observe(doc.body, { childList: true, subtree: true, characterData: true });
+    doc.addEventListener("load", schedule, true);
+    observeContent();
     measure();
-    return () => observer.disconnect();
+    return () => { cancelAnimationFrame(paint); observer.disconnect(); mutations.disconnect(); doc.removeEventListener("load", schedule, true); };
   }, [status, onHeight]);
   React.useEffect(() => {
     const el = frame.current;
