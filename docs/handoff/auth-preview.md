@@ -4,4 +4,6 @@ When the data source is sample and Clerk is disabled, the shared signup/login fr
 
 Configured Clerk screens and live API data sources do not show this simulation notice. Provider settings, credentials, Clerk enablement, authentication/consent logic and backend authorization are unchanged. The real links identify account entry, not proof that OAuth succeeds; no live Google sign-in is claimed.
 
+The Gigster journey also shows this explanation and real-entry links on the parent Hub page, outside its inert preview frames. This parent notice remains visible on Clerk-enabled Pages because the passive frames always isolate fictional sessions; the direct Clerk signup/login screens remain unlabeled as sample auth. The parent links are keyboard-accessible, unlike controls shown only inside a passive thumbnail.
+
 Browser QA checks all six looks at phone/desktop widths in both themes: upfront sample copy, exact non-looping real-entry hrefs, keyboard/touch access, no fake Google button or Clerk request, overflow and axe/contrast. Real-account links are inspected rather than followed. The existing isolated Clerk contract asserts that a configured provider is not mislabeled as a simulated sign-in.
