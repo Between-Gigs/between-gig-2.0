@@ -1,7 +1,7 @@
 "use client";
-import { Button, SegmentedControl, cx, useToast } from "@ds/components";
+import { Button, ConfirmDialog, SegmentedControl, cx, useToast } from "@ds/components";
 import { Reveal } from "@ds/motion";
-import { ArrowRight, LayoutGrid, List, RotateCcw } from "lucide-react";
+import { ArrowRight, LayoutGrid, List, Monitor, RotateCcw, Smartphone } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -12,7 +12,7 @@ import { ThemeBadge } from "@/components/site/ThemeBadge";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { DEMO_TOKENS } from "@/lib/data/fields";
 import { DesignSystemBlock } from "./DesignSystemBlock";
-import { GuidePreviews, GuidePreviewModeContext, LivePagePreview, type GuidePreviewMode } from "./LivePagePreview";
+import { GuidePreviews, GuidePreviewModeContext, GuidePreviewDeviceContext, LivePagePreview, type GuidePreviewMode, type GuidePreviewDevice } from "./LivePagePreview";
 import { useLook } from "@/components/site/LookSync";
 import { Icon3D } from "@/components/ui/Icon3D";
 import type { Icon3DName } from "@/lib/icons3d";
@@ -83,7 +83,7 @@ function GuideCard({ title, body, href, as, onClick, tag, step, view }: {
 }) {
   const cards = useLook() !== "swiss";
   const previewMode = React.useContext(GuidePreviewModeContext);
-  const list = view === "list";
+  const list = previewMode === "list" || view === "list";
   const badge = tag && <span className={cards ? cx("inline-flex rounded-full px-2.5 py-0.5 text-label-sm text-tint-ink", roleTint[tag]) : "inline-flex bg-bg px-2 py-1 text-eyebrow text-ink uppercase"}>{step ?? tag}</span>;
   const label = (
     <>
@@ -114,6 +114,17 @@ function GuideCard({ title, body, href, as, onClick, tag, step, view }: {
 
 const listClass = (view: GuideView, cols = 4) => (view === "list" ? "grid gap-x-6 lg:grid-cols-2 card-layout:mt-5 card-layout:gap-2" : cx("grid gap-x-6 gap-y-8 sm:grid-cols-2 card-layout:mt-5 card-layout:gap-4", cols === 4 ? "xl:grid-cols-4 card-layout:lg:grid-cols-4" : cols === 5 ? "lg:grid-cols-3 card-layout:xl:grid-cols-5" : "lg:grid-cols-3"));
 
+function PreviewItems({ columns = 4, ordered = false, className, children }: { columns?: number; ordered?: boolean; className?: string; children: React.ReactNode }) {
+  const mode = React.useContext(GuidePreviewModeContext);
+  const Tag = ordered ? "ol" : "ul";
+  return <Tag className={cx(listClass(mode === "list" ? "list" : "grid", columns), className)}>{children}</Tag>;
+}
+
+function StepPreview({ title, body, href, as, onClick, step, tag, children }: { title: string; body: string; href: string; as?: string; onClick?: () => void; step: string; tag: Role; children: React.ReactNode }) {
+  const mode = React.useContext(GuidePreviewModeContext);
+  return mode === "list" ? <GuideCard view="list" title={title} body={body} href={href} as={as} onClick={onClick} step={step} tag={tag} /> : children;
+}
+
 function SectionHead({ id, icon, title, body, tint, children }: { id: string; icon: Icon3DName; title: string; body: string; tint: string; children?: React.ReactNode }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
@@ -133,27 +144,33 @@ function SectionHead({ id, icon, title, body, tint, children }: { id: string; ic
 function Section({ n, id, title, body, aside, art, children }: { art?: SectionArt; n: string; id: string; title: string; body: string; aside?: React.ReactNode; children: React.ReactNode }) {
   const cards = useLook() !== "swiss";
   const [mode, setMode] = React.useState<GuidePreviewMode>("thumbnail");
+  const [device, setDevice] = React.useState<GuidePreviewDevice>("desktop");
   const key = `bg2-guide-preview:${id}`;
   React.useEffect(() => {
     try {
       const saved = localStorage.getItem(key);
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (saved === "thumbnail" || saved === "full") setMode(saved);
+      if (saved === "thumbnail" || saved === "list" || saved === "full") setMode(saved);
+      const savedDevice = localStorage.getItem(`${key}:device`);
+      if (savedDevice === "desktop" || savedDevice === "mobile") setDevice(savedDevice);
     } catch { /* restricted storage: keep this section's default */ }
   }, [key]);
   const changeMode = (value: string) => {
-    if (value !== "thumbnail" && value !== "full") return;
+    if (value !== "thumbnail" && value !== "list" && value !== "full") return;
     setMode(value);
     try { localStorage.setItem(key, value); } catch { /* this visit still works */ }
   };
   const controls = <div className="flex flex-wrap items-center gap-3">
     {aside}
-    <SegmentedControl label={`${title} previews`} size="sm" className="[&_button]:min-h-11" value={mode} onChange={changeMode}
-      options={[{ value: "thumbnail", label: "Thumbnails", icon: <LayoutGrid /> }, { value: "full", label: "Full height", icon: <List /> }]} />
+    <SegmentedControl label={`${title} previews`} size="sm" className="max-w-full flex-wrap [&_button]:min-h-11" value={mode} onChange={changeMode}
+      options={[{ value: "thumbnail", label: "Thumbnails", icon: <LayoutGrid /> }, { value: "list", label: "List", icon: <List /> }, { value: "full", label: "Full height", icon: <List /> }]} />
+    <SegmentedControl label={`${title} preview device`} size="sm" className="max-w-full flex-wrap [&_button]:min-h-11" value={device}
+      onChange={value => { if (value === "desktop" || value === "mobile") { setDevice(value); try { localStorage.setItem(`${key}:device`, value); } catch { /* current visit still works */ } } }}
+      options={[{ value: "desktop", label: "Desktop", icon: <Monitor /> }, { value: "mobile", label: "Mobile", icon: <Smartphone /> }]} />
   </div>;
   const heading = art ? <SectionHead id={id} title={title} body={body} icon={art.icon} tint={art.tint}>{controls}</SectionHead>
     : <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 id={id} className="font-display text-heading-lg text-ink">{title}</h2><p className="mt-1 max-w-2xl text-body-md text-ink-muted">{body}</p></div>{controls}</div>;
-  return <GuidePreviewModeContext.Provider value={mode}>
+  return <GuidePreviewModeContext.Provider value={mode}><GuidePreviewDeviceContext.Provider value={device}>
     {cards ? <section aria-labelledby={id} className={cx("grid gap-6 rounded-2xl border border-line bg-surface p-6 sm:p-8", id === "journey-steps-h" ? "mb-6" : "mt-6")}>
       {heading}{children}
     </section> : <section aria-labelledby={id} className="mt-16 grid gap-x-6 gap-y-6 border-t-4 border-line-strong pt-4 lg:mt-20 lg:grid-cols-12">
@@ -163,7 +180,7 @@ function Section({ n, id, title, body, aside, art, children }: { art?: SectionAr
       </div>
       <div className="min-w-0 lg:col-span-9">{children}</div>
     </section>}
-  </GuidePreviewModeContext.Provider>;
+  </GuidePreviewDeviceContext.Provider></GuidePreviewModeContext.Provider>;
 }
 
 /**
@@ -179,14 +196,27 @@ function Guide() {
   const router = useRouter();
   const view: GuideView = "grid";
   const toast = useToast();
+  const [resetOpen, setResetOpen] = React.useState(false);
+  const [resetBusy, setResetBusy] = React.useState(false);
   const asGigster = async (id: string, go: string) => { await data.demo?.signInAs("gigster", id); router.push(go); };
   const openSamplePage = async (as: string, go: string) => {
     if (as === "owner") await data.demo?.signInAs("owner");
     else if (as.startsWith("gigster:")) await data.demo?.signInAs("gigster", as.slice("gigster:".length));
     router.push(go);
   };
-  const asVisitor = async () => { await data.auth.signOut(); router.push(basePath === "/hub" ? "/home/" : "/"); };
-  const reset = async () => { await data.demo?.reset(); toast({ message: "Sample data reset", tone: "success" }); };
+  const publicPreview = basePath === "/hub" ? "/home/" : "/";
+  const asVisitor = async () => {
+    if (data.kind !== "sample" || !data.demo) return;
+    await data.auth.signOut();
+    router.push(publicPreview);
+  };
+  const reset = async () => {
+    if (data.kind !== "sample" || !data.demo) return;
+    setResetBusy(true);
+    try { await data.demo.reset(); setResetOpen(false); toast({ message: "This browser’s sample data was reset", tone: "success" }); }
+    catch { toast({ message: "Sample data could not be reset", tone: "danger" }); }
+    finally { setResetBusy(false); }
+  };
   const startInvite = async () => {
     const r = await data.demo?.signInAs("invited");
     router.push(`/join/?invite=${r?.inviteToken ?? ""}`);
@@ -205,6 +235,9 @@ function Guide() {
 
   return (
     <Page bare>
+      <ConfirmDialog open={resetOpen} onCancel={() => { if (!resetBusy) setResetOpen(false); }} onConfirm={() => void reset()} busy={resetBusy}
+        title="Reset this browser’s sample data?" confirmLabel="Reset fictional sample data"
+        description="This permanently replaces local demo edits, profiles, invites, requests, outbox, activity and the sample session with the original fictional records. There is no built-in undo or backup. Real accounts, server data and separately saved site settings are unaffected." />
       <BrandBand eyebrow="Between Gigs 2.0 · Hub" title="Extraordinary talent." accent="Everyday solutions.">
         <p className="mt-4 max-w-xl text-body-lg text-ink-muted">Your profile, the owner dashboard, and everything we’re building. Explore the guided demos below with fictional sample data.</p>
         <nav aria-label="Hub shortcuts" className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2">
@@ -230,11 +263,12 @@ function Guide() {
           </div>
         </section>
         <Section n="01" id="journey-steps-h" title="Start here" body="The whole Gigster journey in three steps, from the invite to the owner's review.">
-          <ol className="grid gap-x-6 gap-y-8 md:grid-cols-3">
+          <PreviewItems columns={3} ordered>
             {steps.map((s, i) => {
               const now = i === 1 && !cards;
               return (
                 <li key={s.n}>
+                  <StepPreview title={s.title} body={s.body} href={s.href} as={s.as} onClick={s.onClick} step={s.n} tag={i === 2 ? "Owner" : "Invited"}>
                   <Reveal effect="fade-up" delay={i * 70} className={cx("relative flex h-full flex-col gap-4 rounded-xl card-layout:rounded-2xl card-layout:bg-surface card-layout:shadow-lg border border-line bg-surface-raised p-5 swiss:border-0 swiss:border-t-4 swiss:bg-transparent swiss:p-0", now ? "border-tint-mint bg-tint-mint! p-5! text-forest-950" : "swiss:border-line-strong swiss:pt-4 text-ink")}>
                     <LivePagePreview href={s.href} as={s.as} title={s.title} />
                     <div className="flex items-start gap-4 card-layout:items-center card-layout:gap-3">
@@ -251,42 +285,47 @@ function Guide() {
                         : <ButtonLink href={s.href} iconEnd={<ArrowRight />} className={coverCard}>{s.label}</ButtonLink>}
                     </div>
                   </Reveal>
+                  </StepPreview>
                 </li>
               );
             })}
-          </ol>
+          </PreviewItems>
         </Section>
         <Section art={{ icon: "briefcase", tint: "bg-tint-sage" }} n="02" id="sample-profiles-h" title="Sample Gigster Profiles"
           body="See how four entertainment professionals turn their craft into services you can hire them for."
           aside={<ButtonLink size="sm" href="/preview/profiles/" iconEnd={<ArrowRight />}>Compare all four</ButtonLink>}>
-          <ul className={listClass(view, 4)}>
+          <PreviewItems columns={4}>
             {profiles.map((p) => (
               <li key={p.id}><GuideCard view={view} href={`/p/${p.id}/`} title={p.name} body={p.title} /></li>
             ))}
-          </ul>
+          </PreviewItems>
         </Section>
         {data.demo && (
           <Section art={{ icon: "admission_tickets", tint: "bg-tint-sky" }} n="03" id="roles-h" title="Try every role" body="Step into the sample as anyone. No sign-in needed: it uses the fictional sample accounts, kept in this browser."
-            aside={<div className="flex flex-wrap items-center gap-2 pt-2"><Button size="sm" variant="ghost" iconStart={<RotateCcw />} onClick={reset}>Reset sample data</Button></div>}>
+            aside={<div className="flex flex-wrap items-center gap-2 pt-2"><Button size="sm" variant="ghost" iconStart={<RotateCcw />} onClick={() => setResetOpen(true)}>Reset sample data</Button></div>}>
+            <details className="text-body-sm text-ink-muted">
+              <summary className="inline-flex min-h-11 cursor-pointer items-center text-label-md text-ink underline underline-offset-4">What does Reset sample data do?</summary>
+              <p className="mt-2 max-w-3xl">Reset replaces this browser’s fictional people, profiles, drafts, invites, waitlist, requests, outbox, activity and sample session with the original demo data. Local demo changes are lost, with no built-in undo or backup. Real accounts and server data are unaffected. Theme, Hub views, Studio and staff settings stored separately are preserved.</p>
+            </details>
             <h3 className="text-eyebrow text-ink-muted uppercase">Team and start</h3>
-            <ul className={cx("mt-4", listClass(view, 3))}>
+            <PreviewItems columns={3} className="mt-4">
               <li><GuideCard view={view} href="/owners/" as="owner" tag="Owner" title="Open as owner" body="Dashboard, review queue, people, waitlist." onClick={startOwner} /></li>
               <li><GuideCard view={view} href={invitePage} as="invited" tag="Invited" title="Open the invite" body="Create the account, then fill in the profile." onClick={startInvite} /></li>
-              <li><GuideCard view={view} href="/" tag="Visitor" title="Sign out" body="See the site as the public does." onClick={asVisitor} /></li>
-            </ul>
+              <li><GuideCard view={view} href={publicPreview} tag="Visitor" title="Sign out of sample" body="Clear only this browser’s fictional session and open the public-site preview." onClick={asVisitor} /></li>
+            </PreviewItems>
             <h3 className="mt-12 text-eyebrow text-ink-muted uppercase">Practice each onboarding stage</h3>
-            <ul className={cx("mt-4", listClass(view, 3))}>
+            <PreviewItems columns={3} className="mt-4">
               {gigsters.map((g, i) => (
                 <li key={g.id}><GuideCard view={view} href={g.go} as={`gigster:${g.id}`} tag="Gigster" step={`${i + 1} · ${g.stage}`} title={`Sign in as ${g.name}`} body={g.state} onClick={() => asGigster(g.id, g.go)} /></li>
               ))}
-            </ul>
+            </PreviewItems>
           </Section>
         )}
         {groups.map((gr, gi) => (
           <Section key={gr.id} art={gr.art} n={String(gi + (data.demo ? 4 : 3)).padStart(2, "0")} id={`${gr.id}-h`} title={gr.title} body={gr.body}>
-            <ul className={listClass(view, gr.pages.length)}>
+            <PreviewItems columns={gr.pages.length}>
               {gr.pages.map((pg) => <li key={pg.href}><GuideCard view={view} title={pg.title} body={pg.body} href={pg.href} as={pg.as} onClick={pg.as ? () => void openSamplePage(pg.as!, pg.href) : undefined} /></li>)}
-            </ul>
+            </PreviewItems>
           </Section>
         ))}
         <Section art={{ icon: "artist_palette", tint: "bg-tint-butter" }} n={String(groups.length + (data.demo ? 4 : 3)).padStart(2, "0")} id="design-system-h" title="Design system"

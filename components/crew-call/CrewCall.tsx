@@ -73,7 +73,9 @@ export function CrewCall() {
       {brand ? (
         <div data-client-locked="" className="bg-bg text-ink">
           {/* Hero: the client's film-set photo, the promise in the forest serif, one search. */}
-          <section aria-labelledby="cc-h" className="relative isolate mx-auto max-w-7xl overflow-hidden">
+          {/* The hero lines up with the content below it (same edges as the cards), with soft corners from sm. */}
+          <div className="mx-auto max-w-7xl sm:px-6">
+          <section aria-labelledby="cc-h" className="relative isolate overflow-hidden sm:mt-4 sm:rounded-lg sm:shadow-sm">
             <img src={asset(hero.image)} alt="" width={1600} height={800} loading="eager" className="absolute inset-0 -z-20 size-full object-cover dark:hidden" />
             <picture>
               <source media="(orientation: portrait)" srcSet={asset(crewCallDark.portrait)} />
@@ -96,9 +98,10 @@ export function CrewCall() {
               </form>
             </div>
           </section>
+          </div>
 
           {/* Sample testimonials, with arrows to page through them. */}
-          <section aria-labelledby="cc-reviews-h" className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
+          <section aria-labelledby="cc-reviews-h" className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
             <h2 id="cc-reviews-h" className="flex items-center gap-4 text-body-md text-ink before:h-px before:flex-1 before:bg-line-strong after:h-px after:flex-1 after:bg-line-strong">Illustrative testimonials · Sample content</h2>
             <Strip label="Sample testimonials" className="mt-3" itemClass="w-11/12 sm:w-2/3 lg:w-auto lg:min-w-0 lg:flex-1 lg:shrink">
               {testimonials.map((t) => (
@@ -120,7 +123,7 @@ export function CrewCall() {
           </section>
 
           {/* Crew Call */}
-          <section ref={crew} id="crew" aria-labelledby="cc-crew-h" className="mx-auto max-w-7xl scroll-mt-20 px-4 pt-8 pb-16 sm:px-6">
+          <section ref={crew} id="crew" aria-labelledby="cc-crew-h" className="mx-auto max-w-7xl scroll-mt-20 px-4 pt-12 pb-16 sm:px-6">
             <h2 id="cc-crew-h" className="flex items-center gap-6 font-serif text-display-md font-bold text-ink-deep before:h-px before:flex-1 before:bg-line-strong after:h-px after:flex-1 after:bg-line-strong sm:text-display-lg lg:text-display-xl">Crew Call</h2>
             {q && (
               <p aria-live="polite" className="mt-3 flex flex-wrap items-center justify-center gap-2 text-body-md text-ink-muted">

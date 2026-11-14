@@ -77,6 +77,9 @@ try {
     assert.ok(box.height >= 44, "preview controls have phone touch targets");
     await group.getByRole("radio", { name: "Thumbnails", exact: true }).focus();
     await page.keyboard.press("ArrowRight");
+    assert.equal(await group.getByRole("radio", { name: "List", exact: true }).getAttribute("aria-checked"), "true", "arrow keys select section list mode");
+    assert.equal(await page.locator('section[aria-labelledby="public-h"] [data-guide-preview-mode="list"]').count(), 0, "list mode stays in its section");
+    await page.keyboard.press("ArrowRight");
     assert.equal(await full.getAttribute("aria-checked"), "true", "arrow keys select section view");
     assert.equal(await page.locator('section[aria-labelledby="public-h"] [data-guide-preview-mode="full"]').count(), 0, "neighbor section stays in thumbnail mode");
     const submitted = journey.locator('iframe[title="Preview of Profile submitted"]');
@@ -86,7 +89,7 @@ try {
     await submittedCard.frameLocator('iframe[title="Preview of Profile submitted"]').locator("h1").filter({ hasText: "Profile submitted." }).waitFor({ state: "attached" });
     await page.waitForFunction(() => {
       const frame = document.querySelector('iframe[title="Preview of Profile submitted"]');
-      return frame?.contentDocument?.documentElement.hasAttribute("data-guide-ready")
+      return frame?.contentDocument?.documentElement?.hasAttribute("data-guide-ready")
         && Number(frame.style.height.replace("px", "")) > 720
         && Number(frame.style.height.replace("px", "")) >= frame.contentDocument.documentElement.scrollHeight - 1;
     });
@@ -109,6 +112,19 @@ try {
     await page.waitForFunction(() => document.querySelector('section[aria-labelledby="journey-h"] [role="radio"][aria-checked="true"]')?.textContent.includes("Full height"));
     assert.equal(await page.locator('section[aria-labelledby="journey-h"]').getByRole("radio", { name: "Full height", exact: true }).getAttribute("aria-checked"), "true", "section preference persists");
     await page.locator('section[aria-labelledby="journey-h"]').getByRole("radio", { name: "Thumbnails", exact: true }).click();
+    const devices = page.locator('section[aria-labelledby="journey-h"]').getByRole("radiogroup", { name: "The Gigster journey preview device", exact: true });
+    await devices.getByRole("radio", { name: "Mobile", exact: true }).click();
+    const mobileCard = page.locator('section[aria-labelledby="journey-h"] li').filter({ has: page.getByRole("button", { name: /^Profile submitted/ }) });
+    await mobileCard.scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => {
+      const frame = document.querySelector('iframe[title="Preview of Profile submitted"]');
+      return frame?.contentDocument?.documentElement?.hasAttribute("data-guide-ready") && frame.contentWindow.innerWidth === 390;
+    });
+    assert.equal(await page.locator('section[aria-labelledby="public-h"] [data-guide-preview-device="mobile"]').count(), 0, "device toggle stays in its section");
+    await mobileCard.screenshot({ path: `deliverables/hub-cleanup/mobile-preview-${width}-${theme}.png` });
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector('section[aria-labelledby="journey-h"] [role="radiogroup"][aria-label="The Gigster journey preview device"] [aria-checked="true"]')?.textContent.includes("Mobile"));
+    await devices.getByRole("radio", { name: "Desktop", exact: true }).click();
     await page.addScriptTag({ content: fs.readFileSync("node_modules/axe-core/axe.min.js", "utf8") });
     const violations = await page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } })).violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) })));
     assert.deepEqual(violations, [], "Hub accessibility");
@@ -149,7 +165,39 @@ try {
         if (title === "Profile submitted") await page.getByRole("heading", { name: "Profile submitted.", exact: true }).waitFor();
       }
     }
+    if (width === 390 && theme === "light") {
+      await page.goto(`${url}/hub/`);
+      await page.waitForFunction(() => Boolean(window.bgSample));
+      await page.evaluate(async () => { await window.bgSample.signInAs("owner"); localStorage.setItem("bg-qa-unrelated", "keep"); });
+      const saved = await page.evaluate(() => ({ sample: localStorage.getItem("bg2-sample-v2"), theme: localStorage.getItem("bg-theme"), view: localStorage.getItem("bg2-guide-preview:journey-h") }));
+      await page.getByRole("button", { name: "Reset sample data", exact: true }).click();
+      const confirmation = page.getByRole("dialog", { name: "Reset this browser’s sample data?" });
+      await confirmation.waitFor();
+      assert.equal(await page.evaluate(() => localStorage.getItem("bg2-sample-v2")), saved.sample, "opening reset does not change sample data");
+      await page.keyboard.press("Escape");
+      await confirmation.waitFor({ state: "hidden" });
+      assert.equal(await page.evaluate(() => localStorage.getItem("bg2-sample-v2")), saved.sample, "cancel preserves sample edits and session");
+      await page.getByRole("button", { name: "Reset sample data", exact: true }).click();
+      await confirmation.getByRole("button", { name: "Reset fictional sample data", exact: true }).click();
+      await confirmation.waitFor({ state: "hidden" });
+      const reset = await page.evaluate(() => ({ state: JSON.parse(localStorage.getItem("bg2-sample-v2")), theme: localStorage.getItem("bg-theme"), view: localStorage.getItem("bg2-guide-preview:journey-h"), unrelated: localStorage.getItem("bg-qa-unrelated") }));
+      assert.equal(reset.state.session, null);
+      assert.equal(reset.state.outbox.length, 0);
+      assert.equal(reset.theme, saved.theme);
+      assert.equal(reset.view, saved.view);
+      assert.equal(reset.unrelated, "keep");
+      await page.evaluate(() => window.bgSample.signInAs("owner"));
+      const signOut = page.locator('section[aria-labelledby="roles-h"]').getByRole("button", { name: /Sign out of sample/ });
+      const signOutCard = page.locator('section[aria-labelledby="roles-h"] li').filter({ has: signOut });
+      await signOutCard.scrollIntoViewIfNeeded();
+      const source = await signOutCard.locator("iframe").getAttribute("src");
+      assert.equal(source, `${base}${base === "/hub" ? "/home/" : "/"}`, "sign-out thumbnail uses the public-site preview");
+      await signOut.click();
+      await page.waitForURL(location => location.pathname === `${base}${base === "/hub" ? "/home/" : "/"}`);
+      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).session), null, "only fictional session is cleared");
+      assert.equal(await page.evaluate(() => localStorage.getItem("bg-qa-unrelated")), "keep");
+    }
     await context.close();
-    console.log(`PASS: Hub cleanup ${width}px/${theme}: rendered profile previews, scoped full-height controls, keyboard/axe, archive recovery and Scratchpad`);
+    console.log(`PASS: Hub cleanup ${width}px/${theme}: rendered profile previews, scoped thumbnail/list/full-height and device controls, safe sample reset/sign-out, keyboard/axe, archive recovery and Scratchpad`);
   }
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }

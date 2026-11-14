@@ -61,15 +61,16 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
     // Swiss (product screens): the same row on a 12-column grid from md (logo · links · account), closed by a 4px ink rule.
     <header className={cx("sticky top-0 embedded:hidden! z-sticky border-b border-line shadow-md" /* a clear drop shadow (client, 13 Nov 2026) */, app ? "bg-surface" : "bg-bg swiss:border-b-0 swiss:shadow-none")}>
       <div className={cx("mx-auto px-4 sm:px-6", app ? "max-w-none lg:px-5" : "max-w-7xl")}>
-      <div className={cx("flex h-16 items-center gap-4 lg:h-20", app ? "h-16! gap-2" : "swiss:border-b-4 swiss:border-line-strong swiss:md:grid swiss:md:grid-cols-12 swiss:md:gap-x-6")}>
+      <div className={cx("flex min-h-16 flex-wrap items-center gap-x-4 gap-y-0.5 pt-2 sm:h-16 sm:flex-nowrap sm:pt-0 lg:h-20", app ? "h-16! flex-nowrap! gap-2 pt-0!" : "swiss:border-b-4 swiss:border-line-strong swiss:md:grid swiss:md:grid-cols-12 swiss:md:gap-x-6")}>
         {onOpenNav && <IconButton label="Open owner menu" variant="ghost" icon={<MenuIcon />} onClick={onOpenNav} className="lg:hidden" />}
         <div className="flex flex-1 items-center swiss:md:col-span-3">
           <Link href="/" aria-label="Between Gigs home" className="inline-flex min-h-11 shrink-0 items-center rounded-md"><Logo height={28} className="hidden sm:block" /><Logo layout="mark" height={28} className="sm:hidden" /></Link>
         </div>
-        {/* Signed out: the Los Angeles Call Sheet sits in the middle of the bar (Justin, 14 Nov 2026), on two lines on phones. */}
+        {/* Signed out: the Los Angeles Call Sheet sits in the middle of the bar (Justin, 14 Nov 2026); on phones it takes a
+            slim centred row under the logo and buttons, so Sign in and Sign up both fit. */}
         {!app && !loading && !session && (
-          <p data-header-title className="shrink-0 text-center font-display text-label-md leading-tight font-semibold text-balance text-ink sm:text-heading-sm swiss:md:col-span-6">
-            Los Angeles <br className="sm:hidden" />Call Sheet
+          <p data-header-title className="order-last basis-full pb-2 text-center font-display text-label-md leading-tight font-semibold text-ink sm:order-none sm:basis-auto sm:shrink-0 sm:pb-0 sm:text-heading-sm swiss:md:col-span-6">
+            Los Angeles Call Sheet
           </p>
         )}
         {/* Airbnb-style: the page links sit in the middle, the current one underlined. */}
@@ -106,7 +107,14 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
                 </button>
               } />
           ) : (
-            <Link href="/login/" className="inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-label-md text-ink hover:bg-surface-hover swiss:rounded-none swiss:px-0 swiss:font-display swiss:font-semibold swiss:underline-offset-8 swiss:hover:bg-transparent swiss:hover:underline">Sign in</Link>
+            // Two clear doors (Justin, 14 Nov 2026): a quiet Sign in and a filled Sign up, the common pattern for
+            // sign-up-led sites. Sign up steps aside on the sign-up page itself.
+            <>
+              <Link href="/login/" className="inline-flex min-h-11 shrink-0 items-center rounded-full px-2 text-label-md text-ink hover:bg-surface-hover sm:px-3 swiss:rounded-none swiss:px-0 swiss:font-display swiss:font-semibold swiss:underline-offset-8 swiss:hover:bg-transparent swiss:hover:underline">Sign in</Link>
+              {!raw.startsWith("/join/") && (
+                <Link href="/join/" data-header-signup className="inline-flex min-h-11 shrink-0 items-center rounded-full bg-action px-3 text-label-md font-semibold text-on-action shadow-sm transition-colors duration-fast hover:bg-action-hover sm:px-4 swiss:rounded-none">Sign up</Link>
+              )}
+            </>
           )}
         </div>
       </div>
