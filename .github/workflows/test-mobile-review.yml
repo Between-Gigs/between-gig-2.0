@@ -1,7 +1,8 @@
 name: Test-site mobile review captures
 on:
   push:
-    branches: [qa/mobile-review-disabled]
+    branches: [qa/mobile-review-captures-20261114]
+    paths: [.github/workflows/test-mobile-review.yml]
 permissions: {}
 jobs:
   capture:
