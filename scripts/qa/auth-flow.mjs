@@ -6,6 +6,31 @@ import { serve } from "./serve.mjs";
 const { server, url } = await serve("out");
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? "/opt/pw-browsers/chromium" });
 try {
+  // Tall desktop reproduces the reported blank band; narrow screens keep their
+  // intentional portrait fade, but the stage must still meet the footer.
+  for (const viewport of [{ width: 2048, height: 1382 }, { width: 390, height: 844 }]) {
+    for (const mode of ["light", "dark"]) {
+      const context = await browser.newContext({ viewport, colorScheme: mode });
+      await context.addInitScript((theme) => localStorage.setItem("bg-theme", theme), mode);
+      const page = await context.newPage();
+      for (const route of ["join", "login"]) {
+        await page.goto(`${url}/${route}/`);
+        await page.getByLabel("Email", { exact: true }).waitFor();
+        const layout = await page.evaluate(async () => {
+          await document.fonts.ready;
+          const stage = document.querySelector("main > section");
+          const footer = document.querySelector("footer");
+          return {
+            gap: footer.getBoundingClientRect().top - stage.getBoundingClientRect().bottom,
+            overflow: document.documentElement.scrollWidth > innerWidth,
+          };
+        });
+        assert.ok(Math.abs(layout.gap) <= 1, `${route} ${viewport.width} ${mode}: stage/footer gap ${layout.gap}`);
+        assert.equal(layout.overflow, false);
+      }
+      await context.close();
+    }
+  }
   for (const width of [390, 1440]) {
     const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce" });
     const page = await context.newPage();
@@ -58,3 +83,4 @@ try {
   await browser.close();
   server.close();
 }
+

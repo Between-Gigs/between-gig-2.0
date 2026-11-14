@@ -41,7 +41,7 @@ export function AuthShell({ header, lead, children, className, eyebrow, steps: s
     // Launch design (Flow p2): still-life stage, welcome on the paper, the form in the card. `eyebrow` (how they
     // arrived, "You're invited") becomes a badge at the top of the card; the stage keeps the Founding Gigsters line.
     return (
-      <Page bare>
+      <Page bare className="flex flex-col">
         <AuthStageTemplate
           eyebrow={login ? "Welcome back" : "Founding Gigsters"}
           title={login ? <>Pick up where<br className="max-sm:hidden" /> you left off.</> : <>Bring your craft<br className="max-sm:hidden" /> beyond the set.</>}
