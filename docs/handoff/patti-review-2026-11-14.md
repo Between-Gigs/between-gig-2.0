@@ -30,7 +30,7 @@ The five-item editor limit includes Other; portfolio file quotas also count vide
 ## Email unsubscribe
 
 The old Resend broadcast placeholder was inappropriate for Company OS's /emails API delivery.
-Templates now use links.unsubscribe. The dispatcher replaces a neutral marker with a recipient- and tenant-bound signed token, supplies List-Unsubscribe / List-Unsubscribe-Post, and checks suppression again before sending.
+Company OS template exports use links.unsubscribe. The dispatcher replaces a neutral marker with a recipient- and tenant-bound signed token, supplies List-Unsubscribe / List-Unsubscribe-Post, and checks suppression again before sending.
 GET validates and shows a confirmation; POST opts out idempotently without login. Account/booking categories are unaffected.
 The visible footer, plain-text twin and delivered headers use the same destination. Preview unsubscribe remains inactive.
 Company OS invitations use the marketing category so later attempts respect the preference.
@@ -69,3 +69,15 @@ Playbook impact: see the Company's inbox entry added for this review.
 Other-only profiles can submit through the private service_proposal field with the Between Gigs allow_service_proposal setting. The team must categorise the proposed service before approving publication; the sample approval path follows the same rule.
 
 Consent recovery: the self-only GET email-preference endpoint hydrates the live checkbox. Autosave compares an ephemeral baseline and never re-subscribes an unchanged/stale draft after opt-out. Baseline bookkeeping is excluded from stored/public profile details and profile-content comparisons.
+
+
+## Follow-up isolation and upload safety (15 November)
+
+The follow-up branch is separate from the original PR41 head857abdf; do not overwrite parallel annotation work.
+Showcase field updates are functional and keyed by stable IDs. Upload completion preserves current ordering/captions/removals; replacement does not resurrect a removed target. Legacy-image migration translates only URLs in the current list, preserving IDs and edits; failed partial uploads can be retried with successful transfers cached in this editor session. No completed migration is claimed until all needed URLs are restored.
+
+With COMPANY_OS_PROFILE_REVIEW unset/0, upload and signed-unsubscribe endpoints fail before backend access; invitations retain their prior payload without the new marketing category. Live editor activation still requires NEXT_PUBLIC_PROFILE_REVIEW=1 at build time and the matching reviewed backend activation. The canonical Resend HTML retains {{{RESEND_UNSUBSCRIBE_URL}}}; the explicit Company OS recipe renderer supplies {{links.unsubscribe}} for that transport. Both preview variants disable unsubscribing in HTML and plain text.
+
+These changes do not approve backend activation. Anu still must review server-side revision/conflict handling and media cleanup against stale saves across tabs/devices; the per-page upload queue does not provide cross-device concurrency protection. Confirm deployment flag state before merging/deploying the frontend batch. Actual Clerk annotations target AuthStageTemplate/AuthShell, NativeSignup and ClerkProvider localization. Sample/mock screenshots are not their live verification: an authorized Test gate-access browser session is required. No emails or authentication submissions should be used for this visual check.
+
+Regression evidence: scripts/qa/showcase-concurrency.mjs exercises delayed upload with keyboard order, caption edits/removal, replacement by stable ID, removed target,390px native touch,1100px desktop and reload persistence on fictional local profiles. The gate, transport and migration merge tests live in lib/server/review-gates.test.ts, lib/server/unsubscribe.test.ts, lib/profile/showcase-updates.test.ts and lib/invite-email.test.ts.

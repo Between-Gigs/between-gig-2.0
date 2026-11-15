@@ -51,6 +51,7 @@ jobs:
           node scripts/qa/signed-out-navigation.mjs
           node scripts/qa/home-hero.mjs
           node scripts/qa/sample-order.mjs
+          node scripts/qa/showcase-concurrency.mjs
           pnpm qa:flow
           node scripts/qa/funnel-cohort.mjs
       - name: Build Pages configuration with Clerk

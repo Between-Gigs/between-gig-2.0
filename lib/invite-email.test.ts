@@ -48,6 +48,18 @@ describe("canonical Stage 2 invitation", () => {
     expect(email.html).toContain(">Contact support</a>");
   });
 
+  it("keeps each sending transport's unsubscribe placeholder explicit", () => {
+    expect(INVITE_UNSUBSCRIBE).toBe("{{{RESEND_UNSUBSCRIBE_URL}}}");
+    const email = invite({ ...props, unsubscribeUrl: "{{links.unsubscribe}}" });
+    expect(email.html).toContain('href="{{links.unsubscribe}}"');
+    expect(email.text).toContain("Unsubscribe: {{links.unsubscribe}}");
+    expect(email.html).not.toContain("RESEND_UNSUBSCRIBE_URL");
+    const preview = renderPreview("invite", { ...props, unsubscribeUrl: "{{links.unsubscribe}}" }, "light");
+    expect(preview.html).not.toContain('href="{{links.unsubscribe}}"');
+    expect(preview.text).not.toContain("{{links.unsubscribe}}");
+    expect(preview.text).toContain("inactive in this sample");
+  });
+
   it("disables sample unsubscribing while retaining the template macro for actual HTML", () => {
     const email = renderPreview("invite", props, "dark");
     expect(email.html).toContain('<span data-email-unsubscribe aria-disabled="true"');

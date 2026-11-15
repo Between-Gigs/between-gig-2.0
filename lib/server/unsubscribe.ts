@@ -3,7 +3,10 @@ const page = (status: number, title: string, body: string) => new Response('<!do
     title + " · Between Gigs</title><body><main><h1>" + title + "</h1>" + body + "</main></body></html>", { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer", "x-content-type-options": "nosniff" } });
 export async function unsubscribePage(req: Request, deps: {
     cos?: CompanyOs;
+    enabled?: boolean;
 } = {}) {
+    if (!(deps.enabled ?? process.env.COMPANY_OS_PROFILE_REVIEW === "1"))
+        return page(503, "Email preferences are not available yet", '<p>Please contact <a href="mailto:hello@between-gigs.com">hello@between-gigs.com</a> for help with your email preferences.</p>');
     const token = new URL(req.url).searchParams.get("token");
     if (!token || token.length > 2000 || !/^[A-Za-z0-9_.-]+$/.test(token))
         return page(400, "Check your unsubscribe link", "<p>Open the unsubscribe link in your Between Gigs email.</p>");
