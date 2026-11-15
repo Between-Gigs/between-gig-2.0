@@ -43,7 +43,7 @@ const BASE = "{{links.base}}";
 const ctx = { assetBase: BASE, siteUrl: BASE };
 /** Company OS's variables for each template's props. */
 const props = {
-  invite: { inviteUrl: "{{vars.invite_url}}", email: "{{person.email}}" },
+  invite: { inviteUrl: "{{vars.invite_url}}", email: "{{person.email}}", unsubscribeUrl: "{{links.unsubscribe}}" },
   "profile-submitted": { firstName: "{{person.name}}", profileUrl: `${BASE}/profile/`, editUrl: `${BASE}/profile/canvas/` },
   approved: { firstName: "{{person.name}}", profileUrl: `${BASE}/p/{{record.public_handle}}/`, editUrl: `${BASE}/profile/canvas/` },
   // Company OS sends the review's notes as one readable text (one line per section), so they render as a single card.

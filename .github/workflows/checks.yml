@@ -51,8 +51,16 @@ jobs:
           node scripts/qa/signed-out-navigation.mjs
           node scripts/qa/home-hero.mjs
           node scripts/qa/sample-order.mjs
+          node scripts/qa/showcase-concurrency.mjs
           pnpm qa:flow
           node scripts/qa/funnel-cohort.mjs
+      - name: Save showcase concurrency screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: showcase-concurrency-evidence
+          path: deliverables/showcase-concurrency
+          if-no-files-found: warn
       - name: Build Pages configuration with Clerk
         run: pnpm build
         env:

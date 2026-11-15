@@ -7,10 +7,12 @@ export interface InviteProps {
   /** The personal "Create your profile" link: /join?invite=<token>. */
   inviteUrl: string;
   email: string;
+  /** Sending transport supplies its own placeholder; default keeps Resend Broadcast semantics. */
+  unsubscribeUrl?: string;
 }
 
 export const INVITE_REASON = "You’re receiving this message because you requested to join the Call Sheet.";
-export const INVITE_UNSUBSCRIBE = "{{links.unsubscribe}}";
+export const INVITE_UNSUBSCRIBE = "{{{RESEND_UNSUBSCRIBE_URL}}}";
 
 export const INVITE_COPY = {
   subject: "You're invited to Between Gigs",
@@ -28,7 +30,7 @@ export const INVITE_COPY = {
   closing: "We’re thrilled to have you on this journey with us!",
 } as const;
 
-export function invite({ inviteUrl }: InviteProps, ctx: EmailContext = defaultContext): RenderedEmail {
+export function invite({ inviteUrl, unsubscribeUrl = INVITE_UNSUBSCRIBE }: InviteProps, ctx: EmailContext = defaultContext): RenderedEmail {
   const c = INVITE_COPY;
   const hero = [
     craftTitle(c.title).replace('class="e-k-h1"', 'class="e-k-h1 e-invite-title"').replace("font-size:46px;line-height:48px", "font-size:50px;line-height:52px"),
@@ -47,11 +49,11 @@ export function invite({ inviteUrl }: InviteProps, ctx: EmailContext = defaultCo
     craftSignOff(SIGN_OFF, 22, true),
   ].join("\n");
   const body = craftHero({ eyebrow: c.eyebrow, inner: hero, ctx, openPaper: true }) + craftPaper(details);
-  const text = `${c.subject}\n\n${c.eyebrow.toUpperCase()}\n\n${c.title.join(" ")}\n\n${c.lead}\n\n${c.cta.toUpperCase()}:\n${inviteUrl}\n\n${c.opening}\n\n${c.stage}\n\n${c.introduction}\n\n${c.nextTitle} ${c.next}\n\n${c.ready}\n\n${c.cta.toUpperCase()}:\n${inviteUrl}\n\n${c.closing}\n\n${SIGN_OFF}\n\n${textFooter(INVITE_REASON, ctx.siteUrl, INVITE_UNSUBSCRIBE)}`;
+  const text = `${c.subject}\n\n${c.eyebrow.toUpperCase()}\n\n${c.title.join(" ")}\n\n${c.lead}\n\n${c.cta.toUpperCase()}:\n${inviteUrl}\n\n${c.opening}\n\n${c.stage}\n\n${c.introduction}\n\n${c.nextTitle} ${c.next}\n\n${c.ready}\n\n${c.cta.toUpperCase()}:\n${inviteUrl}\n\n${c.closing}\n\n${SIGN_OFF}\n\n${textFooter(INVITE_REASON, ctx.siteUrl, unsubscribeUrl)}`;
   return {
     subject: c.subject,
     preheader: c.preheader,
     text,
-    html: craftLayout({ title: c.subject, preheader: c.preheader, body, reason: INVITE_REASON, ctx, unsubscribe: INVITE_UNSUBSCRIBE, lightOnly: true, center: true }),
+    html: craftLayout({ title: c.subject, preheader: c.preheader, body, reason: INVITE_REASON, ctx, unsubscribe: unsubscribeUrl, lightOnly: true, center: true }),
   };
 }

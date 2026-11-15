@@ -171,6 +171,8 @@ jobs:
       # Check every setting BEFORE any build, infra, variable or service mutation.
       - name: Require production configuration
         env:
+          PROFILE_REVIEW_ENABLED: ${{ vars.PROFILE_REVIEW_ENABLED }}
+          PROFILE_REVIEW_BACKEND_ENABLED: ${{ vars.PROFILE_REVIEW_BACKEND_ENABLED }}
           CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
           COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
@@ -179,6 +181,7 @@ jobs:
           COOKIE_SIGNING_SECRET: ${{ secrets.COOKIE_SIGNING_SECRET }}
           TEST_GATE_PASSPHRASE: ${{ secrets.TEST_GATE_PASSPHRASE }}
         run: |
+          node scripts/check-profile-review-gates.mjs
           case "$CLERK_PUBLISHABLE_KEY" in pk_live_?*) ;; *) echo "::error::production requires a Clerk LIVE publishable key (pk_live_…) in the production environment's variables"; exit 1 ;; esac
           if [ ${#COOKIE_SIGNING_SECRET} -lt 32 ]; then echo "::error::Set the production secret COOKIE_SIGNING_SECRET (openssl rand -hex 32; not test's)"; exit 1; fi
           if [ -n "$TEST_GATE_PASSPHRASE" ]; then echo "::error::The production environment has a TEST_GATE_PASSPHRASE secret: production never runs the test gate. Delete it."; exit 1; fi
@@ -235,7 +238,7 @@ jobs:
           COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
           APP_URL: ${{ vars.APP_URL }}
-          COMPANY_OS_PROFILE_REVIEW: ${{ vars.PROFILE_REVIEW_ENABLED }}
+          COMPANY_OS_PROFILE_REVIEW: ${{ vars.PROFILE_REVIEW_BACKEND_ENABLED }}
           COOKIE_SIGNING_SECRET: ${{ secrets.COOKIE_SIGNING_SECRET }}
         run: |
           for name in COMPANY_OS_READ_TOKEN COMPANY_OS_SUBMIT_TOKEN APP_URL COMPANY_OS_PROFILE_REVIEW COOKIE_SIGNING_SECRET; do

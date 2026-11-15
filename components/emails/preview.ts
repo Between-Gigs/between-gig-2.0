@@ -1,4 +1,3 @@
-import { INVITE_UNSUBSCRIBE } from "@/emails/invite";
 import { renderEmail, type EmailContext } from "@/emails";
 import type { EmailTemplate } from "@/lib/data";
 import { basePath } from "@/lib/site";
@@ -31,7 +30,7 @@ export function renderPreview(name: EmailTemplate, props: Record<string, string>
   // Resend resolves this macro for each recipient at send time. A sample never acts on a real subscription.
   const html = name === "invite" ? email.html.replace(/<a data-email-unsubscribe([^>]*?) href="(?:\{\{\{RESEND_UNSUBSCRIBE_URL\}\}\}|\{\{links\.unsubscribe\}\})"([^>]*)>Unsubscribe<\/a>/,
     '<span data-email-unsubscribe aria-disabled="true"$1$2>Unsubscribe</span>') : email.html;
-  const text = name === "invite" ? email.text.replace(INVITE_UNSUBSCRIBE, "Available in the delivered email only; inactive in this sample.") : email.text;
+  const text = name === "invite" ? email.text.replace(/\{\{\{RESEND_UNSUBSCRIBE_URL\}\}\}|\{\{links\.unsubscribe\}\}/g, "Available in the delivered email only; inactive in this sample.") : email.text;
   // Links leave the preview frame and open in the page itself.
   return { ...email, text, html: forceScheme(html, scheme).replace("<head>", '<head><base target="_parent">') };
 }

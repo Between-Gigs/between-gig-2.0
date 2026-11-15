@@ -572,7 +572,7 @@ async function sendInvite(ctx: Ctx, personId: string, email: string): Promise<"i
     if (e instanceof CompanyOsError && e.code === "already_signed_up") return "signed_up";
     throw e;
   }
-  const log = await ctx.cos.create(ctx.cred, "comms_log", { deliver: true, channel: "email", category: "marketing", recipient: personId, message_key: "invite", vars: { invite_url: url } });
+  const log = await ctx.cos.create(ctx.cred, "comms_log", { deliver: true, channel: "email", ...(process.env.COMPANY_OS_PROFILE_REVIEW === "1" ? { category: "marketing" } : {}), recipient: personId, message_key: "invite", vars: { invite_url: url } });
   if (log?.data?.status === "failed") throw new CompanyOsError(502, "invite_email_failed");
   return "invited";
 }

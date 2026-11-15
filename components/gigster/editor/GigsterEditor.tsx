@@ -189,7 +189,7 @@ function Editor({ personId }: { personId: string }) {
     dirty.current = true;
     touched.current.add(k);
     setSave((x) => (x.status === "saving" ? x : { status: "saving" }));
-    setD((x) => (x ? { ...x, [k]: v } : x));
+    setD((x) => (x ? { ...x, [k]: typeof v === "function" ? v(x[k], x) : v } : x));
     setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
   });
   const required = (field: string) => (template.required as readonly string[]).includes(field);
@@ -337,7 +337,7 @@ function Editor({ personId }: { personId: string }) {
             <div className="min-w-0 lg:col-span-8 lg:pr-10"><CanvasHelp d={d} set={set} errors={errors} /></div>
             <div className="min-w-0 lg:col-span-4 lg:border-l lg:border-line-strong lg:pl-10"><CanvasRates d={d} set={set} errors={errors} required={required} /></div>
           </div>
-          <div className="border-t border-line-strong pt-10"><CanvasSamples d={d} set={set} errors={errors} /></div>
+          <div className="border-t border-line-strong pt-10"><CanvasSamples key={personId} d={d} set={set} errors={errors} /></div>
           <div className="border-t border-line-strong pt-10"><CanvasColumns d={d} set={set} errors={errors} required={required} /></div>
           <div className="border-t border-line-strong pt-10"><CanvasDetails d={d} set={set} errors={errors} /></div>
           <div className="border-t border-line-strong pt-6"><CanvasContact d={d} set={set} errors={errors} email={person.email} /></div>
