@@ -199,23 +199,21 @@ export async function flow({ browser, base, outDir }) {
       await page.getByRole("link", { name: "Create your Gigster profile" }).first().click();
       await page.waitForURL(/\/join\/?$/);
     })
-    && await step("storyboard-talent", async () => {
+    && await step("storyboard-profile", async () => {
       await page.goto(`${base}/storyboard/`);
       await page.getByRole("button", { name: "Next page", exact: true }).click();
       await expectText("Page 2 of 20");
-      await page.getByRole("button", { name: "Offer your skills" }).click();
-      await page.getByRole("button", { name: "Save my professional interest" }).click();
-      await expectText("Fill this in to continue.");
-      const answers = { "Your name": "Sam Rivera", "Email for follow-up": "sam.rivera@example.com", "Your entertainment role or craft": "Scenic carpenter", "What services would you like to offer?": "Custom furniture and repairs.", "Where can you work?": "Los Angeles", "When are you available?": "Weekdays between shoots" };
-      for (const [label, value] of Object.entries(answers)) await page.getByLabel(label, { exact: false }).first().fill(value);
-      await page.getByRole("button", { name: "Save my professional interest" }).click();
-      await expectText("Your professional interest is saved.");
+      const cta = page.getByRole("link", { name: "Create your profile", exact: true });
+      if (await cta.count() !== 1) throw new Error("Storyboard needs one direct profile CTA");
+      if (await page.getByRole("button", { name: "Offer your skills" }).count()) throw new Error("Retired Storyboard form still present");
+      await cta.click();
+      await page.waitForURL(/\/join\/?$/);
     })
     && await step("funnel-emails", async () => {
       await page.goto(`${base}/emails/`);
       await page.getByRole("radio", { name: /Sample outbox/ }).click();
-      await page.getByRole("link", { name: "Your next chapter starts here." }).waitFor();
-      await page.getByRole("link", { name: "Thank you. The next chapter is coming." }).waitFor();
+      if (await page.getByRole("link", { name: "Your next chapter starts here." }).count()) throw new Error("Retired Storyboard welcome was queued");
+      if (await page.getByRole("link", { name: "Thank you. The next chapter is coming." }).count()) throw new Error("Storyboard navigation must not queue a form email");
     })
     && await step("privacy-request", async () => {
       await page.goto(`${base}/privacy/`);

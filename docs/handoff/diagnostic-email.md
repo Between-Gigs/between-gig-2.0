@@ -21,8 +21,10 @@ Review 1: fixed unrelated regenerated templates, live template routing, server b
 
 No real email sent; no real request/provider ID or send timestamp exists. Do not report fake-provider receipts as live evidence.
 
-Playbook inbox: Company OS IN-269.
+Playbook inbox: Company OS IN-270.
 
 Release preparation: frontend 1.1.0 requires Company OS >=1.13.0. Production must follow successful BG test deployment of the backend release.
 
 Release CI corrections: keep the public sample Emails no-send wording distinct from the live owner diagnostic wording. The standalone Hub browser check now verifies a disabled sample send control and anonymous diagnostic rejection after submitting the synthetic local passphrase gate. The Secure gate cookie is forwarded only in the loopback HTTP test; runtime security is unchanged. Fresh independent integrated rounds found no new code blockers. Server/Hub builds, browser QA and package/security checks passed locally after this correction.
+
+Latest-main reconciliation preserves the merged Storyboard direct-profile change from PR47. Diagnostic implementation remains independent of Patti annotation drafts.
