@@ -5,9 +5,15 @@ export function ownerPreviewLink(kind: "live" | "sample", path: string) {
 
 /** Live owners cross into the separate sample Hub build; Pages/Hub keep their local base path. */
 export function ownerEmailPreview(kind: "live" | "sample") {
+  if (kind === "live") return { href: "/owners/emails/", label: "Emails", hint: "Diagnostic and previews", fullPage: false };
   return {
     ...ownerPreviewLink(kind, "/emails/"),
     label: "Email previews",
     hint: "Sample only · no sending",
   };
+}
+
+/** Plain anchors must include the static export base path. */
+export function emailTemplateHref(kind: "live" | "sample", name: string, basePath = "") {
+  return `${kind === "live" ? "/hub" : basePath}/emails/${name}/`;
 }

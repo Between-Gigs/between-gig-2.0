@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { ownerEmailPreview, ownerPreviewLink } from "./owner-email-preview";
+import { emailTemplateHref, ownerEmailPreview, ownerPreviewLink } from "./owner-email-preview";
 
 describe("owner email preview navigation", () => {
-  it("crosses from live owners to the separately served Hub, not the absent live /emails route", () => {
-    expect(ownerEmailPreview("live")).toEqual({ href: "/hub/emails/", label: "Email previews", hint: "Sample only · no sending", fullPage: true });
+  it("opens the live owner diagnostic and email area", () => {
+    expect(ownerEmailPreview("live")).toEqual({ href: "/owners/emails/", label: "Emails", hint: "Diagnostic and previews", fullPage: false });
   });
   it("keeps sample links local so Next applies Pages or Hub basePath once", () => {
     expect(ownerEmailPreview("sample")).toEqual({ href: "/emails/", label: "Email previews", hint: "Sample only · no sending", fullPage: false });
@@ -17,4 +17,11 @@ describe("owner preview destinations", () => {
       expect(ownerPreviewLink("sample", path)).toEqual({ href: path, fullPage: false });
     }
   });
+});
+
+describe("email template anchor destinations", () => {
+ it("preserves local, Hub and Pages paths while live templates use the Hub", () => {
+  for (const base of ["", "/hub", "/between-gig-2.0"]) expect(emailTemplateHref("sample", "invite", base)).toBe(`${base}/emails/invite/`);
+  expect(emailTemplateHref("live", "invite")).toBe("/hub/emails/invite/");
+ });
 });

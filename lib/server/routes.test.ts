@@ -77,7 +77,7 @@ describe("credentials", () => {
 
   it("every route is in the table with an access rule", () => {
     expect(Object.keys(ROUTES).sort()).toEqual([
-      "auth.session", "auth.syncExternal", "funnel.addDetails", "funnel.joinWaitlist", "funnel.privacyRequest", "funnel.submitSketch",
+      "auth.session", "auth.syncExternal", "emails.diagnosticStatus", "emails.sendDiagnostic", "funnel.addDetails", "funnel.joinWaitlist", "funnel.privacyRequest", "funnel.submitSketch",
       "owners.activity", "owners.approve", "owners.dashboard", "owners.invite", "owners.requestChanges", "owners.resendInvite", "owners.reviewQueue", "owners.waitlist",
       "people.get", "people.getPublic", "people.list", "people.similar", "profiles.getDraft", "profiles.getProfile", "profiles.saveDraft", "profiles.submit",
     ]);
@@ -102,7 +102,7 @@ describe("signed in or not", () => {
     expect(owner).toContain("owners.resendInvite");
     for (const name of owner) {
       const f = fake(undefined, { superAdmin: false });
-      const { res, body, calls } = await call(name, [PERSON, [{ section: "about", note: "x" }]], undefined, f);
+      const { res, body, calls } = await call(name, name.startsWith("emails.") ? [] : [PERSON, [{ section: "about", note: "x" }]], undefined, f);
       expect(res.status, name).toBe(403);
       expect(body).toEqual({ error: "super-admin only" });
       expect(calls.map((c) => c.path)).toEqual(["/me"]);
