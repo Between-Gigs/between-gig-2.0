@@ -34,6 +34,9 @@ export function diagnostic(ctx: EmailContext = defaultContext): RenderedEmail {
   // Keep the real wallpaper visible as an image: the current backend forbids background attributes and URL placeholders in CSS.
   // This diagnostic does not relax that sanitizer or depend on the gated marketing-template changes.
   const safeHero = hero
+    // This image strip is the diagnostic wallpaper in every client, including classic Outlook.
+    .replace("<!--[if !mso]><!-->", "")
+    .replace("<!--<![endif]-->", "")
     .replace(/ background="[^"]*"/g, "")
     .replace(/background-image:url\('[^']*'\);/g, "")
     .replace(
