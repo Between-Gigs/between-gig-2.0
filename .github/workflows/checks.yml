@@ -47,6 +47,13 @@ jobs:
           node scripts/qa/sample-order.mjs
           pnpm qa:flow
           node scripts/qa/funnel-cohort.mjs
+      - name: Save Professionals implementation captures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: professionals-adjusted-evidence
+          path: deliverables/professionals-adjusted
+          if-no-files-found: warn
       - name: Build Pages configuration with Clerk
         run: pnpm build
         env:

@@ -22,6 +22,11 @@ try{for(const width of [320,390,768,1024,1440])for(const theme of ['light','dark
  await page.addScriptTag({content:fs.readFileSync('node_modules/axe-core/axe.min.js','utf8')});const violations=await page.evaluate(async()=> (await window.axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa']}})).violations.map(v=>({id:v.id,targets:v.nodes.map(n=>n.target)})));assert.deepEqual(violations,[],`${width}/${theme}: axe`);
  const summary=main.locator('summary').first();await summary.focus();await page.keyboard.press('Enter');assert.equal(await summary.evaluate(e=>e.parentElement.open),true);
  await page.locator('#specialties details').evaluate(e=>{e.open=true;});
- if([390,1440].includes(width))for(const [name,selector] of [['hero','main > section:first-of-type'],['specialties','#specialties'],['profiles','#profiles'],['chapter','#next-chapter'],['faq','#faq'],['founders','#founders'],['closing','main > section:last-of-type']]){const section=page.locator(selector).first();await section.scrollIntoViewIfNeeded();await section.screenshot({path:`deliverables/professionals-adjusted/${width}-${theme}-${name}.png`});}
+ if([390,1440].includes(width)){
+  await page.evaluate(()=>scrollTo(0,0));const boxes={};
+  for(const [name,selector] of [['hero','main > section:first-of-type'],['specialties','#specialties'],['profiles','#profiles'],['chapter','#next-chapter'],['faq','#faq'],['founders','#founders'],['closing','main > section:last-of-type']]) boxes[name]=await page.locator(selector).first().boundingBox();
+  fs.writeFileSync(`deliverables/professionals-adjusted/${width}-${theme}-sections.json`,JSON.stringify(boxes));
+  await page.screenshot({path:`deliverables/professionals-adjusted/${width}-${theme}-full.png`,fullPage:true});
+ }
  await context.close();console.log(`PASS Professionals exact copy, artwork, routes, keyboard, fit/axe ${width}/${theme}`);
 }}finally{await browser.close();server.close();}
