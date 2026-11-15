@@ -308,7 +308,7 @@ export function CanvasRates({ d, set, errors, required }: SectionProps & { requi
         <Input id="f-minimum" maxLength={stageTwoLimits.bookingMinimum} value={d.bookingMinimum ?? ""} placeholder="Minimum booking, if any" invalid={!!errors.bookingMinimum}
           onChange={(e) => set("bookingMinimum")(e.target.value.slice(0, stageTwoLimits.bookingMinimum))} />
       </div>
-      <div id="sec-availability" className="grid scroll-mt-40 gap-3 pt-2">
+      <div id="sec-availability" className="mt-6 grid scroll-mt-40 gap-3 border-t border-line-strong pt-6">
         <Switch id="f-monthStatus" label="Available for work" checked={available}
           onChange={(on) => set("monthStatus")(on ? "available" : "away")} />
         {available && (
