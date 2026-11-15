@@ -10,6 +10,8 @@ describe("diagnostic email", () => {
     expect(html).toContain('.e-diagnostic p,.e-diagnostic h1,.e-diagnostic a{color:#f5f5f5!important}');
     expect(html).toContain('background-image:linear-gradient(#fbf8f2,#fbf8f2)');
     expect(html).toContain('class="e-d-logo"');
+    expect(html).toContain('width:100%;max-width:600px');
+    expect(html).not.toContain('padding:88px 60px');
     expect(html).not.toMatch(/color:#(?:0f3d29|4a5249|516253|086c42)[;"}]/);
   });
   it("keeps the existing wallpaper visible to classic Outlook conditional rendering", () => {
