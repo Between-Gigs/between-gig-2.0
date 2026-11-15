@@ -454,20 +454,16 @@ export function CanvasSamples({ d, set }: SectionProps) {
   );
 }
 
-/** The three ruled columns: Skills & experience, Credits, and the personality question. */
-export function CanvasColumns({ d, set, errors, required }: SectionProps & { required: (field: string) => boolean }) {
+/** Skills & experience comes before services; fields and save contracts are unchanged. */
+export function CanvasExperience({ d, set, errors, required }: SectionProps & { required: (field: string) => boolean }) {
   const [expOpen, openExp] = useOpen(!!(d.position || d.years || d.about || d.skills.length || errors.position || errors.about || errors.years || errors.skills));
-  const [credOpen, openCred] = useOpen(!!(d.credits.some((c) => c.trim()) || d.imdb || d.resumeUrl || errors.credits || errors.imdb));
-  const [qOpen, openQ] = useOpen(!!(d.personalityQuestion || d.personality || errors.personality || errors.personalityQuestion));
-  const question = personalityQuestions.find((q) => q.id === d.personalityQuestion)?.text;
   const col = "grid min-w-0 scroll-mt-40 content-start gap-4";
   return (
-    <div className="grid gap-10 lg:grid-cols-3 lg:gap-0">
-      <section id="sec-film" aria-labelledby="sec-film-h" className={cx(col, "lg:pr-8")}>
+      <section id="sec-film" aria-labelledby="sec-film-h" className={col}>
         <H id="sec-film-h" size="md">Skills &amp; experience</H>
         <p className="text-body-md text-ink">What kind of work do you do in the entertainment industry, and how does that experience help you deliver this service?</p>
         {expOpen ? (
-          <div className="grid gap-4">
+          <div className="grid items-start gap-6 lg:grid-cols-2">
             <Field label="Department or role" optional={!required("position")} error={errors.position}>
               <Input id="f-position" maxLength={DEPARTMENT_MAX} value={d.position} placeholder="e.g. Costume & wardrobe" onChange={(e) => set("position")(e.target.value.slice(0, DEPARTMENT_MAX))} />
             </Field>
@@ -487,8 +483,18 @@ export function CanvasColumns({ d, set, errors, required }: SectionProps & { req
           </div>
         ) : <AddLink id="f-about" onClick={openExp}>Add experience</AddLink>}
       </section>
+  );
+}
 
-      <section id="sec-credits" aria-labelledby="sec-credits-h" className={cx(col, "lg:border-l lg:border-line-strong lg:px-8")}>
+/** The remaining ruled columns: Credits and the personality question. */
+export function CanvasColumns({ d, set, errors, required }: SectionProps & { required: (field: string) => boolean }) {
+  const [credOpen, openCred] = useOpen(!!(d.credits.some((c) => c.trim()) || d.imdb || d.resumeUrl || errors.credits || errors.imdb));
+  const [qOpen, openQ] = useOpen(!!(d.personalityQuestion || d.personality || errors.personality || errors.personalityQuestion));
+  const question = personalityQuestions.find((q) => q.id === d.personalityQuestion)?.text;
+  const col = "grid min-w-0 scroll-mt-40 content-start gap-4";
+  return (
+    <div className="grid gap-10 lg:grid-cols-2 lg:gap-0">
+      <section id="sec-credits" aria-labelledby="sec-credits-h" className={cx(col, "lg:pr-8")}>
         <H id="sec-credits-h" size="md">Credits</H>
         {credOpen ? (
           <div className="grid gap-4">
@@ -543,12 +549,12 @@ export function CanvasDetails({ d, set }: SectionProps) {
           <p className="text-body-sm text-ink-muted">Languages you speak, on site or at your studio, transport and tools. They show under Details on your profile.</p>
         </div>
       ) : (
-        <div className="grid gap-x-10 gap-y-5 md:grid-cols-2">
+        <div className="grid items-start gap-x-10 gap-y-5 md:grid-cols-2">
           <Field label="Languages" optional><Input id="f-languages" value={d.languages} placeholder="e.g. English, Spanish" maxLength={120} onChange={(e) => set("languages")(e.target.value)} /></Field>
           <RadioGroup name="f-mode" label="How you work" value={d.mode} onChange={(v) => set("mode")(v as typeof d.mode)}
             options={[{ value: "on-site", label: "On site, at the client's place" }, { value: "studio", label: "At my studio" }, { value: "both", label: "Both" }]} />
           <Field label="Transport" optional><Input id="f-transport" value={d.transport} placeholder="e.g. Car, can carry a rolling rack" maxLength={120} onChange={(e) => set("transport")(e.target.value)} /></Field>
-          <Field label="Tools and equipment" optional><Input id="f-tools" value={d.tools} placeholder="e.g. Steamer, sewing kit, garment bags" maxLength={160} onChange={(e) => set("tools")(e.target.value)} /></Field>
+          <Field label="Tools and equipment" optional><Textarea id="f-tools" rows={4} value={d.tools} placeholder="Special Cameras, Lighting Kit, Box Truck, Makeup kit, etc." maxLength={160} onChange={(e) => set("tools")(e.target.value)} /></Field>
           <RadioGroup name="f-insurance" label={<>Insurance <span className="font-normal text-ink-subtle">· optional, self-reported</span></>} value={d.insurance} onChange={(v) => set("insurance")(v as typeof d.insurance)}
             options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance yet" }]} />
         </div>
