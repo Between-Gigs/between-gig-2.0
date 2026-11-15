@@ -18,8 +18,8 @@ export const DIAGNOSTIC_REASON =
   "You requested this one-time diagnostic to check Between Gigs email delivery.";
 /** Scoped to this diagnostic: shared invitation/welcome templates remain byte-for-byte unchanged.
  * Neutral text gives forced-inversion clients a simpler high-contrast pair. Clients supporting
- * theme CSS get an explicit dark palette. The transparent original logo keeps a cream image-like
- * backing even when Gmail recolors HTML backgrounds; no artwork is regenerated.
+ * theme CSS get an explicit dark palette. A cream gradient behind the transparent original logo
+ * is intended to resist HTML background recoloring; actual Gmail behavior still needs a client check.
  */
 function diagnosticAppearance(html: string): string {
   const dark = `
