@@ -1,7 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { diagnostic } from "../emails/diagnostic";
+import { diagnostic, DIAGNOSTIC_DARK_INK } from "../emails/diagnostic";
+import { k } from "../emails/craft";
 import { FOOTER_ADDRESS_LINE } from "../emails/config";
 describe("diagnostic email", () => {
+  it("pairs every visible text block with coordinated dark colors and protects the original logo backing", () => {
+    const html = diagnostic().html;
+    expect(html).toContain('name="color-scheme" content="light dark"');
+    expect(html).toContain('@media (prefers-color-scheme:dark)');
+    expect(html).toContain('[data-ogsc] .e-diagnostic p');
+    expect(html).toContain(`.e-diagnostic p,.e-diagnostic h1,.e-diagnostic a{color:${DIAGNOSTIC_DARK_INK}!important}`);
+    expect(html).toContain(`background-image:linear-gradient(${k.cream},${k.cream})`);
+    expect(html).toContain('class="e-d-logo"');
+    expect(html).toContain('width:100%;max-width:600px');
+    expect(html).not.toContain('padding:88px 60px');
+    expect(html).not.toMatch(/color:#(?:0f3d29|4a5249|516253|086c42)[;"}]/);
+  });
   it("keeps the existing wallpaper visible to classic Outlook conditional rendering", () => {
     // Simulate only the explicit !mso exclusion; this is not an Outlook application test.
     const classic = diagnostic().html.replace(/<!--\[if !mso\]><!-->[\s\S]*?<!--<!\[endif\]-->/g, "");
