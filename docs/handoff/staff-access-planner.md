@@ -1,0 +1,67 @@
+# Staff access planner — proposal, not authorization
+
+## Current delivery
+
+Separate branch `feature/staff-access-planner`, stacked on Product Development PR56. The Staff page has an Access planner tab with editable Simple, Medium and Advanced proposals, a View/Edit matrix aligned with dashboard sections, dependencies and a proposed sidebar. Sensitive actions start off in every preset. Coming-soon sections cannot be selected. The planner changes page memory only; reloading or leaving the Staff page discards its draft; switching Staff tabs preserves it. It cannot apply permissions, send invitations, or modify accounts. Existing Staff tools and owner gates remain unchanged.
+
+Justin described Simple for Peter, Medium for Patti and Advanced for Justin/Anowar/Anu. These are intended audiences, not assigned roles. No live users or grants were changed. Advanced is not a superadmin role, and selecting Simple does not revoke permissions supplied by another role. No private correspondence was imported for this preview.
+
+## Decisions to confirm with Justin
+
+1. Is Simple read-only review, or should Peter also approve/publish and see private contact information?
+2. Should Medium edit draft profile copy/feedback only, or may Patti publish profiles and send invitations?
+3. Who may view all company records rather than assigned records, export data, see private source notes, and manage team access? Define assignments separately from record creator/ownership.
+
+All presets and scopes are editable proposals until these decisions are made. Import, export, deletion, sending, publication, private fields and access administration each require a distinct scoped decision; a single broad checkbox must not become a broad backend grant. The preview groups some of these for discussion, not as an executable policy schema. The database's existing `own` scope must not be relabeled as assigned scope.
+
+## Existing source and enforcement boundary
+
+Frontend inspection at PR56 base `d98f30c3c1d6587688b418ded134acb988ecc0c7`:
+
+- `components/owners/OwnerGate.tsx` requires owner access. `lib/server/gigs.ts` maps Company OS `me.isSuperAdmin` to the owner session role. A normal reviewer currently does not gain the dashboard simply by having data grants.
+- `lib/server/routes.ts` marks owner actions such as dashboard, review queue, people, waitlist and invitations as owner-only. Personal Gigster operations retain their own session checks.
+- `components/owners/OwnerStaff.tsx` already exposes role memberships and raw entity CRUD scopes. The planning tab does not call those mutations. Existing protection must remain until a fully tested replacement is available.
+
+Company OS source inspected at `ab802321912a97b2973b94245c2f0b01748fbf3a`:
+
+- `apps/api/src/services/tenant-context.ts` builds membership/permission context for a tenant; entity/action grants are exact IDs, with default none. Role capabilities alone are not record authorization.
+- `apps/api/src/services/metadata.ts` gives newly created entities' CRUD grants only to that tenant's super_admin role. Metadata descriptions are not access controls.
+- `apps/api/src/query/policy.ts` and `query/engine.ts` enforce read permission and tenant predicates; `routes/runtime.ts` checks generic CRUD. Ordinary roles without explicit entity grants are denied. Existing operator/superadmin behavior must remain explicit.
+- Actual deployed grants still require an authorized audit; source inspection is not proof of a live tenant's configuration. Module sync can reinstall module grants, so a policy change must account for recipe defaults and sync, not just a one-off UI patch.
+
+## Implementation after the proposed matrix is confirmed
+
+1. Define stable section IDs with granular command and field capabilities. Separate presentation preference (Simple/Medium/Advanced layout) from authorization and from existing superadmin status. Store tenant-scoped, versioned policy and assignments. Start deny-by-default for new staff capabilities, while preserving the verified current owners.
+2. Resolve effective permissions on the server from all memberships, showing each permission's origin. The UI shows an explicit before/after delta for a named user. Hidden navigation is only a reflection of these decisions; direct links, requests and queries must be protected independently.
+3. Add matching frontend server guards for pages and every action. Do not replace owner checks with a generic signed-in check, and do not use a privileged service identity to bypass a user's denied access. Preview, draft editing, publication, email delivery, upload, deletion and import/export need separate guards.
+4. Enforce Company OS data access for both application routes and direct generic APIs, scoped to tenant, record assignment and allowed fields. Restrict profile editing to an explicit field allowlist. A generic update grant must not allow setting publication status, grants, private contact fields or other privileged columns. Aggregate/list/detail/export endpoints need the same restrictions. If field-level and assignment policies cannot express this safely, implement command endpoints and restrict generic grants rather than relying on UI filters.
+5. Keep private communication/source notes and contact information separately restricted; sanitise shared previews and exports. No cross-tenant IDs or parent links may escape the tenant boundary. Validate actor and subject belong to the same tenant.
+6. Make policy and membership changes atomic and revision-checked. Re-evaluate actor authority in the transaction; prevent self-elevation, self-lockout and removal/demotion of the final administrator. UI warnings do not replace these backend rules. Concurrent role edits must fail safely, with no partial grants. Sensitive grants require explicit approval and must never be inferred from preset selection.
+7. Record actor, tenant, subject, reason, request ID, policy revision and exact before/after policy and memberships in a protected audit log. Invalidate authorization caches on changes and test immediate revocation. Support idempotent retries.
+8. Roll back a targeted policy revision and its assignments using the recorded before-state, with the same authorization, revision and last-admin safeguards. Never reset unrelated roles or an entire tenant. Keep a trusted owner session available during staged verification.
+
+## Verification and release gates
+
+Local preview checks cover model dependencies, all-off sensitive defaults, no proposal mutations on the network, real-sidebar preservation, draft reset, desktop/mobile light/dark layout and accessibility. They do **not** prove live authorization or persistence.
+
+Before enabling real policy application, test on an isolated approved test tenant with synthetic records:
+
+- Anonymous and signed-in nonstaff: direct pages, action APIs, generic query/list/detail/aggregate and exports denied.
+- Each approved preset: exact permitted view/edit commands succeed and all other commands fail. Never test only hidden navigation.
+- Assigned-only records: other assignments and cross-tenant IDs fail, including parent links, searches, counts, nested requests and bulk endpoints. Private fields are absent, not merely hidden by CSS.
+- Sensitive actions cannot be triggered by generic updates or replayed URLs; read/preview does not authorize send, publish, import/export or delete.
+- Multiple roles: effective union and origins match the review screen; smaller layout does not falsely promise revocation. Existing owners and Gigster personal flows remain functional.
+- Revocation, stale policy revisions, duplicate request IDs, simultaneous last-admin removals and actor demotion during a change fail safely.
+- Audit records, cache invalidation and a targeted rollback are verified, including failure handling.
+
+Coordinate shared auth files and backend migration numbering with the Patti/invitation integrator. Ship this planning preview independently; it does not block Product Development or invitation releases. No backend schema, migration, Railway or environment changes belong to this preview PR. Do not deploy or apply grants merely because the planning UI passed its local tests.
+
+## Local verification receipt — 2026-11-15
+
+- TypeScript and targeted ESLint passed; design-token raw-value check passed; static Next production build passed.
+- Five access-plan tests passed (safe defaults, prerequisites, dependent clearing, immutable proposals and unavailable controls).
+- Playwright workflow passed at 1440px and 390px in light and dark: all three proposals, prerequisite toggles, disabled sensitive application, unchanged actual sidebar, draft retention across tabs, and zero network mutation requests from the planner.
+- Axe WCAG 2 A/AA and 2.1 AA returned zero violations at those four viewport/theme combinations. Mobile matrix fits without horizontal page overflow.
+- Two independent read-only source reviews found no remaining substantive blockers. These checks apply to the planning preview only; live grants and future enforcement were not tested or changed.
+
+Reproduce: `pnpm build && node scripts/qa/staff-access-planner.mjs`. Chromium defaults to `/usr/bin/chromium`; override with `CHROMIUM_PATH`. Captures and Axe results default to `/tmp/bg-staff-access-qa` (`QA_OUTPUT` overrides). Screenshots are fictional local sample data, not a live account.

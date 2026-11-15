@@ -1,0 +1,52 @@
+"use client";
+import * as React from "react";
+import { Button, cx } from "@ds/components";
+import { Check, ChevronRight, Eye, LockKeyhole, PencilLine, ShieldCheck } from "lucide-react";
+import { accessRows, presets, sensitiveActions, makePlan, changeAccess, changeSensitive, type Preset, type Plan } from "@/lib/staff/access-plan";
+import { markArea } from "@/lib/split-area";
+
+markArea("bg-split:dashboard");
+const control = "min-h-11 min-w-0 w-full rounded-lg border border-line-strong bg-bg px-3 py-2 text-body-sm text-ink";
+const groups = [...new Set(accessRows.map(r => r.group))];
+
+/** Non-operative design preview. No gateway, API, storage or user assignment is used here. */
+export function StaffAccessPlanner() {
+  const [preset, setPreset] = React.useState<Preset>("simple");
+  const [plans, setPlans] = React.useState<Record<Preset, Plan>>(() => ({ simple: makePlan("simple"), medium: makePlan("medium"), advanced: makePlan("advanced") }));
+  const [notice, setNotice] = React.useState("");
+  const plan = plans[preset];
+  const update = (transform: (p: Plan) => Plan, message: string) => {
+    setPlans(all => ({ ...all, [preset]: transform(all[preset]) }));
+    setNotice(message + " Proposal only; no account access changed.");
+  };
+  const selected = presets.find(p => p.key === preset)!;
+  const visible = accessRows.filter(r => plan.rows[r.id].view);
+  const editable = accessRows.filter(r => plan.rows[r.id].edit);
+  const sensitive = sensitiveActions.filter(a => plan.sensitive[a.id]);
+  return <section aria-labelledby="access-planner-title" className="grid gap-6">
+    <div className="rounded-xl border border-line bg-tint-sky p-5 sm:p-6">
+      <div className="flex items-start gap-3"><ShieldCheck className="mt-1 size-6 shrink-0 text-ink" aria-hidden="true" /><div className="grid gap-2"><p className="text-label-sm font-bold uppercase tracking-widest text-ink-muted">Planning preview · not live permissions</p><h2 id="access-planner-title" className="font-display text-heading-xl text-ink">The right tools for each teammate.</h2><p className="max-w-3xl text-body-md text-ink">Try a proposed sidebar and access matrix. Simple, Medium and Advanced are starting points for discussion, not assignments to anyone. Existing owner access stays unchanged.</p><p className="text-body-sm text-ink-muted">This draft stays in page memory and resets on reload. Applying it is unavailable until the exact rules are approved and enforced on the server.</p></div></div>
+    </div>
+    <div className="grid gap-3 sm:grid-cols-3" aria-label="Proposed access presets">{presets.map(p => <button key={p.key} type="button" aria-pressed={preset === p.key} onClick={() => { setPreset(p.key); setNotice(""); }} className={cx("rounded-xl border p-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-ink-brand", preset === p.key ? "border-ink-brand bg-surface-selected" : "border-line bg-bg")}><span className="flex items-center justify-between gap-3 text-label-lg font-bold text-ink">{p.name}{preset === p.key && <Check className="size-5" aria-hidden="true" />}</span><span className="mt-2 block text-body-sm text-ink-muted">{p.description}</span></button>)}</div>
+    {notice && <p role="status" className="rounded-lg border border-line bg-surface-selected p-3 text-body-sm text-ink">{notice}</p>}
+    <div className="grid items-start gap-6 xl:grid-cols-3">
+      <div className="grid min-w-0 gap-5 xl:col-span-2">
+        <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-heading-md font-bold text-ink">{selected.name}: proposed access</h3><p className="mt-1 text-body-sm text-ink-muted">Edit includes View. Removing a required page clears dependent choices.</p></div><Button variant="ghost" size="sm" onClick={() => update(() => makePlan(preset), "Suggested starting point restored.")}>Reset proposal</Button></div>
+        <label className="grid gap-2 text-body-sm text-ink"><span className="font-bold">Proposed record scope</span><select className={control} value={plan.scope} onChange={e => update(p => ({ ...p, scope: e.target.value as Plan["scope"] }), "Record scope changed.")}><option value="assigned">Assigned records only — assignment rules need definition</option><option value="tenant">All records in this company — explicit approval needed</option></select><span className="text-ink-muted">“Assigned” is not the same as “created by me.” Neither choice grants access across companies.</span></label>
+        <div className="overflow-x-auto rounded-xl border border-line" role="region" aria-label="Proposed sidebar permission matrix" tabIndex={0}>
+          <table className="w-full table-fixed text-left text-body-sm"><caption className="sr-only">Proposed View and Edit access for {selected.name}. Not enforced or applied.</caption><colgroup><col /><col className="w-16" /><col className="w-16" /></colgroup><thead className="bg-surface"><tr><th scope="col" className="p-3 font-bold text-ink">Sidebar item</th><th scope="col" className="p-3 font-bold text-ink">View</th><th scope="col" className="p-3 font-bold text-ink">Edit</th></tr></thead>
+            {groups.map(group => <tbody key={group}><tr className="border-t border-line bg-surface"><th colSpan={3} scope="colgroup" className="px-3 py-2 text-label-sm font-bold uppercase tracking-widest text-ink-muted">{group}</th></tr>{accessRows.filter(r => r.group === group).map(r => <tr key={r.id} className="border-t border-line bg-bg"><th scope="row" className="p-3 font-normal text-ink"><span className="font-bold">{r.title}</span>{r.soon ? <span className="mt-1 block text-caption text-ink-muted">Coming soon · no access to grant</span> : <><span className="mt-1 block text-caption text-ink-muted">{r.edit || "View only in this proposal"}</span>{r.requires.length > 0 && <span className="mt-1 block text-caption text-ink-muted">Needs: {r.requires.map(id => accessRows.find(x => x.id === id)?.title).join(", ")}</span>}</>}</th><td className="p-2"><label className="flex min-h-11 min-w-11 items-center justify-center"><span className="sr-only">Proposed View {r.title}</span><input type="checkbox" className="size-4 accent-(--color-action)" disabled={r.soon} checked={plan.rows[r.id].view} onChange={e => update(p => changeAccess(p, r.id, "view", e.target.checked), `${r.title} view updated; required pages and dependent actions were checked.`)} /></label></td><td className="p-2">{r.edit && !r.soon ? <label className="flex min-h-11 min-w-11 items-center justify-center"><span className="sr-only">Proposed Edit {r.title}</span><input type="checkbox" className="size-4 accent-(--color-action)" checked={plan.rows[r.id].edit} onChange={e => update(p => changeAccess(p, r.id, "edit", e.target.checked), `${r.title} editing updated; View and required pages are included when enabled.`)} /></label> : <span className="block px-3 text-center text-ink-muted" aria-label="Editing unavailable">—</span>}</td></tr>)}</tbody>)}
+          </table>
+        </div>
+      </div>
+      <aside className="grid gap-4 rounded-xl border border-line bg-tint-sand p-5" aria-label="Proposed sidebar preview">
+        <div><p className="text-label-sm font-bold uppercase tracking-widest text-ink-muted">Preview only</p><h3 className="mt-1 font-display text-heading-lg text-ink">{selected.name} sidebar</h3><p className="mt-2 text-body-sm text-ink-muted">{visible.length} visible · {editable.length} editable · {sensitive.length} sensitive actions proposed</p></div>
+        {groups.map(group => { const items = visible.filter(r => r.group === group); return items.length ? <div key={group} className="grid gap-2"><p className="text-label-sm font-bold text-ink-muted">{group}</p>{items.map(r => <div key={r.id} className="flex items-center gap-2 rounded-lg bg-bg p-3 text-label-sm text-ink"><ChevronRight className="size-4 shrink-0" aria-hidden="true" /><span className="flex-1">{r.title}</span>{plan.rows[r.id].edit ? <PencilLine className="size-4 shrink-0" aria-label="Proposed edit access" /> : <Eye className="size-4 shrink-0" aria-label="Proposed view access" />}</div>)}</div> : null; })}
+        {!visible.length && <p className="text-body-sm text-ink-muted">No pages selected in this proposal.</p>}
+        <p className="border-t border-line pt-3 text-caption text-ink-muted">This illustration changes only the preview. The real sidebar and current roles do not change.</p>
+      </aside>
+    </div>
+    <div className="grid gap-4 rounded-xl border border-line bg-bg p-5"><div className="flex gap-3"><LockKeyhole className="size-5 shrink-0 text-ink" aria-hidden="true" /><div><h3 className="text-heading-md font-bold text-ink">Sensitive actions need their own decision</h3><p className="mt-1 text-body-sm text-ink-muted">Off in every starting proposal. Checking one here only proposes it; it never sends, publishes, exports or changes roles.</p></div></div><div className="grid gap-3 md:grid-cols-2">{sensitiveActions.map(a => <label key={a.id} className="flex items-start gap-3 rounded-lg border border-line p-4"><input className="mt-1 size-4 shrink-0 accent-(--color-action)" type="checkbox" checked={plan.sensitive[a.id]} onChange={e => update(p => changeSensitive(p, a.id, e.target.checked), `${a.title} proposal changed; prerequisite views were checked.`)} /><span><span className="block text-label-md font-bold text-ink">{a.title}</span><span className="mt-1 block text-body-sm text-ink-muted">{a.note}</span></span></label>)}</div></div>
+    <div className="grid gap-3 rounded-xl border border-line bg-surface p-5"><h3 className="text-heading-md font-bold text-ink">Decisions before implementation</h3><ul className="list-disc space-y-2 pl-5 text-body-sm text-ink"><li>Should Simple be review-only, or include approvals and contact information?</li><li>Should Medium edit profile copy and draft feedback only, or also publish and send messages?</li><li>Who may access all company records, exports, private source notes and team permissions?</li></ul><p className="text-body-sm text-ink-muted">Roles combine. A smaller preset would not remove access already held through another role. Existing superadmin access must be reviewed separately, with an explicit before/after confirmation.</p><Button variant="strong" disabled>Apply access</Button><p className="text-caption text-ink-muted">Release gate: confirmed matrix, page/API/data enforcement, tenant-isolation tests, audited changes and a tested rollback.</p></div>
+  </section>;
+}

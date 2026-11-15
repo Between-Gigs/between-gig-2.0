@@ -6,6 +6,7 @@ import { data } from "@/lib/data";
 import { staff } from "@/lib/staff/selected";
 import type { StaffAction, StaffGateway, StaffPermission, StaffScope, StaffSnapshot, StaffUser } from "@/lib/staff/sample";
 import { OwnerGate } from "./OwnerGate";
+import { StaffAccessPlanner } from "./StaffAccessPlanner";
 import { OwnerShell } from "./OwnerShell";
 import { OwnerPage, Panel } from "./kit";
 import { markArea } from "@/lib/split-area";
@@ -27,7 +28,7 @@ export function OwnerStaff() {
 
 function Staff() {
   const [snapshot, setSnapshot] = React.useState<StaffSnapshot | null>(null);
-  const [tab, setTab] = React.useState<"people" | "rules">("people");
+  const [tab, setTab] = React.useState<"people" | "rules" | "plan">("people");
   const [query, setQuery] = React.useState("");
   const [includeGigsters, setIncludeGigsters] = React.useState(false);
   const [inviteOpen, setInviteOpen] = React.useState(false);
@@ -81,13 +82,14 @@ function Staff() {
     { value: snapshot ? multiple : "—", label: "With multiple roles", icon: Check },
   ];
 
-  return <OwnerShell><OwnerPage title="Staff" description="Manage the team, their roles, and what they can access." actions={<Button variant="strong" iconStart={<Plus />} onClick={() => { setInviteOpen(true); setInviteUrl(""); setNotice(""); setError(""); }}>Invite staff</Button>}>
+  return <OwnerShell><OwnerPage title="Staff" description="Manage the team, their roles, and what they can access." actions={tab === "plan" ? undefined : <Button variant="strong" iconStart={<Plus />} onClick={() => { setInviteOpen(true); setInviteUrl(""); setNotice(""); setError(""); }}>Invite staff</Button>}>
     {data.kind === "sample" && <p className="rounded-lg border border-line bg-surface-selected px-4 py-3 text-body-sm text-ink"><strong>Fictional sample.</strong> Changes stay in this browser. Invitations and emails are not sent.</p>}
     <div className="grid gap-3 sm:grid-cols-3">{stats.map(({ value, label, icon: Icon }) => <div key={label} className="flex items-center gap-3 rounded-xl border border-line bg-surface p-4"><span className="grid size-11 shrink-0 place-items-center rounded-lg bg-surface-selected text-ink-brand"><Icon className="size-5" aria-hidden="true" /></span><div><p className="font-display text-heading-lg tabular-nums text-ink">{value}</p><p className="text-body-sm text-ink-muted">{label}</p></div></div>)}</div>
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-2">
-      <div className="flex gap-1" aria-label="Staff views">
+      <div className="flex flex-wrap gap-1" aria-label="Staff views">
         <Button variant={tab === "people" ? "strong" : "ghost"} aria-pressed={tab === "people"} onClick={() => setTab("people")} iconStart={<Users />}>Team members</Button>
         <Button variant={tab === "rules" ? "strong" : "ghost"} aria-pressed={tab === "rules"} onClick={() => setTab("rules")} iconStart={<ShieldCheck />}>Role access</Button>
+        <Button variant={tab === "plan" ? "strong" : "ghost"} aria-pressed={tab === "plan"} disabled={busy} onClick={() => { setTab("plan"); setInviteOpen(false); setEditing(null); setNotice(""); }} iconStart={<ShieldCheck />}>Access planner</Button>
       </div>
       <Button variant="ghost" size="sm" iconStart={<RefreshCw />} disabled={busy} onClick={() => void mutate(refresh, "Staff list refreshed.")}>Refresh</Button>
     </div>
@@ -123,7 +125,8 @@ function Staff() {
           void mutate(() => checked ? gateway.addRole({ email: user.email, roleKey }) : gateway.removeRole({ membershipId: membership!.membershipId }), "Role assignments saved.");
         }} />}
       </li>)}</ul>}
-    </Panel> : snapshot && <RoleAccess key={snapshot.roles.map((r) => r.key).join(",")} snapshot={snapshot} busy={busy} save={(roleKey, permissions) => mutate(() => gateway.savePermissions({ roleKey, permissions }), "Role access saved.")} />}
+    </Panel> : tab === "rules" && snapshot && <RoleAccess key={snapshot.roles.map((r) => r.key).join(",")} snapshot={snapshot} busy={busy} save={(roleKey, permissions) => mutate(() => gateway.savePermissions({ roleKey, permissions }), "Role access saved.")} />}
+    <div hidden={tab !== "plan"}><StaffAccessPlanner /></div>
   </OwnerPage></OwnerShell>;
 }
 
