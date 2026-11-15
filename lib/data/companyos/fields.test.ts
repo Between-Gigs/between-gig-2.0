@@ -173,3 +173,11 @@ describe("profile extras (tenant fields)", () => {
     expect(fromProfile({ service_lines: { a: 3, b: "ok" } }, [], "").serviceLines).toEqual({ b: "ok" });
   });
 });
+
+it("round-trips multiline equipment through the existing Company OS text field", () => {
+  const tools = "Special Cameras\nLighting Kit\nMakeup kit";
+  const { data, items } = toProfile({ ...filled, tools });
+  expect(data.tools).toBe(tools);
+  expect(fromProfile(data, items, filled.photo).tools).toBe(tools);
+  expect(fromProfile(data, items, filled.photo).transport).toBe(filled.transport);
+});
