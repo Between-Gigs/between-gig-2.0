@@ -14,6 +14,7 @@ import {
   type EmailContext,
   type RenderedEmail,
 } from "./layout";
+export const DIAGNOSTIC_DARK_INK = "#f5f5f5";
 export const DIAGNOSTIC_REASON =
   "You requested this one-time diagnostic to check Between Gigs email delivery.";
 /** Scoped to this diagnostic: shared invitation/welcome templates remain byte-for-byte unchanged.
@@ -25,7 +26,7 @@ function diagnosticAppearance(html: string): string {
   const dark = `
 .e-diagnostic,.e-diagnostic .e-outer{background-color:#181818!important}
 .e-diagnostic table[bgcolor],.e-diagnostic .e-card{background-color:#242424!important;border-color:#555555!important}
-.e-diagnostic p,.e-diagnostic h1,.e-diagnostic a{color:#f5f5f5!important}
+.e-diagnostic p,.e-diagnostic h1,.e-diagnostic a{color:${DIAGNOSTIC_DARK_INK}!important}
 `;
   const outlook = dark.trim().split("\n").map((rule) => {
     const [selectors, declarations] = rule.split("{");

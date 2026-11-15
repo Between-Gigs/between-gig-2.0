@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { diagnostic } from "../emails/diagnostic";
+import { diagnostic, DIAGNOSTIC_DARK_INK } from "../emails/diagnostic";
+import { k } from "../emails/craft";
 import { FOOTER_ADDRESS_LINE } from "../emails/config";
 describe("diagnostic email", () => {
   it("pairs every visible text block with coordinated dark colors and protects the original logo backing", () => {
@@ -7,8 +8,8 @@ describe("diagnostic email", () => {
     expect(html).toContain('name="color-scheme" content="light dark"');
     expect(html).toContain('@media (prefers-color-scheme:dark)');
     expect(html).toContain('[data-ogsc] .e-diagnostic p');
-    expect(html).toContain('.e-diagnostic p,.e-diagnostic h1,.e-diagnostic a{color:#f5f5f5!important}');
-    expect(html).toContain('background-image:linear-gradient(#fbf8f2,#fbf8f2)');
+    expect(html).toContain(`.e-diagnostic p,.e-diagnostic h1,.e-diagnostic a{color:${DIAGNOSTIC_DARK_INK}!important}`);
+    expect(html).toContain(`background-image:linear-gradient(${k.cream},${k.cream})`);
     expect(html).toContain('class="e-d-logo"');
     expect(html).toContain('width:100%;max-width:600px');
     expect(html).not.toContain('padding:88px 60px');
