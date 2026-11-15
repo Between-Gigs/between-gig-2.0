@@ -29,7 +29,8 @@ export function ComingSoon() {
       <SiteHeader />
       <main id="main" tabIndex={-1} className="flex flex-1 flex-col outline-none">
         <PhotoStage {...STILL_LIFE} aria-labelledby="home-title" className="flex flex-1 items-center">
-          <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-8 md:py-16">
+          {/* Reserve more paper below the copy where the landscape crop brings the cable into tablet layouts. */}
+          <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-8 md:pt-16 md:pb-40">
             {/* Phones get a soft panel so the copy reads over the still life; from md the photo frames it on its own. */}
             <div className="grid justify-items-center rounded-2xl bg-bg/90 px-5 py-8 max-xs:px-4 text-center shadow-sm backdrop-blur-sm sm:px-10 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none dark:bg-bg/85 dark:md:bg-transparent">
               {/* An announcement shaped like the art's seal, not a disabled button. */}
