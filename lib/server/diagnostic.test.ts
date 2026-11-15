@@ -7,7 +7,7 @@ const configured = {
   sender: "hello@between-gigs.com",
   receipt: null,
 };
-function setup(admin = true, status = configured) {
+function setup(admin = true, status: typeof configured & { authorization?: string; templateSha256?: string; originalRequestId?: string } = configured) {
   const calls: { path: string; method: string; body: unknown }[] = [];
   const cos = companyOs({
     url: "http://cos.internal",
@@ -85,6 +85,21 @@ describe("site diagnostic email boundary", () => {
       const wrong = setup(true, { ...configured, ...patch });
       expect((await wrong.run("emails.sendDiagnostic")).status).toBe(409);
       expect(wrong.calls.some((c) => c.method === "POST")).toBe(false);
+    }
+  });
+});
+
+
+describe("revised diagnostic authority", () => {
+  const revised = { ...configured, authorization: "revised", originalRequestId: "3632e9c4-b3ac-476b-a3f1-471bdb8304c4", templateSha256: "7c25145b910f881b85da101a0b2cb6cc24e4d6e34254a40998fa3b2eb67582ad" };
+  it("pins the exact revised template and original request before the empty site POST", async () => {
+    const good = setup(true,revised);
+    expect((await good.run("emails.sendDiagnostic")).status).toBe(200);
+    expect(good.calls.at(-1)?.body).toEqual({});
+    for(const patch of [{templateSha256:"other"},{originalRequestId:"other"},{authorization:"third"}]) {
+      const bad = setup(true,{...revised,...patch});
+      expect((await bad.run("emails.sendDiagnostic")).status).toBe(409);
+      expect(bad.calls.some(c=>c.method==="POST")).toBe(false);
     }
   });
 });
