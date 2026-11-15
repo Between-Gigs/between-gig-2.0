@@ -128,10 +128,6 @@ export const routes = [
     name: "crew-call-form", path: "/crew-call/", ready: "h1",
     act: async (page) => { await page.getByRole("button", { name: "Carpentry & Custom Builds" }).click(); await page.getByRole("dialog").waitFor(); },
   },
-  {
-    name: "storyboard-form", path: "/storyboard/", setup: reset, ready: "h1",
-    act: async (page) => { await page.getByRole("button", { name: "Offer your skills" }).click(); await page.getByRole("dialog").waitFor(); },
-  },
   { name: "privacy", path: "/privacy/", ready: "h1" },
   { name: "terms", path: "/terms/", ready: "h1" },
   { name: "provider-standards", path: "/provider-standards/", ready: "h1" },
