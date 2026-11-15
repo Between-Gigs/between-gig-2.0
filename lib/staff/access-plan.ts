@@ -1,5 +1,5 @@
 /** Planning model only. Never a source of authorization, role grants or API requests. */
-export type Preset = "simple" | "medium" | "advanced";
+export type Preset = "simple" | "medium" | "designer" | "developer" | "product_manager";
 export type Access = { view: boolean; edit: boolean };
 export type Plan = { rows: Record<string, Access>; sensitive: Record<string, boolean>; scope: "assigned" | "tenant" };
 type Row = { id: string; group: string; title: string; edit: string; requires: string[]; soon?: boolean };
@@ -22,23 +22,30 @@ export const accessRows: Row[] = [
 ];
 export const sensitiveActions = [
   { id: "contacts", title: "View private contact details", requires: ["people"], note: "Email addresses and other nonpublic fields." },
-  { id: "publish", title: "Approve or publish profiles", requires: ["review"], note: "Separate from editing draft feedback." },
+  { id: "approve", title: "Approve profiles", requires: ["review"], note: "A review decision; publication is tracked separately." },
+  { id: "publish", title: "Publish profiles", requires: ["review"], note: "Make a profile public; separate from draft editing." },
   { id: "send", title: "Send email or invitations", requires: ["email_previews"], note: "Previewing an email never authorizes delivery." },
-  { id: "import_export", title: "Import or export records", requires: ["people"], note: "Bulk access and consent must be approved separately." },
+  { id: "export", title: "Export company records", requires: ["people"], note: "Export scope and private fields must be reviewed before applying." },
+  { id: "import", title: "Import records", requires: ["people"], note: "Separate from export; not authorized by the current decisions." },
   { id: "delete", title: "Delete records or assets", requires: ["people"], note: "Never implied by Edit. Entity scope must be specified." },
   { id: "manage_access", title: "Manage team access", requires: ["staff"], note: "No self-elevation, self-lockout or removal of the last administrator." },
 ];
 export const presets: { key: Preset; name: string; description: string }[] = [
-  { key: "simple", name: "Simple", description: "Proposed focused review: dashboard, people and review queue. View only; private contact details excluded." },
-  { key: "medium", name: "Medium", description: "Proposed editorial work: Simple plus previews and draft profile/feedback editing. Sending and approval remain separate." },
-  { key: "advanced", name: "Advanced", description: "Proposed working tools across the dashboard. This is not a superadmin grant and does not replace existing owner access." },
+  { key: "simple", name: "Simple · Peter", description: "Confirmed intent: approve profiles and see private contacts. Other access remains a proposal." },
+  { key: "medium", name: "Medium · Patti", description: "Confirmed intent: publish profiles and send messages. Draft editing is proposed; contact access is not inferred." },
+  { key: "designer", name: "Advanced · Anowar", description: "Designer. View all company information; no profile approval. No editing, sending or access administration inferred." },
+  { key: "developer", name: "Advanced · Anuraag", description: "Developer. Manage team access and export company data. Editing is proposed; this is not a superadmin assignment." },
+  { key: "product_manager", name: "Advanced · Justin", description: "Product Manager. Manage team access and export company data. Existing live roles remain unchanged." },
 ];
 export function makePlan(preset: Preset): Plan {
-  let plan: Plan = { rows: Object.fromEntries(accessRows.map(r => [r.id, { view: false, edit: false }])), sensitive: Object.fromEntries(sensitiveActions.map(a => [a.id, false])), scope: "assigned" };
-  const views = preset === "advanced" ? accessRows.filter(r => !r.soon).map(r => r.id) : ["dashboard", "people", "review", ...(preset === "medium" ? ["hub", "page_previews", "email_previews", "forms", "funnels", "social_previews"] : [])];
+  const advanced = ["designer", "developer", "product_manager"].includes(preset);
+  let plan: Plan = { rows: Object.fromEntries(accessRows.map(r => [r.id, { view: false, edit: false }])), sensitive: Object.fromEntries(sensitiveActions.map(a => [a.id, false])), scope: advanced ? "tenant" : "assigned" };
+  const views = advanced ? accessRows.filter(r => !r.soon).map(r => r.id) : ["dashboard", "people", "review", ...(preset === "medium" ? ["hub", "page_previews", "email_previews", "forms", "funnels", "social_previews"] : [])];
   for (const id of views) plan = changeAccess(plan, id, "view", true);
-  const edits = preset === "advanced" ? ["review", "people", "waitlist", "product", "wallpapers"] : preset === "medium" ? ["review", "people"] : [];
+  const edits = ["developer", "product_manager"].includes(preset) ? ["review", "people", "waitlist", "product", "wallpapers"] : preset === "medium" ? ["review", "people"] : [];
   for (const id of edits) plan = changeAccess(plan, id, "edit", true);
+  const actions = preset === "simple" ? ["approve", "contacts"] : preset === "medium" ? ["publish", "send"] : preset === "designer" ? ["contacts"] : ["manage_access", "export"];
+  for (const id of actions) plan = changeSensitive(plan, id, true);
   return plan;
 }
 export function changeAccess(plan: Plan, id: string, action: keyof Access, enabled: boolean): Plan {

@@ -29,9 +29,16 @@ try {
     const nav = page.getByRole("navigation", { name: "Owner workspace", exact: true, includeHidden: true });
     const sidebarBefore = await nav.textContent();
     const input = name => planner.getByRole("checkbox", { name, exact: true });
-    for (const label of ["Simple", "Medium", "Advanced"]) {
+    for (const [label, approve, publish, send, manage] of [
+      ["Simple · Peter", true, false, false, false], ["Medium · Patti", false, true, true, false],
+      ["Advanced · Anowar", false, false, false, false], ["Advanced · Anuraag", false, false, false, true],
+      ["Advanced · Justin", false, false, false, true],
+    ]) {
       await planner.getByRole("button", { name: new RegExp(`^${label}`) }).click();
-      assert.equal(await input("Send email or invitations Previewing an email never authorizes delivery.").isChecked(), false);
+      assert.equal(await input("Approve profiles A review decision; publication is tracked separately.").isChecked(), approve);
+      assert.equal(await input("Publish profiles Make a profile public; separate from draft editing.").isChecked(), publish);
+      assert.equal(await input("Send email or invitations Previewing an email never authorizes delivery.").isChecked(), send);
+      assert.equal(await input("Manage team access No self-elevation, self-lockout or removal of the last administrator.").isChecked(), manage);
     }
     await planner.getByRole("button", { name: /^Simple/ }).click();
     await input("Proposed Edit Review queue").check();
@@ -39,11 +46,11 @@ try {
     await input("Proposed View People").uncheck();
     assert.equal(await input("Proposed View Review queue").isChecked(), false);
     assert.equal(await input("Proposed Edit Review queue").isChecked(), false);
-    await input("Approve or publish profiles Separate from editing draft feedback.").check();
+    await input("Approve profiles A review decision; publication is tracked separately.").check();
     assert.equal(await input("Proposed View People").isChecked(), true);
     assert.equal(await input("Proposed View Review queue").isChecked(), true);
     await input("Proposed View Review queue").uncheck();
-    assert.equal(await input("Approve or publish profiles Separate from editing draft feedback.").isChecked(), false);
+    assert.equal(await input("Approve profiles A review decision; publication is tracked separately.").isChecked(), false);
     assert.equal(await input("Proposed View Finance").isDisabled(), true);
     assert.equal(await planner.getByRole("button", { name: "Apply access" }).isDisabled(), true);
     await planner.getByRole("button", { name: "Reset proposal" }).click();
@@ -55,7 +62,7 @@ try {
     assert.deepEqual(violations.map(v => v.id), [], "Accessible planning preview");
     await planner.evaluate(element => { const main = document.getElementById("main"); main.scrollTop += element.getBoundingClientRect().top - main.getBoundingClientRect().top - 120; });
     await page.screenshot({ path: `${output}/staff-access-${width}-${theme}.png` });
-    await planner.getByRole("heading", { name: "Simple: proposed access", exact: true }).evaluate(element => { const main = document.getElementById("main"); main.scrollTop += element.getBoundingClientRect().top - main.getBoundingClientRect().top - 120; });
+    await planner.getByRole("heading", { name: "Simple · Peter: proposed access", exact: true }).evaluate(element => { const main = document.getElementById("main"); main.scrollTop += element.getBoundingClientRect().top - main.getBoundingClientRect().top - 120; });
     await page.screenshot({ path: `${output}/staff-access-matrix-${width}-${theme}.png` });
     await input("Proposed View People").uncheck();
     await page.getByRole("button", { name: "Team members", exact: true }).click();

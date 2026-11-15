@@ -2,17 +2,34 @@
 
 ## Current delivery
 
-Separate branch `feature/staff-access-planner`, stacked on Product Development PR56. The Staff page has an Access planner tab with editable Simple, Medium and Advanced proposals, a View/Edit matrix aligned with dashboard sections, dependencies and a proposed sidebar. Sensitive actions start off in every preset. Coming-soon sections cannot be selected. The planner changes page memory only; reloading or leaving the Staff page discards its draft; switching Staff tabs preserves it. It cannot apply permissions, send invitations, or modify accounts. Existing Staff tools and owner gates remain unchanged.
+Separate branch `feature/staff-access-planner`, stacked on Product Development PR56. The Staff page has an Access planner tab with editable Simple, Medium and Advanced proposals, a View/Edit matrix aligned with dashboard sections, dependencies and a proposed sidebar. Sensitive actions reflect Justin’s confirmed intent; unconfirmed sensitive actions remain off. Coming-soon sections cannot be selected. The planner changes page memory only; reloading or leaving the Staff page discards its draft; switching Staff tabs preserves it. It cannot apply permissions, send invitations, or modify accounts. Existing Staff tools and owner gates remain unchanged.
 
-Justin described Simple for Peter, Medium for Patti and Advanced for Justin/Anowar/Anu. These are intended audiences, not assigned roles. No live users or grants were changed. Advanced is not a superadmin role, and selecting Simple does not revoke permissions supplied by another role. No private correspondence was imported for this preview.
+Justin confirmed Simple for Peter, Medium for Patti, and distinct Advanced plans for Anowar (Designer), Anuraag (Developer), and Justin (Product Manager). These are intended audiences, not assigned roles. No live users or grants were changed. Advanced is not a superadmin role, and selecting Simple does not revoke permissions supplied by another role. No private correspondence was imported for this preview.
 
-## Decisions to confirm with Justin
+## Confirmed intent — Justin’s reply, 2026-11-15
 
-1. Is Simple read-only review, or should Peter also approve/publish and see private contact information?
-2. Should Medium edit draft profile copy/feedback only, or may Patti publish profiles and send invitations?
-3. Who may view all company records rather than assigned records, export data, see private source notes, and manage team access? Define assignments separately from record creator/ownership.
+| Person | Experience | Confirmed intent reflected in preview |
+| --- | --- | --- |
+| Peter | Simple | Approve profiles and view private contact details |
+| Patti | Medium | Publish profiles and send messages/invitations |
+| Anowar | Advanced / Designer | View all company information; **cannot approve profiles** |
+| Anuraag | Advanced / Developer | Manage team access and export company data |
+| Justin | Advanced / Product Manager | Manage team access and export company data |
 
-All presets and scopes are editable proposals until these decisions are made. Import, export, deletion, sending, publication, private fields and access administration each require a distinct scoped decision; a single broad checkbox must not become a broad backend grant. The preview groups some of these for discussion, not as an executable policy schema. The database's existing `own` scope must not be relabeled as assigned scope.
+Anowar and Anuraag are separate people. Never resolve them from a nickname or assign one person’s privileges to the other. Account identities still need verification at application time.
+
+These are policy decisions for the editable preview, **not executed live grants**. Applying persistent changes requires the exact named account and per-action permission delta to be reviewed/confirmed under the coordinator’s instruction. Existing owner roles remain unchanged. The preview does not silently demote Anowar or claim his current live role already prevents approvals.
+
+### Remaining implementation details (do not repeat answered questions)
+
+- Draft editing choices remain proposals. Do not infer publishing, sending, importing or deleting from a person’s job title.
+- Peter’s approval and Patti’s publication are separate capabilities in this model. If the current approval endpoint automatically publishes, resolve that coupling before granting either; do not silently grant both.
+- Peter/Patti record-assignment rules remain undefined. Assigned records are not equivalent to the existing database `own` / created-by scope.
+- Anowar’s view-all intent includes company data visibility, but no editing, export, send or access administration is inferred. Actual field/record scope must be reviewed in the before/after delta.
+- Justin/Anuraag export and team administration do not automatically grant unrelated sensitive actions; imports and deletion remain off. Define precise export entity/field scope before applying.
+- Existing roles combine. If Anowar is currently a superadmin, adding a restrictive Designer preset alone cannot satisfy “cannot approve.” Safely reconcile effective permissions on the server with a reviewed transition; preserve another trusted admin and prevent lockouts.
+
+All plans remain editable. A customization is a proposal, not another confirmed grant. Coming-soon sections cannot receive access. No private communication import or live mutation occurred.
 
 ## Existing source and enforcement boundary
 
@@ -59,8 +76,8 @@ Coordinate shared auth files and backend migration numbering with the Patti/invi
 ## Local verification receipt — 2026-11-15
 
 - TypeScript and targeted ESLint passed; design-token raw-value check passed; static Next production build passed.
-- Five access-plan tests passed (safe defaults, prerequisites, dependent clearing, immutable proposals and unavailable controls).
-- Playwright workflow passed at 1440px and 390px in light and dark: all three proposals, prerequisite toggles, disabled sensitive application, unchanged actual sidebar, draft retention across tabs, and zero network mutation requests from the planner.
+- Six access-plan tests passed (confirmed intent, distinct designer/developer permissions, prerequisites, dependent clearing, immutable proposals and unavailable controls).
+- Playwright workflow passed at 1440px and 390px in light and dark: all five person-specific proposals, prerequisite toggles, disabled sensitive application, unchanged actual sidebar, draft retention across tabs, and zero network mutation requests from the planner.
 - Axe WCAG 2 A/AA and 2.1 AA returned zero violations at those four viewport/theme combinations. Mobile matrix fits without horizontal page overflow.
 - Two independent read-only source reviews found no remaining substantive blockers. These checks apply to the planning preview only; live grants and future enforcement were not tested or changed.
 

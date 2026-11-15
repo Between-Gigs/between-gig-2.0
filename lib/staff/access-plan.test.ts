@@ -1,12 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { accessRows, makePlan, changeAccess, changeSensitive, sensitiveActions } from "./access-plan";
+import { accessRows, makePlan, changeAccess, changeSensitive, sensitiveActions, presets } from "./access-plan";
 describe("non-operative access planning", () => {
-  it("keeps every consequential action off in every proposed preset", () => {
-    for (const preset of ["simple", "medium", "advanced"] as const) {
-      const plan = makePlan(preset);
-      expect(Object.values(plan.sensitive).every(value => value === false)).toBe(true);
+  it("records confirmed intent without adding unrequested sensitive powers", () => {
+    const expected = { simple: ["contacts", "approve"], medium: ["publish", "send"], designer: ["contacts"], developer: ["export", "manage_access"], product_manager: ["export", "manage_access"] };
+    for (const { key } of presets) {
+      const plan = makePlan(key);
+      expect(Object.keys(plan.sensitive).filter(id => plan.sensitive[id]).sort()).toEqual([...expected[key]].sort());
       expect(accessRows.filter(row => row.soon).every(row => !plan.rows[row.id].view && !plan.rows[row.id].edit)).toBe(true);
     }
+  });
+  it("distinguishes Anowar the designer from Anuraag the developer", () => {
+    const designer = makePlan("designer");
+    expect(designer.scope).toBe("tenant");
+    expect(accessRows.filter(r => !r.soon).every(r => designer.rows[r.id].view)).toBe(true);
+    expect(Object.values(designer.rows).every(r => !r.edit)).toBe(true);
+    expect(designer.sensitive.approve).toBe(false);
+    expect(designer.sensitive.manage_access).toBe(false);
+    expect(makePlan("developer").sensitive.manage_access).toBe(true);
   });
   it("edit includes view and required pages; removing a prerequisite clears dependents", () => {
     let plan = changeAccess(makePlan("simple"), "review", "edit", true);
