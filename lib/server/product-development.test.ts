@@ -1,10 +1,89 @@
 import { describe, expect, it, vi } from "vitest";
 import { handleProductDevelopment } from "./product-development";
 import { companyOs } from "./companyos";
-const request=(body:unknown, token="session")=>new Request("https://example.org/api/product-development/",{method:"POST",headers:{"content-type":"application/json",...(token?{authorization:`Bearer ${token}`}:{})},body:JSON.stringify(body)});
-describe("private product development",()=>{
- it("requires a session before accessing backend",async()=>{const call=vi.fn();expect((await handleProductDevelopment(request({action:"snapshot"},""),{cos:{call} as never})).status).toBe(401);expect(call).not.toHaveBeenCalled();});
- it("denies providers before metadata, records or mutations",async()=>{const cos={me:vi.fn().mockResolvedValue({isSuperAdmin:false}),call:vi.fn()};expect((await handleProductDevelopment(request({action:"initialize"}),{cos:cos as never})).status).toBe(403);expect(cos.call).not.toHaveBeenCalled();});
- it("refuses caller-controlled tenant, entity and unsupported actions",async()=>{const cos={me:vi.fn().mockResolvedValue({isSuperAdmin:true}),call:vi.fn()};for(const body of [{action:"snapshot",tenant:"other"},{action:"delete"},{action:"snapshot",entity:"person"}]) expect((await handleProductDevelopment(request(body),{cos:cos as never})).status).toBe(400);expect(cos.call).not.toHaveBeenCalled();});
- it("reports uninitialized database honestly and without writing",async()=>{const fetch=vi.fn(async(url:string|URL|Request,init?:RequestInit)=>{expect(init?.method).toBe("GET");return Response.json(String(url).endsWith("/me")?{isSuperAdmin:true}:{entities:[]});});const cos=companyOs({url:"https://api.example.org",tenant:"only-this",readerToken:"",submitterToken:"",fetch:fetch as typeof globalThis.fetch});const res=await handleProductDevelopment(request({action:"snapshot"}),{cos});expect(res.status).toBe(200);expect((await res.json()).result).toMatchObject({ready:false,mode:"database",items:[]});expect(fetch.mock.calls.every(([url])=>String(url).startsWith("https://api.example.org/t/only-this/"))).toBe(true);});
+const request = (body: unknown, token = "session-token") =>
+  new Request("https://example.org/api/product-development/", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+describe("private product development", () => {
+  it("requires a session before accessing backend", async () => {
+    const call = vi.fn();
+    expect(
+      (
+        await handleProductDevelopment(request({ action: "snapshot" }, ""), {
+          cos: { call } as never,
+        })
+      ).status,
+    ).toBe(401);
+    expect(call).not.toHaveBeenCalled();
+  });
+  it("denies providers before metadata, records or mutations", async () => {
+    const cos = {
+      me: vi.fn().mockResolvedValue({ isSuperAdmin: false }),
+      call: vi.fn(),
+    };
+    expect(
+      (
+        await handleProductDevelopment(request({ action: "initialize" }), {
+          cos: cos as never,
+        })
+      ).status,
+    ).toBe(403);
+    expect(cos.call).not.toHaveBeenCalled();
+  });
+  it("refuses caller-controlled tenant, entity and unsupported actions", async () => {
+    const cos = {
+      me: vi.fn().mockResolvedValue({ isSuperAdmin: true }),
+      call: vi.fn(),
+    };
+    for (const body of [
+      { action: "snapshot", tenant: "other" },
+      { action: "delete" },
+      { action: "snapshot", entity: "person" },
+    ])
+      expect(
+        (await handleProductDevelopment(request(body), { cos: cos as never }))
+          .status,
+      ).toBe(400);
+    expect(cos.call).not.toHaveBeenCalled();
+  });
+  it("reports uninitialized database honestly and without writing", async () => {
+    const fetch = vi.fn(
+      async (url: string | URL | Request, init?: RequestInit) => {
+        expect(init?.method).toBe("GET");
+        return Response.json(
+          String(url).endsWith("/me")
+            ? { isSuperAdmin: true }
+            : { entities: [] },
+        );
+      },
+    );
+    const cos = companyOs({
+      url: "https://api.example.org",
+      tenant: "only-this",
+      readerToken: "",
+      submitterToken: "",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const res = await handleProductDevelopment(
+      request({ action: "snapshot" }),
+      { cos },
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).result).toMatchObject({
+      ready: false,
+      mode: "database",
+      items: [],
+    });
+    expect(
+      fetch.mock.calls.every(([url]) =>
+        String(url).startsWith("https://api.example.org/t/only-this/"),
+      ),
+    ).toBe(true);
+  });
 });

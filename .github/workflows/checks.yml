@@ -38,6 +38,7 @@ jobs:
           node scripts/qa/profile-entry.mjs
           node scripts/qa/hub-staff.mjs
           node scripts/qa/owner-sidebar.mjs
+          node scripts/qa/product-development.mjs
           node scripts/qa/admin-shell.mjs
           node scripts/qa/social-preview.mjs
           node scripts/qa/signed-out-navigation.mjs
