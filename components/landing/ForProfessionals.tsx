@@ -13,12 +13,15 @@ import Link from "next/link";
 import { Eyebrow, Heading, Text, TextLink } from "@/components/ds/atoms";
 import { PhotoStage } from "@/components/ds/organisms";
 import { Founders } from "@/components/funnel/parts";
-import { benefits, faqs, profiles, services } from "@/components/funnel/professionals-content";
+import { benefits, faqs, profiles as sampleProfiles, services } from "@/components/funnel/professionals-content";
 import { Page } from "@/components/site/Page";
 import { asset } from "@/lib/site";
 import { STILL_LIFE } from "./ComingSoon";
 import { JOIN_HREF, JoinCta } from "./JoinCta";
 
+import {specialties, everydaySpecialties, productionBackgrounds, industryDepartments, originalBackgrounds} from "./professionals-approved-copy";
+
+const profiles = sampleProfiles.map(p => ({...p,...originalBackgrounds[p.id]}));
 const CITIES = ["New York", "Atlanta", "Toronto", "Vancouver"];
 
 /** A small "→ /join/" text link that names where it goes. */
@@ -76,14 +79,14 @@ export function ForProfessionals() {
                   <Text size="sm" muted>{s.text}</Text>
                   <details className="group/ideas">
                     <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-label-md text-ink hover:text-ink-brand [&::-webkit-details-marker]:hidden">
-                      <ChevronDown aria-hidden="true" className="size-4 transition-transform duration-fast group-open/ideas:rotate-180" />Service ideas
+                      <ChevronDown aria-hidden="true" className="size-4 transition-transform duration-fast group-open/ideas:rotate-180" />Explore service ideas
                     </summary>
                     <ul className="grid gap-1 pb-2 text-body-sm text-ink-muted">
                       {s.ideas.map((x) => <li key={x} className="flex gap-2"><span aria-hidden="true" className="mt-2 size-1 shrink-0 rounded-full bg-action" />{x}</li>)}
                     </ul>
                   </details>
                   <div className="border-t border-line pt-1">
-                    <JoinLink label={`I offer ${s.to.toLowerCase()}: create your Gigster profile`}>I offer this: create my profile</JoinLink>
+                    <JoinLink label={`I offer this service — ${s.to.toLowerCase()}: create your Gigster profile`}>I offer this service</JoinLink>
                   </div>
                 </div>
               </article>
@@ -92,13 +95,27 @@ export function ForProfessionals() {
         </ul>
       </section>
 
+      <section id="specialties" aria-labelledby="specialties-h" className="mx-auto max-w-7xl scroll-mt-24 px-4 pb-16 sm:px-6 lg:pb-24">
+        <div className="grid gap-6 rounded-xl border border-line bg-surface p-6 sm:p-10">
+          <Heading level="h1" id="specialties-h">More specialties. More of the crew.</Heading>
+          <Text>Named skills and industry backgrounds, with the exact service chosen and confirmed by each provider.</Text>
+          <ul className="flex flex-wrap gap-2">{specialties.map(s=><li key={s} className="rounded-lg border border-line bg-surface-sunken px-3 py-2 text-body-sm">{s}</li>)}</ul>
+          <Heading level="h3" as="h3">Additional everyday specialties</Heading>
+          <ul className="flex flex-wrap gap-2">{everydaySpecialties.map(s=><li key={s} className="rounded-lg border border-line bg-surface-sunken px-3 py-2 text-body-sm">{s}</li>)}</ul>
+          <Heading level="h3" as="h3">Specialist production backgrounds</Heading>
+          <ul className="flex flex-wrap gap-2">{productionBackgrounds.map(s=><li key={s} className="rounded-lg border border-line bg-surface-sunken px-3 py-2 text-body-sm">{s}</li>)}</ul>
+          <Text muted>These categories require separate scope, qualification and safety review. A department title is not proof of credentials, availability or a service someone offers. No automatic provider matching or booking is enabled for them.</Text>
+          <details className="border-t border-line pt-3"><summary className="min-h-11 cursor-pointer py-3 text-label-md font-semibold text-ink">Industry departments represented</summary><ul className="grid gap-3 py-3 text-body-md text-ink-muted">{industryDepartments.map(s=><li key={s}>{s}</li>)}</ul></details>
+          <Text size="sm" muted>Joining records your interest; it does not verify qualifications or activate a service.</Text>
+        </div>
+      </section>
+
       {/* Sample profiles */}
       <section id="profiles" aria-labelledby="profiles-h" className="scroll-mt-24 border-y border-line bg-surface-sunken py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="mx-auto grid max-w-3xl justify-items-start sm:justify-items-center gap-4 text-left sm:text-center">
-            <Eyebrow rule className="sm:justify-items-center!">Sample profiles</Eyebrow>
+            <Eyebrow rule className="sm:justify-items-center!">Sample professional profiles</Eyebrow>
             <Heading level="display-l" id="profiles-h" className="max-sm:text-display-md">Here's how your skills could translate.</Heading>
-            <Text size="lg" muted>Tell us what you do on set. We'll help you shape it into services, rates and availability like these.</Text>
           </div>
           <ul className="mt-10 grid gap-6 md:grid-cols-2">
             {profiles.map((p) => (
@@ -114,7 +131,7 @@ export function ForProfessionals() {
                       <p className="text-label-md font-semibold text-ink-brand">{p.title}</p>
                     </div>
                     <Text>{p.services}</Text>
-                    <p className="inline-flex gap-2 text-body-sm text-ink-muted"><Clapperboard className="mt-0.5 size-4 shrink-0 text-ink-subtle" aria-label="Background" />{p.credits}</p>
+                    <p className="inline-flex gap-2 text-body-sm text-ink-muted"><Clapperboard className="mt-0.5 size-4 shrink-0 text-ink-subtle" aria-label="Background" /><span>{p.background}<br /><span>Credits include: {p.credits}</span></span></p>
                     <dl className="mt-auto grid gap-2 border-t border-line pt-3 text-body-sm sm:grid-cols-2 sm:gap-4">
                       <div className="flex gap-2"><dt><Tag className="mt-0.5 size-4 text-ink-subtle" aria-label="Pricing" /></dt><dd className="text-label-md text-ink tabular-nums">{p.pricing}</dd></div>
                       <div className="flex gap-2"><dt><CalendarClock className="mt-0.5 size-4 text-ink-subtle" aria-label="Availability" /></dt><dd className="text-ink-muted">{p.availability}</dd></div>
@@ -127,7 +144,7 @@ export function ForProfessionals() {
               </li>
             ))}
           </ul>
-          <p className="mt-6 text-center font-display text-body-md text-ink-muted italic">Illustrative profiles and pricing.</p>
+          <p className="mt-6 text-center font-display text-body-md text-ink-muted italic">Sample profiles, services and pricing shown for illustration.</p>
         </div>
       </section>
 
@@ -135,7 +152,11 @@ export function ForProfessionals() {
       <section id="next-chapter" aria-labelledby="next-chapter-h" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 sm:px-6 lg:py-24">
         <div className="grid justify-items-start sm:justify-items-center gap-4 rounded-xl bg-surface-brand px-6 py-12 text-left sm:text-center shadow-md sm:px-10 lg:py-16">
           <h2 id="next-chapter-h" className="font-display text-display-md text-balance text-ink-on-brand sm:text-display-lg">Your next chapter <i>starts here.</i></h2>
-          <p className="max-w-2xl text-body-lg text-ink-on-brand">Professional expertise, available between productions. Choose work that fits your interests, set your rates, and make room for your next production.</p>
+          <p className="max-w-2xl font-display text-heading-lg text-ink-on-brand">Extraordinary Talent. Everyday Solutions.</p>
+          <p className="max-w-2xl text-body-lg text-ink-on-brand">Professional expertise. Available between productions.</p>
+          <p className="max-w-2xl text-body-lg text-ink-on-brand">Between Gigs connects you with clients who value the creativity, craftsmanship, and expertise you’ve developed in entertainment.</p>
+          <p className="max-w-2xl text-body-lg text-ink-on-brand">Bring your skills beyond the set to projects, tasks, and services for people and businesses. Choose work that fits your interests, set your rates, and make room for your next production.</p>
+          <p className="max-w-2xl font-display text-heading-lg text-ink-on-brand">Your expertise. New clients. On your terms.</p>
           <p className="mt-2 font-display text-heading-lg text-ink-on-brand">Launching in Los Angeles.</p>
           <p className="text-label-md text-ink-on-brand">Coming soon to {CITIES.join(", ").replace(/, ([^,]*)$/, " and $1")}.</p>
         </div>
@@ -147,7 +168,7 @@ export function ForProfessionals() {
       {/* FAQ */}
       <section id="faq" aria-labelledby="faq-h" className="mx-auto grid max-w-3xl scroll-mt-24 gap-8 px-4 pb-16 sm:px-6 lg:pb-24">
         <div className="grid justify-items-start sm:justify-items-center gap-4 text-left sm:text-center">
-          <Eyebrow rule className="sm:justify-items-center!">Your questions, answered</Eyebrow>
+          <Eyebrow rule className="sm:justify-items-center!">Professional FAQ</Eyebrow>
           <Heading level="h1" id="faq-h">Built around life between productions.</Heading>
         </div>
         <Accordion variant="framed" items={faqs.map(([q, a], i) => ({ id: `faq-${i}`, title: q, content: <div className="grid gap-3">{a.split("\n\n").map((para) => <p key={para}>{para}</p>)}</div> }))} />
@@ -162,7 +183,7 @@ export function ForProfessionals() {
         <div className="mx-auto grid max-w-4xl justify-items-start sm:justify-items-center px-4 py-16 sm:px-6 md:py-24">
           <div className="grid justify-items-start sm:justify-items-center gap-5 rounded-2xl bg-bg/85 px-5 py-8 text-left sm:text-center shadow-sm backdrop-blur-sm sm:px-10 lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-none dark:bg-bg/80 dark:lg:bg-transparent">
             <Eyebrow rule className="sm:justify-items-center!">Join the community</Eyebrow>
-            <Heading level="display-l" id="final-h" className="max-w-2xl max-sm:text-display-sm">Get discovered, get hired, and keep creating.</Heading>
+            <Heading level="display-l" id="final-h" className="max-w-2xl max-sm:text-heading-md max-[22rem]:text-body-lg"><span className="whitespace-nowrap">Get Discovered, Get hired</span><br />keep creating.</Heading>
             <JoinCta className="mt-2" />
             <TextLink href="/storyboard/" kind="arrow" className="font-medium text-ink-muted">See it in the Storyboard</TextLink>
           </div>

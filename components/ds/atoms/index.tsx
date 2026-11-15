@@ -33,7 +33,7 @@ export function Heading({ level = "h2", as: Tag = "h2", className, children, ...
 export function Eyebrow({ children, rule = false, className }: { children: React.ReactNode; rule?: boolean; className?: string }) {
   return (
     <div className={cx("grid justify-items-start gap-3", className)}>
-      <p className="text-eyebrow tracking-widest text-ink-muted uppercase">{children}</p>
+      <p className="text-eyebrow tracking-widest text-ink-muted uppercase" style={{ fontSize: "var(--text-label-sm)" }}>{children}</p>
       {rule && <span aria-hidden="true" className="h-0.5 w-10 rounded-full bg-focus" />}
     </div>
   );
