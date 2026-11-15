@@ -14,6 +14,7 @@ import { randomBytes } from "node:crypto";
 import { blankFields } from "@/lib/data/fields";
 import { CompanyOsError, companyOs, configFromEnv, type CompanyOs, type Credential } from "./companyos";
 import * as gigs from "./gigs";
+import { diagnosticRequest } from "./diagnostic";
 
 type Access = "optional" | "session" | "owner" | "public" | "funnel";
 type Args = unknown[];
@@ -44,6 +45,8 @@ export function cleanFields(v: unknown): ProfileFields {
 }
 
 export const ROUTES = {
+  "emails.diagnosticStatus": { access: "owner", run: (ctx, args) => diagnosticRequest(ctx, args, false) },
+  "emails.sendDiagnostic": { access: "owner", run: (ctx, args) => diagnosticRequest(ctx, args, true) },
   "auth.session": { access: "optional", run: (ctx) => (ctx.cred.kind === "session" ? gigs.session(ctx) : Promise.resolve(null)) },
   "auth.syncExternal": { access: "optional", run: (ctx) => (ctx.cred.kind === "session" ? gigs.syncExternal(ctx) : Promise.resolve({ ok: false, error: "unknown-email" })) },
 
@@ -217,6 +220,7 @@ export async function handle(name: RouteName, req: Request, deps: Deps = {}): Pr
   let args: Args;
   try {
     const body = JSON.parse(text || "{}") as { args?: unknown };
+    if (name.startsWith("emails.") && (!body || Object.keys(body).length !== 1 || !Array.isArray(body.args) || body.args.length !== 0)) return json(400, { error: "invalid_diagnostic_request" });
     args = Array.isArray(body.args) ? body.args : [];
   } catch {
     return json(400, { error: "invalid body" });

@@ -1,13 +1,15 @@
 "use client";
 import { EmptyState, SegmentedControl } from "@ds/components";
 import { ArrowRight, ArrowUpRight, Inbox, Mail, Send } from "lucide-react";
-import Link from "next/link";
 import * as React from "react";
 import { activeEmailNames, emailTemplates } from "@/emails";
 import { data, type OutboxEmail } from "@/lib/data";
 import { AppPage } from "@/components/site/AppPage";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { OwnerPage, Panel, Row, RowSkeletons } from "@/components/owners/kit";
+import { emailTemplateHref } from "@/lib/owner-email-preview";
+import { basePath } from "@/lib/site";
+import { DiagnosticEmail } from "./DiagnosticEmail";
 import { renderPreview } from "./preview";
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -29,12 +31,13 @@ export function EmailsIndex() {
   return (
     <AppPage>
       <OwnerPage title="Emails" meta={tab === "templates" ? activeEmailNames.length : outbox?.length}
-        description="Email template previews and a fictional sample outbox, not live delivery history. Nothing here sends email. Open a template to review it on desktop and phone."
+        description="Email template previews and a fictional sample outbox, not live delivery history. Only the separate diagnostic can send one approved test. Open a template to review it on desktop and phone."
         actions={
           // In the pinned bar, so switching never needs a scroll back up.
           <SegmentedControl label="Show" value={tab} onChange={setTab}
             options={[{ value: "templates", label: "Active templates", icon: <Mail /> }, { value: "outbox", label: `Sample outbox${outbox?.length ? ` (${outbox.length})` : ""}`, icon: <Send /> }]} />
         }>
+          <DiagnosticEmail />
           {tab === "templates" ? (
             <ul className="grid items-start gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {activeEmailNames.map((n) => {
@@ -45,7 +48,7 @@ export function EmailsIndex() {
                     <EmailThumb html={thumbs[n]} />
                     <div className="flex flex-1 flex-col gap-1 p-5">
                       <h2 className="font-display text-heading-sm text-ink">
-                        <Link href={`/emails/${n}/`} className="rounded-xs after:absolute after:inset-0 group-hover:text-ink-brand">{t.label}</Link>
+                        <a href={emailTemplateHref(data.kind, n, basePath)} className="rounded-xs after:absolute after:inset-0 group-hover:text-ink-brand">{t.label}</a>
                       </h2>
                       <p className="text-body-sm text-ink-muted">{t.when}</p>
                       <dl className="mt-auto grid gap-0.5 border-t border-line pt-3 text-body-sm">
