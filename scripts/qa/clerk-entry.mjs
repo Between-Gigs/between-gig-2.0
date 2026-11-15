@@ -14,8 +14,10 @@ try {
     const page = await context.newPage();
     page.setDefaultTimeout(15000);
     await page.goto(`${url}/join/`);
-    await page.getByRole("heading", { name: "Create your account", exact: true }).waitFor();
-    await page.getByText(/Then confirm your name and agree/).waitFor();
+    await page.getByText("Founding Gigsters", { exact: true }).waitFor();
+    await page.getByText("Sign-in couldn't load", { exact: true }).waitFor();
+    assert.equal(await page.getByRole("heading", { name: "Create your account", exact: true }).count(), 0, "the duplicate heading is removed");
+    assert.equal(await page.getByText(/Then confirm your name and agree/).count(), 0, "the redundant Clerk paragraph is removed");
     assert.equal(await page.getByRole("checkbox").count(), 0); // app consent follows Clerk identity verification
     assert.equal(await page.getByRole("button", { name: "Continue to password", exact: true }).count(), 0);
     await page.getByText("Sign-in couldn't load", { exact: true }).waitFor();
@@ -27,10 +29,12 @@ try {
     for (const hash of ["#/sso-callback", "#/verify-email-address", "#verify-email-address"]) {
       await page.goto("about:blank");
       await page.goto(`${url}/join/${hash}`);
-      await page.getByRole("heading", { name: "Create your account", exact: true }).waitFor();
+      await page.getByText("Founding Gigsters", { exact: true }).waitFor();
+    await page.getByText("Sign-in couldn't load", { exact: true }).waitFor();
       assert.equal(await page.getByRole("button", { name: "Continue to password", exact: true }).count(), 0);
       await page.reload();
-      await page.getByRole("heading", { name: "Create your account", exact: true }).waitFor();
+      await page.getByText("Founding Gigsters", { exact: true }).waitFor();
+    await page.getByText("Sign-in couldn't load", { exact: true }).waitFor();
     }
     await page.goto(`${url}/login/?__clerk_status=client_mismatch&notInvited=old@example.com`);
     await page.getByText("This sign-in link is out of date", { exact: true }).waitFor();
@@ -40,7 +44,8 @@ try {
     assert.equal(await page.getByText("Need to create a password?", { exact: false }).count(), 0);
     await page.locator("p:visible").filter({ hasText: "Already joined with Google or an email code? Use that same sign-in method" }).first().waitFor();
     await page.getByRole("link", { name: "Create an account", exact: true }).click();
-    await page.getByRole("heading", { name: "Create your account", exact: true }).waitFor();
+    await page.getByText("Founding Gigsters", { exact: true }).waitFor();
+    await page.getByText("Sign-in couldn't load", { exact: true }).waitFor();
     assert.equal(new URL(page.url()).pathname, `${base}/join/`);
     await context.close();
     console.log(`Clerk entry passed at ${width}px: native-first entry, callback boundary, offline recovery, Pages routing (no real authentication).`);
