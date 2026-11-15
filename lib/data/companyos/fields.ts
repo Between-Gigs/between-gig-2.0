@@ -62,7 +62,7 @@ export function toProfile(f: ProfileFields, opts: { extras?: boolean; review?: b
     work_mode: mode[f.mode],
     services_other: f.other.trim(),
     ...(opts.extras ? extrasOf(f) : {}),
-    ...(opts.review ? { [REVIEW_PUBLIC_FIELD]: publicReviewDetails(f), [REVIEW_PRIVATE_FIELD]: privateReviewDetails(f) } : {}),
+    ...(opts.review ? { service_proposal: f.other.trim(), [REVIEW_PUBLIC_FIELD]: publicReviewDetails(f), [REVIEW_PRIVATE_FIELD]: privateReviewDetails(f) } : {}),
   };
   const credits = f.credits
     .map((value, i) => ({ value: value.trim(), visible: f.creditPins?.[i] !== false }))
@@ -97,7 +97,7 @@ export function fromProfile(data: Record<string, unknown>, items: ProfileItem[],
     ...(credits.length ? { creditPins: credits.map((c) => c.visible !== false) } : {}),
     skills: labels("skill"),
     services: labels("service"),
-    other: text(data.services_other),
+    other: text(data.service_proposal) || text(data.services_other),
     market: data.home_market === "la" || data.home_market === undefined ? "la" : "other",
     otherCity: text(data.home_city),
     zip: text(data.postal_code),

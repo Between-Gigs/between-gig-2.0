@@ -643,6 +643,8 @@ export const sampleSource: DataSource = {
       const state = load();
       const person = state.people.find((p) => p.id === personId);
       if (!person || person.status !== "submitted") throw new Error("Only submitted profiles can be approved");
+      const submitted = state.profiles.find(p=>p.personId===personId);
+      if (submitted?.fields.other.trim() && !submitted.fields.services.length) throw new Error("Review the proposed service and add an approved service before publishing.");
       const t = now();
       Object.assign(person, { status: "approved", approvedAt: t, updatedAt: t, reviewNotes: undefined });
       // The approved version goes live as the team saw it, with the Gigster's latest availability. A newer draft (edited

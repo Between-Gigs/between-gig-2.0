@@ -65,3 +65,5 @@ Rollback frontend flags to blank/0 and restore the baseline frontend; do not del
 Record actual deployment SHA, URLs and item-level exceptions after the test release.
 
 Playbook impact: see the Company's inbox entry added for this review.
+
+Other-only profiles can submit through the private service_proposal field with the Between Gigs allow_service_proposal setting. The team must categorise the proposed service before approving publication; the sample approval path follows the same rule.
