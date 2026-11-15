@@ -6,20 +6,14 @@ import { data } from "@/lib/data";
 import { apiSource } from "@/lib/data/api";
 import { basePath } from "@/lib/site";
 import { previewContext } from "./preview";
-type Receipt = {
-  requestId: string;
-  status: string;
-  requestedAt: string;
-  providerId: string | null;
-  sentAt: string | null;
-  deliveredAt: string | null;
-  error: string | null;
-};
+import { DiagnosticReceipts, type Receipt } from "./DiagnosticReceipts";
 type Status = {
   enabled: boolean;
   recipient: string | null;
   sender: string | null;
   receipt: Receipt | null;
+  authorization?: "original" | "revised";
+  receipts?: Receipt[];
 };
 export function DiagnosticEmail() {
   const live = data.kind === "live";
@@ -88,6 +82,7 @@ export function DiagnosticEmail() {
     }
   };
   const receipt = status?.receipt;
+  const receipts = status?.receipts ?? (receipt ? [receipt] : []);
   return (
     <section
       className="mb-6 grid gap-4 rounded-lg border border-line bg-surface p-5"
@@ -97,7 +92,7 @@ export function DiagnosticEmail() {
         id="diagnostic-heading"
         className="font-display text-heading-md text-ink"
       >
-        Diagnostic email · one-time test
+        Diagnostic email · approved test
       </h2>
       <p className="text-body-sm text-ink-muted">
         From hello@between-gigs.com, only to jmassion@gmail.com. Uses our
@@ -110,7 +105,7 @@ export function DiagnosticEmail() {
           disabled={!live || busy || !status?.enabled || !!receipt}
           onClick={() => void act(true)}
         >
-          {busy ? "Checking…" : "Send one diagnostic"}
+          {busy ? "Checking…" : status?.authorization === "revised" ? "Send one revised diagnostic" : "Send one diagnostic"}
         </Button>
         {live && (
           <Button size="sm" disabled={busy} onClick={() => void act(false)}>
@@ -137,29 +132,11 @@ export function DiagnosticEmail() {
                   ? "Ready for the single approved diagnostic."
                   : "Sending is disabled. Backend review, approved configuration and deployment are required.")}
       </div>
-      {receipt && (
-        <dl className="grid gap-2 break-words text-body-sm text-ink-muted">
-          {Object.entries({
-            "Request ID": receipt.requestId,
-            "Requested at": receipt.requestedAt,
-            "Provider ID": receipt.providerId ?? "Not available",
-            "Provider accepted at": receipt.sentAt ?? "Not confirmed",
-            "Receiving server accepted at":
-              receipt.deliveredAt ?? "Not confirmed",
-            "Delivery issue": receipt.error ?? "None reported",
-          }).map(([k, v]) => (
-            <div key={k}>
-              <dt className="font-semibold">{k}</dt>
-              <dd>{v}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
+      <DiagnosticReceipts receipts={receipts} />
       <p className="text-body-sm text-ink-subtle">
         Queued means stored for sending. Sent means provider acceptance.
         Delivered means acceptance by the receiving mail server, not confirmed
-        inbox placement. Failed, bounced or cancelled do not permit a second
-        diagnostic. Refresh after an uncertain request; duplicate clicks reuse
+        inbox placement. Failed, bounced or cancelled do not renew an authorization. Each approved test can be queued only once. Refresh after an uncertain request; duplicate clicks reuse
         the same request.
       </p>
       <div
