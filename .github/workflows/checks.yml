@@ -43,6 +43,7 @@ jobs:
           node scripts/qa/signed-out-navigation.mjs
           node scripts/qa/home-hero.mjs
           node scripts/qa/storyboard-profile.mjs
+          node scripts/qa/professionals-copy.mjs
           node scripts/qa/sample-order.mjs
           pnpm qa:flow
           node scripts/qa/funnel-cohort.mjs
