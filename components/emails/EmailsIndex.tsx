@@ -31,7 +31,7 @@ export function EmailsIndex() {
   return (
     <AppPage>
       <OwnerPage title="Emails" meta={tab === "templates" ? activeEmailNames.length : outbox?.length}
-        description="Email template previews and a fictional sample outbox, not live delivery history. Only the separate diagnostic can send one approved test. Open a template to review it on desktop and phone."
+        description={`Email template previews and a fictional sample outbox, not live delivery history. ${data.kind === "live" ? "Only the separate diagnostic can send one approved test." : "Nothing here sends email."} Open a template to review it on desktop and phone.`}
         actions={
           // In the pinned bar, so switching never needs a scroll back up.
           <SegmentedControl label="Show" value={tab} onChange={setTab}

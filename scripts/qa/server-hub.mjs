@@ -35,12 +35,25 @@ try {
     await page.setViewportSize({ width, height: 900 });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth) <= 1, "Hub overflow at " + width);
   }
-  // The live owner email-preview link crosses into this public, sample-only build.
+  // Template previews remain public samples; the diagnostic sends only from the protected live owner area.
   assert.equal((await page.goto(base + "/hub/emails/")).status(), 200);
   await page.getByText("Nothing here sends email.", { exact: false }).waitFor();
+  assert.equal(await page.getByRole("button", { name: "Send one diagnostic", exact: true }).isDisabled(), true, "sample diagnostic cannot send");
+  assert.equal((await page.goto(base + "/owners/emails/")).status(), 401);
+  assert.equal((await fetch(base + "/api/emails/sendDiagnostic/", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ args: [] }) })).status, 401);
+  await page.goto(base + "/hub/emails/");
   assert.equal((await page.reload()).status(), 200);
   assert.equal((await page.goto(base + "/owners/staff/")).status(), 401);
   assert.equal((await fetch(base + "/api/staff/snapshot/", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })).status, 401);
+  // Pass the passphrase gate while remaining signed out: now the route itself must reject sending.
+  const unlocked = await page.request.post(base + "/test-gate/", { form: { passphrase: env.TEST_GATE_PASSPHRASE, next: "/hub/emails/" }, maxRedirects: 0 });
+  assert.equal(unlocked.status(), 303);
+  // The production cookie is Secure; forward the locally issued synthetic cookie explicitly on loopback HTTP.
+  const gateCookie = unlocked.headers()["set-cookie"]?.split(";")[0];
+  assert.ok(gateCookie?.startsWith("bg_test_gate="));
+  const anonymousDiagnostic = await fetch(base + "/api/emails/sendDiagnostic/", { method: "POST", headers: { "content-type": "application/json", cookie: gateCookie }, body: JSON.stringify({ args: [] }) });
+  assert.equal(anonymousDiagnostic.status, 401);
+  assert.deepEqual(await anonymousDiagnostic.json(), { error: "unauthorized" });
   assert.deepEqual(errors, []);
   console.log("PASS: server Hub public without cookies; canonical aliases, client navigation, refresh and 390/420px; real staff routes remain protected.");
 } finally { await browser?.close(); server.kill(); }
