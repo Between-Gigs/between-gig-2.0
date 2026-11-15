@@ -46,6 +46,7 @@ jobs:
           node scripts/qa/storyboard-profile.mjs
           node scripts/qa/professionals-copy.mjs
           node scripts/qa/sample-order.mjs
+          node scripts/qa/patti-editor-presentation.mjs
           pnpm qa:flow
           node scripts/qa/funnel-cohort.mjs
       - name: Save Professionals implementation captures
