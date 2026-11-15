@@ -1,9 +1,10 @@
 "use client";
-import { Button, IconButton, cx } from "@ds/components";
+import { IconButton, cx } from "@ds/components";
 import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import * as React from "react";
 import { useLook } from "@/components/site/LookSync";
 import { asset } from "@/lib/site";
+import { ButtonLink } from "@/components/ui/ButtonLink";
 import { Lettering } from "@/components/ui/Lettering";
 import { scenePages } from "@/lib/storyboard";
 import { createBook, type BookState } from "./engine";
@@ -14,10 +15,10 @@ export interface StoryBookHandle { goTo: (index: number) => void; prefetch: (ind
 /**
  * The Storyboard hero. The approved column is unchanged: Peter's handwritten "Your next chapter starts
  * here." and the sketchbook (drag a page, tap a half, or use the arrows / arrow keys). Under it, on the Swiss
- * grid: the page count and hint, the caption, then the two ways in.
+ * grid: the page count and hint, the caption, then the profile link.
  */
-export const StoryBook = React.forwardRef<StoryBookHandle, { onPlan: (kind: "buyer" | "talent") => void; onScrollOn: () => void }>(
-  function StoryBook({ onPlan, onScrollOn }, ref) {
+export const StoryBook = React.forwardRef<StoryBookHandle, { profileHref: string; onScrollOn: () => void }>(
+  function StoryBook({ profileHref, onScrollOn }, ref) {
     const swiss = useLook() === "swiss";
     const stage = React.useRef<HTMLDivElement>(null);
     const frame = React.useRef<HTMLDivElement>(null);
@@ -112,8 +113,7 @@ export const StoryBook = React.forwardRef<StoryBookHandle, { onPlan: (kind: "buy
             {!swiss && <p className={cx("order-3 text-body-sm text-ink-subtle transition-opacity duration-slow", hinted && "opacity-0 max-md:hidden")}>Drag the page or use the arrows to turn</p>}
             <div ref={captions} aria-hidden="true" className={swiss ? "sb-captions col-span-12 md:col-span-5 lg:col-span-6" : "sb-captions order-1 max-w-3xl px-4"} />
             <div className={swiss ? "col-span-12 grid content-start gap-3 md:col-span-4 lg:col-span-3" : "order-4 flex flex-wrap justify-center gap-3"}>
-              <Button variant="primary" size="lg" className={swiss ? "glow-hover w-full justify-between" : "glow-hover"} iconEnd={<ArrowRight />} onClick={() => onPlan("buyer")}>Find talent for a project</Button>
-              <Button variant="secondary" size="lg" className={swiss ? "w-full justify-between" : undefined} onClick={() => onPlan("talent")}>Offer your skills</Button>
+              <ButtonLink href={profileHref} variant="primary" size="lg" className={swiss ? "glow-hover w-full justify-between" : "glow-hover"} iconEnd={<ArrowRight />}>Create your profile</ButtonLink>
             </div>
           </div>
           <div className={swiss ? "mt-6 flex justify-center" : "order-5 mt-2 flex justify-center"}>

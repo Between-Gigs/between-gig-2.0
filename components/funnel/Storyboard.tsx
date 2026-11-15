@@ -4,6 +4,7 @@ import { Check, Inbox, LayoutGrid, List, Sparkles } from "lucide-react";
 import { Reveal } from "@ds/motion";
 import Link from "next/link";
 import * as React from "react";
+import { useSession } from "@/lib/session";
 import { useLook } from "@/components/site/LookSync";
 import { flushSync } from "react-dom";
 import { data } from "@/lib/data";
@@ -24,11 +25,11 @@ function reflow(update: () => void) {
 
 /**
  * /storyboard. The approved Storyboard, rebuilt on the design system: the sketchbook with its curling page
- * turn (components/storyboard), the credits, the catalog of commissions, and the two forms.
+ * turn (components/storyboard), the credits, the catalog of commissions, and a direct profile link.
  */
 export function Storyboard() {
   const swiss = useLook() === "swiss";
-  const [planner, setPlanner] = React.useState<Kind | null>(null);
+  const { session } = useSession();
   const bookRef = React.useRef<StoryBookHandle>(null);
   const top = React.useRef<HTMLDivElement>(null);
 
@@ -42,7 +43,7 @@ export function Storyboard() {
   return (
     <Page bare>
       <div ref={top} className="scroll-mt-16" />
-      <StoryBook ref={bookRef} onPlan={setPlanner} onScrollOn={() => document.getElementById("credits")?.scrollIntoView({ behavior: "smooth", block: "start" })} />
+      <StoryBook ref={bookRef} profileHref={session ? "/profile/" : "/join/"} onScrollOn={() => document.getElementById("credits")?.scrollIntoView({ behavior: "smooth", block: "start" })} />
 
       {/* The credits keep rolling */}
       <section id="credits" aria-labelledby="credits-h" className={swiss ? "mx-auto max-w-7xl scroll-mt-20 px-4 pt-8 pb-16 sm:px-6 lg:pt-12 lg:pb-24" : "mx-auto grid max-w-3xl scroll-mt-20 gap-5 border-t border-line px-4 py-20 text-center sm:px-6"}>
@@ -61,9 +62,6 @@ export function Storyboard() {
 
       <Catalog onOpen={openScene} onIntent={prefetch} />
 
-      {/* Mounted per opening, so every form starts empty. */}
-      {planner && <Planner key={planner} kind={planner} onClose={() => setPlanner(null)}
-        onBrowse={() => { setPlanner(null); window.setTimeout(() => document.getElementById("plates")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }), 50); }} />}
     </Page>
   );
 }

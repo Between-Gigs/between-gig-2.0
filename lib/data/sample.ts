@@ -559,7 +559,7 @@ export const sampleSource: DataSource = {
       const signup: WaitlistSignup = { id: uid(), email: address, zip, category, details: "", placement, createdAt: now() };
       state.waitlist.unshift(signup);
       log(state, "joined_waitlist", { email: address });
-      queue(state, "welcome", address, { storyboardUrl: absoluteUrl("/storyboard/") });
+      // The Storyboard welcome is retired; keep the signup and any earlier outbox records.
       save(state);
       return { ok: true, signup: clone(signup) };
     },
