@@ -436,10 +436,10 @@ export function Credits({ credits, pins, error, onChange }: { credits: string[];
               : <span aria-hidden="true" className="size-10 shrink-0" />}
             {/* Two fields per credit, kept as one "Production · Role" line (the format the profile reads). */}
             <div className="grid min-w-0 flex-1 gap-1.5">
-              <Input id={i === 0 ? "f-credits" : `credit-${i}`} aria-label={`Credit ${i + 1}: production`} value={splitCredit(c)[0]} placeholder="Production" className="min-w-0" invalid={!!error && i === 0}
+              <Input id={i === 0 ? "f-credits" : `credit-${i}`} aria-label={`Credit ${i + 1}: Name of the Production`} value={splitCredit(c)[0]} placeholder="Name of the Production" className="min-w-0" invalid={!!error && i === 0}
                 aria-describedby={error && i === 0 ? "credits-error" : undefined}
                 onChange={(e) => onChange(credits.map((x, j) => (j === i ? joinCredit(e.target.value, splitCredit(x)[1]) : x)), all)} />
-              <Input id={`credit-role-${i}`} aria-label={`Credit ${i + 1}: your role`} value={splitCredit(c)[1]} placeholder="Your role" className="min-w-0"
+              <Input id={`credit-role-${i}`} aria-label={`Credit ${i + 1}: Your role or Title`} value={splitCredit(c)[1]} placeholder="Your role or Title" className="min-w-0"
                 onChange={(e) => onChange(credits.map((x, j) => (j === i ? joinCredit(splitCredit(x)[0], e.target.value) : x)), all)} />
             </div>
             {credits.length > 1 && <IconButton label={`Remove credit ${i + 1}`} variant="ghost" icon={<Trash2 />} onClick={() => onChange(credits.filter((_, j) => j !== i), all.filter((_, j) => j !== i))} />}

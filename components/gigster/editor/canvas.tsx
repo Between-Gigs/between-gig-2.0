@@ -100,7 +100,7 @@ export function CanvasIdentity({ d, set, errors, personId, confirmPhoto, require
               <RadioGroup name="f-market" label="Where you're based" orientation="horizontal" value={d.market} onChange={(v) => set("market")(v as typeof d.market)}
                 options={[{ value: "la", label: "Los Angeles" }, { value: "other", label: "Somewhere else" }]} />
               <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
-                <Field label="ZIP or postal code" optional={!required("zip")} error={errors.zip}>
+                <Field label={d.market === "la" ? "ZIP code" : "ZIP or postal code"} optional={!required("zip")} error={errors.zip}>
                   <Input id="f-zip" inputMode="numeric" autoComplete="postal-code" value={d.zip} start={<MapPin />} placeholder="90026"
                     onChange={(e) => set("zip")(e.target.value.replace(/\D/g, "").slice(0, 5))} />
                 </Field>
@@ -189,7 +189,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
     <section id="sec-help" aria-labelledby="sec-help-h" className="grid min-w-0 scroll-mt-40 content-start gap-5">
       <div className="grid gap-2">
         <H id="sec-help-h">How I can help</H>
-        <p id="services-hint" className="max-w-xl text-body-md text-ink-muted">The most important part of your profile. Name a service, then say in one line what a customer can hire you to do. One clear service is enough to start.{rows.length > 1 && " Drag the grip to put your main service first."}</p>
+        <p id="services-hint" className="max-w-xl text-body-md text-ink-muted">The most important part of your profile. Choose a service, then say in one line what a customer can hire you to do. One clear service is enough to start. Five is the maximum.{rows.length > 1 && " Drag the grip to put your main service first."}</p>
       </div>
       <ol className="grid gap-5">
         {rows.map((s, i) => {
@@ -220,11 +220,11 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
                 </div>
                 <div className="grid min-w-0 gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
                   <label htmlFor={`f-line-${i}`} className="text-body-md text-ink">What can a customer hire you to do?</label>
+                  {!lineError && <p className="text-body-sm text-ink-muted italic">Example: Hang artwork and style a room for a party.</p>}
                   <Textarea id={`f-line-${i}`} rows={2} showCount maxLength={SERVICE_LINE_MAX} value={line} invalid={!!lineError}
-                    placeholder="I'll sort your wardrobe and set up a closet you can keep organized."
+                    placeholder="Describe what a customer can hire you to do."
                     onChange={(e) => setLine(s, e.target.value)} />
-                  {lineError ? <p className="text-body-sm text-danger">{lineError}</p>
-                    : <p className="text-body-sm text-ink-muted italic">Example: Hang artwork and style a room for a party.</p>}
+                  {lineError && <p className="text-body-sm text-danger">{lineError}</p>}
                 </div>
               </div>
               {standard && <p className="text-body-sm text-ink-muted"><span className="font-semibold text-ink">Standard description</span> · the same for everyone who offers it: {standard}</p>}
@@ -238,7 +238,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
             <div className="grid gap-4 sm:grid-cols-12 sm:gap-0">
               <div className="flex items-start gap-1 sm:col-span-5 sm:pr-5">
                 <div className="grid min-w-0 flex-1 gap-1.5">
-                  <label htmlFor="f-other" className="text-body-md text-ink">Your own service</label>
+                  <label htmlFor="f-other" className="text-body-md text-ink">Name of the Service</label>
                   <Input id="f-other" value={otherName} maxLength={60} placeholder="e.g. Web design"
                     onChange={(e) => setOther(e.target.value.replace(/\n/g, " "), otherLine)} />
                 </div>
@@ -247,13 +247,13 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
               </div>
               <div className="grid min-w-0 gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
                 <label htmlFor="f-other-line" className="text-body-md text-ink">What can a customer hire you to do?</label>
-                <Textarea id="f-other-line" rows={2} showCount maxLength={SERVICE_LINE_MAX} value={otherLine}
-                  placeholder="I'll design and build a simple website for your business."
-                  onChange={(e) => setOther(otherName, e.target.value)} />
                 <p className="text-body-sm text-ink-muted italic">Example: Hang artwork and style a room for a party.</p>
+                <Textarea id="f-other-line" rows={2} showCount maxLength={SERVICE_LINE_MAX} value={otherLine}
+                  placeholder="Describe what a customer can hire you to do."
+                  onChange={(e) => setOther(otherName, e.target.value)} />
               </div>
             </div>
-            <p className="text-body-sm text-ink-muted">Not on the list? The Between Gigs team reviews new services before they show on your profile.</p>
+            <p className="text-body-sm text-ink-muted">The Between Gigs team reviews new services before they show on your profile.</p>
           </li>
         )}
         {showBlank && (
@@ -291,8 +291,8 @@ export function CanvasRates({ d, set, errors, required }: SectionProps & { requi
     <section id="sec-rates" aria-labelledby="sec-rates-h" className="grid min-w-0 scroll-mt-40 content-start gap-4">
       <H id="sec-rates-h">Rates</H>
       <RadioGroup name="f-basis" label="How you charge" value={basis} onChange={(v) => set("basis")(v as typeof d.basis)}
-        options={[{ value: "hourly", label: "Hourly rate" }, { value: "project", label: "Starting project price" }, ...(d.basis === "day" ? [{ value: "day", label: "Day rate" }] : [])]} />
-      <p className="text-body-sm text-ink-muted">{basis === "project" ? "A flat fee per project; you quote each project's final price before it's booked." : "For your time and skills on a client's project. Materials and travel are agreed first."}</p>
+        options={[{ value: "hourly", label: "Hourly" }, { value: "project", label: "By Project" }, ...(d.basis === "day" ? [{ value: "day", label: "Day rate" }] : [])]} />
+      <p className="text-body-sm text-ink-muted">Materials and travel can be agreed to separately as needed.</p>
       <div className="grid gap-1.5">
         <label htmlFor="f-rate" className="sr-only">{basis === "hourly" ? "Amount per hour" : basis === "day" ? "Amount per day" : "Starting price per project"}{required("rate") ? "" : " (optional)"}</label>
         <Input id="f-rate" inputMode="numeric" value={d.rate} placeholder="Amount" invalid={!!errors.rate} start={<span className="text-label-md">$</span>} end={<span className="text-label-sm text-ink-subtle">USD</span>}
@@ -309,7 +309,7 @@ export function CanvasRates({ d, set, errors, required }: SectionProps & { requi
           onChange={(e) => set("bookingMinimum")(e.target.value.slice(0, stageTwoLimits.bookingMinimum))} />
       </div>
       <div id="sec-availability" className="grid scroll-mt-40 gap-3 pt-2">
-        <Switch id="f-monthStatus" label="Available for work" description={d.month ? `This month · ${d.month}` : undefined} checked={available}
+        <Switch id="f-monthStatus" label="Available for work" checked={available}
           onChange={(on) => set("monthStatus")(on ? "available" : "away")} />
         {available && (
           <div role="group" aria-label="How available" className="flex flex-wrap gap-2">
@@ -317,7 +317,7 @@ export function CanvasRates({ d, set, errors, required }: SectionProps & { requi
               <button key={v} type="button" aria-pressed={d.monthStatus === v} onClick={() => set("monthStatus")(v)}
                 className={cx("inline-flex min-h-9 items-center rounded-full border px-3 text-label-sm font-semibold transition-colors duration-fast focus-visible:outline-2 focus-visible:outline-focus",
                   d.monthStatus === v ? "border-action bg-action text-on-action" : "border-line-strong text-ink hover:bg-surface-hover")}>
-                {v === "available" ? "Fully available" : "Limited"}
+                {v === "available" ? "Fully available" : "Limited Availability"}
               </button>
             ))}
           </div>
@@ -403,7 +403,7 @@ export function CanvasSamples({ d, set }: SectionProps) {
   return (
     <section id="sec-work" aria-labelledby="sec-work-h" className="grid scroll-mt-40 gap-5">
       <div className="grid gap-2">
-        <H id="sec-work-h" tag={samples.length ? `${samples.length} of ${MAX_SAMPLES}` : `Optional · up to ${MAX_SAMPLES}`}>Work samples</H>
+        <H id="sec-work-h" tag={samples.length ? `${samples.length} of ${MAX_SAMPLES}` : `Optional · up to ${MAX_SAMPLES}`}>Showcase your work</H>
         {samples.length > 0 && <p id="samples-hint" className="text-body-md text-ink-muted">{samples.length > 1 ? "Drag a photo by its handle to change the order. The first one shows first on your profile. " : ""}Use Adjust to choose how each photo fits its frame.</p>}
       </div>
       <p aria-live="polite" className="sr-only">{said}</p>
@@ -465,7 +465,7 @@ export function CanvasColumns({ d, set, errors, required }: SectionProps & { req
     <div className="grid gap-10 lg:grid-cols-3 lg:gap-0">
       <section id="sec-film" aria-labelledby="sec-film-h" className={cx(col, "lg:pr-8")}>
         <H id="sec-film-h" size="md">Skills &amp; experience</H>
-        <p className="text-body-md text-ink">What kind of work do you do in film and television, and how does that experience help you deliver this service?</p>
+        <p className="text-body-md text-ink">What kind of work do you do in the entertainment industry, and how does that experience help you deliver this service?</p>
         {expOpen ? (
           <div className="grid gap-4">
             <Field label="Department or role" optional={!required("position")} error={errors.position}>
@@ -477,11 +477,11 @@ export function CanvasColumns({ d, set, errors, required }: SectionProps & { req
                 onToggle={(o) => { set("skills")(d.skills.includes(o) ? d.skills.filter((s) => s !== o) : [...d.skills, o]); if (!d.position.trim()) set("position")(o); }} />
               <GroupError id="f-skills-error">{errors.skills}</GroupError>
             </div>
-            <Field label="Years in film and TV" optional={!required("years")} error={errors.years}>
+            <Field label="Years in the Entertainment Industry" optional={!required("years")} error={errors.years}>
               <Input id="f-years" inputMode="numeric" value={d.years} placeholder="e.g. 9" className="max-w-32" onChange={(e) => set("years")(e.target.value.replace(/\D/g, "").slice(0, 2))} />
             </Field>
-            <Field label="How that experience helps" optional={!required("about")} error={errors.about}
-              hint="e.g. “Nine years in film and TV wardrobe taught me how to pull a look together on a deadline.”">
+            <Field label="How can customers benefit from your entertainment industry experience?" optional={!required("about")} error={errors.about}
+              hint="For example: “Building sets for film and television. I bring that same craftsmanship, creativity, and attention to detail to custom furniture, home improvements, and special projects.”">
               <Textarea id="f-about" rows={5} showCount maxLength={ABOUT_MAX} value={d.about} onChange={(e) => set("about")(e.target.value)} />
             </Field>
           </div>
@@ -494,7 +494,7 @@ export function CanvasColumns({ d, set, errors, required }: SectionProps & { req
           <div className="grid gap-4">
             <p className="text-body-sm text-ink-muted">Productions you worked on, and your role on each.</p>
             <Credits credits={d.credits} pins={d.creditPins ?? []} error={errors.credits} onChange={(c, p) => { set("credits")(c); set("creditPins")(p); }} />
-            <Field label="IMDb profile link" optional={!required("imdb")} error={errors.imdb} hint="Helps the team confirm your credits. Clients don't see it.">
+            <Field label="IMDb profile link" optional={!required("imdb")} error={errors.imdb}>
               <Input id="f-imdb" type="url" inputMode="url" value={d.imdb} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} />
             </Field>
             <Field label="Résumé link" optional hint="A website, Google Drive or Dropbox link. Clients see “View résumé”.">
@@ -505,6 +505,7 @@ export function CanvasColumns({ d, set, errors, required }: SectionProps & { req
       </section>
 
       <section id="sec-personality" aria-labelledby="sec-personality-h" className={cx(col, "lg:border-l lg:border-line-strong lg:pl-8")}>
+        <p className="text-body-sm text-ink-muted">Let your potential clients get to know you better.</p>
         <H id="sec-personality-h" size="md">{question ?? "A question about you"}</H>
         {qOpen ? (
           <div className="grid gap-4">
@@ -562,7 +563,7 @@ export function CanvasContact({ d, set, errors, email }: SectionProps & { email:
   return (
     <section id="sec-contact" aria-labelledby="sec-contact-h" className="grid scroll-mt-40 gap-4">
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <h2 id="sec-contact-h" className="flex items-center gap-2 text-label-lg font-semibold text-ink"><Lock aria-hidden="true" className="size-5 shrink-0" />Private booking contact</h2>
+        <h2 id="sec-contact-h" className="flex items-center gap-2 text-label-lg font-semibold text-ink"><Lock aria-hidden="true" className="size-5 shrink-0" />Contact Information</h2>
         <span aria-hidden="true" className="hidden h-6 w-px bg-line-strong sm:block" />
         {!open && <AddLink id="f-mobile" onClick={() => setOpen(true)}>Add email &amp; mobile</AddLink>}
         <span aria-hidden="true" className="hidden h-6 w-px bg-line-strong sm:block" />
