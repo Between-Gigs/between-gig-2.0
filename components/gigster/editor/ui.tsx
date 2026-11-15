@@ -13,7 +13,7 @@ import { markArea } from "@/lib/split-area";
 
 markArea("bg-split:dashboard");
 
-export type Setter = <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K] | ((previous: ProfileFields[K]) => ProfileFields[K])) => void;
+export type Setter = <K extends keyof ProfileFields>(k: K) => (v: ProfileFields[K] | ((previous: ProfileFields[K], fields: Readonly<ProfileFields>) => ProfileFields[K])) => void;
 
 /** What every section gets: the answers, the setter, and the errors from the last Submit. */
 export interface SectionProps {

@@ -189,7 +189,7 @@ function Editor({ personId }: { personId: string }) {
     dirty.current = true;
     touched.current.add(k);
     setSave((x) => (x.status === "saving" ? x : { status: "saving" }));
-    setD((x) => (x ? { ...x, [k]: typeof v === "function" ? v(x[k]) : v } : x));
+    setD((x) => (x ? { ...x, [k]: typeof v === "function" ? v(x[k], x) : v } : x));
     setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
   });
   const required = (field: string) => (template.required as readonly string[]).includes(field);

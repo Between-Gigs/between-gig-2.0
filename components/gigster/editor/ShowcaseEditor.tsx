@@ -18,10 +18,11 @@ export function ShowcaseEditor({ d, set }: SectionProps) {
     const replacing = React.useRef<string | null>(null), tiles = React.useRef<(HTMLLIElement | null)[]>([]);
     const [fitting, setFitting] = React.useState<string | null>(null), [dragging, setDragging] = React.useState<number | null>(null);
     const [busy, setBusy] = React.useState(false), [problem, setProblem] = React.useState(""), [link, setLink] = React.useState(""), [kind, setKind] = React.useState<"image" | "video">("video"), [thumbFor, setThumbFor] = React.useState<string | null>(null);
-    const change = (update: (current: ShowcaseItem[]) => ShowcaseItem[]) => set("showcase")(current => update(legacyShowcase(current, d.workSamples)));
+    const change = (update: (current: ShowcaseItem[]) => ShowcaseItem[]) => set("showcase")((current, fields) => update(legacyShowcase(current, fields.workSamples)));
     const pending = React.useRef(false), mounted = React.useRef(false);
     const migrationCache = React.useRef(new Map<string, string>());
     const [migrationFailed, setMigrationFailed] = React.useState(false), [retry, setRetry] = React.useState(0);
+    const [restorationAttempted, setRestorationAttempted] = React.useState(false);
     React.useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
     const upload = React.useCallback(async (file: File) => {
         if (file.type.startsWith("image/")) {
@@ -58,11 +59,12 @@ export function ShowcaseEditor({ d, set }: SectionProps) {
     const migrating = React.useRef(false);
     React.useEffect(() => {
         const originals = legacyShowcase(d.showcase, d.workSamples);
-        if (data.kind !== "live" || migrating.current || !originals.length ||
+        if (data.kind !== "live" || migrating.current || migrationFailed || !originals.length ||
             (d.showcase !== undefined && !originals.some(item => parseSample(item.url).src.startsWith("data:image/")))) return;
         migrating.current = true;
         pending.current = true;
         void Promise.resolve().then(async () => {
+            setRestorationAttempted(true);
             setBusy(true);
             try {
                 const replacements = new Map<string, string>();
@@ -84,7 +86,7 @@ export function ShowcaseEditor({ d, set }: SectionProps) {
                 }
                 if (!mounted.current) return;
                 // Merge into the latest list: retain reordered/removed/replaced items and edited captions.
-                set("showcase")(current => mergeMigratedShowcase(legacyShowcase(current, d.workSamples), replacements));
+                set("showcase")((current, fields) => mergeMigratedShowcase(legacyShowcase(current, fields.workSamples), replacements));
                 setMigrationFailed(false);
             } catch (e) {
                 if (mounted.current) { setMigrationFailed(true); setProblem(e instanceof Error ? e.message : "We couldn’t restore an older image."); }
@@ -93,7 +95,7 @@ export function ShowcaseEditor({ d, set }: SectionProps) {
                 if (mounted.current) setBusy(false);
             }
         });
-    }, [d.showcase, d.workSamples, set, upload, retry]);
+    }, [d.showcase, d.workSamples, set, upload, retry, migrationFailed]);
     const pick = async (file: File | undefined, target: string | null) => {
         if (!file || !target || pending.current) return;
         pending.current = true; setBusy(true); setProblem("");
@@ -141,7 +143,7 @@ export function ShowcaseEditor({ d, set }: SectionProps) {
  <ol className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{items.map((item, i) => <li key={item.id} ref={el => { tiles.current[i] = el; }} className="grid content-start gap-3 rounded-lg border border-line bg-surface p-4"><figure><ShowcaseMedia item={item}/></figure><div className="flex flex-wrap gap-2"><button type="button" id={"sample-grip-" + i} aria-label={"Move work sample " + (i + 1) + " of " + items.length} title="Drag to reorder, or use the arrow keys" className="inline-flex min-h-11 touch-none items-center rounded-md px-2 text-ink hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus" onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); setDragging(i); }} onPointerMove={drag} onPointerUp={() => setDragging(null)} onPointerCancel={() => setDragging(null)} onKeyDown={e => key(e, i)}><GripVertical className="size-4" aria-hidden="true"/></button><span className="mr-auto self-center text-label-md text-ink">{i + 1} · {item.kind === "video" ? "Video" : "Image"}</span>{i > 0 && <Button variant="ghost" aria-label={"Move showcase item " + (i + 1) + " up"} iconStart={<ArrowUp />} onClick={() => move(i, i - 1)}/>} {i < items.length - 1 && <Button variant="ghost" aria-label={"Move showcase item " + (i + 1) + " down"} iconStart={<ArrowDown />} onClick={() => move(i, i + 1)}/>}<Button variant="ghost" aria-label={"Remove showcase item " + (i + 1)} iconStart={<Trash2 />} onClick={() => change(current => current.filter(x => x.id !== item.id))}/></div>{item.kind === "image" && <Button variant="secondary" iconStart={<Crop />} aria-label={"Adjust the fit of work sample " + (i + 1)} onClick={() => setFitting(item.id)}>Adjust</Button>}<Button variant="ghost" iconStart={<RefreshCw />} disabled={busy} aria-label={"Replace showcase item " + (i + 1)} onClick={() => { replacing.current = item.id; input.current?.click(); }}>Replace</Button><Field label="Short description" optional><Textarea rows={2} maxLength={160} showCount value={item.description ?? ""} onChange={e => change(current => current.map(x => x.id === item.id ? { ...x, description: e.target.value } : x))}/></Field>{item.kind === "video" && <Button variant="secondary" disabled={busy} onClick={() => { setThumbFor(item.id); thumbnail.current?.click(); }}>Choose video thumbnail</Button>}</li>)}</ol>
  {items.length < 5 && <div className="grid gap-5 rounded-lg border border-line bg-surface p-5"><div className="grid justify-items-start gap-2"><Button variant="secondary" iconStart={<Plus />} loading={busy} onClick={() => input.current?.click()}>Upload an image or video</Button><p className="text-body-sm text-ink-muted">JPG, PNG or WebP up to 10 MB. MP4 video up to 50 MB and two minutes.</p></div><div className="grid gap-3 border-t border-line pt-4"><RadioGroup name="showcase-link-type" label="Or add a link" orientation="horizontal" value={kind} onChange={v => setKind(v as typeof kind)} options={[{ value: "video", label: "Video" }, { value: "image", label: "Image" }]}/><div className="flex flex-wrap items-end gap-3"><Field label="Public image or video URL" className="min-w-0 flex-1"><Input type="url" value={link} maxLength={2048} placeholder="https://" onChange={e => setLink(e.target.value)}/></Field><Button variant="secondary" onClick={addLink}>Add link</Button></div><p className="text-body-sm text-ink-muted">YouTube and Vimeo links open on the video’s original site.</p></div></div>}
  {fitting && items.find(i => i.id === fitting) && <CropShowcase item={items.find(i => i.id === fitting)!} onCancel={() => setFitting(null)} onSave={fit => { change(current => current.map(item => item.id === fitting ? { ...item, url: withFit(item.url, fit) } : item)); setFitting(null); }}/>}
- {migrationFailed && <Button variant="secondary" disabled={busy} onClick={() => { migrating.current = false; setProblem(""); setRetry(n => n + 1); }}>Retry restoring older images</Button>}
+ {(migrationFailed || (restorationAttempted && !busy && items.some(item => parseSample(item.url).src.startsWith("data:image/")))) && <Button variant="secondary" disabled={busy} onClick={() => { migrating.current = false; setMigrationFailed(false); setProblem(""); setRetry(n => n + 1); }}>Retry restoring older images</Button>}
  {problem && <p role="alert" className="text-body-md text-danger">{problem}</p>}
  </section>;
 }
