@@ -49,7 +49,7 @@ try {
   await p.getByRole("checkbox",{name:"Hourly",exact:true}).uncheck();await capture("rates-project","#sec-rates");await p.getByRole("checkbox",{name:"Hourly",exact:true}).check();
   await p.locator("#sec-help textarea").first().fill("");await capture("services-instruction","#sec-help");
   const other=p.getByRole("button",{name:"Other — name your service",exact:true});if(await other.count())await other.click();await capture("services-other","#sec-help");
-  await p.getByLabel("Credit 1: Name of the Production",{exact:true}).fill("");await p.getByLabel("Credit 1: Your role or Title",{exact:true}).fill("");await capture("credits-empty","#sec-credits");
+  await p.getByLabel("Credit 1: Your role or Title",{exact:true}).fill("");await p.getByLabel("Credit 1: Name of the Production",{exact:true}).fill("");await capture("credits-empty","#sec-credits");
   await p.locator("#f-mobile").fill("+12135550123");await p.getByRole("checkbox",{name:"SMS",exact:true}).check();await capture("contact-channels","#sec-contact");
   await p.locator("#sec-work li").last().screenshot({path:"deliverables/patti-review/showcase-caption.png"});
   await p.getByRole("heading",{name:"You’re Almost There!",exact:true}).locator("..").screenshot({path:"deliverables/patti-review/submit.png"});
