@@ -235,9 +235,10 @@ jobs:
           COMPANY_OS_READ_TOKEN: ${{ secrets.COMPANY_OS_READ_TOKEN }}
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
           APP_URL: ${{ vars.APP_URL }}
+          COMPANY_OS_PROFILE_REVIEW: ${{ vars.PROFILE_REVIEW_ENABLED }}
           COOKIE_SIGNING_SECRET: ${{ secrets.COOKIE_SIGNING_SECRET }}
         run: |
-          for name in COMPANY_OS_READ_TOKEN COMPANY_OS_SUBMIT_TOKEN APP_URL COOKIE_SIGNING_SECRET; do
+          for name in COMPANY_OS_READ_TOKEN COMPANY_OS_SUBMIT_TOKEN APP_URL COMPANY_OS_PROFILE_REVIEW COOKIE_SIGNING_SECRET; do
             printf '%s' "${!name}" | railway variable set "$name" --stdin \
               --service "$SERVICE" --environment "$RAILWAY_ENV" --skip-deploys
           done

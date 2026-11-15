@@ -29,6 +29,14 @@ try {
   assert.equal(await p.locator("#f-projectMinimum").inputValue(),"250");
   await p.getByRole("button",{name:"Remove Custom craft",exact:true}).waitFor();
   assert.equal(await p.locator("#f-marketingEmailConsent").isChecked(),false);
+  // Save a linked video and caption through the UI, then prove they survive reload.
+  while(await p.locator('#sec-work li').count()>=5)await p.getByRole("button",{name:"Remove showcase item 1",exact:true}).click();
+  await p.locator('#sec-work input[type="url"]').fill("https://example.com/showcase-video");
+  await p.getByRole("button",{name:"Add link",exact:true}).click();
+  await p.locator('#sec-work textarea').last().fill("Fictional showcase example for this review.");
+  await p.getByRole("button",{name:"Save draft",exact:true}).click();await p.waitForTimeout(1200);await p.reload();
+  await p.locator('#sec-work textarea').last().waitFor();assert.equal(await p.locator('#sec-work textarea').last().inputValue(),"Fictional showcase example for this review.");
+  await p.getByRole("button",{name:"Choose video thumbnail",exact:true}).waitFor();
   // Evidence for the requested per-item PDF. All accounts here are fictional sample data.
   await p.getByRole("radio",{name:"Los Angeles",exact:true}).check();await p.locator("#f-zip").fill("90026");
   await p.getByRole("radio",{name:"I have liability insurance",exact:true}).check();

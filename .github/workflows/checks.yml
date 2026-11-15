@@ -69,4 +69,5 @@ jobs:
       - name: Live server build, code-split check
         env:
           NEXT_PUBLIC_DATA_SOURCE: api
+          NEXT_PUBLIC_PROFILE_REVIEW: "1"
         run: pnpm build:server && node scripts/check-split.mjs
