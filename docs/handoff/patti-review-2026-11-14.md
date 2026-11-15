@@ -67,3 +67,5 @@ Record actual deployment SHA, URLs and item-level exceptions after the test rele
 Playbook impact: see the Company's inbox entry added for this review.
 
 Other-only profiles can submit through the private service_proposal field with the Between Gigs allow_service_proposal setting. The team must categorise the proposed service before approving publication; the sample approval path follows the same rule.
+
+Consent recovery: the self-only GET email-preference endpoint hydrates the live checkbox. Autosave compares an ephemeral baseline and never re-subscribes an unchanged/stale draft after opt-out. Baseline bookkeeping is excluded from stored/public profile details and profile-content comparisons.

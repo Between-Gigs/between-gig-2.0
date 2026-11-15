@@ -27,7 +27,7 @@ const text = (v: unknown, max: number) => typeof v === "string" ? v.slice(0, max
 const record = (v: unknown): Record<string, unknown> => v && typeof v === "object" && !Array.isArray(v) ? v as Record<string, unknown> : {};
 export function cleanReviewFields(input: unknown): Partial<ProfileFields> {
     const v = record(input), out: Partial<ProfileFields> = {};
-    for (const k of ["travelBeyondLA", "bookingContactConsent", "marketingEmailConsent"] as const)
+    for (const k of ["travelBeyondLA", "bookingContactConsent", "marketingEmailConsent", "marketingConsentBaseline", "marketingPreferenceConfigured"] as const)
         if (k in v)
             out[k] = v[k] === true;
     for (const k of ["hourlyRate", "projectMinimum", "minimumHours"] as const)

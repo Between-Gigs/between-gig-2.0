@@ -89,6 +89,9 @@ export interface ProfileFields {
   contactChannels?: ("sms" | "phone" | "whatsapp")[];
   bookingContactConsent?: boolean;
   marketingEmailConsent?: boolean;
+  /** Ephemeral preference snapshot; never part of public/private profile details. */
+  marketingConsentBaseline?: boolean;
+  marketingPreferenceConfigured?: boolean;
   showcase?: ShowcaseItem[];
   /** A data URL in the sample (resized to 480px); a storage URL in production. */
   photo: string;

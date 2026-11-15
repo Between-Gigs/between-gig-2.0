@@ -1,3 +1,4 @@
+import { marketingPreferenceChange } from "@/lib/profile/marketing-consent";
 import { cleanupShowcase } from "./showcase-cleanup";
 /*
  * The DataSource methods on Company OS, server side: what each one reads and writes, and how Company OS's records
@@ -305,13 +306,17 @@ async function ownProfile(ctx: Ctx, personId: string) {
 const fieldsFrom = (p: { profile?: Row; items: Row[]; photo?: Row }) => fromProfile(p.profile!.data, itemsOf(p.items), p.photo ? mediaUrl(p.photo.id) : "");
 
 /** The draft is the profile itself (N-09: one record). The builder's step stays in the browser (lib/data/api.ts). */
+async function marketingFields(ctx:Ctx,personId:string,fields:ProfileFields):Promise<ProfileFields>{
+ if(process.env.COMPANY_OS_PROFILE_REVIEW!=="1"||(await session(ctx))?.personId!==personId)return fields;
+ const pref=await ctx.cos.getEmailPreference(ctx.cred);return {...fields,marketingEmailConsent:pref.enabled,marketingConsentBaseline:pref.enabled,marketingPreferenceConfigured:pref.configured};
+}
 export async function getDraft(ctx: Ctx, personId: string): Promise<ProfileDraft | null> {
   const own = await ownProfile(ctx, personId);
-  if (own.profile) return { personId, fields: fieldsFrom(own), step: 0, savedAt: iso(own.profile.updatedAt) };
+  if (own.profile) return { personId, fields: await marketingFields(ctx,personId,fieldsFrom(own)), step: 0, savedAt: iso(own.profile.updatedAt) };
   const [person] = await ctx.cos.query(ctx.cred, { entity: "person", filter: eq("id", personId), limit: 1 });
   if (!person) return null;
   const name = str(person.data.name);
-  return { personId, fields: blankFields(name === str(person.data.email) ? "" : name), step: 0, savedAt: "" };
+  return { personId, fields: await marketingFields(ctx,personId,blankFields(name === str(person.data.email) ? "" : name)), step: 0, savedAt: "" };
 }
 
 const keyOf = (i: { kind?: unknown; value?: unknown }) => `${String(i.kind)}\u0000${String(i.value)}`;
@@ -382,9 +387,10 @@ export async function saveDraft(ctx: Ctx, personId: string, input: ProfileFields
   if (process.env.COMPANY_OS_PROFILE_REVIEW === "1" && own.profile) await cleanupShowcase(ctx.cos,ctx.cred,own.profile.id,fieldsFrom(own).showcase,fields.showcase);
   // Removing the photo deletes it, on a draft only: a submitted or live profile needs one, so it's replaced by uploading.
   if (!fields.photo && own.photo && own.profile?.data.status === "draft") await ctx.cos.remove(ctx.cred, "file", own.photo.id);
-  if (process.env.COMPANY_OS_PROFILE_REVIEW === "1" && (await session(ctx))?.personId === personId) await ctx.cos.setEmailPreference(ctx.cred, fields.marketingEmailConsent === true);
+  const preferenceChange=marketingPreferenceChange(fields);
+  if (process.env.COMPANY_OS_PROFILE_REVIEW === "1" && preferenceChange!==undefined && (await session(ctx))?.personId === personId) await ctx.cos.setEmailPreference(ctx.cred, preferenceChange);
   const after = await ownProfile(ctx, personId);
-  return { personId, fields: after.profile ? fieldsFrom(after) : fields, step: 0, savedAt: after.profile ? iso(after.profile.updatedAt) : nowIso() };
+  return { personId, fields: await marketingFields(ctx,personId,after.profile ? fieldsFrom(after) : fields), step: 0, savedAt: after.profile ? iso(after.profile.updatedAt) : nowIso() };
 }
 
 export async function submit(ctx: Ctx, personId: string) {

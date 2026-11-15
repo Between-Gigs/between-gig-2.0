@@ -36,6 +36,7 @@ export function contentChanged(a: ProfileFields, b: ProfileFields): boolean {
   const norm = (f: ProfileFields) => {
     const rest: Record<string, unknown> = { ...f, creditPins: f.credits.map((_, i) => f.creditPins?.[i] !== false) };
     for (const k of LIVE_FIELDS) delete rest[k];
+    delete rest.marketingConsentBaseline; delete rest.marketingPreferenceConfigured;
     // The editor's answers as sorted pairs (a replacer list would drop nested keys), and absent when empty.
     const lines = Object.entries(f.serviceLines ?? {}).filter(([, v]) => v.trim()).sort(([a], [b]) => a.localeCompare(b));
     if (lines.length) rest.serviceLines = lines; else delete rest.serviceLines;
