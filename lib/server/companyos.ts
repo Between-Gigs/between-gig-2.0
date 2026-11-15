@@ -122,6 +122,7 @@ export function companyOs(cfg: CompanyOsConfig) {
       call<{ userId: string; invitationId: string; url: string }>(cred, "POST", "/invitations", body),
     submitForm: (formKey: string, body: { email: string; answers?: Record<string, string>; placement?: string }) =>
       call<{ outcome: "created" | "merged" }>({ kind: "submitter" }, "POST", `/forms/${encodeURIComponent(formKey)}/submissions`, body),
+    unsubscribe: (token: string, confirm = false) => call<{ ok: boolean }>({ kind: "reader" }, confirm ? "POST" : "GET", "/comms/unsubscribe" + (confirm ? "" : "?token=" + encodeURIComponent(token)), confirm ? { token } : undefined),
     /** Starts an upload: the file record (pending) and the one-time link its bytes go to. */
     startUpload: (cred: Credential, body: { ownerEntity: string; ownerId: string; kind: string; filename: string; mime: string; sizeBytes: number }) =>
       call<{ file: Row & { id: string }; uploadUrl: string }>(cred, "POST", "/files", body),

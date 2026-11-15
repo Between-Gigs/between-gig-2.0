@@ -5,6 +5,7 @@
  * environment's emails link to and load images from its own site (emails/index.ts).
  *
  *   pnpm emails:companyos ../company-os            write the copies into a Company OS checkout
+ *   pnpm emails:companyos ../company-os --invite-only  invitation only; preserve all other templates
  *   pnpm emails:companyos ../company-os --check    exit 1 if any copy differs (nothing written)
  *
  * Re-rendered in full: invite, profile-submitted, approved and changes-requested (its notes as one card: Company OS
@@ -14,14 +15,17 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { register } from "node:module";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const [target, ...flags] = process.argv.slice(2);
 const diagnosticOnly = flags.includes("--diagnostic-only");
+const inviteOnly = flags.includes("--invite-only");
+if (inviteOnly && diagnosticOnly) { console.error("Choose one template scope"); process.exit(2); }
 if (!target) { console.error("usage: render-companyos-emails.mjs <company-os checkout> [--check]"); process.exit(2); }
 const dir = resolve(target, "deploy/recipes/between-gigs/emails");
 if (!existsSync(dir)) { console.error(`not a Company OS checkout: ${dir} is missing`); process.exit(2); }
 
-const root = new URL("..", import.meta.url).pathname;
+const root = fileURLToPath(new URL("..", import.meta.url));
 // Node 22 runs the templates' TypeScript itself (type stripping); this hook adds what the bundler normally does:
 // "@/…" is the repository root, and an import without an extension is its .ts file.
 register("data:text/javascript," + encodeURIComponent(`
@@ -36,15 +40,15 @@ register("data:text/javascript," + encodeURIComponent(`
     }
     return next(spec, context);
   }`));
-const { emailTemplates } = await import(join(root, "emails/index.ts"));
-const { FOOTER_ADDRESS_LINE } = await import(join(root, "emails/config.ts"));
-const { diagnostic } = await import(join(root, "emails/diagnostic.ts"));
+const { emailTemplates } = await import(pathToFileURL(join(root, "emails/index.ts")).href);
+const { FOOTER_ADDRESS_LINE } = await import(pathToFileURL(join(root, "emails/config.ts")).href);
+const { diagnostic } = await import(pathToFileURL(join(root, "emails/diagnostic.ts")).href);
 
 const BASE = "{{links.base}}";
 const ctx = { assetBase: BASE, siteUrl: BASE };
 /** Company OS's variables for each template's props. */
 const props = {
-  invite: { inviteUrl: "{{vars.invite_url}}", email: "{{person.email}}" },
+  invite: { inviteUrl: "{{vars.invite_url}}", email: "{{person.email}}", unsubscribeUrl: "{{links.unsubscribe}}" },
   "profile-submitted": { firstName: "{{person.name}}", profileUrl: `${BASE}/profile/`, editUrl: `${BASE}/profile/canvas/` },
   approved: { firstName: "{{person.name}}", profileUrl: `${BASE}/p/{{record.public_handle}}/`, editUrl: `${BASE}/profile/canvas/` },
   // Company OS sends the review's notes as one readable text (one line per section), so they render as a single card.
@@ -53,18 +57,20 @@ const props = {
 const footerOnly = ["welcome", "coming-soon", "sign-in-code"];
 
 const diagnosticEmail = diagnostic(ctx);
-const out = { "diagnostic.html": diagnosticEmail.html, "diagnostic.txt": diagnosticEmail.text };
+const out = inviteOnly ? {} : { "diagnostic.html": diagnosticEmail.html, "diagnostic.txt": diagnosticEmail.text };
+const selectedProps = diagnosticOnly ? {} : inviteOnly ? { invite: props.invite } : props;
 // Company OS's one note can hold several suggestions, so the count 2.0 works out from its list doesn't apply.
 const uncounted = (t) => t.replace("have one suggestion before", "have a few suggestions before");
-for (const [name, p] of Object.entries(diagnosticOnly ? {} : props)) {
+for (const [name, p] of Object.entries(selectedProps)) {
   const raw = emailTemplates[name].render(p, ctx);
   const r = name === "changes-requested" ? { ...raw, html: uncounted(raw.html), text: uncounted(raw.text) } : raw;
-  out[`${name}.html`] = r.html;
+  // Preview-only markers and CSS placeholders cannot be sent. Keep the safe legacy background attribute.
+  out[`${name}.html`] = name === "invite" ? r.html.replace(/\sdata-email-unsubscribe(?=[\s>])/g, "").replace(/background-image:url\('[^']*\{\{links\.base\}\}[^']*'\);?/g, "") : r.html;
   out[`${name}.txt`] = r.text;
 }
 // Any earlier "Between Gigs · <address>" footer line becomes the current one.
 const footerLine = /Between Gigs · [^<\n]*(Los Angeles|California|CA)[^<\n]*/g;
-for (const name of diagnosticOnly ? [] : footerOnly) for (const ext of ["html", "txt"]) {
+for (const name of diagnosticOnly || inviteOnly ? [] : footerOnly) for (const ext of ["html", "txt"]) {
   const file = `${name}.${ext}`;
   out[file] = readFileSync(join(dir, file), "utf8").replace(footerLine, FOOTER_ADDRESS_LINE.replace(/&/g, "&amp;"));
 }
@@ -72,8 +78,8 @@ for (const name of diagnosticOnly ? [] : footerOnly) for (const ext of ["html", 
 // The subjects Company OS shows (its subjects.json; the recipe's comms templates carry the same text).
 const subjectsFile = join(dir, "subjects.json");
 const subjects = JSON.parse(readFileSync(subjectsFile, "utf8"));
-subjects.diagnostic = diagnosticEmail.subject;
-for (const [name, p] of Object.entries(diagnosticOnly ? {} : props)) subjects[name] = emailTemplates[name].render(p, ctx).subject;
+if (!inviteOnly) subjects.diagnostic = diagnosticEmail.subject;
+for (const [name, p] of Object.entries(selectedProps)) subjects[name] = emailTemplates[name].render(p, ctx).subject;
 out["subjects.json"] = `${JSON.stringify(subjects, null, 2)}\n`;
 
 const changed = Object.entries(out).filter(([f, body]) => !existsSync(join(dir, f)) || readFileSync(join(dir, f), "utf8") !== body).map(([f]) => f);

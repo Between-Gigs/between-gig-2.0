@@ -42,6 +42,8 @@ const config: NextConfig = {
       { source: "/:path((?!(?:hub|preview)(?:/|$)).*)", headers: securityHeaders() },
       { source: "/hub/:path*", headers: securityHeaders().filter((h) => h.key !== "X-Frame-Options") },
       { source: "/preview/:path*", headers: securityHeaders().filter((h) => h.key !== "X-Frame-Options") },
+      // Signed preference links must never forward their token as a referrer. Keep the test gate intact.
+      { source: "/unsubscribe/:path*", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
     ],
   }),
 };
