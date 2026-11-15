@@ -38,7 +38,7 @@ try {
   await p.locator('#sec-work textarea').last().waitFor();assert.equal(await p.locator('#sec-work textarea').last().inputValue(),"Fictional showcase example for this review.");
   await p.getByRole("button",{name:"Choose video thumbnail",exact:true}).waitFor();
   // Evidence for the requested per-item PDF. All accounts here are fictional sample data.
-  const capture=async(name,selector)=>{const target=p.locator(selector).first();await target.scrollIntoViewIfNeeded();await p.evaluate(()=>document.fonts.ready);await target.screenshot({path:"deliverables/patti-review/"+name+".png"});};
+  const capture=async(name,selector)=>{const target=p.locator(selector).first(),viewport=p.viewportSize();const height=Math.ceil(await target.evaluate(el=>el.getBoundingClientRect().height));await p.setViewportSize({width:viewport.width,height:Math.max(viewport.height,height+240)});await target.evaluate(el=>window.scrollTo(0,window.scrollY+el.getBoundingClientRect().top-160));await p.evaluate(()=>document.fonts.ready);await target.screenshot({path:"deliverables/patti-review/"+name+".png"});await p.setViewportSize(viewport);};
   await capture("location-international","#sec-where");
   await p.getByRole("radio",{name:"Los Angeles",exact:true}).check();await p.locator("#f-zip").fill("90026");
   await p.getByRole("radio",{name:"I have liability insurance",exact:true}).check();
