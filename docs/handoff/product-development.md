@@ -2,7 +2,7 @@
 
 Independent workstream, based on main 26838ebd9254d59753bcf22ca60a1393710a21b3, 2026-11-15. No release claim.
 
-Scope: Studio Product Development (first), Social, Ads, PR (one coming-soon entry), Skills and Characters coming soon; Team Communications and Meetings coming soon; Tools, Accounts and Finance coming soon in appropriate sections.
+Scope: Studio Product Development (first), Social, Ads, PR (one coming-soon entry), Skills, Characters and Copywriting coming soon; Team Communications and Meetings coming soon; Tools, Accounts and Finance coming soon in appropriate sections.
 
 Use Company OS existing tenant metadata, records, query and guarded batch API for private persistent phases and work records. No new backend release or migrations planned. No change to profile, invitation, DNS, auth or existing role permissions. Do not bundle this with Patti PR41/63 or invitation PR55/70; frontend 1.3.0/API1.15.0 are allocated to invitation work. Coordinate release version after integration.
 
@@ -17,7 +17,7 @@ Playbook impact: none; existing generic API, no backend code changes.
 
 ## Implemented, 15 November 2026
 
-Route: `/owners/product-development/` within the persistent owner shell. Studio starts with Product Development; Social, Ads, PR is one coming-soon item, followed by Skills, Characters and Tools coming soon. Team retains Staff and adds Team Communications, Meetings, Accounts and Finance coming soon. Existing role grants are unchanged.
+Route: `/owners/product-development/` within the persistent owner shell. Studio starts with Product Development; Social, Ads, PR is one coming-soon item, Copywriting, Skills, Characters and Tools are also coming soon. Team retains Staff and adds Team Communications, Meetings, Accounts and Finance coming soon. Existing role grants are unchanged.
 
 Overview, list, board and timeline views support editable phases, project/milestone hierarchy, tasks, checklists, requests, deliverables and source communications. Records include classification, owner, journey, blocker, acceptance criteria, dates, dependencies, deployment context and dated evidence. Progress counts active actionable leaf records; phase narrative remains owner-reported. It is not a realtime release monitor.
 
@@ -51,3 +51,5 @@ A separate private handoff contains 79 sourced records: the 57-request Patti che
 6. Verify the production route and persistence. Rollback uses the prior frontend release; the two additive private entities can remain intact. Do not delete data as rollback.
 
 Shared-file coordination: `next.config.ts`, `scripts/server-build.mjs`, `scripts/check-split.mjs`, `.github/workflows/checks.yml`, `components/owners/OwnerShell.tsx`. No edits to package.json, company-os.json, backend app/env/Railway/comms/recipe/playbook or migration numbering. No external messages, emails or invitations sent.
+
+Navigation-only follow-up: added Copywriting (Coming soon) under Studio at Justin’s request; preserves every existing item. This changes the PR head, so rerun/check CI on the new head before release. Earlier screenshots predate this one additional entry.

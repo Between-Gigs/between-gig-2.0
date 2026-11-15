@@ -2,7 +2,7 @@
 import { useLook } from "@/components/site/LookSync";
 import { Button, Drawer, IconButton, Input, Logo, ThemeToggle, cx } from "@ds/components";
 import { initials } from "@ds/components/Avatar";
-import { CalendarDays, CircleDollarSign, ClipboardList, Megaphone, MessageSquare, Shapes, Sparkles, Wrench, ChevronDown, ChevronRight, Image as ImageIcon, Palette, Route, Ellipsis, Inbox, LayoutDashboard, ListChecks, LogOut, Mail, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Search, Users, X, type LucideIcon } from "lucide-react";
+import { CalendarDays, CircleDollarSign, ClipboardList, PenLine, Megaphone, MessageSquare, Shapes, Sparkles, Wrench, ChevronDown, ChevronRight, Image as ImageIcon, Palette, Route, Ellipsis, Inbox, LayoutDashboard, ListChecks, LogOut, Mail, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Search, Users, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
@@ -62,6 +62,7 @@ const sections: { title: string; items: Item[] }[] = [
     previewItem("/preview/wallpapers/", "Wallpapers", ImageIcon, "framed_picture"),
     { href: "#media-library", label: "Media Library", icon: ImageIcon, art: "package", disabled: true },
     { href: "#social-ads-pr", label: "Social, Ads, PR", icon: Megaphone, art: "envelope", disabled: true },
+    { href: "#copywriting", label: "Copywriting", icon: PenLine, art: "clipboard", disabled: true },
     { href: "#skills", label: "Skills", icon: Sparkles, art: "clipboard", disabled: true },
     { href: "#characters", label: "Characters", icon: Shapes, art: "framed_picture", disabled: true },
     { href: "#tools", label: "Tools", icon: Wrench, art: "clipboard", disabled: true },
