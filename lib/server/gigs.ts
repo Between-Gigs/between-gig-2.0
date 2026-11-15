@@ -1,3 +1,4 @@
+import { cleanupShowcase } from "./showcase-cleanup";
 /*
  * The DataSource methods on Company OS, server side: what each one reads and writes, and how Company OS's records
  * become 2.0's types. Method-by-method mapping and the agreed differences: Company OS
@@ -378,6 +379,7 @@ export async function saveDraft(ctx: Ctx, personId: string, input: ProfileFields
     // The first batch creates the profile when there is none; later chunks only touch items (rare: over 200 changes).
     await ctx.cos.batch(ctx.cred, ops.slice(i, i + 200));
   }
+  if (process.env.COMPANY_OS_PROFILE_REVIEW === "1" && own.profile) await cleanupShowcase(ctx.cos,ctx.cred,own.profile.id,fieldsFrom(own).showcase,fields.showcase);
   // Removing the photo deletes it, on a draft only: a submitted or live profile needs one, so it's replaced by uploading.
   if (!fields.photo && own.photo && own.profile?.data.status === "draft") await ctx.cos.remove(ctx.cred, "file", own.photo.id);
   if (process.env.COMPANY_OS_PROFILE_REVIEW === "1" && (await session(ctx))?.personId === personId) await ctx.cos.setEmailPreference(ctx.cred, fields.marketingEmailConsent === true);

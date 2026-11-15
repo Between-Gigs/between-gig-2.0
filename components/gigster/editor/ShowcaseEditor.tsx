@@ -108,8 +108,8 @@ export function ShowcaseEditor({ d, set }: SectionProps) {
             for (const file of selected) {
                 const url = await upload(file);
                 added.push({ id: crypto.randomUUID(), kind: file.type.startsWith("video/") ? "video" : "image", url, description: "" });
+                save(replace === null ? [...items, ...added] : items.map((item, i) => i === replace ? { ...added[0], description: item.description } : item));
             }
-            save(replace === null ? [...items, ...added] : items.map((item, i) => i === replace ? { ...added[0], description: item.description } : item));
         }
         catch (e) {
             setProblem(e instanceof Error ? e.message : "Upload failed.");
