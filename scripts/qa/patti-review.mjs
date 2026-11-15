@@ -38,11 +38,21 @@ try {
   await p.locator('#sec-work textarea').last().waitFor();assert.equal(await p.locator('#sec-work textarea').last().inputValue(),"Fictional showcase example for this review.");
   await p.getByRole("button",{name:"Choose video thumbnail",exact:true}).waitFor();
   // Evidence for the requested per-item PDF. All accounts here are fictional sample data.
+  const capture=async(name,selector)=>{const target=p.locator(selector).first();await target.scrollIntoViewIfNeeded();await p.evaluate(()=>document.fonts.ready);await target.screenshot({path:"deliverables/patti-review/"+name+".png"});};
+  await capture("location-international","#sec-where");
   await p.getByRole("radio",{name:"Los Angeles",exact:true}).check();await p.locator("#f-zip").fill("90026");
   await p.getByRole("radio",{name:"I have liability insurance",exact:true}).check();
-  const capture=async(name,selector)=>{const target=p.locator(selector).first();await target.scrollIntoViewIfNeeded();await p.evaluate(()=>document.fonts.ready);await target.screenshot({path:"deliverables/patti-review/"+name+".png"});};
+
   for(const [name,sel] of [["location","#sec-where"],["experience","#sec-film"],["services","#sec-help"],["rates","#sec-rates"],["showcase","#sec-work"],["credits","#sec-credits"],["personality","#sec-personality"],["details","#sec-details"],["contact","#sec-contact"]])await capture(name,sel);
-  await p.getByRole("heading",{name:"You’re Almost There!",exact:true}).scrollIntoViewIfNeeded();await p.screenshot({path:"deliverables/patti-review/submit.png"});
+  await p.locator("#f-travel").click();await p.getByRole("listbox").screenshot({path:"deliverables/patti-review/travel-options.png"});await p.keyboard.press("Escape");
+  await capture("availability","#sec-availability");
+  await p.getByRole("checkbox",{name:"Hourly",exact:true}).uncheck();await capture("rates-project","#sec-rates");await p.getByRole("checkbox",{name:"Hourly",exact:true}).check();
+  await p.locator("#sec-help textarea").first().fill("");await capture("services-instruction","#sec-help");
+  const other=p.getByRole("button",{name:"Other — name your service",exact:true});if(await other.count())await other.click();await capture("services-other","#sec-help");
+  await p.getByLabel("Credit 1: Name of the Production",{exact:true}).fill("");await p.getByLabel("Credit 1: Your role or Title",{exact:true}).fill("");await capture("credits-empty","#sec-credits");
+  await p.locator("#f-mobile").fill("+12135550123");await p.getByRole("checkbox",{name:"SMS",exact:true}).check();await capture("contact-channels","#sec-contact");
+  await p.locator("#sec-work li").last().screenshot({path:"deliverables/patti-review/showcase-caption.png"});
+  await p.getByRole("heading",{name:"You’re Almost There!",exact:true}).locator("..").screenshot({path:"deliverables/patti-review/submit.png"});
   for(const width of [390,1440]) {await p.setViewportSize({width,height:1000});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),"no horizontal overflow at "+width);}
   const publicPage=await browser.newPage({viewport:{width:1440,height:1000}});
   for(const [name,route] of [["signup","join"],["signin","login"],["professionals","professionals"],["invitation","emails/invite"]]){await publicPage.goto(url+"/"+route+"/");await publicPage.waitForLoadState("networkidle");await publicPage.evaluate(()=>document.fonts.ready);await publicPage.screenshot({path:"deliverables/patti-review/"+name+".png",fullPage:true});

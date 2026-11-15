@@ -31,6 +31,15 @@ jobs:
           test -x "$bg_chrome_path"
           "$bg_chrome_path" --version
           echo "CHROMIUM_PATH=$bg_chrome_path" >> "$GITHUB_ENV"
+      - name: Check Patti questionnaire and capture evidence
+        run: node scripts/qa/patti-review.mjs
+      - name: Save Patti review screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: patti-review-evidence
+          path: deliverables/patti-review
+          if-no-files-found: warn
       - name: Test signup and existing product flow (sample mode, no real accounts)
         run: |
           node scripts/qa/auth-flow.mjs
@@ -42,16 +51,8 @@ jobs:
           node scripts/qa/signed-out-navigation.mjs
           node scripts/qa/home-hero.mjs
           node scripts/qa/sample-order.mjs
-          node scripts/qa/patti-review.mjs
           pnpm qa:flow
           node scripts/qa/funnel-cohort.mjs
-      - name: Save Patti review screenshots
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: patti-review-evidence
-          path: deliverables/patti-review
-          if-no-files-found: warn
       - name: Build Pages configuration with Clerk
         run: pnpm build
         env:
