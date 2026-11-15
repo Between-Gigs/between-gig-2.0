@@ -5,7 +5,7 @@ mkdirSync('/tmp/diagnostic-screens',{recursive:true});
 for(const width of [390,1440]){
  const page=await browser.newPage({viewport:{width,height:1000}});
  await page.goto('http://localhost:3011/emails/',{waitUntil:'networkidle'});
- await page.getByRole('heading',{name:'Diagnostic email · one-time test'}).waitFor();
+ await page.getByRole('heading',{name:'Diagnostic email · approved test'}).waitFor();
  if(width===390)await page.getByRole('button',{name:'Phone preview',exact:true}).click();
  const frame=page.frameLocator('iframe[title="Diagnostic email preview"]');
  await frame.getByRole('heading',{name:'Email check'}).waitFor();

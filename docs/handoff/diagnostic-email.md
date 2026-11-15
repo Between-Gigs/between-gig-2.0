@@ -30,3 +30,26 @@ Release CI corrections: keep the public sample Emails no-send wording distinct f
 Latest-main reconciliation preserves the merged Storyboard direct-profile change from PR47. Diagnostic implementation remains independent of Patti annotation drafts.
 
 Outlook follow-up: the diagnostic's existing wallpaper image previously retained a craftHero !mso exclusion after its background was removed. Remove only those hero exclusion markers so the ordinary image is available to classic Outlook. Red/green tests simulate conditional exclusion; Chromium390/640px normal/simulated markup shows loaded wallpaper and no overflow. Two independent rounds passed; actual Outlook application rendering remains unverified. No change to sender, recipient, auth, reservation, shared templates or sanitizer.
+
+## Separately approved revised test (local, unpushed follow-up)
+
+Justin later requested exactly one revised test. This branch adds the UI for a
+second bounded backend authorization and retains both original/revised receipts.
+The server pins original request3632e9c4-b3ac-476b-a3f1-471bdb8304c4 and stored
+HTML SHA2567c25145b910f881b85da101a0b2cb6cc24e4d6e34254a40998fa3b2eb67582ad,
+as well as the existing exact recipient/sender. Browser POST remains empty.
+Existing/sample mode never sends. No old reservation is reset and changing a
+hash cannot allocate another slot. Backend retains a single additional fixed
+lifetime reservation. Outbox retention still reports history_unavailable and
+never restores authority; do not promise indefinite provider-detail storage.
+
+Proposed frontend release1.2.0 requires Company OS>=1.14.0. Backend runtime must
+ship first, through its normal test/prod release gates. Coordinate integration
+with the recovery integrator; branch starts at132cd15766785e05feaf892959dfa36541c7d9ce
+and contains no unrelated recovery work. The backend handoff
+`docs/history/diagnostic-revised-once.md` has the precise configuration and release
+sequence. Coordinator alone may activate and perform the eventual single site
+click after verifying both runtimes and exact template. This implementation does
+not push, deploy, activate or send. No direct provider send is an acceptance test.
+
+Playbook inbox: Company OS IN-273.
