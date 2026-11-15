@@ -26,7 +26,7 @@ import { ProfileView } from "@/components/profile/ProfileView";
 import { Page } from "@/components/site/Page";
 import { markArea } from "@/lib/split-area";
 import { Checklist, type ChecklistItem } from "./Checklist";
-import { CanvasColumns, CanvasContact, CanvasDetails, CanvasHelp, CanvasIdentity, CanvasRates, CanvasSamples } from "./canvas";
+import { CanvasColumns, CanvasContact, CanvasDetails, CanvasExperience, CanvasHelp, CanvasIdentity, CanvasRates, CanvasSamples } from "./canvas";
 import type { Setter } from "./ui";
 
 markArea("bg-split:dashboard");
@@ -327,6 +327,7 @@ function Editor({ personId }: { personId: string }) {
 
           {/* The profile itself is the form (Justin's Flow p3 design): ruled rows, serif headings, "+ Add" to open a field. */}
           <CanvasIdentity d={d} set={set} errors={errors} personId={personId} required={required} confirmPhoto={(go) => live.guard("photo", go)} />
+          <div className="border-t border-line-strong pt-10"><CanvasExperience d={d} set={set} errors={errors} required={required} /></div>
           <div className="grid gap-12 border-t border-line-strong pt-10 lg:grid-cols-12 lg:gap-0">
             <div className="min-w-0 lg:col-span-8 lg:pr-10"><CanvasHelp d={d} set={set} errors={errors} /></div>
             <div className="min-w-0 lg:col-span-4 lg:border-l lg:border-line-strong lg:pl-10"><CanvasRates d={d} set={set} errors={errors} required={required} /></div>

@@ -79,3 +79,12 @@ describe("draftOps writes what isn't stored yet", () => {
     expect(update!.data).toMatchObject({ home_market: "la", work_mode: "at_provider", insurance_disclosure: "discuss_privately", rate_basis: "hourly", position: "Set decoration" });
   });
 });
+
+it("multiline equipment stays a tools-only autosave with unchanged legacy transport and media", () => {
+  const tools = "Special Cameras\nLighting Kit\nMakeup kit";
+  const ops = draftOps(PERSON, { ...fields, tools }, stored());
+  expect(ops).toHaveLength(1);
+  expect(ops[0]).toMatchObject({ op: "update", entity: "profile", id: "prof", data: { tools } });
+  expect(ops[0].data).not.toHaveProperty("transport");
+  expect(ops[0].data).not.toHaveProperty("photo");
+});
