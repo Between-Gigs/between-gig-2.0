@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { diagnostic } from "../emails/diagnostic";
 import { FOOTER_ADDRESS_LINE } from "../emails/config";
 describe("diagnostic email", () => {
+  it("keeps the existing wallpaper visible to classic Outlook conditional rendering", () => {
+    // Simulate only the explicit !mso exclusion; this is not an Outlook application test.
+    const classic = diagnostic().html.replace(/<!--\[if !mso\]><!-->[\s\S]*?<!--<!\[endif\]-->/g, "");
+    expect(classic).toContain('/email/craft-invitation-desktop.jpg');
+    expect(classic).toContain(FOOTER_ADDRESS_LINE);
+  });
   it("uses the existing wallpaper, branded shell and shared footer without invitation actions", () => {
     const mail = diagnostic();
     expect(mail.subject).toContain("DIAGNOSTIC");
