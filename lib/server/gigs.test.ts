@@ -114,3 +114,9 @@ it("editing equipment preserves a retired nonempty transport answer without send
   expect(draftOps(PERSON,{...legacy,tools:"Fictional updated lighting kit"},stored(legacy))).toEqual([{op:"update",entity:"profile",id:"prof",data:{tools:"Fictional updated lighting kit"}}]);
   const mapped=toProfile(legacy);expect(fromProfile(mapped.data,mapped.items,legacy.photo).transport).toBe(legacy.transport);
 });
+
+it("changing both work locations updates only work_mode and preserves private notes and media", () => {
+  const previous = stored(); previous.profile.data.insurance_notes = "Private fictional coverage";
+  const ops = draftOps(PERSON, { ...fields, mode: "both" }, previous);
+  expect(ops).toEqual([{ op: "update", entity: "profile", id: "prof", data: { work_mode: "on_site_or_at_provider" } }]);
+});

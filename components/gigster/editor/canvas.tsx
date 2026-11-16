@@ -7,7 +7,7 @@
  * opens its field. Patti's and Peter's corrections to that mockup are applied: "Your name" (not "public name"), up to
  * five services with their standard description, the film and TV questions, 1 of 4 personality questions, and no "0%".
  */
-import { Button, Field, Input, RadioGroup, Select, Switch, Textarea } from "@ds/components";
+import { Button, Checkbox, Field, Input, RadioGroup, Select, Switch, Textarea } from "@ds/components";
 import { cx } from "@ds/components/cx";
 import { Camera, Crop as CropIcon, GripVertical, Lock, MapPin, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import * as React from "react";
@@ -572,6 +572,12 @@ export function CanvasColumns({ d, set, errors, required }: SectionProps & { req
 export function CanvasDetails({ d, set }: SectionProps) {
   const filled = !!(d.languages.trim() || d.tools.trim() || d.mode !== "on-site" || d.insurance !== "private");
   const [open, openIt] = useOpen(filled);
+  const atClient = d.mode === "on-site" || d.mode === "both";
+  const atBusiness = d.mode === "studio" || d.mode === "both";
+  const chooseLocations = (client: boolean, business: boolean) => {
+    if (!client && !business) return; // Existing work_mode contract always has at least one location.
+    set("mode")(client && business ? "both" : business ? "studio" : "on-site");
+  };
   return (
     <section id="sec-details" aria-labelledby="sec-details-h" className="grid scroll-mt-40 gap-5">
       <H id="sec-details-h" tag="Optional" size="md">Details</H>
@@ -583,8 +589,14 @@ export function CanvasDetails({ d, set }: SectionProps) {
       ) : (
         <div className="grid items-start gap-x-10 gap-y-5 md:grid-cols-2">
           <Field label="Languages" optional><Input id="f-languages" value={d.languages} placeholder="e.g. English, Spanish" maxLength={120} onChange={(e) => set("languages")(e.target.value)} /></Field>
-          <RadioGroup name="f-mode" label="How you work" value={d.mode} onChange={(v) => set("mode")(v as typeof d.mode)}
-            options={[{ value: "on-site", label: "On site, at the client's place" }, { value: "studio", label: "At my studio" }, { value: "both", label: "Both" }]} />
+          <fieldset className="grid content-start gap-3" aria-describedby="work-locations-hint">
+            <legend className="mb-2 text-label-md text-ink">Where you work</legend>
+            <p id="work-locations-hint" className="text-body-sm text-ink-muted">Select one or both locations.</p>
+            <Checkbox id="f-mode-client" label="On Site, at the client’s location." checked={atClient} disabled={atClient && !atBusiness}
+              onChange={(e) => chooseLocations(e.target.checked, atBusiness)} />
+            <Checkbox id="f-mode-business" label="At my office, studio or other place of business." checked={atBusiness} disabled={atBusiness && !atClient}
+              onChange={(e) => chooseLocations(atClient, e.target.checked)} />
+          </fieldset>
           <Field label="Tools and equipment" optional><Textarea id="f-tools" rows={4} value={d.tools} placeholder="Special Cameras, Lighting Kit, Box Truck, Makeup kit, etc." maxLength={160} onChange={(e) => set("tools")(e.target.value)} /></Field>
           <RadioGroup name="f-insurance" label={<>Insurance <span className="font-normal text-ink-subtle">· optional, self-reported</span></>} value={d.insurance} onChange={(v) => set("insurance")(v as typeof d.insurance)}
             options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance yet" }]} />

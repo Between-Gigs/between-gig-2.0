@@ -181,3 +181,14 @@ it("round-trips multiline equipment through the existing Company OS text field",
   expect(fromProfile(data, items, filled.photo).tools).toBe(tools);
   expect(fromProfile(data, items, filled.photo).transport).toBe(filled.transport);
 });
+
+describe("work locations use the existing work-mode contract", () => {
+  it.each([
+    ["on-site", "on_site"], ["studio", "at_provider"], ["both", "on_site_or_at_provider"],
+  ] as const)("round-trips %s without new fields or extras", (mode, stored) => {
+    const { data, items } = toProfile({ ...filled, mode });
+    expect(data.work_mode).toBe(stored);
+    expect(fromProfile(data, items, "").mode).toBe(mode);
+    expect(data).not.toHaveProperty("work_locations");
+  });
+});
