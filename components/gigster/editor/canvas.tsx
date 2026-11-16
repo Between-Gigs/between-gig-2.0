@@ -15,6 +15,7 @@ import { data } from "@/lib/data";
 import { laServiceAreas, onSetSkills, serviceChoices } from "@/lib/data/taxonomy";
 import { personalityQuestions } from "@/lib/profile/personality";
 import { serviceDescription } from "@/lib/profile/service-descriptions";
+import { POSTAL_CODE_MAX } from "@/lib/profile/postal";
 import { stageTwoLimits } from "@/lib/profile/stage-two";
 import { ABOUT_MAX, DATES_MAX, DEPARTMENT_MAX, MAX_SERVICES, NAME_MAX, SERVICE_LINE_MAX, TITLE_MAX, hasRate } from "@/lib/profile/validate";
 import { Credits } from "@/components/builder/ProfileBuilder";
@@ -101,8 +102,8 @@ export function CanvasIdentity({ d, set, errors, personId, confirmPhoto, require
                 options={[{ value: "la", label: "Los Angeles" }, { value: "other", label: "Somewhere else" }]} />
               <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
                 <Field label={d.market === "la" ? "ZIP code" : "ZIP or postal code"} optional={!required("zip")} error={errors.zip}>
-                  <Input id="f-zip" inputMode="numeric" autoComplete="postal-code" value={d.zip} start={<MapPin />} placeholder="90026"
-                    onChange={(e) => set("zip")(e.target.value.replace(/\D/g, "").slice(0, 5))} />
+                  <Input id="f-zip" inputMode={d.market === "la" ? "numeric" : "text"} autoComplete="postal-code" value={d.zip} start={<MapPin />} placeholder={d.market === "la" ? "90026" : "ZIP or postal code"} maxLength={d.market === "la" ? 5 : POSTAL_CODE_MAX}
+                    onChange={(e) => set("zip")(d.market === "la" ? e.target.value.replace(/\D/g, "").slice(0, 5) : e.target.value.slice(0, POSTAL_CODE_MAX))} />
                 </Field>
                 <Field label="Travel radius" optional={!required("travel")} error={errors.travel}>
                   <Input id="f-travel" value={d.travel} placeholder="e.g. Up to 15 miles" onChange={(e) => set("travel")(e.target.value.slice(0, 80))} />

@@ -1,0 +1,41 @@
+// Local current Gigster editor only. Fictional sample data; no real Clerk or hosted save claim.
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import { chromium } from "playwright-core";
+import { serve } from "./serve.mjs";
+const {server,url}=await serve("out");
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||"/usr/bin/chromium"});
+fs.mkdirSync("deliverables/postal-entry",{recursive:true});
+try {for(const width of [320,390,768,1440]) for(const theme of ["light","dark"]) {
+ const context=await browser.newContext({viewport:{width,height:1100},colorScheme:theme,reducedMotion:"reduce"}),external=[];
+ await context.route("**/*",r=>new URL(r.request().url()).origin===new URL(url).origin?r.continue():(external.push(r.request().url()),r.abort()));
+ await context.addInitScript(t=>localStorage.setItem("bg-theme",t),theme);
+ const page=await context.newPage();page.setDefaultTimeout(15000);await page.goto(url+"/");
+ await page.waitForFunction(()=>!!window.bgSample);await page.evaluate(()=>window.bgSample.reset().then(()=>window.bgSample.signInAs("gigster","maya")));
+ await page.goto(url+"/profile/canvas/");await page.locator("#sec-where").waitFor();
+ if(!await page.locator("#f-zip").count())await page.getByRole("button",{name:"ZIP or postal code & travel radius",exact:true}).click();
+ const before=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem("bg2-sample-v2"));return s.drafts.find(d=>d.personId===s.session.personId)?.fields;});
+ await page.getByRole("radio",{name:"Somewhere else",exact:true}).check();
+ const postal=page.getByLabel("ZIP or postal code",{exact:true});
+ assert.equal(await postal.getAttribute("inputmode"),"text");assert.equal(await postal.getAttribute("maxlength"),"20");
+ await postal.fill("K1A 0B1");await page.getByLabel("City / region and country").fill("Fictional city, Test Country");
+ await page.waitForFunction(()=>{const s=JSON.parse(localStorage.getItem("bg2-sample-v2"));const f=s.drafts.find(d=>d.personId===s.session.personId)?.fields;return f?.zip==="K1A 0B1"&&f.market==="other"&&f.otherCity==="Fictional city, Test Country";});
+ await page.reload();assert.equal(await page.locator("#f-zip").inputValue(),"K1A 0B1");
+ await page.getByRole("radio",{name:"Los Angeles",exact:true}).check();
+ assert.equal(await page.locator("#f-zip").inputValue(),"K1A 0B1","switching markets must not rewrite the stored answer");
+ await page.getByRole("button",{name:/^(Submit|Send).*review$/}).first().click();
+ await page.getByText("Enter a 5-digit ZIP code, like 90026.",{exact:true}).first().waitFor();
+ assert.equal(await page.locator("#f-zip").getAttribute("aria-invalid"),"true");
+ await page.getByRole("radio",{name:"Somewhere else",exact:true}).check();
+ assert.notEqual(await page.locator("#f-zip").getAttribute("aria-invalid"),"true","clear stale market-dependent error");
+ assert.equal(await page.locator("#f-zip").inputValue(),"K1A 0B1");
+ await page.getByRole("radio",{name:"Los Angeles",exact:true}).check();
+ await page.locator("#f-zip").fill("1234567");assert.equal(await page.locator("#f-zip").inputValue(),"12345");
+ await page.getByRole("radio",{name:"Somewhere else",exact:true}).check();await page.locator("#f-zip").fill("SW1A 1AA");
+ await page.waitForFunction(()=>{const s=JSON.parse(localStorage.getItem("bg2-sample-v2"));return s.drafts.find(d=>d.personId===s.session.personId)?.fields.zip==="SW1A 1AA";});
+ const after=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem("bg2-sample-v2"));return s.drafts.find(d=>d.personId===s.session.personId)?.fields;});
+ for(const key of ["services","credits","tools","transport","workSamples","travel","bookingMobile"])assert.deepEqual(after[key],before[key],`preserve ${key}`);
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),"no horizontal overflow");assert.equal(external.length,0);
+ await page.locator("#sec-where").screenshot({path:`deliverables/postal-entry/LOCAL-NOT-LIVE-SAMPLE-${width}-${theme}.png`});
+ await context.close();console.log(`PASS ${width}/${theme}: international entry/reload, LA five-digit validation, lossless market switch, cleared stale errors, preserved unrelated fields, no overflow/network (sample only)`);
+}}finally{await browser.close();server.close();}
