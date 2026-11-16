@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolveLoginCallback, runLoginCallback, type CallbackClerk, type CallbackOutcome } from "./sso-callback";
 
 // Clerk is mocked at its boundary: only the resources the resolver reads and the calls it makes.
@@ -16,6 +16,8 @@ function clerkWith(opts: {
   };
   return { clerk, create, setActive };
 }
+
+afterEach(() => { vi.useRealTimers(); });
 
 const transferable = { status: "transferable", error: { code: "external_account_not_found", message: "not found" } };
 
@@ -128,5 +130,38 @@ describe("runLoginCallback (the controller the login page runs)", () => {
     stop();
     expect(vi.getTimerCount()).toBe(0);
     vi.useRealTimers();
+  });
+});
+
+describe("runLoginCallback: the page re-renders as soon as the session is active", () => {
+  it("a brand-new Google user still reaches /join/ when the effect's cleanup runs before the transfer's answer is applied", async () => {
+    vi.useFakeTimers();
+    try {
+      let stop: () => void = () => undefined;
+      const create = vi.fn(async () => ({ status: "complete", createdSessionId: "sess_new" }));
+      const clerk: CallbackClerk = {
+        loaded: true,
+        client: { signIn: { status: "needs_identifier", firstFactorVerification: transferable }, signUp: { create } },
+        // setActive signs the user in, which re-renders the login view and runs the effect's cleanup
+        setActive: vi.fn(async () => { stop(); }),
+      };
+      const seen: CallbackOutcome[] = [];
+      stop = runLoginCallback(clerk, { onOutcome: (o) => seen.push(o) });
+      await vi.advanceTimersByTimeAsync(100);
+      expect(seen).toEqual([{ kind: "redirect", to: "/join/" }]);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally { vi.useRealTimers(); }
+  });
+  it("a stopped run does not show an error banner for a failed transfer after the page moved on", async () => {
+    vi.useFakeTimers();
+    try {
+      let stop: () => void = () => undefined;
+      const create = vi.fn(async () => { await Promise.resolve(); stop(); throw new Error("boom"); });
+      const { clerk } = clerkWith({ verification: transferable, create });
+      const seen: CallbackOutcome[] = [];
+      stop = runLoginCallback(clerk, { onOutcome: (o) => seen.push(o) });
+      await vi.advanceTimersByTimeAsync(100);
+      expect(seen).toEqual([]);
+    } finally { vi.useRealTimers(); }
   });
 });

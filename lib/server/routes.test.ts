@@ -723,3 +723,18 @@ it('accepts only explicit boolean travel preference, preserving legacy omission 
  const{cleanFields}=await import('./routes');for(const v of[true,false])expect(cleanFields({travelBeyondLA:v}).travelBeyondLA).toBe(v);
  expect(cleanFields({})).not.toHaveProperty('travelBeyondLA');for(const v of[null,'true','false',0,1,{},[]])expect(()=>cleanFields({travelBeyondLA:v})).toThrow();
 });
+
+it("public page reads only finished (status ready) photo and sample files", async () => {
+  const prev = process.env.NEXT_PUBLIC_PROFILE_VIDEO_LINKS; process.env.NEXT_PUBLIC_PROFILE_VIDEO_LINKS = "1";
+  try {
+    const f = fake(c => {
+      if (c.path === "/query") return { body: { data: (c.body as { entity?: string }).entity === "profile"
+        ? [{ id: "prof", data: { display_name: "Fictional Public Profile", public_handle: "fictional-profile" }, createdAt: "", updatedAt: "" }] : [] } };
+      return undefined;
+    });
+    await call("people.getPublic", ["fictional-profile"], undefined, f);
+    const fileQueries = f.calls.filter(c => c.path === "/query" && (c.body as { entity?: string }).entity === "file").map(c => JSON.stringify(c.body));
+    expect(fileQueries).toHaveLength(2);
+    for (const q of fileQueries) expect(q).toContain('"ready"');
+  } finally { if (prev === undefined) delete process.env.NEXT_PUBLIC_PROFILE_VIDEO_LINKS; else process.env.NEXT_PUBLIC_PROFILE_VIDEO_LINKS = prev; }
+});

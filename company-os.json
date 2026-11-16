@@ -1,5 +1,5 @@
 {
-  "requires": ">=1.15.0",
+  "requires": ">=1.16.0",
   "profileFeatures": {
     "customServiceReview": {
       "requires": null,
@@ -40,7 +40,7 @@
       }
     },
     "publishGate": {
-      "requires": null,
+      "requires": ">=1.16.0",
       "profilesModule": "1.9.0",
       "apiCommit": null,
       "settingsEvidence": {

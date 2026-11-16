@@ -41,6 +41,9 @@ export function checkProfileActivation(env, manifest) {
   if (env.NEXT_PUBLIC_PROFILE_PUBLISH_GATE === "1") {
     const release = checkRequirement(manifest, { publishGate: true });
     if (!release.ok) return release;
+    // With the gate on, approval is private and nothing becomes public until a publish action exists (a later release).
+    // Turning it on is therefore deliberate: the deploy must say so.
+    if (env.PROFILE_PUBLISH_GATE_ACK_NO_PUBLISH !== "1") return { ok: false, error: "The publish gate keeps approved profiles private and this release has no publish action yet: set PROFILE_PUBLISH_GATE_ACK_NO_PUBLISH=1 to confirm that nothing should go public at launch" };
   }
   if (env.NEXT_PUBLIC_PROFILE_VIDEO_LINKS === "1") {
     const release = checkRequirement(manifest, { videoLinks: true });

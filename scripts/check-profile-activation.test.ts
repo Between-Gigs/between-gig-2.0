@@ -69,10 +69,20 @@ it('requires actual travel preference field/policy capability and environment re
 });
 
 it('requires the publish gate API release, profiles 1.9.0 and an environment receipt before the gate wording shows',()=>{
- const env={RAILWAY_ENV:'test',NEXT_PUBLIC_PROFILE_PUBLISH_GATE:'1'};expect(checkProfileActivation(env,pending).ok).toBe(false);
+ const env={RAILWAY_ENV:'test',NEXT_PUBLIC_PROFILE_PUBLISH_GATE:'1',PROFILE_PUBLISH_GATE_ACK_NO_PUBLISH:'1'};expect(checkProfileActivation(env,pending).ok).toBe(false);
  const manifest=JSON.stringify({requires:'>=1.16.0',profileFeatures:{publishGate:{requires:'>=1.16.0',profilesModule:'1.9.0',apiCommit:'a'.repeat(40),settingsEvidence:{test:'libfile_fictional_publish',production:null}}}});
  expect(checkProfileActivation(env,manifest).ok).toBe(true);expect(checkProfileActivation({...env,RAILWAY_ENV:'production'},manifest).ok).toBe(false);expect(checkProfileActivation({...env,NEXT_PUBLIC_PROFILE_PUBLISH_GATE:'true'},manifest).ok).toBe(false);
  expect(checkProfileActivation({...env,NEXT_PUBLIC_PROFILE_PUBLISH_GATE:'1'},JSON.stringify({requires:'>=1.15.0',profileFeatures:{publishGate:{requires:'>=1.16.0',profilesModule:'1.9.0',apiCommit:'a'.repeat(40),settingsEvidence:{test:'libfile_x',production:null}}}})).ok).toBe(false);
+});
+
+it('refuses the publish gate flag unless the deploy acknowledges that no publish action exists yet',()=>{
+ const manifest=JSON.stringify({requires:'>=1.16.0',profileFeatures:{publishGate:{requires:'>=1.16.0',profilesModule:'1.9.0',apiCommit:'a'.repeat(40),settingsEvidence:{test:'libfile_fictional_publish',production:null}}}});
+ const env={RAILWAY_ENV:'test',NEXT_PUBLIC_PROFILE_PUBLISH_GATE:'1'};
+ const refused=checkProfileActivation(env,manifest);expect(refused.ok).toBe(false);expect(refused.error).toMatch(/PROFILE_PUBLISH_GATE_ACK_NO_PUBLISH/);
+ expect(checkProfileActivation({...env,PROFILE_PUBLISH_GATE_ACK_NO_PUBLISH:'0'},manifest).ok).toBe(false);
+ expect(checkProfileActivation({...env,PROFILE_PUBLISH_GATE_ACK_NO_PUBLISH:'1'},manifest).ok).toBe(true);
+ // with the gate off the acknowledgement is irrelevant
+ expect(checkProfileActivation({RAILWAY_ENV:'test'},manifest).ok).toBe(true);
 });
 
 it('requires the 1.16.0 API release and the 1.10.0 profiles module before the video-link UI can be built in',()=>{
