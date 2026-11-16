@@ -567,7 +567,7 @@ export function CanvasColumns({ d, set, errors, required }: SectionProps & { req
 
 /** "Details · Optional": what the profile's Details block shows (languages and how they work), asked right here. */
 export function CanvasDetails({ d, set }: SectionProps) {
-  const filled = !!(d.languages.trim() || d.tools.trim() || d.transport.trim() || d.mode !== "on-site" || d.insurance !== "private");
+  const filled = !!(d.languages.trim() || d.tools.trim() || d.mode !== "on-site" || d.insurance !== "private");
   const [open, openIt] = useOpen(filled);
   return (
     <section id="sec-details" aria-labelledby="sec-details-h" className="grid scroll-mt-40 gap-5">
@@ -575,14 +575,13 @@ export function CanvasDetails({ d, set }: SectionProps) {
       {!open ? (
         <div className="grid gap-1">
           <AddLink id="f-details-open" onClick={() => { openIt(); requestAnimationFrame(() => document.getElementById("f-languages")?.focus()); }}>Add languages and how you work</AddLink>
-          <p className="text-body-sm text-ink-muted">Languages you speak, on site or at your studio, transport and tools. They show under Details on your profile.</p>
+          <p className="text-body-sm text-ink-muted">Languages you speak, on site or at your studio, and tools. They show under Details on your profile.</p>
         </div>
       ) : (
         <div className="grid items-start gap-x-10 gap-y-5 md:grid-cols-2">
           <Field label="Languages" optional><Input id="f-languages" value={d.languages} placeholder="e.g. English, Spanish" maxLength={120} onChange={(e) => set("languages")(e.target.value)} /></Field>
           <RadioGroup name="f-mode" label="How you work" value={d.mode} onChange={(v) => set("mode")(v as typeof d.mode)}
             options={[{ value: "on-site", label: "On site, at the client's place" }, { value: "studio", label: "At my studio" }, { value: "both", label: "Both" }]} />
-          <Field label="Transport" optional><Input id="f-transport" value={d.transport} placeholder="e.g. Car, can carry a rolling rack" maxLength={120} onChange={(e) => set("transport")(e.target.value)} /></Field>
           <Field label="Tools and equipment" optional><Textarea id="f-tools" rows={4} value={d.tools} placeholder="Special Cameras, Lighting Kit, Box Truck, Makeup kit, etc." maxLength={160} onChange={(e) => set("tools")(e.target.value)} /></Field>
           <RadioGroup name="f-insurance" label={<>Insurance <span className="font-normal text-ink-subtle">· optional, self-reported</span></>} value={d.insurance} onChange={(v) => set("insurance")(v as typeof d.insurance)}
             options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance yet" }]} />

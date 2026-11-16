@@ -58,3 +58,14 @@ describe("profile template", () => {
     expect(validateAll(blankFields())[0]).toHaveProperty("photo");
   });
 });
+
+it("retires only the old Transport requirement while preserving the other saved template settings",()=>{
+  const legacy={version:1,required:["transport","tools","name"],order:[...defaultProfileTemplate.order].reverse(),sections:[...defaultProfileTemplate.sections].reverse()};
+  const parsed=parseProfileTemplate(JSON.stringify(legacy))!;
+  expect(parsed).not.toBeNull();expect(parsed.required).toEqual(["name","tools"]);expect(parsed.order).toEqual(legacy.order);expect(parsed.sections).toEqual(legacy.sections);
+  expect(validateAll({...blankFields("Fictional Crew"),tools:"Fictional lighting kit"},parsed)).toEqual({});
+  expect(parseProfileTemplate(JSON.stringify({...legacy,required:["transport","unknown_private_field"]}))).toBeNull();
+  expect(parseProfileTemplate(JSON.stringify({...legacy,required:["transport","transport"]}))).toBeNull();
+  expect(JSON.parse(encodeProfileTemplate({...defaultProfileTemplate,required:["name","transport","tools"]})).required).toEqual(["name","tools"]);
+  expect(legacy.required).toEqual(["transport","tools","name"]);
+});

@@ -108,3 +108,9 @@ it("reorders service item positions without rewriting descriptions, private fiel
   expect(fromProfile(old.profile.data, items as Parameters<typeof fromProfile>[1], start.photo)).toMatchObject({ services: ordered, serviceLines });
   expect(old.profile.data.insurance_notes).toBe("Private fictional note");
 });
+
+it("editing equipment preserves a retired nonempty transport answer without sending a transport mutation",()=>{
+  const legacy={...fields,transport:"Fictional legacy transport answer"};
+  expect(draftOps(PERSON,{...legacy,tools:"Fictional updated lighting kit"},stored(legacy))).toEqual([{op:"update",entity:"profile",id:"prof",data:{tools:"Fictional updated lighting kit"}}]);
+  const mapped=toProfile(legacy);expect(fromProfile(mapped.data,mapped.items,legacy.photo).transport).toBe(legacy.transport);
+});

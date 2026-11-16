@@ -15,7 +15,7 @@ import { basePath } from "@/lib/site";
 import { professionalExamples } from "@/lib/professional-examples";
 
 type Screen = "canvas" | "form" | "page";
-const fields = Object.keys(profileFieldParts) as ProfileFieldRule[];
+const fields = (Object.keys(profileFieldParts) as ProfileFieldRule[]).filter((key) => key !== "transport");
 const screenOptions = [{ value: "canvas", label: "Guided editor" }, { value: "form", label: "Questionnaire" }, { value: "page", label: "Client page" }];
 
 function move<T>(items: readonly T[], index: number, direction: -1 | 1): T[] {
