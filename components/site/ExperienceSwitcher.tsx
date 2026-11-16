@@ -23,6 +23,6 @@ export function ExperienceSwitcher({ className }: { className?: string }) {
   return <span className={className}><Menu align="end"
     items={experiences.map((item, i) => ({ label: item.label, icon: <item.icon />, checked: i === selected || undefined, onSelect: () => { if (data.kind === "live" && item.href === "/hub/") window.location.assign(item.href); else router.push(basePath === "/hub" && item.href === "/hub/" ? "/" : item.href); } }))}
     trigger={<button type="button" aria-label="Switch experience" className={cx("inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg border border-line bg-surface px-3 text-label-md text-ink hover:bg-surface-hover")}>
-      <CurrentIcon aria-hidden="true" className="size-4" /><span>{experiences[selected].short}</span><ChevronDown aria-hidden="true" className="size-4" />
+      <CurrentIcon aria-hidden="true" className="size-4" /><span className="max-[22rem]:sr-only">{experiences[selected].short}</span><ChevronDown aria-hidden="true" className="size-4" />
     </button>} /></span>;
 }
