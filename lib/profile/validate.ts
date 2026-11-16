@@ -112,7 +112,8 @@ export function validateStep(step: number, d: ProfileFields, template = readProf
       : "Use an IMDb name-profile link, like https://www.imdb.com/name/nm1234567/, or leave it empty.";
   }
   if (step === 1) {
-    if (d.services.length > MAX_SERVICES) e.services = `Choose up to ${MAX_SERVICES} services. You have ${d.services.length}.`;
+    const serviceCount = d.services.length + Number(!!d.other.trim());
+    if (serviceCount > MAX_SERVICES) e.services = `Choose up to ${MAX_SERVICES} services. You have ${serviceCount}.`;
     if (d.services.some((s) => (d.serviceLines?.[s]?.trim().length ?? 0) > SERVICE_LINE_MAX)) e.serviceLines = `Keep each line to ${SERVICE_LINE_MAX} characters.`;
   }
   if (step === 2) {

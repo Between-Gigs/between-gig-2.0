@@ -133,7 +133,6 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
   const [adding, setAdding] = React.useState(false);
   const lines = d.serviceLines ?? {};
   const rows = d.services;
-  const showBlank = rows.length === 0 || (adding && rows.length < MAX_SERVICES);
   const setLine = (service: string, text: string) => set("serviceLines")({ ...lines, [service]: text.slice(0, SERVICE_LINE_MAX) });
   const replace = (i: number, next: string) => {
     const prev = rows[i];
@@ -142,7 +141,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
     set("services")(rows.map((s, j) => (j === i ? next : s)));
     set("serviceLines")(nextLines);
   };
-  const add = (next: string) => { set("services")([...rows, next]); setAdding(false); };
+  const add = (next: string) => { if (count >= MAX_SERVICES) return; set("services")([...rows, next]); setAdding(false); };
   const remove = (i: number) => {
     const nextLines = { ...lines };
     delete nextLines[rows[i]];
@@ -150,17 +149,22 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
     set("serviceLines")(nextLines);
   };
   const [otherOpen, setOtherOpen] = React.useState(!!d.other.trim());
+  // Keep incoming saved text visible; also reserve a slot for an open, empty custom input.
+  const otherVisible = otherOpen || !!d.other.trim();
+  const count = rows.length + Number(otherVisible);
+  const showBlank = count < MAX_SERVICES && (rows.length === 0 || adding);
   const OTHER = "__other";
   const optionsFor = (current?: string) => [
     ...choices.filter((c) => c === current || !rows.includes(c)).map((c) => ({ value: c, label: c })),
     // Not on the list: the team reviews a new service before it shows (it is stored as "Something else").
-    ...(current === undefined && !otherOpen ? [{ value: OTHER, label: "Something else: name your own" }] : []),
+    ...(current === undefined && !otherVisible ? [{ value: OTHER, label: "Other — name your service" }] : []),
   ];
   // "Something else" holds the service's name on its first line and what they'd do after it.
   const [otherName = "", ...otherRest] = d.other.split("\n");
   const otherLine = otherRest.join(" ");
   const setOther = (name: string, line: string) => set("other")(line.trim() ? `${name}\n${line.slice(0, SERVICE_LINE_MAX)}` : name);
   const pickNew = (next: string) => {
+    if (count >= MAX_SERVICES) return;
     if (next !== OTHER) return add(next);
     setOtherOpen(true); setAdding(false);
     requestAnimationFrame(() => document.getElementById("f-other")?.focus());
@@ -191,6 +195,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
         <H id="sec-help-h">How I can help</H>
         <p id="services-hint" className="max-w-xl text-body-md text-ink-muted">The most important part of your profile. Choose a service, then say in one line what a customer can hire you to do. One clear service is enough to start. Five is the maximum.{rows.length > 1 && " Drag the grip to put your main service first."}</p>
       </div>
+      {!otherVisible && count < MAX_SERVICES && <div><Button variant="secondary" iconStart={<Plus />} onClick={() => pickNew(OTHER)}>Other — name your service</Button></div>}
       <ol className="grid gap-5">
         {rows.map((s, i) => {
           const standard = serviceDescription(s);
@@ -231,7 +236,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
             </li>
           );
         })}
-        {otherOpen && (
+        {otherVisible && (
           // Their own service, laid out like the others: its name, then what a customer can hire them to do. Both go
           // in "Something else" (name on the first line), which the team reviews before it shows.
           <li key="other" className="grid gap-3 border-b border-line pb-5">
@@ -260,7 +265,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
           <li key="blank" className="grid gap-2 sm:grid-cols-12 sm:items-start sm:gap-0">
             <div className="grid gap-1 sm:col-span-5 sm:pr-5">
               <label htmlFor={`f-service-${rows.length}`} className="sr-only">{rows.length ? `Service ${rows.length + 1}` : "Your first service"}</label>
-              <Select id={`f-service-${rows.length}`} options={optionsFor()} placeholder="Choose a service" invalid={!rows.length && !otherOpen && !!errors.services} onValueChange={pickNew} />
+              <Select id={`f-service-${rows.length}`} options={optionsFor()} placeholder="Choose a service" invalid={!rows.length && !otherVisible && !!errors.services} onValueChange={pickNew} />
               {!rows.length && errors.services && <p className="text-body-sm text-danger">{errors.services}</p>}
             </div>
             <div className="grid gap-1 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
@@ -273,8 +278,8 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
       </ol>
       <p role="status" aria-live="polite" className="sr-only">{said}</p>
       <GroupError id="f-services-error">{rows.length ? errors.services : undefined}</GroupError>
-      {!showBlank && (rows.length < MAX_SERVICES
-        ? <div><Button variant="secondary" iconStart={<Plus />} onClick={() => setAdding(true)}>Add another service <span className="text-ink-muted">· {rows.length} of {MAX_SERVICES}</span></Button></div>
+      {!showBlank && (count < MAX_SERVICES
+        ? <div><Button variant="secondary" iconStart={<Plus />} onClick={() => setAdding(true)}>Add another service <span className="text-ink-muted">· {count} of {MAX_SERVICES}</span></Button></div>
         : <p className="text-body-sm text-ink-muted">That&apos;s the most: {MAX_SERVICES} services. Remove one to add another.</p>)}
     </section>
   );
