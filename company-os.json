@@ -38,6 +38,15 @@
         "test": null,
         "production": null
       }
+    },
+    "travelPreference": {
+      "requires": null,
+      "profilesModule": "1.8.0",
+      "apiCommit": null,
+      "settingsEvidence": {
+        "test": null,
+        "production": null
+      }
     }
   }
 }

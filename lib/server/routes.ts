@@ -41,6 +41,10 @@ export function cleanFields(v: unknown): ProfileFields {
     if (typeof d === "string" && typeof x === "string") out[k] = x.slice(0, 4000);
     else if (Array.isArray(d) && Array.isArray(x)) out[k] = x.filter((e): e is string => typeof e === "string").slice(0, 50).map((e) => e.slice(0, 400));
   }
+  if (input.travelBeyondLA !== undefined) {
+    if (typeof input.travelBeyondLA !== "boolean") throw new CompanyOsError(422,"invalid_travel_preference","Choose whether you are willing to travel beyond Los Angeles.");
+    out.travelBeyondLA = input.travelBeyondLA;
+  }
   if (input.insuranceNotes !== undefined) {
     if (typeof input.insuranceNotes !== "string" || input.insuranceNotes.length > INSURANCE_NOTES_MAX) {
       throw new CompanyOsError(422, "invalid_insurance_notes", `Use text of up to ${INSURANCE_NOTES_MAX} characters for the insurance description.`);

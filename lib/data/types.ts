@@ -91,6 +91,8 @@ export interface ProfileFields {
   zip: string;
   areas: string[];
   travel: string;
+  /** Optional explicit willingness to travel beyond the launch market; missing means not answered. */
+  travelBeyondLA?: boolean;
   month: string;
   monthStatus: MonthStatus;
   dates: string;

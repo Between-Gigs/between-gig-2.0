@@ -17,6 +17,7 @@ import { personalityQuestions } from "@/lib/profile/personality";
 import { departmentFieldRetired } from "@/lib/profile/department-retirement";
 import { serviceDescription } from "@/lib/profile/service-descriptions";
 import { locationControlsEnabled, travelRadiusOptions } from "@/lib/profile/location-controls";
+import { travelPreferenceEnabled } from "@/lib/profile/travel-preference";
 import { customSkillsEnabled } from "@/lib/profile/skills";
 import { SkillPicker } from "./SkillPicker";
 import { POSTAL_CODE_MAX } from "@/lib/profile/postal";
@@ -91,7 +92,7 @@ function InPlace({ id, label, value, placeholder, onChange, maxLength, size, err
 export function CanvasIdentity({ d, set, errors, personId, confirmPhoto, required }: SectionProps & {
   personId: string; required: (field: string) => boolean; confirmPhoto: (go: () => void) => void;
 }) {
-  const [whereOpen, openWhere] = useOpen(!!(d.zip || d.travel || d.areas.length || d.market === "other" || errors.zip || errors.areas || errors.otherCity || errors.travel));
+  const [whereOpen, openWhere] = useOpen(!!(d.zip || d.travel || d.travelBeyondLA === true || d.areas.length || d.market === "other" || errors.zip || errors.areas || errors.otherCity || errors.travel));
   return (
     <section id="sec-identity" aria-label="About you" className="grid scroll-mt-40 gap-8 md:grid-cols-12 md:gap-10">
       <div className="min-w-0 md:col-span-4">
@@ -116,6 +117,10 @@ export function CanvasIdentity({ d, set, errors, personId, confirmPhoto, require
                     : <Input id="f-travel" value={d.travel} placeholder="e.g. Up to 15 miles" onChange={(e) => set("travel")(e.target.value.slice(0, 80))} />}
                 </Field>
               </div>
+              {travelPreferenceEnabled() && <div className="grid gap-2">
+                <Checkbox id="f-travelBeyondLA" className="min-h-11 items-center" aria-describedby="f-travel-preference-hint" checked={d.travelBeyondLA === true} onChange={e=>set("travelBeyondLA")(e.target.checked)} label="I’m willing to travel beyond Los Angeles." />
+                <p id="f-travel-preference-hint" className="text-body-sm text-ink-muted">Optional. If selected, this appears on your profile after approval. It does not change your travel radius.</p>
+              </div>}
               {d.market === "other"
                 ? <Field label="City / region and country" optional={!required("location")} error={errors.otherCity} hint="Los Angeles is the launch market. Your profile is held for a future market.">
                     <Input id="f-otherCity" value={d.otherCity} onChange={(e) => set("otherCity")(e.target.value)} />

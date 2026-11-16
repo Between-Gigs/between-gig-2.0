@@ -6,6 +6,7 @@ import { ArrowRight, Check, ChevronLeft, ChevronRight, CircleDashed, Heart, Info
 import Link from "next/link";
 import * as React from "react";
 import { data, type Person, type Profile, type ProfileFields } from "@/lib/data";
+import { extendedTravelLabel } from "@/lib/profile/travel-preference";
 import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/data/taxonomy";
 import { profileLocationLabel } from "@/lib/profile/location";
 import { absoluteUrl, asset } from "@/lib/site";
@@ -137,6 +138,7 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
   // How they work (mode and travel, transport, insurance when shared) and what they bring, as the facts table reads.
   const works = [
     `${modeLabel[f.mode]}${f.travel ? ` · ${f.travel}` : ""}`,
+    extendedTravelLabel(f.travelBeyondLA),
     f.transport,
     !unseen && f.insurance === "yes" ? insuranceLabel[f.insurance] : "",
   ].filter(Boolean).join(" · ");

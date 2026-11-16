@@ -221,6 +221,6 @@ it.each(['constructor','__proto__','toString'])('keeps prototype-like custom ski
 });
 
 it('round-trips explicit travel preference booleans without inventing an answer for legacy profiles',()=>{
- for(const travelBeyondLA of[true,false]){const encoded=toProfile({...filled,travelBeyondLA});expect(encoded.data.travel_outside_home_market).toBe(travelBeyondLA);expect(fromProfile(encoded.data,encoded.items,'').travelBeyondLA).toBe(travelBeyondLA);}
- expect(toProfile(filled).data).not.toHaveProperty('travel_outside_home_market');for(const v of[undefined,null,'true',1])expect(fromProfile({travel_outside_home_market:v},[],'')).not.toHaveProperty('travelBeyondLA');
+ for(const travelBeyondLA of[true,false]){const encoded=toProfile({...filled,travelBeyondLA});expect(encoded.data.extended_travel_available).toBe(travelBeyondLA);expect(fromProfile(encoded.data,encoded.items,'').travelBeyondLA).toBe(travelBeyondLA);}
+ expect(toProfile(filled).data).not.toHaveProperty('extended_travel_available');for(const v of[undefined,null,'true',1])expect(fromProfile({extended_travel_available:v},[],'')).not.toHaveProperty('travelBeyondLA');
 });

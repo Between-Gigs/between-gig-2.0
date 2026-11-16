@@ -463,6 +463,9 @@ export const sampleSource: DataSource = {
       const person = state.people.find((p) => p.id === personId);
       if (!person) throw new Error("No such person");
       const previousDraft = state.drafts.find(d => d.personId === personId);
+      if (fields.travelBeyondLA !== undefined && typeof fields.travelBeyondLA !== "boolean") throw new Error("Choose a boolean travel preference.");
+      // Older clients omit this optional answer; omission never overwrites an explicit stored choice.
+      if (fields.travelBeyondLA === undefined && typeof previousDraft?.fields.travelBeyondLA === "boolean") fields = {...fields,travelBeyondLA:previousDraft.fields.travelBeyondLA};
       const profileCreatedAt = previousDraft ? previousDraft.profileCreatedAt : state.profiles.some(p => p.personId === personId) ? undefined : now();
       const draft: ProfileDraft = { personId, profileCreatedAt, fields: clone(fields), step, savedAt: now() };
       state.drafts = [...state.drafts.filter((d) => d.personId !== personId), draft];
