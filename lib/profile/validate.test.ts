@@ -85,3 +85,16 @@ describe("lib/profile/validate.ts", () => {
     expect(contentChanged({ ...a, title: "" }, a)).toBe(false);
   });
 });
+
+
+describe("custom-only Gigster validation",()=>{
+  const f={...completeFields("Fictional Custom Crew","/media/f"),services:[],serviceLines:{},other:"Fictional restoration\nRestore a fictional display prop."};
+  it("accepts a clearly described custom-only service and marks its checklist complete",()=>{
+    expect(validateGigster(f,defaultProfileTemplate).services).toBeUndefined();
+    expect(gigsterChecklist(f,defaultProfileTemplate).required.find(i=>i.id==="services")?.done).toBe(true);
+  });
+  it("refuses blank/missing/oversized custom names or descriptions, preserving the supplied fields",()=>{
+    for(const other of [""," ","\nDescription only","Name only","X".repeat(61)+"\nDescription","Name\n"+"X".repeat(121)])expect(validateGigster({...f,other},defaultProfileTemplate).services).toBeTruthy();
+    expect(f.other).toBe("Fictional restoration\nRestore a fictional display prop.");
+  });
+});
