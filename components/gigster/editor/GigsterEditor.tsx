@@ -6,6 +6,7 @@
  * review checks everything once and lands on "Profile submitted" (/profile/submitted/). The earlier edit-on-page
  * editor is kept as a Hub draft (/preview/drafts/profile-editor-v1/).
  */
+import { departmentFieldRetired } from "@/lib/profile/department-retirement";
 import { Button, Skeleton, useToast } from "@ds/components";
 import { cx } from "@ds/components/cx";
 import { ArrowLeft, ArrowRight, ChevronDown, Eye, FileText, MessageSquareWarning, Save, Send } from "lucide-react";
@@ -43,7 +44,7 @@ const dayOf = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-US",
 /** Where each checklist item lives on the page: the field to focus. */
 const ITEM_TARGET: Record<GigsterItemId, string> = {
   photo: "sec-identity", name: "f-name", title: "f-title", where: "sec-where", services: "sec-help", rate: "f-rate", availability: "f-dates",
-  film: "f-position", experience: "f-about", credits: "f-credits", personality: "sec-personality", contact: "f-mobile",
+  film: departmentFieldRetired() ? "f-years" : "f-position", experience: "f-about", credits: "f-credits", personality: "sec-personality", contact: "f-mobile",
 };
 /** The team's review notes are per questionnaire section; this is where each one is answered here. */
 /** The team picks a section of the old builder; name it as this editor does. */
