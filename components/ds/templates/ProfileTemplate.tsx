@@ -15,6 +15,7 @@ import Link from "next/link";
 import * as React from "react";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import type { ProfileLayoutProps } from "@/components/profile/ProfileView";
+import { extendedTravelLabel } from "@/lib/profile/travel-preference";
 import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/data/taxonomy";
 import { personalityQuestionText } from "@/lib/profile/personality";
 import { serviceDescription } from "@/lib/profile/service-descriptions";
@@ -168,6 +169,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
   // How they work: mode and travel, transport, tools and (when shared) insurance.
   const how = [
     modeLabel[f.mode],
+    extendedTravelLabel(f.travelBeyondLA),
     f.transport,
     f.tools,
     !unseen && f.insurance === "yes" ? insuranceLabel[f.insurance] : "",
@@ -235,7 +237,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
             <dt className="flex items-center gap-2 text-label-sm text-ink-muted"><BriefcaseBusiness aria-hidden="true" className="size-4" />{editing ? "How you work" : `How ${first} works`}</dt>
             <dd className="text-body-md text-ink">
               {editing
-                ? <span>{[modeLabel[f.mode], f.transport, f.tools, insuranceLabel[f.insurance]].filter(Boolean).join(" · ")}</span>
+                ? <span>{[modeLabel[f.mode], extendedTravelLabel(f.travelBeyondLA), f.transport, f.tools, insuranceLabel[f.insurance]].filter(Boolean).join(" · ")}</span>
                 : how.join(" · ")}
             </dd>
           </div>

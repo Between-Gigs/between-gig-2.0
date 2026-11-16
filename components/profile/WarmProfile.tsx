@@ -8,6 +8,7 @@ import Link from "next/link";
 import * as React from "react";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { Icon3D } from "@/components/ui/Icon3D";
+import { extendedTravelLabel } from "@/lib/profile/travel-preference";
 import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/data/taxonomy";
 import { craftIcon, iconTint, type Icon3DName } from "@/lib/icons3d";
 import { hasRate } from "@/lib/profile/validate";
@@ -110,6 +111,7 @@ export function WarmProfile({ person, fields: f, mode, embedded, similar = [], d
   // How they work: mode and travel, transport, tools and (when shared) insurance, in one line.
   const how = [
     `${modeLabel[f.mode]}${f.travel ? ` · ${f.travel}` : ""}`,
+    extendedTravelLabel(f.travelBeyondLA),
     f.transport,
     f.tools,
     !unseen && f.insurance === "yes" ? insuranceLabel[f.insurance] : "",

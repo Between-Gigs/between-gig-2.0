@@ -5,8 +5,9 @@
  * Company OS's to decide (row policies, Super Admin routes), never this file's.
  */
 import { craftOf } from "@/lib/profile/department";
+import { customServiceError } from "@/lib/profile/custom-service";
 import { completeness } from "@/lib/profile/validate";
-import { fromProfile, toProfile, type ProfileItem } from "@/lib/data/companyos/fields";
+import { fromProfile, toProfile, optionKey, type ProfileItem } from "@/lib/data/companyos/fields";
 import { personStatuses, inviteStatuses } from "@/lib/data/types";
 import type {
   ActivityEvent, ActivityKind, DashboardSummary, FunnelCounts, InviteStatus, PeopleQuery, Person, PersonSource, PersonStatus, PersonSummary, Profile,
@@ -14,7 +15,7 @@ import type {
   WaitlistResult, WaitlistRow, WaitlistSignup,
 } from "@/lib/data/types";
 import { blankFields } from "@/lib/data/fields";
-import { waitlistCategories } from "@/lib/data/taxonomy";
+import { onSetSkills, waitlistCategories } from "@/lib/data/taxonomy";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { CompanyOsError, and, eq, type AdminUser, type BatchOp, type CompanyOs, type Credential, type Row } from "./companyos";
 
@@ -264,6 +265,9 @@ async function publicProfiles(ctx: Ctx, profiles: Row[]) {
   return profiles.map((p) => {
     const photo = photoBy.get(p.id);
     const fields = fromProfile(p.data, itemsOf(itemsBy.get(p.id)), photo ? mediaUrl(photo.id) : "");
+    fields.other = ""; // Private review text never belongs in a public response, even on upstream over-return.
+    // Private even if an upstream policy unexpectedly returns the field.
+    delete fields.insuranceNotes;
     // The public page knows the profile, not the person: its id stands in, and nothing private is in it.
     const person: Person = {
       id: p.id, email: "", name: fields.name, slug: str(p.data.public_handle), status: "approved", waitlistZip: "", waitlistCategory: "",
@@ -302,14 +306,20 @@ async function ownProfile(ctx: Ctx, personId: string) {
 
 const fieldsFrom = (p: { profile?: Row; items: Row[]; photo?: Row }) => fromProfile(p.profile!.data, itemsOf(p.items), p.photo ? mediaUrl(p.photo.id) : "");
 
+/** Derive metadata only from the authenticated API row, never a field supplied by a client. */
+function profileCreation(row: Row): string | undefined {
+  const value = iso(row.createdAt);
+  return value && Number.isFinite(Date.parse(value)) ? new Date(value).toISOString() : undefined;
+}
+
 /** The draft is the profile itself (N-09: one record). The builder's step stays in the browser (lib/data/api.ts). */
 export async function getDraft(ctx: Ctx, personId: string): Promise<ProfileDraft | null> {
   const own = await ownProfile(ctx, personId);
-  if (own.profile) return { personId, fields: fieldsFrom(own), step: 0, savedAt: iso(own.profile.updatedAt) };
+  if (own.profile) return { personId, profileCreatedAt: profileCreation(own.profile), fields: fieldsFrom(own), step: 0, savedAt: iso(own.profile.updatedAt) };
   const [person] = await ctx.cos.query(ctx.cred, { entity: "person", filter: eq("id", personId), limit: 1 });
   if (!person) return null;
   const name = str(person.data.name);
-  return { personId, fields: blankFields(name === str(person.data.email) ? "" : name), step: 0, savedAt: "" };
+  return { personId, profileCreatedAt: null, fields: blankFields(name === str(person.data.email) ? "" : name), step: 0, savedAt: "" };
 }
 
 const keyOf = (i: { kind?: unknown; value?: unknown }) => `${String(i.kind)}\u0000${String(i.value)}`;
@@ -343,7 +353,11 @@ export function draftOps(personId: string, fields: ProfileFields, existing: { pr
   for (const k of ["years_experience", "availability_month"]) if (!(k in data) && old[k] != null && old[k] !== "") changed[k] = null;
   const ops: BatchOp[] = Object.keys(changed).length ? [{ op: "update", entity: "profile", id, data: changed }] : [];
   // Credits are matched by text; skills, services and areas by key. One stored item per wanted item.
-  const pool = groupBy(existing.items, (r) => keyOf(r.data));
+  // Historical raw labels that equal a catalog label display identically to its key.
+  // Match both by that display identity, preserving the original row/value instead of recreating it.
+  const pool = groupBy([...existing.items].sort((a,b)=>Number(a.data.position??0)-Number(b.data.position??0)), (r) => keyOf(
+    r.data.kind === "skill" && onSetSkills.includes(str(r.data.value))
+      ? {...r.data,value:optionKey(str(r.data.value))} : r.data));
   for (const want of items) {
     const have = pool.get(keyOf(want))?.shift();
     const visible = want.visible ?? true;
@@ -374,14 +388,27 @@ export async function saveDraft(ctx: Ctx, personId: string, input: ProfileFields
   // Removing the photo deletes it, on a draft only: a submitted or live profile needs one, so it's replaced by uploading.
   if (!fields.photo && own.photo && own.profile?.data.status === "draft") await ctx.cos.remove(ctx.cred, "file", own.photo.id);
   const after = await ownProfile(ctx, personId);
-  return { personId, fields: after.profile ? fieldsFrom(after) : fields, step: 0, savedAt: after.profile ? iso(after.profile.updatedAt) : nowIso() };
+  return { personId, profileCreatedAt: after.profile ? profileCreation(after.profile) : null, fields: after.profile ? fieldsFrom(after) : fields, step: 0, savedAt: after.profile ? iso(after.profile.updatedAt) : nowIso() };
 }
 
 export async function submit(ctx: Ctx, personId: string) {
   const own = await ownProfile(ctx, personId);
   if (!own.profile) throw new CompanyOsError(422, "profile_incomplete", "nothing to submit");
   // Already with the team or live: nothing to send (an edit to a live profile has already sent it back, N-09).
-  if (own.profile.data.status !== "submitted" && own.profile.data.status !== "approved") await ctx.cos.patch(ctx.cred, "profile", own.profile.id, { status: "submitted" });
+  if (own.profile.data.status !== "submitted" && own.profile.data.status !== "approved") {
+    const fields = fieldsFrom(own);
+    if (!fields.services.length) {
+      const enabled = process.env.CUSTOM_SERVICE_REVIEW_ENABLED === "1";
+      if (process.env.NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW === "1" && !enabled) throw new CompanyOsError(503, "custom_service_review_unavailable");
+      // Both flags absent preserves the older client's existing submit contract.
+      if (enabled) {
+        if (!fields.other.trim()) throw new CompanyOsError(422, "profile_incomplete", "Choose a service or describe a custom service.");
+        const error = customServiceError(fields.other);
+        if (error) throw new CompanyOsError(422, "invalid_custom_service", error);
+      }
+    }
+    await ctx.cos.patch(ctx.cred, "profile", own.profile.id, { status: "submitted" });
+  }
   const summary = await getPerson(ctx, personId);
   const profile = await getProfile(ctx, personId);
   if (!summary || !profile) throw new CompanyOsError(404, "not found");
@@ -625,6 +652,11 @@ async function decide(ctx: Ctx, personId: string, status: "approved" | "changes_
   const profile = await profileOf(ctx, personId);
   // Only a submitted profile is decided on. Company OS would take a review of an approved profile as a note.
   if (profile.data.status !== "submitted") throw new CompanyOsError(422, "invalid_status_transition", "only a submitted profile can be reviewed");
+  if (status === "approved" && str(profile.data.services_other).trim() && (process.env.CUSTOM_SERVICE_REVIEW_ENABLED === "1" || process.env.NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW === "1")) {
+    if (process.env.CUSTOM_SERVICE_REVIEW_ENABLED !== "1") throw new CompanyOsError(503, "custom_service_review_unavailable");
+    const items = await ctx.cos.all(ctx.cred, { entity: "profile_item", filter: and(eq("profile", profile.id), eq("kind", "service")) });
+    if (!items.some((item) => item.data.kind === "service" && item.data.visible !== false)) throw new CompanyOsError(422, "profile_incomplete", "Add a listed service before approving a private custom-service request.");
+  }
   const sections = Object.fromEntries(notes.map((n) => [n.section, n.note]));
   const label: Record<ProfileSection, string> = { about: "About you", skills: "Skills & services", where: "Where & when", story: "Your story", photo: "Photo" };
   const note = notes.length ? notes.map((n) => `${label[n.section]}: ${n.note}`).join("\n") : "Approved";

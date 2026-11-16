@@ -86,7 +86,15 @@ jobs:
           COOKIE_SIGNING_SECRET: ${{ secrets.COOKIE_SIGNING_SECRET }}
           APP_URL: ${{ vars.APP_URL }}
           BG_RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT_NAME }}
+          NEXT_PUBLIC_PROFILE_NO_DEPARTMENT: ${{ vars.PROFILE_NO_DEPARTMENT }}
+          NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS: ${{ vars.PROFILE_LOCATION_CONTROLS }}
+          NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS: ${{ vars.PROFILE_CUSTOM_SKILLS }}
+          NEXT_PUBLIC_PROFILE_TRAVEL_PREFERENCE: ${{ vars.PROFILE_TRAVEL_PREFERENCE }}
+          NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER: ${{ vars.PROFILE_TRAVEL_REQUIRED_AFTER }}
+          NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW: ${{ vars.CUSTOM_SERVICE_REVIEW }}
+          CUSTOM_SERVICE_REVIEW_ENABLED: ${{ vars.CUSTOM_SERVICE_REVIEW_ENABLED }}
         run: |
+          node scripts/check-profile-activation.mjs
           node scripts/check-app-url.mjs --test
           case "$CLERK_PUBLISHABLE_KEY" in pk_test_?*) ;; *) echo "::error::test requires a Clerk TEST publishable key (pk_test_…) in the test environment's variables"; exit 1 ;; esac
           # The test site is public: it never runs without its passphrase gate (playbook rule D5).
@@ -125,6 +133,12 @@ jobs:
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_DATA_SOURCE: api
+          NEXT_PUBLIC_PROFILE_NO_DEPARTMENT: ${{ vars.PROFILE_NO_DEPARTMENT }}
+          NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS: ${{ vars.PROFILE_LOCATION_CONTROLS }}
+          NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS: ${{ vars.PROFILE_CUSTOM_SKILLS }}
+          NEXT_PUBLIC_PROFILE_TRAVEL_PREFERENCE: ${{ vars.PROFILE_TRAVEL_PREFERENCE }}
+          NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER: ${{ vars.PROFILE_TRAVEL_REQUIRED_AFTER }}
+          NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW: ${{ vars.CUSTOM_SERVICE_REVIEW }}
           NEXT_PUBLIC_SITE_ORIGIN: ${{ vars.APP_URL }}
         run: pnpm build:server && pnpm build:preview && pnpm check:server
 
@@ -147,10 +161,15 @@ jobs:
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
           TEST_GATE_PASSPHRASE: ${{ secrets.TEST_GATE_PASSPHRASE }}
           COOKIE_SIGNING_SECRET: ${{ secrets.COOKIE_SIGNING_SECRET }}
+          CUSTOM_SERVICE_REVIEW_ENABLED: ${{ vars.CUSTOM_SERVICE_REVIEW_ENABLED }}
         run: |
           for name in APP_URL COMPANY_OS_READ_TOKEN COMPANY_OS_SUBMIT_TOKEN TEST_GATE_PASSPHRASE COOKIE_SIGNING_SECRET; do
             printf '%s' "${!name}" | railway variable set "$name" --stdin --service "$SERVICE" --environment "$RAILWAY_ENV" --skip-deploys
           done
+          if [ "$CUSTOM_SERVICE_REVIEW_ENABLED" = "1" ]; then
+            printf '%s' "$CUSTOM_SERVICE_REVIEW_ENABLED" | railway variable set CUSTOM_SERVICE_REVIEW_ENABLED --stdin \
+              --service "$SERVICE" --environment "$RAILWAY_ENV" --skip-deploys
+          fi
 
       # Uploads the checked bundle only (not the checkout).
       - name: Deploy
