@@ -6,6 +6,7 @@
  * review checks everything once and lands on "Profile submitted" (/profile/submitted/). The earlier edit-on-page
  * editor is kept as a Hub draft (/preview/drafts/profile-editor-v1/).
  */
+import { APPROVED_EDIT_HINT, APPROVED_NOT_PUBLIC, APPROVED_NOT_PUBLIC_LINE, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
 import { departmentFieldRetired } from "@/lib/profile/department-retirement";
 import { Button, Skeleton, useToast } from "@ds/components";
 import { cx } from "@ds/components/cx";
@@ -205,7 +206,9 @@ function Editor({ personId }: { personId: string }) {
 
   const first = d.name.trim().split(/\s+/)[0] || "there";
   const status = person.status;
-  const sentAlready = status === "submitted" || status === "approved";
+  const sentAlready = status === "submitted" || isReviewedStatus(status);
+  const isLive = isPublicStatus(status);
+  const approvedPrivate = isApprovedPrivate(status);
   const unsent = KEEPS_DRAFT && sentAlready && !!sentVersion && contentChanged(d, sentVersion);
   // With the team or live, there's something to send only once something has changed. Live keeps one record, so an
   // edit sends it back by itself and there is never anything to send.
@@ -213,7 +216,8 @@ function Editor({ personId }: { personId: string }) {
   const notes = status === "changes_requested" ? readNotes(person.reviewNotes ?? []) : [];
   const resubmit = sentAlready || notes.length > 0;
   const sendLabel = resubmit ? "Send again for review" : "Submit for review";
-  const stateLabel = status === "approved" ? (unsent ? "Live · unsent changes" : "Live")
+  const stateLabel = approvedPrivate ? (unsent ? `${APPROVED_NOT_PUBLIC} · unsent changes` : APPROVED_NOT_PUBLIC)
+    : isLive ? (unsent ? "Live · unsent changes" : "Live")
     : status === "submitted" ? (unsent ? "In review · unsent changes" : `In review since ${dayOf(person.submittedAt)}`)
     : status === "changes_requested" ? "Changes requested" : "Private draft";
   // In page order, so the list reads top to bottom like the form.
@@ -249,7 +253,7 @@ function Editor({ personId }: { personId: string }) {
 
   const sendButton = (size: "md" | "lg", full = false) => nothingToSend
     ? <Link href="/profile/submitted/" className={cx("inline-flex min-h-11 items-center justify-center gap-2 text-label-md font-semibold text-ink underline underline-offset-4", full && "w-full")}>
-        {status === "approved" ? "Your page is live" : "Submitted · view status"}
+        {isLive ? "Your page is live" : approvedPrivate ? APPROVED_NOT_PUBLIC : "Submitted · view status"}
       </Link>
     : <Button variant="primary" size={size} fullWidth={full} loading={submitting} iconEnd={<Send />} onClick={submit}>{sendLabel}</Button>;
 
@@ -297,7 +301,9 @@ function Editor({ personId }: { personId: string }) {
               ? <h1 className="font-display text-heading-lg text-ink wrap-anywhere">Welcome, {first}. This is your page.</h1>
               : <h1 className="font-display text-heading-lg text-ink wrap-anywhere">Edit your profile</h1>}
             <p className="max-w-2xl text-body-md text-pretty text-ink-muted">
-              {status === "approved"
+              {approvedPrivate
+                ? `${APPROVED_NOT_PUBLIC_LINE} ${APPROVED_EDIT_HINT}`
+                : isLive
                 ? data.kind === "live" ? "Availability changes go live as you save. Other changes take your page off the site until the team approves them." : "Availability changes go live as you save. Other changes wait here until you send them again."
                 : "This is your profile as clients will see it: fill it in right here. It saves as you go and stays private until the Between Gigs team approves it."}
             </p>
@@ -353,8 +359,8 @@ function Editor({ personId }: { personId: string }) {
 
           <section aria-labelledby="next-h" className="grid gap-4 border-t border-line-strong pt-8 sm:flex sm:items-center sm:justify-between sm:gap-6">
             <div className="grid gap-1">
-              <h2 id="next-h" className="font-display text-heading-lg text-ink">{nothingToSend ? (status === "approved" ? "Your page is live" : "Your profile is with the team") : "You’re Almost There!"}</h2>
-              <p className="text-body-md text-ink-muted">{nothingToSend ? (status === "approved" ? "Availability saves as you go. Edit anything else and you can send it for review here." : "Changes you make here save as you go. We'll email you when there's an update.") : "Preview your profile to see how it will appear to potential customers. Once you’re happy with it, submit it to the Between Gigs team for review."}</p>
+              <h2 id="next-h" className="font-display text-heading-lg text-ink">{nothingToSend ? (isLive ? "Your page is live" : approvedPrivate ? APPROVED_NOT_PUBLIC : "Your profile is with the team") : "You’re Almost There!"}</h2>
+              <p className="text-body-md text-ink-muted">{nothingToSend ? (approvedPrivate ? `${APPROVED_NOT_PUBLIC_LINE} ${APPROVED_EDIT_HINT}` : isLive ? "Availability saves as you go. Edit anything else and you can send it for review here." : "Changes you make here save as you go. We'll email you when there's an update.") : "Preview your profile to see how it will appear to potential customers. Once you’re happy with it, submit it to the Between Gigs team for review."}</p>
               {!nothingToSend && <p className="text-body-md text-ink-muted">Your profile will remain private until it’s approved and we’re ready to make it public.</p>}
             </div>
             <div className="flex flex-wrap gap-2 sm:shrink-0">

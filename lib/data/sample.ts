@@ -1,4 +1,6 @@
 import { withTravelRequirement } from "@/lib/profile/location-controls";
+import { APPROVED_NOT_PUBLIC_SAMPLE } from "./seed";
+import { isPublicStatus, publishGateOn } from "@/lib/profile/publish-gate";
 import { readProfileTemplate } from "@/lib/profile/template";
 /*
  * The sample DataSource: the whole backend, faked in the browser. State lives in localStorage under
@@ -48,6 +50,8 @@ const latency = (ms = 60) => new Promise((r) => setTimeout(r, ms));
 
 function fresh(): State {
   const seed = buildSeed([...seedPeople, ...featuredPeople]);
+  // With the publish gate on, the sample shows both states: most seeded people are published, a few only approved.
+  if (publishGateOn()) for (const p of seed.people) if (p.status === "approved" && !APPROVED_NOT_PUBLIC_SAMPLE.includes(p.id)) p.status = "published";
   return { ...seed, outbox: [], session: null, challenges: [], waitlist: buildWaitlist(seed.people), activity: buildActivity(seed.people) };
 }
 
@@ -180,7 +184,7 @@ function publicOf(person: Person, profile: Profile): { person: Person; profile: 
   delete f.insuranceNotes;
   const credits = pinnedCredits(f);
   return {
-    person: { id: person.id, email: "", name: person.name, slug: person.slug, status: "approved", waitlistZip: "", waitlistCategory: "", invitedAt: "", updatedAt: person.updatedAt, ...(person.sample ? { sample: true } : {}) },
+    person: { id: person.id, email: "", name: person.name, slug: person.slug, status: publishGateOn() ? "published" : "approved", waitlistZip: "", waitlistCategory: "", invitedAt: "", updatedAt: person.updatedAt, ...(person.sample ? { sample: true } : {}) },
     profile: clone({ personId: profile.personId, fields: { ...f, credits, creditPins: credits.map(() => true), imdb: "", other: "", zip: "", otherCity: "" }, submittedAt: "", ...(profile.extras ? { extras: profile.extras } : {}) }),
   };
 }
@@ -280,7 +284,7 @@ export const sampleSource: DataSource = {
       const state = load();
       // Like live: only an approved profile resolves, and anything else reads exactly as an unknown handle, so a
       // visitor can't tell who is on the platform. The person themself checks their own slug (PublicProfile).
-      const person = state.people.find((p) => p.slug === slug && p.slug !== "" && p.status === "approved");
+      const person = state.people.find((p) => p.slug === slug && p.slug !== "" && isPublicStatus(p.status));
       const profile = person && state.profiles.find((p) => p.personId === person.id);
       return person && profile ? publicOf(person, profile) : { person: null, profile: null };
     },
@@ -288,7 +292,7 @@ export const sampleSource: DataSource = {
       await latency(0);
       const state = load();
       return state.people
-        .filter((p) => p.id !== id && p.status === "approved")
+        .filter((p) => p.id !== id && isPublicStatus(p.status))
         .map((person) => ({ person, profile: state.profiles.find((x) => x.personId === person.id) }))
         .filter((x): x is { person: Person; profile: Profile } => !!x.profile)
         .sort((a, b) => Number(!!b.profile.fields.photo) - Number(!!a.profile.fields.photo))
@@ -620,14 +624,16 @@ export const sampleSource: DataSource = {
       const selfSignedUp = state.people.filter((p) => p.source === "self");
       const invitedCounts = Object.fromEntries(personStatuses.map((st) => [st, invited.filter((p) => p.status === st).length])) as Record<PersonStatus, number>;
       const openedIds = new Set(state.invites.filter((i) => i.openedAt).map((i) => i.personId));
-      const sent = ["submitted", "changes_requested", "approved"];
+      const sent = ["submitted", "changes_requested", "approved", "published"];
       const funnel = {
         signups: waitlist.total,
         invited: invited.length,
         opened: invited.filter((p) => p.status !== "invited" || openedIds.has(p.id)).length,
         accounts: invited.filter((p) => p.status !== "invited").length,
         submitted: invited.filter((p) => p.status !== "invited" && (sent.includes(p.status) || !!p.submittedAt)).length,
-        approved: invitedCounts.approved,
+        // Reached approval (private or live); `published` is the live ones. Without the gate nobody is published.
+        approved: invitedCounts.approved + invitedCounts.published,
+        published: invitedCounts.published,
         signedUp: selfSignedUp.length,
       };
       return { counts, invitedCounts, invitedPersonIds: invited.map((p) => p.id), signedUpPersonIds: selfSignedUp.map((p) => p.id), funnel, waitlist, reviewQueue: await sampleSource.owners.reviewQueue(), activity: clone((state.activity ?? []).slice(0, 12)) };
@@ -658,7 +664,8 @@ export const sampleSource: DataSource = {
       const draft = state.drafts.find((d) => d.personId === personId);
       if (profile && draft) profile.fields = withAvailability(profile.fields, draft.fields);
       log(state, "approved", { personId, name: person.name, email: person.email }, ownerName(state));
-      queue(state, "approved", person.email, {
+      // With the publish gate, approving sends nothing: the "live" email goes out when the profile is published.
+      if (!publishGateOn()) queue(state, "approved", person.email, {
         firstName: person.name.split(" ")[0] ?? "", profileUrl: absoluteUrl(`/p/${person.slug}/`), editUrl: absoluteUrl("/profile/canvas/"),
       });
       save(state);
@@ -745,7 +752,7 @@ export const sampleSource: DataSource = {
     async publicExamples() {
       const state = load();
       return featuredPeople.flatMap(({ id }) => {
-        const person = state.people.find((p) => p.id === id && p.sample && p.status === "approved");
+        const person = state.people.find((p) => p.id === id && p.sample && isPublicStatus(p.status));
         const profile = person && state.profiles.find((p) => p.personId === id);
         return person && profile ? [publicOf(person, profile)] : [];
       });

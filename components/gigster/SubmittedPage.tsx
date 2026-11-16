@@ -4,6 +4,7 @@
  * "IN REVIEW", the serif "Profile submitted.", the thanks line, their name and title, "View my profile" and "Edit
  * profile", and "Your profile stays private during review." Opened at another time, it says where the profile stands.
  */
+import { APPROVED_EDIT_HINT, APPROVED_NOT_PUBLIC, APPROVED_NOT_PUBLIC_LINE, isApprovedPrivate, isPublicStatus } from "@/lib/profile/publish-gate";
 import { Skeleton, cx } from "@ds/components";
 import { Check } from "lucide-react";
 import * as React from "react";
@@ -54,7 +55,8 @@ export function SubmittedPage() {
   const first = name.split(/\s+/)[0] || "there";
   const title = fields?.title?.trim() || fields?.position || fields?.services[0] || "";
   const inReview = person.status === "submitted";
-  const live = person.status === "approved";
+  const live = isPublicStatus(person.status);
+  const approvedPrivate = isApprovedPrivate(person.status);
 
   return (
     <Page bare className="flex flex-col">
@@ -63,12 +65,13 @@ export function SubmittedPage() {
           <span aria-hidden="true" className="grid size-16 place-items-center rounded-full bg-action text-on-action shadow-md">
             <Check className="size-8" strokeWidth={2.5} />
           </span>
-          <p className="text-eyebrow tracking-widest text-ink uppercase">{inReview ? "In review" : live ? "Live" : "Not sent yet"}</p>
-          <Heading level="display-xl" as="h1" className="max-sm:text-display-md">{inReview ? "Profile submitted." : live ? "Your profile is live." : "Your profile isn't sent yet."}</Heading>
+          <p className="text-eyebrow tracking-widest text-ink uppercase">{inReview ? "In review" : live ? "Live" : approvedPrivate ? APPROVED_NOT_PUBLIC : "Not sent yet"}</p>
+          <Heading level="display-xl" as="h1" className="max-sm:text-display-md">{inReview ? "Profile submitted." : live ? "Your profile is live." : approvedPrivate ? "Your profile is approved." : "Your profile isn't sent yet."}</Heading>
           <Text size="lg" className="max-w-xl text-pretty">
             {inReview
               ? <>Thanks, {first}. Our team has your profile. We&apos;ll email you if we have suggestions or when there&apos;s an update.</>
               : live ? <>Clients can find you now, {first}. Keep your availability current from Edit profile.</>
+              : approvedPrivate ? <>{APPROVED_NOT_PUBLIC_LINE}</>
               : <>Finish your profile and submit it for review when it&apos;s ready, {first}.</>}
           </Text>
           <div className="grid w-full max-w-2xl grid-cols-1 items-center gap-1 border-y border-line-strong py-5 sm:grid-cols-2 sm:gap-0">
@@ -77,9 +80,9 @@ export function SubmittedPage() {
           </div>
           <div className="flex w-full flex-col items-start gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-8">
             <ButtonLink href={live && person.slug ? `/p/${person.slug}/` : "/profile/"} variant="primary" size="lg" fullWidth className="min-w-64 sm:w-auto">View my profile</ButtonLink>
-            <TextLink href="/profile/canvas/">{inReview || live ? "Edit profile" : "Continue your profile"}</TextLink>
+            <TextLink href="/profile/canvas/">{inReview || live || approvedPrivate ? "Edit profile" : "Continue your profile"}</TextLink>
           </div>
-          <Text size="sm" muted>{live ? "Changes other than availability go back to the team for review." : `Your profile stays private during review. You'll hear from us ${REVIEW_TIME}.`}</Text>
+          <Text size="sm" muted>{approvedPrivate ? APPROVED_EDIT_HINT : live ? "Changes other than availability go back to the team for review." : `Your profile stays private during review. You'll hear from us ${REVIEW_TIME}.`}</Text>
         </div>
       </Stage>
     </Page>

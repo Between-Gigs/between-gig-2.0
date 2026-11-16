@@ -5,9 +5,9 @@
  */
 
 /** Where a Gigster is on the way from waitlist to a public profile. Order matters: it is the funnel. */
-export type PersonStatus = "invited" | "registered" | "draft" | "submitted" | "changes_requested" | "approved";
+export type PersonStatus = "invited" | "registered" | "draft" | "submitted" | "changes_requested" | "approved" | "published";
 
-export const personStatuses: PersonStatus[] = ["invited", "registered", "draft", "submitted", "changes_requested", "approved"];
+export const personStatuses: PersonStatus[] = ["invited", "registered", "draft", "submitted", "changes_requested", "approved", "published"];
 
 export type Role = "gigster" | "owner";
 
@@ -342,7 +342,10 @@ export interface FunnelCounts {
   accounts: number;
   /** Submitted a profile at least once (submitted, changes requested or approved). */
   submitted: number;
+  /** Reached approval: approved (private, with the publish gate) or published. */
   approved: number;
+  /** Live: published. Always 0 without the publish gate. */
+  published: number;
   /** People who signed up by themselves (a separate source, not part of the invited cohort above). */
   signedUp: number;
 }

@@ -1,3 +1,4 @@
+import { isPublicStatus } from "@/lib/profile/publish-gate";
 import type { MonthStatus, Person, Profile } from "@/lib/data/types";
 import { laServiceAreas, monthStatusLabel } from "@/lib/data/taxonomy";
 import { craftOf, crafts } from "./department";
@@ -55,7 +56,7 @@ export type Listed = { person: Person; profile: Profile };
 export function filterGigsters(list: Listed[], f: BrowseFilters): Listed[] {
   const words = f.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
   return list.filter(({ person, profile: { fields: x } }) => {
-    if (person.status !== "approved") return false;
+    if (!isPublicStatus(person.status)) return false;
     const craft = craftOf(x.position, x.skills);
     if (f.craft && (!craft || craftSlug(craft) !== f.craft)) return false;
     if (f.area && !x.areas.some((a) => areaSlug(a) === f.area)) return false;

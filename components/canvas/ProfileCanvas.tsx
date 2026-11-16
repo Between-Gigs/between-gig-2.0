@@ -1,4 +1,5 @@
 "use client";
+import { APPROVED_EDIT_HINT, APPROVED_NOT_PUBLIC, APPROVED_NOT_PUBLIC_LINE, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
 import { Badge, Button, Field, Input, RadioGroup, Skeleton, Slider, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
 import { ArrowDown, ArrowRight, Check, ChevronUp, Copy, Link2, MapPin, MessageSquareWarning, PartyPopper, Pencil, Plus, Share2, WandSparkles, X } from "lucide-react";
@@ -443,14 +444,14 @@ function Canvas({ personId }: { personId: string }) {
     }
   };
 
-  const resubmit = person.status === "submitted" || person.status === "approved" || notes.length > 0;
-  const sentAlready = person.status === "submitted" || person.status === "approved";
+  const resubmit = person.status === "submitted" || isReviewedStatus(person.status) || notes.length > 0;
+  const sentAlready = person.status === "submitted" || isReviewedStatus(person.status);
   // Changes (other than availability) not yet sent: the team, or the public, still has the version sent before.
   const unsent = KEEPS_DRAFT && sentAlready && !!sentVersion && contentChanged(d, sentVersion);
   // With the team or live, there's something to send only once something has changed. Live keeps one record, so an
   // edit sends it back itself and there is never anything to send.
   const nothingToSend = sentAlready && (data.kind === "live" || !unsent);
-  const reviewState: ReviewState | null = person.status === "approved" ? "live" : person.status === "submitted" ? "review" : null;
+  const reviewState: ReviewState | null = isApprovedPrivate(person.status) ? "approved" : isPublicStatus(person.status) ? "live" : person.status === "submitted" ? "review" : null;
   const first = d.name.split(" ")[0] || "there";
   const ctx: Ctx = { order: template.order, required, filled, nextOf, d, editing, next, fresh, errors, noted, open, close, advance, portrait, rise, missing: Object.keys(fieldErrors).length };
   // The progress line: one segment per required part, in the order the page leads them; the next one is marked.
@@ -554,7 +555,7 @@ function Canvas({ personId }: { personId: string }) {
       </div>
       {!sent && !editing && view === "edit" && (
         <Dock done={done} total={required.length} next={next} ready={ready} resubmit={resubmit} canSend={!nothingToSend} submitting={submitting} onNext={() => next && open(next)} onSubmit={submit}
-          idle={reviewState === "live" ? "Live" : reviewState === "review" ? `In review since ${dayOf(person.submittedAt)}` : ""}
+          idle={reviewState === "approved" ? APPROVED_NOT_PUBLIC : reviewState === "live" ? "Live" : reviewState === "review" ? `In review since ${dayOf(person.submittedAt)}` : ""}
           left={template.order.filter((id) => invalidParts.has(id))} notes={notes.filter((n, i) => notes.findIndex((m) => SECTION_SPOT[m.section] === SECTION_SPOT[n.section]) === i).map((n) => ({ id: SECTION_SPOT[n.section], label: sectionLabel[n.section] }))} onOpen={open} />
       )}
     </Page>
@@ -664,7 +665,7 @@ function ViewToggle({ value, onChange }: { value: "edit" | "client"; onChange: (
   );
 }
 
-type ReviewState = "review" | "live";
+type ReviewState = "review" | "live" | "approved";
 
 /**
  * With the team, or live: the one mint block says where the page stands and what Send again would do. Live, an
@@ -674,8 +675,9 @@ type ReviewState = "review" | "live";
  */
 function ReviewBlock({ state, unsent, since, slug }: { state: ReviewState; unsent: boolean; since: string; slug: string }) {
   const kept = data.kind !== "live";
-  const title = state === "review" ? `In review since ${since}` : "Your page is live";
-  const line = state === "review"
+  const title = state === "review" ? `In review since ${since}` : state === "approved" ? APPROVED_NOT_PUBLIC : "Your page is live";
+  const line = state === "approved" ? `${APPROVED_NOT_PUBLIC_LINE} ${APPROVED_EDIT_HINT}`
+    : state === "review"
     ? kept
       ? unsent
         ? "You've changed your page since you sent it. The team still sees the version you sent. Send again replaces it with this one."
@@ -717,6 +719,7 @@ function EditorBar({ segs, done, total, ready, missing, save, view, editing, sen
   const line = sent ? "Sent for review"
     : missing ? `${missing} ${missing === 1 ? "thing" : "things"} to finish`
     : unsent ? "Unsent changes"
+    : state === "approved" ? APPROVED_NOT_PUBLIC
     : state === "live" ? "Live · up to date"
     : state === "review" ? "In review"
     : ready ? "Ready to send" : "Your page · edit on page";

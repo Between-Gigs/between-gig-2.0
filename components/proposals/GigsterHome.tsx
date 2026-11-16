@@ -4,6 +4,7 @@ import { Badge, Banner, EmptyState, Progress, SegmentedControl, Skeleton, cx } f
 import { ArrowRight, CalendarCheck, CircleCheck, Eye, Inbox, Link2, PencilLine } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { APPROVED_EDIT_HINT, APPROVED_NOT_PUBLIC, APPROVED_NOT_PUBLIC_LINE, isApprovedPrivate } from "@/lib/profile/publish-gate";
 import { data, type MonthStatus, type PersonSummary } from "@/lib/data";
 import { monthStatusLabel } from "@/lib/data/taxonomy";
 import { partsDone } from "@/lib/profile/validate";
@@ -49,7 +50,10 @@ export function GigsterHome({ personId }: { personId: string }) {
     draft: { title: "Finish your profile", body: `${progressLabel}. Submit it when it feels like you.`, href: "/profile/canvas/", cta: "Continue your profile" },
     submitted: { title: "We're reviewing your profile", body: "Nothing to do right now. We'll email you when it's approved or if we suggest a change.", href: "/profile/", cta: "See my profile" },
     changes_requested: { title: "Make the suggested edits", body: `${p.reviewNotes?.length ?? 0} short ${p.reviewNotes?.length === 1 ? "note" : "notes"} from the Between Gigs team.`, href: "/profile/canvas/", cta: "Make the changes" },
-    approved: { title: "Keep your availability fresh", body: `Confirm you're free in ${f?.month ?? "this month"} so clients know when to ask.`, href: "/profile/canvas/", cta: "Update availability" },
+    approved: isApprovedPrivate(p.status)
+      ? { title: APPROVED_NOT_PUBLIC, body: `${APPROVED_NOT_PUBLIC_LINE} ${APPROVED_EDIT_HINT}`, href: "/profile/", cta: "See my profile" }
+      : { title: "Keep your availability fresh", body: `Confirm you're free in ${f?.month ?? "this month"} so clients know when to ask.`, href: "/profile/canvas/", cta: "Update availability" },
+    published: { title: "Keep your availability fresh", body: `Confirm you're free in ${f?.month ?? "this month"} so clients know when to ask.`, href: "/profile/canvas/", cta: "Update availability" },
   }[p.status];
 
   if (brand) return (

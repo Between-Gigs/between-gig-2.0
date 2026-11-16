@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { personStatusMeta } from "@/components/people/PersonStatusBadge";
 import { personStatuses } from "@/lib/data/types";
 import { APPROVED_NOT_PUBLIC, APPROVED_NOT_PUBLIC_LINE, gigstersLabel, isApprovedPrivate, isPublicStatus, isReviewedStatus, ownerLabel, publishGateOn } from "./publish-gate";
 
@@ -44,7 +43,7 @@ describe("which statuses are public", () => {
 
 describe("labels per status", () => {
   it("every status has a badge", () => {
-    for (const s of personStatuses) expect(personStatusMeta[s]).toBeTruthy();
+    for (const s of personStatuses) for (const gate of [false, true]) { expect(gigstersLabel(s, gate)).not.toBe(""); expect(ownerLabel(s, gate)).not.toBe(""); }
   });
   it("flag off keeps today's words", () => {
     expect(gigstersLabel("approved", false)).toBe("Approved");
