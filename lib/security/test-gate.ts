@@ -8,7 +8,7 @@
  * - A right passphrase sets a signed cookie for 30 days. It is bound to the passphrase, so a new passphrase signs
  *   everyone out.
  * - 5 wrong tries in 15 minutes from one address, then 429 (in memory: one server instance on test).
- * - Exempt: Resend's signed webhook, the email images (mail clients fetch them without a cookie) and the healthcheck.
+ * - Exempt: Resend's signed webhook, the email images (mail clients fetch them without a cookie), the signed unsubscribe page (GET and One-Click POST) and the healthcheck.
  */
 // Web Crypto: runs the same in any runtime Next gives the proxy.
 
@@ -27,6 +27,8 @@ const LIMIT = { max: 5, windowMs: 15 * 60_000 };
 const WEBHOOK = /^\/webhooks\/resend\/?$/;
 // Reading an email image only: a plain file name with an image extension, nothing encoded.
 const EMAIL_IMAGE = /^\/email\/[A-Za-z0-9._-]+\.(?:png|jpe?g|gif|webp)$/;
+// The signed unsubscribe page and its One-Click POST: mail clients load it without a cookie; the token is the authorization.
+const UNSUBSCRIBE = /^\/unsubscribe\/?$/;
 const HEALTH = /^\/healthz\/?$/;
 
 export const gateEnv = (env: NodeJS.ProcessEnv = process.env): GateEnv => ({
@@ -117,6 +119,7 @@ export async function testGate(req: Request, env: GateEnv = gateEnv(), now = Dat
   // Public sample namespaces contain no live API or data credentials. Only reads bypass the test gate.
   if (read && /^(?:\/(?:hub|preview)(?:\/|$)|\/preview-access\/?$)/.test(url.pathname)) return null;
   if (WEBHOOK.test(url.pathname) || (read && EMAIL_IMAGE.test(url.pathname))) return null;
+  if ((read || req.method === "POST") && UNSUBSCRIBE.test(url.pathname)) return null;
   // Half configured: everything answers 503, the healthcheck included, so Railway doesn't call a closed site healthy.
   if (!env.secret) return text(503, "This test site is not configured yet.");
   if (HEALTH.test(url.pathname)) return null;

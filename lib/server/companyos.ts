@@ -122,6 +122,7 @@ export function companyOs(cfg: CompanyOsConfig) {
       call<{ userId: string; invitationId: string; url: string }>(cred, "POST", "/invitations", body),
     submitForm: (formKey: string, body: { email: string; answers?: Record<string, string>; placement?: string }) =>
       call<{ outcome: "created" | "merged" }>({ kind: "submitter" }, "POST", `/forms/${encodeURIComponent(formKey)}/submissions`, body),
+    // The API route needs no auth; the reader token is only the frontend's standard service call, so a missing COMPANY_OS_READ_TOKEN makes opt-out fail with 503.
     unsubscribe: (token: string, confirm = false) => call<{ ok: boolean }>({ kind: "reader" }, confirm ? "POST" : "GET", "/comms/unsubscribe" + (confirm ? "" : "?token=" + encodeURIComponent(token)), confirm ? { token } : undefined),
     /** Starts an upload: the file record (pending) and the one-time link its bytes go to. */
     startUpload: (cred: Credential, body: { ownerEntity: string; ownerId: string; kind: string; filename: string; mime: string; sizeBytes: number }) =>
