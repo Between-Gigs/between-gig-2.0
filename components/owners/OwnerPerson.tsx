@@ -160,11 +160,21 @@ function Person({ id }: { id: string }) {
     </EmptyNote>
   );
 
+  // Render only inside OwnerGate, separate from the public-profile preview.
+  const insuranceNote = fields?.insurance === "yes" && typeof fields.insuranceNotes === "string" ? fields.insuranceNotes.trim() : "";
+  const privateInsurance = insuranceNote ? (
+    <section className="mt-6 grid min-w-0 gap-2 rounded-lg border border-line bg-surface p-4 sm:p-6" aria-labelledby="owner-insurance-heading">
+      <h2 id="owner-insurance-heading" className="text-label-md text-ink">Private insurance description</h2>
+      <p className="text-body-sm text-ink-muted">Self-reported. Not shown on the public profile.</p>
+      <p id="owner-insurance-description" className="max-w-prose text-body-md whitespace-pre-wrap break-words text-ink">{insuranceNote}</p>
+    </section>
+  ) : null;
+
   if (p.status === "submitted" && fields) {
     return (
       <OwnerShell section={section}>
         {crumbs(name)}
-        <ReviewWorkspace person={p} fields={fields} queue={queue} history={history} scrolled={pastHero} header={<>{header}{heroMark}</>}>{preview("02")}</ReviewWorkspace>
+        <ReviewWorkspace person={p} fields={fields} queue={queue} history={history} scrolled={pastHero} header={<>{header}{heroMark}</>}>{privateInsurance}{preview("02")}</ReviewWorkspace>
       </OwnerShell>
     );
   }
@@ -176,6 +186,7 @@ function Person({ id }: { id: string }) {
       {header}
       {heroMark}
       {history.unsentDraft && <UnsentDraftFlag className="mt-4" />}
+      {privateInsurance}
       {/* Where they stand, as the page's first section: the notes they're working on, or that they're live. */}
       {p.status === "changes_requested" && (
         <Panel className="mt-8" number="01" title="Changes requested" aside="Waiting on their edits" flush>
