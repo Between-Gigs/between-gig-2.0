@@ -57,7 +57,9 @@ export type Sample = ImageSample | VideoSample;
 const PREFIX = "video:";
 const imageData = (v: unknown): v is string => typeof v === "string" && v.length < 4_000_000 && /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(v);
 const httpsUrl = (v: unknown): v is string => typeof v === "string" && /^https:\/\/[^\s]+$/.test(v) && v.length <= URL_MAX;
-const THUMB_OK = (v: unknown): v is string => imageData(v) || httpsUrl(v);
+/** A picture of this site's own media route (a file Company OS stored for the profile). */
+export const mediaPath = (v: unknown): v is string => typeof v === "string" && /^\/media\/[A-Za-z0-9-]{1,64}$/.test(v);
+const THUMB_OK = (v: unknown): v is string => imageData(v) || httpsUrl(v) || mediaPath(v);
 
 export function encodeVideoSample({ url, thumb, caption }: { url: string; thumb?: string; caption?: string }): string {
   return PREFIX + encodeURIComponent(JSON.stringify({ u: url, ...(thumb ? { t: thumb } : {}), ...(caption ? { c: caption.slice(0, CAPTION_MAX) } : {}) }));

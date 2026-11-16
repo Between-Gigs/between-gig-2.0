@@ -87,13 +87,15 @@ const text = (v: unknown) => (typeof v === "string" ? v : "");
  * link (2.0's /media route), or "". Fields a reader can't see (a public read has no ZIP or insurance) come back empty
  * or as the builder's default. Company OS values 2.0 has no answer for read as the nearest one (remote → on site).
  */
-export function fromProfile(data: Record<string, unknown>, items: ProfileItem[], photo: string): ProfileFields {
+export function fromProfile(data: Record<string, unknown>, items: ProfileItem[], photo: string, samples?: string[]): ProfileFields {
   const of = (kind: ProfileItem["kind"]) => items.filter((i) => i.kind === kind).sort((a, b) => a.position - b.position);
   const labels = (kind: ProfileItem["kind"]) => of(kind).map((i) => (kind === "credit" ? undefined : (Object.hasOwn(labelsByKind[kind],i.value) ? labelsByKind[kind][i.value] : undefined)) ?? i.value);
   const credits = of("credit");
   const years = data.years_experience;
   return {
     photo,
+    // Work samples read from Company OS (portfolio files and video links); absent unless the server read them.
+    ...(samples ? { workSamples: samples } : {}),
     name: text(data.display_name),
     years: typeof years === "number" ? String(years) : "",
     position: text(data.position),
