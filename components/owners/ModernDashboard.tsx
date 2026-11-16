@@ -1,4 +1,5 @@
 "use client";
+import { isPublicStatus, publishGateOn } from "@/lib/profile/publish-gate";
 import { Button, SegmentedControl } from "@ds/components";
 import { ArrowRight, Clock3, Mail } from "lucide-react";
 import { useState } from "react";
@@ -81,12 +82,13 @@ export function ModernDashboard({
   const showing = Math.min(limit, count);
   const photos = new Map(people.map((r) => [r.person.id, r.fields?.photo || undefined]));
   const approved = people
-    .filter((r) => r.person.status === "approved" && r.person.approvedAt)
+    .filter((r) => isPublicStatus(r.person.status) && r.person.approvedAt)
     .map((r) => Date.parse(r.person.approvedAt!));
   const trend = Array.from(
     { length: 8 },
     (_, i) => approved.filter((date) => date <= now - (7 - i) * 7 * 86400000).length,
   );
+  const gate = publishGateOn();
   const metrics: { key: DashboardView; label: string; value: number; hint?: string }[] = [
     { key: "submitted", label: "Waiting for review", value: submitted, hint: "Submitted, ready for review" },
     {
@@ -95,7 +97,8 @@ export function ModernDashboard({
       value: d.counts.changes_requested,
       hint: "Sent back for changes",
     },
-    { key: "approved", label: "Live profiles", value: d.counts.approved },
+    { key: gate ? "published" : "approved", label: "Live profiles", value: gate ? d.counts.published : d.counts.approved },
+    ...(gate ? [{ key: "approved" as const, label: "Approved", value: d.counts.approved, hint: "Not public yet" }] : []),
     { key: "not_invited", label: "Ready to invite", value: d.waitlist.not_invited },
   ];
   const pick = (next: DashboardView, scope: "all" | "invited" = "all") => {
@@ -164,7 +167,7 @@ export function ModernDashboard({
               {m.key === "not_invited" && <small> / {d.waitlist.total}</small>}
             </strong>
             {m.hint && <span className="mo-hint">{m.hint}</span>}
-            {m.key === "approved" && (
+            {m.key === (gate ? "published" : "approved") && (
               <span
                 className="mo-trend"
                 role="img"
