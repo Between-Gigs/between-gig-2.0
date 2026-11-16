@@ -71,4 +71,25 @@ describe("gate on", () => {
     expect(after.counts.approved).toBe(before.counts.approved + 1);
     expect(after.counts.published).toBe(before.counts.published);
   });
+
+  it("editing an approved-private profile and sending again puts it back in review, still not public", async () => {
+    await s.owners.approve("imani-carter");
+    const d = (await s.profiles.getDraft("imani-carter"))!;
+    await s.profiles.saveDraft("imani-carter", { ...d.fields, about: "Edited after approval." }, d.step);
+    const r = await s.profiles.submit("imani-carter");
+    expect(r.person.status).toBe("submitted");
+    expect(await s.people.getPublic(r.person.slug)).toEqual({ person: null, profile: null });
+  });
+  it("undoing an approval leaves an unrelated queued approved email alone", async () => {
+    await s.owners.approve("imani-carter");
+    const email = (await s.people.get("imani-carter"))!.person.email;
+    await s.emails.queue("approved", email, { firstName: "Imani", profileUrl: "x", editUrl: "y" });
+    const queued = (await s.emails.outbox()).filter((e) => e.template === "approved" && e.to === email).length;
+    await s.owners.undoReview("imani-carter");
+    expect((await s.emails.outbox()).filter((e) => e.template === "approved" && e.to === email).length).toBe(queued);
+  });
+  it("the funnel's Approved stage and its list agree (approved plus published)", async () => {
+    const d = await s.owners.dashboard();
+    expect(d.funnel.approved).toBe(d.invitedCounts.approved + d.invitedCounts.published);
+  });
 });

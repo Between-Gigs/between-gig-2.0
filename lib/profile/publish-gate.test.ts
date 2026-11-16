@@ -53,7 +53,11 @@ describe("labels per status", () => {
     expect(APPROVED_NOT_PUBLIC).toBe("Approved, not yet public");
     expect(gigstersLabel("approved", true)).toBe(APPROVED_NOT_PUBLIC);
     expect(gigstersLabel("published", true)).toBe("Live");
-    expect(APPROVED_NOT_PUBLIC_LINE).toBe("The Between Gigs team approved your profile. It goes public when we launch the directory.");
+    expect(APPROVED_NOT_PUBLIC_LINE).toBe("The Between Gigs team approved your profile. It goes public when the team publishes it.");
+  });
+  it("an unknown status reads as Draft", () => {
+    expect(gigstersLabel("mystery" as never, true)).toBe("Draft");
+    expect(ownerLabel("mystery" as never, false)).toBe("Draft");
   });
   it("gate on: the owner reads 'Approved, not public' and 'Live'", () => {
     expect(ownerLabel("approved", true)).toBe("Approved, not public");
