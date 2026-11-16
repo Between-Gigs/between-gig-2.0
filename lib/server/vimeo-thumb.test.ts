@@ -51,4 +51,23 @@ describe("createVimeoThumbs", () => {
     await Promise.all([get("1"), get("1"), get("1")]); expect(fetcher).toHaveBeenCalledTimes(1);
     await get("2"); await get("3"); await get("1"); expect(fetcher).toHaveBeenCalledTimes(4);
   });
+  it("reads at most 64 KB of the oEmbed answer (declared length or streamed)", async () => {
+    const big = JSON.stringify({ thumbnail_url: "https://i.vimeocdn.com/x.jpg", pad: "x".repeat(70_000) });
+    expect(await createVimeoThumbs({ fetcher: async () => new Response(big, { status: 200, headers: { "content-length": String(big.length) } }) })("5")).toBeNull();
+    const stream = new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode(big)); c.close(); } });
+    expect(await createVimeoThumbs({ fetcher: async () => new Response(stream, { status: 200 }) })("6")).toBeNull();
+  });
+  it("at most 5 lookups at once: the rest get the placeholder without calling Vimeo", async () => {
+    const release: (() => void)[] = [];
+    const fetcher = vi.fn(() => new Promise<Response>((ok) => release.push(() => ok(oembed("https://i.vimeocdn.com/a.jpg")))));
+    const get = createVimeoThumbs({ fetcher, maxInflight: 5 });
+    const first = ["1", "2", "3", "4", "5"].map((id) => get(id));
+    expect(await get("6")).toBeNull();
+    expect(fetcher).toHaveBeenCalledTimes(5);
+    release.forEach((r) => r());
+    expect(await Promise.all(first)).toEqual(Array(5).fill("https://i.vimeocdn.com/a.jpg"));
+    release.length = 0;
+    const later = get("6"); release.forEach((r) => r());
+    expect(await later).toBe("https://i.vimeocdn.com/a.jpg");
+  });
 });
