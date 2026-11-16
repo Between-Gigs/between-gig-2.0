@@ -88,3 +88,9 @@ it("multiline equipment stays a tools-only autosave with unchanged legacy transp
   expect(ops[0].data).not.toHaveProperty("transport");
   expect(ops[0].data).not.toHaveProperty("photo");
 });
+
+it("editing equipment preserves a retired nonempty transport answer without sending a transport mutation",()=>{
+  const legacy={...fields,transport:"Fictional legacy transport answer"};
+  expect(draftOps(PERSON,{...legacy,tools:"Fictional updated lighting kit"},stored(legacy))).toEqual([{op:"update",entity:"profile",id:"prof",data:{tools:"Fictional updated lighting kit"}}]);
+  const mapped=toProfile(legacy);expect(fromProfile(mapped.data,mapped.items,legacy.photo).transport).toBe(legacy.transport);
+});
