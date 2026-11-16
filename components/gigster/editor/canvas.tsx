@@ -7,14 +7,21 @@
  * opens its field. Patti's and Peter's corrections to that mockup are applied: "Your name" (not "public name"), up to
  * five services with their standard description, the film and TV questions, 1 of 4 personality questions, and no "0%".
  */
-import { Button, Field, Input, RadioGroup, Select, Switch, Textarea } from "@ds/components";
+import { Button, Checkbox, Field, Input, RadioGroup, Select, Switch, Textarea } from "@ds/components";
 import { cx } from "@ds/components/cx";
 import { Camera, Crop as CropIcon, GripVertical, Lock, MapPin, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { data } from "@/lib/data";
 import { laServiceAreas, onSetSkills, serviceChoices } from "@/lib/data/taxonomy";
 import { personalityQuestions } from "@/lib/profile/personality";
+import { departmentFieldRetired } from "@/lib/profile/department-retirement";
 import { serviceDescription } from "@/lib/profile/service-descriptions";
+import { locationControlsEnabled, travelRadiusOptions } from "@/lib/profile/location-controls";
+import { travelPreferenceEnabled } from "@/lib/profile/travel-preference";
+import { customSkillsEnabled } from "@/lib/profile/skills";
+import { SkillPicker } from "./SkillPicker";
+import { POSTAL_CODE_MAX } from "@/lib/profile/postal";
+import { INSURANCE_NOTES_MAX } from "@/lib/profile/insurance";
 import { stageTwoLimits } from "@/lib/profile/stage-two";
 import { ABOUT_MAX, DATES_MAX, DEPARTMENT_MAX, MAX_SERVICES, NAME_MAX, SERVICE_LINE_MAX, TITLE_MAX, hasRate } from "@/lib/profile/validate";
 import { Credits } from "@/components/builder/ProfileBuilder";
@@ -85,7 +92,7 @@ function InPlace({ id, label, value, placeholder, onChange, maxLength, size, err
 export function CanvasIdentity({ d, set, errors, personId, confirmPhoto, required }: SectionProps & {
   personId: string; required: (field: string) => boolean; confirmPhoto: (go: () => void) => void;
 }) {
-  const [whereOpen, openWhere] = useOpen(!!(d.zip || d.travel || d.areas.length || d.market === "other" || errors.zip || errors.areas || errors.otherCity || errors.travel));
+  const [whereOpen, openWhere] = useOpen(!!(d.zip || d.travel || d.travelBeyondLA === true || d.areas.length || d.market === "other" || errors.zip || errors.areas || errors.otherCity || errors.travel));
   return (
     <section id="sec-identity" aria-label="About you" className="grid scroll-mt-40 gap-8 md:grid-cols-12 md:gap-10">
       <div className="min-w-0 md:col-span-4">
@@ -101,23 +108,29 @@ export function CanvasIdentity({ d, set, errors, personId, confirmPhoto, require
                 options={[{ value: "la", label: "Los Angeles" }, { value: "other", label: "Somewhere else" }]} />
               <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
                 <Field label={d.market === "la" ? "ZIP code" : "ZIP or postal code"} optional={!required("zip")} error={errors.zip}>
-                  <Input id="f-zip" inputMode="numeric" autoComplete="postal-code" value={d.zip} start={<MapPin />} placeholder="90026"
-                    onChange={(e) => set("zip")(e.target.value.replace(/\D/g, "").slice(0, 5))} />
+                  <Input id="f-zip" inputMode={d.market === "la" ? "numeric" : "text"} autoComplete="postal-code" value={d.zip} start={<MapPin />} placeholder={d.market === "la" ? "90026" : "ZIP or postal code"} maxLength={d.market === "la" ? 5 : POSTAL_CODE_MAX}
+                    onChange={(e) => set("zip")(d.market === "la" ? e.target.value.replace(/\D/g, "").slice(0, 5) : e.target.value.slice(0, POSTAL_CODE_MAX))} />
                 </Field>
                 <Field label="Travel radius" optional={!required("travel")} error={errors.travel}>
-                  <Input id="f-travel" value={d.travel} placeholder="e.g. Up to 15 miles" onChange={(e) => set("travel")(e.target.value.slice(0, 80))} />
+                  {locationControlsEnabled()
+                    ? <Select id="f-travel" aria-label="Travel radius" value={d.travel} placeholder="Choose a travel radius" options={travelRadiusOptions(d.travel)} onValueChange={set("travel")} />
+                    : <Input id="f-travel" value={d.travel} placeholder="e.g. Up to 15 miles" onChange={(e) => set("travel")(e.target.value.slice(0, 80))} />}
                 </Field>
               </div>
+              {travelPreferenceEnabled() && <div className="grid gap-2">
+                <Checkbox id="f-travelBeyondLA" className="min-h-11 items-center" aria-describedby="f-travel-preference-hint" checked={d.travelBeyondLA === true} onChange={e=>set("travelBeyondLA")(e.target.checked)} label="I’m willing to travel beyond Los Angeles." />
+                <p id="f-travel-preference-hint" className="text-body-sm text-ink-muted">Optional. If selected, this appears on your profile after approval. It does not change your travel radius.</p>
+              </div>}
               {d.market === "other"
                 ? <Field label="City / region and country" optional={!required("location")} error={errors.otherCity} hint="Los Angeles is the launch market. Your profile is held for a future market.">
                     <Input id="f-otherCity" value={d.otherCity} onChange={(e) => set("otherCity")(e.target.value)} />
                   </Field>
-                : <div className="grid gap-2">
+                : !locationControlsEnabled() ? <div className="grid gap-2">
                     <p className="text-label-md text-ink">Areas you serve{!required("location") && <span className="ml-2 text-body-sm font-normal text-ink-subtle">Optional</span>}</p>
                     <Pills label="Areas you serve" options={laServiceAreas} isOn={(o) => d.areas.includes(o)}
                       onToggle={(o) => set("areas")(d.areas.includes(o) ? d.areas.filter((a) => a !== o) : [...d.areas, o])} />
                     <GroupError id="f-areas-error">{errors.areas}</GroupError>
-                  </div>}
+                  </div> : null}
             </div>
           ) : <AddLink onClick={openWhere}>ZIP or postal code &amp; travel radius</AddLink>}
           <p className="text-body-sm text-ink-muted italic">Your home address stays private.</p>
@@ -133,7 +146,6 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
   const [adding, setAdding] = React.useState(false);
   const lines = d.serviceLines ?? {};
   const rows = d.services;
-  const showBlank = rows.length === 0 || (adding && rows.length < MAX_SERVICES);
   const setLine = (service: string, text: string) => set("serviceLines")({ ...lines, [service]: text.slice(0, SERVICE_LINE_MAX) });
   const replace = (i: number, next: string) => {
     const prev = rows[i];
@@ -142,7 +154,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
     set("services")(rows.map((s, j) => (j === i ? next : s)));
     set("serviceLines")(nextLines);
   };
-  const add = (next: string) => { set("services")([...rows, next]); setAdding(false); };
+  const add = (next: string) => { if (count >= MAX_SERVICES) return; set("services")([...rows, next]); setAdding(false); };
   const remove = (i: number) => {
     const nextLines = { ...lines };
     delete nextLines[rows[i]];
@@ -150,33 +162,60 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
     set("serviceLines")(nextLines);
   };
   const [otherOpen, setOtherOpen] = React.useState(!!d.other.trim());
+  // Keep incoming saved text visible; also reserve a slot for an open, empty custom input.
+  const otherVisible = otherOpen || !!d.other.trim();
+  const count = rows.length + Number(otherVisible);
+  const showBlank = count < MAX_SERVICES && (rows.length === 0 || adding);
   const OTHER = "__other";
   const optionsFor = (current?: string) => [
     ...choices.filter((c) => c === current || !rows.includes(c)).map((c) => ({ value: c, label: c })),
     // Not on the list: the team reviews a new service before it shows (it is stored as "Something else").
-    ...(current === undefined && !otherOpen ? [{ value: OTHER, label: "Something else: name your own" }] : []),
+    ...(current === undefined && !otherVisible ? [{ value: OTHER, label: "Other — name your service" }] : []),
   ];
   // "Something else" holds the service's name on its first line and what they'd do after it.
   const [otherName = "", ...otherRest] = d.other.split("\n");
   const otherLine = otherRest.join(" ");
   const setOther = (name: string, line: string) => set("other")(line.trim() ? `${name}\n${line.slice(0, SERVICE_LINE_MAX)}` : name);
   const pickNew = (next: string) => {
+    if (count >= MAX_SERVICES) return;
     if (next !== OTHER) return add(next);
     setOtherOpen(true); setAdding(false);
     requestAnimationFrame(() => document.getElementById("f-other")?.focus());
   };
   // Order: drag the grip, or focus it and use the arrow keys. The first service leads the profile.
   const items = React.useRef<(HTMLLIElement | null)[]>([]);
+  const list = React.useRef<HTMLOListElement | null>(null);
+  const activePointer = React.useRef<{ id: number; service: string; capture: HTMLOListElement } | null>(null);
   const [dragging, setDragging] = React.useState<number | null>(null);
   const [said, setSaid] = React.useState("");
   const swap = (i: number, j: number) => { const next = [...rows]; [next[i], next[j]] = [next[j], next[i]]; set("services")(next); };
-  const drag = (e: React.PointerEvent) => {
-    if (dragging === null) return;
-    const up = items.current[dragging - 1]?.getBoundingClientRect(), down = items.current[dragging + 1]?.getBoundingClientRect();
-    if (up && e.clientY < up.top + up.height / 2) { swap(dragging, dragging - 1); setDragging(dragging - 1); }
-    else if (down && e.clientY > down.top + down.height / 2) { swap(dragging, dragging + 1); setDragging(dragging + 1); }
+  const finish = (pointerId: number, stopped = false) => {
+    const active = activePointer.current;
+    if (!active || active.id !== pointerId) return;
+    activePointer.current = null;
+    // Clear ownership before releasing capture: the browser may synchronously report its loss.
+    try { if (active.capture.hasPointerCapture(pointerId)) active.capture.releasePointerCapture(pointerId); } catch { /* Already released by the browser. */ }
+    const position = rows.indexOf(active.service);
+    setSaid(!stopped && position >= 0 ? `Moved to position ${position + 1} of ${rows.length}.` : "Reordering stopped.");
+    setDragging(null);
   };
-  const drop = () => { if (dragging !== null) setSaid(`Moved to position ${dragging + 1} of ${rows.length}.`); setDragging(null); };
+  const start = (e: React.PointerEvent, i: number) => {
+    const capture = list.current, service = rows[i];
+    if (!e.isPrimary || e.button !== 0 || activePointer.current || !capture || !service) return;
+    // The list stays mounted while its rows move; a moved row can lose pointer capture.
+    try { capture.setPointerCapture(e.pointerId); } catch { return; }
+    activePointer.current = { id: e.pointerId, service, capture };
+    setDragging(i);
+  };
+  const drag = (e: React.PointerEvent) => {
+    const active = activePointer.current;
+    if (!active || active.id !== e.pointerId) return;
+    const i = rows.indexOf(active.service);
+    if (i < 0 || (e.pointerType === "mouse" && !(e.buttons & 1))) { finish(e.pointerId, true); return; }
+    const up = items.current[i - 1]?.getBoundingClientRect(), down = items.current[i + 1]?.getBoundingClientRect();
+    if (up && e.clientY < up.top + up.height / 2) { swap(i, i - 1); setDragging(i - 1); }
+    else if (down && e.clientY > down.top + down.height / 2) { swap(i, i + 1); setDragging(i + 1); }
+  };
   const key = (e: React.KeyboardEvent, i: number) => {
     const j = e.key === "ArrowUp" ? i - 1 : e.key === "ArrowDown" ? i + 1 : -1;
     if (j < 0 || j >= rows.length) return;
@@ -191,7 +230,9 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
         <H id="sec-help-h">How I can help</H>
         <p id="services-hint" className="max-w-xl text-body-md text-ink-muted">The most important part of your profile. Choose a service, then say in one line what a customer can hire you to do. One clear service is enough to start. Five is the maximum.{rows.length > 1 && " Drag the grip to put your main service first."}</p>
       </div>
-      <ol className="grid gap-5">
+      {!otherVisible && count < MAX_SERVICES && <div><Button variant="secondary" iconStart={<Plus />} onClick={() => pickNew(OTHER)}>Other — name your service</Button></div>}
+      <ol ref={list} className="grid gap-5" onPointerMove={drag}
+        onPointerUp={(e) => finish(e.pointerId)} onPointerCancel={(e) => finish(e.pointerId, true)} onLostPointerCapture={(e) => finish(e.pointerId, true)}>
         {rows.map((s, i) => {
           const standard = serviceDescription(s);
           const line = lines[s] ?? "";
@@ -206,8 +247,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
                       title="Drag to reorder, or use the arrow keys"
                       className={cx("grid size-10 shrink-0 touch-none place-items-center rounded-md text-ink-subtle transition-colors hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-ink-brand",
                         dragging === i ? "cursor-grabbing text-ink-brand" : "cursor-grab")}
-                      onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDragging(i); }}
-                      onPointerMove={drag} onPointerUp={drop} onPointerCancel={drop} onKeyDown={(e) => key(e, i)}>
+                      onPointerDown={(e) => start(e, i)} onKeyDown={(e) => key(e, i)}>
                       <GripVertical aria-hidden="true" className="size-5" />
                     </button>
                   )}
@@ -231,7 +271,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
             </li>
           );
         })}
-        {otherOpen && (
+        {otherVisible && (
           // Their own service, laid out like the others: its name, then what a customer can hire them to do. Both go
           // in "Something else" (name on the first line), which the team reviews before it shows.
           <li key="other" className="grid gap-3 border-b border-line pb-5">
@@ -260,8 +300,8 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
           <li key="blank" className="grid gap-2 sm:grid-cols-12 sm:items-start sm:gap-0">
             <div className="grid gap-1 sm:col-span-5 sm:pr-5">
               <label htmlFor={`f-service-${rows.length}`} className="sr-only">{rows.length ? `Service ${rows.length + 1}` : "Your first service"}</label>
-              <Select id={`f-service-${rows.length}`} options={optionsFor()} placeholder="Choose a service" invalid={!rows.length && !otherOpen && !!errors.services} onValueChange={pickNew} />
-              {!rows.length && errors.services && <p className="text-body-sm text-danger">{errors.services}</p>}
+              <Select id={`f-service-${rows.length}`} options={optionsFor()} placeholder="Choose a service" invalid={!rows.length && !otherVisible && !!errors.services} onValueChange={pickNew} />
+              {!rows.length && !otherVisible && errors.services && <p className="text-body-sm text-danger">{errors.services}</p>}
             </div>
             <div className="grid gap-1 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
               <p className="text-body-md text-ink-muted">What can a customer hire you to do?</p>
@@ -272,9 +312,9 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
         )}
       </ol>
       <p role="status" aria-live="polite" className="sr-only">{said}</p>
-      <GroupError id="f-services-error">{rows.length ? errors.services : undefined}</GroupError>
-      {!showBlank && (rows.length < MAX_SERVICES
-        ? <div><Button variant="secondary" iconStart={<Plus />} onClick={() => setAdding(true)}>Add another service <span className="text-ink-muted">· {rows.length} of {MAX_SERVICES}</span></Button></div>
+      <GroupError id="f-services-error">{rows.length || otherVisible ? errors.services : undefined}</GroupError>
+      {!showBlank && (count < MAX_SERVICES
+        ? <div><Button variant="secondary" iconStart={<Plus />} onClick={() => setAdding(true)}>Add another service <span className="text-ink-muted">· {count} of {MAX_SERVICES}</span></Button></div>
         : <p className="text-body-sm text-ink-muted">That&apos;s the most: {MAX_SERVICES} services. Remove one to add another.</p>)}
     </section>
   );
@@ -458,7 +498,8 @@ export function CanvasSamples({ d, set }: SectionProps) {
 
 /** Skills & experience comes before services; fields and save contracts are unchanged. */
 export function CanvasExperience({ d, set, errors, required }: SectionProps & { required: (field: string) => boolean }) {
-  const [expOpen, openExp] = useOpen(!!(d.position || d.years || d.about || d.skills.length || errors.position || errors.about || errors.years || errors.skills));
+  const retired = departmentFieldRetired();
+  const [expOpen, openExp] = useOpen(!!((!retired && (d.position || errors.position)) || d.years || d.about || d.skills.length || errors.about || errors.years || errors.skills));
   const col = "grid min-w-0 scroll-mt-40 content-start gap-4";
   return (
       <section id="sec-film" aria-labelledby="sec-film-h" className={col}>
@@ -466,13 +507,15 @@ export function CanvasExperience({ d, set, errors, required }: SectionProps & { 
         <p className="text-body-md text-ink">What kind of work do you do in the entertainment industry, and how does that experience help you deliver this service?</p>
         {expOpen ? (
           <div className="grid items-start gap-6 lg:grid-cols-2">
-            <Field label="Department or role" optional={!required("position")} error={errors.position}>
+            {!retired && <Field label="Department or role" optional={!required("position")} error={errors.position}>
               <Input id="f-position" maxLength={DEPARTMENT_MAX} value={d.position} placeholder="e.g. Costume & wardrobe" onChange={(e) => set("position")(e.target.value.slice(0, DEPARTMENT_MAX))} />
-            </Field>
+            </Field>}
             <div className="grid gap-2">
               <p className="text-label-md text-ink">On-set skills{!required("skills") && <span className="ml-2 text-body-sm font-normal text-ink-subtle">Optional</span>}</p>
-              <Pills label="On-set skills" options={onSetSkills} isOn={(o) => d.skills.includes(o)}
-                onToggle={(o) => { set("skills")(d.skills.includes(o) ? d.skills.filter((s) => s !== o) : [...d.skills, o]); if (!d.position.trim()) set("position")(o); }} />
+              {customSkillsEnabled()
+                ? <SkillPicker value={d.skills} describedBy={errors.skills ? "f-skills-error" : undefined} onChange={(skills,added) => { set("skills")(skills); if (!retired && !d.position.trim() && added && onSetSkills.includes(added)) set("position")(added); }} />
+                : <Pills label="On-set skills" options={onSetSkills} isOn={(o) => d.skills.includes(o)}
+                    onToggle={(o) => { set("skills")(d.skills.includes(o) ? d.skills.filter((s) => s !== o) : [...d.skills, o]); if (!retired && !d.position.trim()) set("position")(o); }} />}
               <GroupError id="f-skills-error">{errors.skills}</GroupError>
             </div>
             <Field label="Years in the Entertainment Industry" optional={!required("years")} error={errors.years}>
@@ -540,25 +583,39 @@ export function CanvasColumns({ d, set, errors, required }: SectionProps & { req
 
 /** "Details · Optional": what the profile's Details block shows (languages and how they work), asked right here. */
 export function CanvasDetails({ d, set }: SectionProps) {
-  const filled = !!(d.languages.trim() || d.tools.trim() || d.transport.trim() || d.mode !== "on-site" || d.insurance !== "private");
+  const filled = !!(d.languages.trim() || d.tools.trim() || d.mode !== "on-site" || d.insurance !== "private" || d.insuranceNotes?.trim());
   const [open, openIt] = useOpen(filled);
+  const atClient = d.mode === "on-site" || d.mode === "both";
+  const atBusiness = d.mode === "studio" || d.mode === "both";
+  const chooseLocations = (client: boolean, business: boolean) => {
+    if (!client && !business) return; // Existing work_mode contract always has at least one location.
+    set("mode")(client && business ? "both" : business ? "studio" : "on-site");
+  };
   return (
     <section id="sec-details" aria-labelledby="sec-details-h" className="grid scroll-mt-40 gap-5">
       <H id="sec-details-h" tag="Optional" size="md">Details</H>
       {!open ? (
         <div className="grid gap-1">
           <AddLink id="f-details-open" onClick={() => { openIt(); requestAnimationFrame(() => document.getElementById("f-languages")?.focus()); }}>Add languages and how you work</AddLink>
-          <p className="text-body-sm text-ink-muted">Languages you speak, on site or at your studio, transport and tools. They show under Details on your profile.</p>
+          <p className="text-body-sm text-ink-muted">Languages you speak, on site or at your studio, and tools. They show under Details on your profile.</p>
         </div>
       ) : (
         <div className="grid items-start gap-x-10 gap-y-5 md:grid-cols-2">
           <Field label="Languages" optional><Input id="f-languages" value={d.languages} placeholder="e.g. English, Spanish" maxLength={120} onChange={(e) => set("languages")(e.target.value)} /></Field>
-          <RadioGroup name="f-mode" label="How you work" value={d.mode} onChange={(v) => set("mode")(v as typeof d.mode)}
-            options={[{ value: "on-site", label: "On site, at the client's place" }, { value: "studio", label: "At my studio" }, { value: "both", label: "Both" }]} />
-          <Field label="Transport" optional><Input id="f-transport" value={d.transport} placeholder="e.g. Car, can carry a rolling rack" maxLength={120} onChange={(e) => set("transport")(e.target.value)} /></Field>
+          <fieldset className="grid content-start gap-3" aria-describedby="work-locations-hint">
+            <legend className="mb-2 text-label-md text-ink">Where you work</legend>
+            <p id="work-locations-hint" className="text-body-sm text-ink-muted">Select one or both locations.</p>
+            <Checkbox id="f-mode-client" label="On Site, at the client’s location." checked={atClient} disabled={atClient && !atBusiness}
+              onChange={(e) => chooseLocations(e.target.checked, atBusiness)} />
+            <Checkbox id="f-mode-business" label="At my office, studio or other place of business." checked={atBusiness} disabled={atBusiness && !atClient}
+              onChange={(e) => chooseLocations(atClient, e.target.checked)} />
+          </fieldset>
           <Field label="Tools and equipment" optional><Textarea id="f-tools" rows={4} value={d.tools} placeholder="Special Cameras, Lighting Kit, Box Truck, Makeup kit, etc." maxLength={160} onChange={(e) => set("tools")(e.target.value)} /></Field>
           <RadioGroup name="f-insurance" label={<>Insurance <span className="font-normal text-ink-subtle">· optional, self-reported</span></>} value={d.insurance} onChange={(v) => set("insurance")(v as typeof d.insurance)}
             options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance yet" }]} />
+          {d.insurance === "yes" && <Field label="Describe your liability insurance" optional hint="For the Between Gigs team. Not shown on your public profile.">
+            <Textarea id="f-insurance-notes" rows={3} maxLength={INSURANCE_NOTES_MAX} showCount value={d.insuranceNotes ?? ""} onChange={(e) => set("insuranceNotes")(e.target.value)} />
+          </Field>}
         </div>
       )}
     </section>

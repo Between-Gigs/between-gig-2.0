@@ -48,6 +48,7 @@ export function toProfile(f: ProfileFields, opts: { extras?: boolean } = {}): { 
     home_city: f.market === "other" ? f.otherCity.trim() : "",
     postal_code: f.zip.trim(),
     travel_notes: f.travel.trim(),
+    ...(typeof f.travelBeyondLA === "boolean" ? { extended_travel_available: f.travelBeyondLA } : {}),
     ...(/^\d{4}-\d{2}$/.test(f.month) ? { availability_month: f.month } : {}),
     availability_status: availability[f.monthStatus],
     availability_notes: f.dates.trim(),
@@ -56,6 +57,8 @@ export function toProfile(f: ProfileFields, opts: { extras?: boolean } = {}): { 
     about: f.about.trim(),
     languages: f.languages.trim(),
     insurance_disclosure: insurance[f.insurance],
+    // Omitted by legacy clients: never erase a stored note merely because their model lacks it.
+    ...(typeof f.insuranceNotes === "string" ? { insurance_notes: f.insuranceNotes.trim() } : {}),
     tools: f.tools.trim(),
     transport: f.transport.trim(),
     work_mode: mode[f.mode],
@@ -66,13 +69,17 @@ export function toProfile(f: ProfileFields, opts: { extras?: boolean } = {}): { 
     .map((value, i) => ({ value: value.trim(), visible: f.creditPins?.[i] !== false }))
     .filter((c) => c.value)
     .map((c, position) => ({ kind: "credit" as const, value: c.value, position, visible: c.visible }));
-  const list = (kind: ProfileItem["kind"], labels: string[]) => labels.map((label, position) => ({ kind, value: optionKey(label), position }));
+  const list = (kind: ProfileItem["kind"], labels: string[]) => labels.map((label, position) => ({ kind, value: kind === "skill" && !onSetSkills.includes(label) ? label : optionKey(label), position }));
   const items: ProfileItem[] = [...credits, ...list("skill", f.skills), ...list("service", f.services), ...(f.market === "la" ? list("area", f.areas) : [])];
   return { data, items };
 }
 
 const invert = <K extends string>(m: Record<K, string>) => Object.fromEntries(Object.entries(m).map(([k, v]) => [v, k])) as Record<string, K>;
-const labelOf = Object.fromEntries([...onSetSkills, ...offSetServices, ...laServiceAreas].map((l) => [optionKey(l), l]));
+const labelsByKind = {
+  skill: Object.fromEntries(onSetSkills.map(l => [optionKey(l),l])),
+  service: Object.fromEntries(offSetServices.map(l => [optionKey(l),l])),
+  area: Object.fromEntries(laServiceAreas.map(l => [optionKey(l),l])),
+};
 const text = (v: unknown) => (typeof v === "string" ? v : "");
 
 /**
@@ -82,7 +89,7 @@ const text = (v: unknown) => (typeof v === "string" ? v : "");
  */
 export function fromProfile(data: Record<string, unknown>, items: ProfileItem[], photo: string): ProfileFields {
   const of = (kind: ProfileItem["kind"]) => items.filter((i) => i.kind === kind).sort((a, b) => a.position - b.position);
-  const labels = (kind: ProfileItem["kind"]) => of(kind).map((i) => labelOf[i.value] ?? i.value);
+  const labels = (kind: ProfileItem["kind"]) => of(kind).map((i) => (kind === "credit" ? undefined : (Object.hasOwn(labelsByKind[kind],i.value) ? labelsByKind[kind][i.value] : undefined)) ?? i.value);
   const credits = of("credit");
   const years = data.years_experience;
   return {
@@ -101,6 +108,7 @@ export function fromProfile(data: Record<string, unknown>, items: ProfileItem[],
     zip: text(data.postal_code),
     areas: labels("area"),
     travel: text(data.travel_notes),
+    ...(typeof data.extended_travel_available === "boolean" ? { travelBeyondLA: data.extended_travel_available } : {}),
     month: text(data.availability_month),
     monthStatus: invert(availability)[text(data.availability_status)] ?? "available",
     dates: text(data.availability_notes),
@@ -109,6 +117,7 @@ export function fromProfile(data: Record<string, unknown>, items: ProfileItem[],
     about: text(data.about),
     languages: text(data.languages),
     insurance: invert(insurance)[text(data.insurance_disclosure)] ?? "private",
+    ...(typeof data.insurance_notes === "string" ? { insuranceNotes: data.insurance_notes } : {}),
     tools: text(data.tools),
     transport: text(data.transport),
     mode: invert(mode)[text(data.work_mode)] ?? "on-site",

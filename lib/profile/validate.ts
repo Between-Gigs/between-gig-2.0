@@ -1,6 +1,10 @@
+import { locationControlsEnabled } from "./location-controls";
+import { customServiceError, customServiceReviewEnabled } from "./custom-service";
+import { departmentFieldRetired } from "./department-retirement";
+import { postalCodeError, validPostalCode } from "./postal";
 import type { ProfileFields, ProfileSection, ReviewNote } from "@/lib/data/types";
 import { stageTwoLimits, startDateLabel } from "./stage-two";
-import { profileFieldParts, readProfileTemplate, requiredProfileParts, type ProfileFieldRule, type ProfilePartId, type ProfileTemplate } from "./template";
+import { profileFieldParts, readProfileTemplate, requiredProfileParts, requiredProfileRules, type ProfileFieldRule, type ProfilePartId, type ProfileTemplate } from "./template";
 export type { ProfilePartId } from "./template";
 
 /** The builder's five steps. The first four are profile sections; the fifth is the review. */
@@ -38,6 +42,7 @@ export function contentChanged(a: ProfileFields, b: ProfileFields): boolean {
     // The editor's answers as sorted pairs (a replacer list would drop nested keys), and absent when empty.
     const lines = Object.entries(f.serviceLines ?? {}).filter(([, v]) => v.trim()).sort(([a], [b]) => a.localeCompare(b));
     if (lines.length) rest.serviceLines = lines; else delete rest.serviceLines;
+    if (f.insuranceNotes?.trim()) rest.insuranceNotes = f.insuranceNotes.trim(); else delete rest.insuranceNotes;
     for (const key of ["personalityQuestion", "title"] as const) if (!f[key]) delete rest[key];
     // A draft saved before the booking questions existed has the same answers as blank inputs.
     for (const key of Object.keys(stageTwoLimits) as (keyof typeof stageTwoLimits)[]) {
@@ -82,7 +87,7 @@ const missingAnswer: Record<ProfileFieldRule, string> = {
 
 function answered(key: ProfileFieldRule, d: ProfileFields): boolean {
   switch (key) {
-    case "location": return d.market === "other" ? !!d.otherCity.trim() : d.areas.length > 0;
+    case "location": return d.market === "other" ? !!d.otherCity.trim() : locationControlsEnabled() || d.areas.length > 0;
     case "services": return d.services.length > 0 || !!d.other.trim();
     case "credits": return d.credits.some((c) => c.trim());
     case "skills": return d.skills.length > 0;
@@ -95,28 +100,29 @@ const answerKey = (key: ProfileFieldRule, d: ProfileFields) => key === "location
 
 export function validateStep(step: number, d: ProfileFields, template = readProfileTemplate()): FieldErrors {
   const e: FieldErrors = {};
-  for (const rule of template.required) {
+  for (const rule of requiredProfileRules(template)) {
     const key = answerKey(rule, d);
     if (fieldStep[key] === step && !answered(rule, d)) {
-      e[key] = key === "otherCity" ? "Enter your city, region and country." : missingAnswer[rule];
+      e[key] = key === "otherCity" ? "Enter your city, region and country." : rule === "travel" && locationControlsEnabled() ? "Choose a travel radius." : missingAnswer[rule];
     }
   }
   // Optional answers can be empty; a supplied answer must still have a valid format.
   if (step === 0) {
     if (d.name.trim().length > NAME_MAX) e.name = `Keep your name to ${NAME_MAX} characters.`;
     if (d.years !== "" && Number.isNaN(Number(d.years))) e.years = missingAnswer.years;
-    if (d.position.trim().length > DEPARTMENT_MAX) e.position = `Keep your department to ${DEPARTMENT_MAX} characters.`;
+    if (!departmentFieldRetired() && d.position.trim().length > DEPARTMENT_MAX) e.position = `Keep your department to ${DEPARTMENT_MAX} characters.`;
     if ((d.title?.trim().length ?? 0) > TITLE_MAX) e.title = `Keep your title to ${TITLE_MAX} characters.`;
     if (d.imdb.trim() && !IMDB_RE.test(d.imdb.trim())) e.imdb = template.required.includes("imdb")
       ? "Use an IMDb name-profile link, like https://www.imdb.com/name/nm1234567/."
       : "Use an IMDb name-profile link, like https://www.imdb.com/name/nm1234567/, or leave it empty.";
   }
   if (step === 1) {
-    if (d.services.length > MAX_SERVICES) e.services = `Choose up to ${MAX_SERVICES} services. You have ${d.services.length}.`;
+    const serviceCount = d.services.length + Number(!!d.other.trim());
+    if (serviceCount > MAX_SERVICES) e.services = `Choose up to ${MAX_SERVICES} services. You have ${serviceCount}.`;
     if (d.services.some((s) => (d.serviceLines?.[s]?.trim().length ?? 0) > SERVICE_LINE_MAX)) e.serviceLines = `Keep each line to ${SERVICE_LINE_MAX} characters.`;
   }
   if (step === 2) {
-    if (d.zip && !/^\d{5}$/.test(d.zip)) e.zip = missingAnswer.zip;
+    if ((d.zip || e.zip) && !validPostalCode(d.market, d.zip)) e.zip = postalCodeError(d.market);
     if (d.dates.trim().length > DATES_MAX) e.dates = `Keep the dates to ${DATES_MAX} characters.`;
   }
   if (step === 3 && d.about.length > ABOUT_MAX) e.about = `Keep About me to ${ABOUT_MAX} characters. It's ${d.about.length} now.`;
@@ -134,9 +140,12 @@ export function validateStep(step: number, d: ProfileFields, template = readProf
  * editor asks for on top. At least one service, each with its own line of what you'll do ("One clearly described
  * service is enough to start"), and a personality answer says which question it answers. Empty when it can be sent.
  */
-export function validateGigster(d: ProfileFields, template = readProfileTemplate()): FieldErrors {
+export function validateGigster(d: ProfileFields, template = readProfileTemplate(), allowCustomOnly = customServiceReviewEnabled()): FieldErrors {
   const e: FieldErrors = Object.assign({}, ...Object.values(validateAll(d, template)));
-  if (!d.services.length && !e.services) e.services = missingAnswer.services;
+  if (!d.services.length && !e.services) {
+    const error = allowCustomOnly && d.other.trim() ? customServiceError(d.other) : missingAnswer.services;
+    if (error) e.services = error;
+  }
   if (!e.serviceLines && d.services.some((s) => !d.serviceLines?.[s]?.trim())) e.serviceLines = "Add one line about what you'll do for each service.";
   if (d.personality?.trim() && !d.personalityQuestion) e.personalityQuestion = "Choose the question you're answering.";
   // The editor asks about entertainment industry experience, not an "About me".
@@ -172,12 +181,12 @@ export type GigsterItemId = (typeof gigsterItems)[number]["id"];
 export const gigsterItemOf = (field: keyof ProfileFields): GigsterItemId | undefined =>
   gigsterItems.find((i) => (i.fields as readonly string[]).includes(field))?.id;
 
-function itemFilled(id: GigsterItemId, d: ProfileFields): boolean {
+function itemFilled(id: GigsterItemId, d: ProfileFields, allowCustomOnly: boolean): boolean {
   switch (id) {
     case "photo": return !!d.photo;
     case "name": return !!d.name.trim();
-    case "services": return d.services.length > 0 && d.services.every((s) => !!d.serviceLines?.[s]?.trim());
-    case "film": return !!d.position.trim() && d.skills.length > 0 && d.years !== "";
+    case "services": return d.services.length > 0 ? d.services.every((s) => !!d.serviceLines?.[s]?.trim()) : allowCustomOnly && !!d.other.trim() && !customServiceError(d.other);
+    case "film": return (departmentFieldRetired() || !!d.position.trim()) && d.skills.length > 0 && d.years !== "";
     case "experience": return !!d.about.trim();
     case "credits": return d.credits.some((c) => c.trim());
     case "where": return isPartFilled("where", d);
@@ -194,13 +203,13 @@ function itemFilled(id: GigsterItemId, d: ProfileFields): boolean {
  * required when the editor always asks for it (photo, name, a service) or when the profile template requires any of
  * its fields; otherwise it can come later.
  */
-export function gigsterChecklist(d: ProfileFields, template = readProfileTemplate()) {
-  const errors = validateGigster(d, template);
+export function gigsterChecklist(d: ProfileFields, template = readProfileTemplate(), allowCustomOnly = customServiceReviewEnabled()) {
+  const errors = validateGigster(d, template, allowCustomOnly);
   const always: GigsterItemId[] = ["services"];
   const out = gigsterItems.map((item) => {
-    const required = always.includes(item.id) || item.fields.some((f) => (template.required as readonly string[]).includes(f === "areas" || f === "otherCity" ? "location" : f));
+    const required = always.includes(item.id) || item.fields.some((f) => (requiredProfileRules(template) as readonly string[]).includes(f === "areas" || f === "otherCity" ? "location" : f));
     const invalid = item.fields.some((f) => errors[f]);
-    return { id: item.id, label: item.label, required, done: !invalid && itemFilled(item.id, d) };
+    return { id: item.id, label: item.label, required, done: !invalid && itemFilled(item.id, d, allowCustomOnly) };
   });
   return { required: out.filter((i) => i.required), optional: out.filter((i) => !i.required), errors };
 }
@@ -218,9 +227,9 @@ export function validateAll(d: ProfileFields, template = readProfileTemplate()):
 /** Share of configured required answers that are valid. */
 export function completeness(d: ProfileFields | null, template = readProfileTemplate()): number {
   if (!d) return 0;
-  if (!template.required.length) return 1;
+  if (!requiredProfileRules(template).length) return 1;
   const errors = Object.assign({}, ...Object.values(validateAll(d, template))) as FieldErrors;
-  return template.required.filter((k) => !errors[answerKey(k, d)]).length / template.required.length;
+  return requiredProfileRules(template).filter((k) => !errors[answerKey(k, d)]).length / requiredProfileRules(template).length;
 }
 
 /** Which step a field lives on, so the error summary can link to it. */
@@ -255,7 +264,7 @@ export function isPartFilled(id: ProfilePartId, d: ProfileFields): boolean {
     case "years": return d.years !== "";
     case "services": return d.services.length > 0 || !!d.other.trim();
     case "skills": return d.skills.length > 0;
-    case "where": return /^\d{5}$/.test(d.zip) && (d.market === "other" ? !!d.otherCity.trim() : d.areas.length > 0);
+    case "where": return validPostalCode(d.market, d.zip) && (d.market === "other" ? !!d.otherCity.trim() : locationControlsEnabled() || d.areas.length > 0);
     case "availability": return !!d.dates.trim();
     case "rate": return hasRate(d.rate);
     case "about": return !!d.about.trim();
@@ -268,7 +277,7 @@ export function isPartFilled(id: ProfilePartId, d: ProfileFields): boolean {
 
 /** Use all configured answers within a combined spot (e.g. service areas and private ZIP). */
 export function partComplete(id: ProfilePartId, d: ProfileFields, template: ProfileTemplate, errors: FieldErrors): boolean {
-  const members = template.required.filter((k) => profileFieldParts[k] === id);
+  const members = requiredProfileRules(template).filter((k) => profileFieldParts[k] === id);
   if (!members.length) return isPartFilled(id, d);
   return members.every((k) => !errors[answerKey(k, d)]);
 }

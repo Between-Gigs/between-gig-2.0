@@ -91,6 +91,8 @@ export interface ProfileFields {
   zip: string;
   areas: string[];
   travel: string;
+  /** Optional explicit willingness to travel beyond the launch market; missing means not answered. */
+  travelBeyondLA?: boolean;
   month: string;
   monthStatus: MonthStatus;
   dates: string;
@@ -99,6 +101,8 @@ export interface ProfileFields {
   about: string;
   languages: string;
   insurance: InsuranceAnswer;
+  /** Optional private description; existing Company OS insurance_notes field, never public. */
+  insuranceNotes?: string;
   tools: string;
   transport: string;
   mode: WorkMode;
@@ -127,6 +131,8 @@ export interface ProfileFields {
 /** The person's working copy: what the builder autosaves. */
 export interface ProfileDraft {
   personId: string;
+  /** Trusted server profile-row creation metadata, outside writable fields. Null means no profile row yet. */
+  readonly profileCreatedAt?: string | null;
   fields: ProfileFields;
   /** Builder step to resume at (0 to 4). */
   step: number;
