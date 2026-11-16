@@ -193,6 +193,7 @@ jobs:
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_DATA_SOURCE: api
+          NEXT_PUBLIC_PROFILE_NO_DEPARTMENT: ${{ vars.PROFILE_NO_DEPARTMENT }}
           NEXT_PUBLIC_SITE_ORIGIN: ${{ vars.APP_URL }}
         run: pnpm build:server && pnpm build:preview && pnpm check:server
 

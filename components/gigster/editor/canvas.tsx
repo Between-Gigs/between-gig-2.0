@@ -14,6 +14,7 @@ import * as React from "react";
 import { data } from "@/lib/data";
 import { laServiceAreas, onSetSkills, serviceChoices } from "@/lib/data/taxonomy";
 import { personalityQuestions } from "@/lib/profile/personality";
+import { departmentFieldRetired } from "@/lib/profile/department-retirement";
 import { serviceDescription } from "@/lib/profile/service-descriptions";
 import { stageTwoLimits } from "@/lib/profile/stage-two";
 import { ABOUT_MAX, DATES_MAX, DEPARTMENT_MAX, MAX_SERVICES, NAME_MAX, SERVICE_LINE_MAX, TITLE_MAX, hasRate } from "@/lib/profile/validate";
@@ -458,7 +459,8 @@ export function CanvasSamples({ d, set }: SectionProps) {
 
 /** Skills & experience comes before services; fields and save contracts are unchanged. */
 export function CanvasExperience({ d, set, errors, required }: SectionProps & { required: (field: string) => boolean }) {
-  const [expOpen, openExp] = useOpen(!!(d.position || d.years || d.about || d.skills.length || errors.position || errors.about || errors.years || errors.skills));
+  const retired = departmentFieldRetired();
+  const [expOpen, openExp] = useOpen(!!((!retired && (d.position || errors.position)) || d.years || d.about || d.skills.length || errors.about || errors.years || errors.skills));
   const col = "grid min-w-0 scroll-mt-40 content-start gap-4";
   return (
       <section id="sec-film" aria-labelledby="sec-film-h" className={col}>
@@ -466,13 +468,13 @@ export function CanvasExperience({ d, set, errors, required }: SectionProps & { 
         <p className="text-body-md text-ink">What kind of work do you do in the entertainment industry, and how does that experience help you deliver this service?</p>
         {expOpen ? (
           <div className="grid items-start gap-6 lg:grid-cols-2">
-            <Field label="Department or role" optional={!required("position")} error={errors.position}>
+            {!retired && <Field label="Department or role" optional={!required("position")} error={errors.position}>
               <Input id="f-position" maxLength={DEPARTMENT_MAX} value={d.position} placeholder="e.g. Costume & wardrobe" onChange={(e) => set("position")(e.target.value.slice(0, DEPARTMENT_MAX))} />
-            </Field>
+            </Field>}
             <div className="grid gap-2">
               <p className="text-label-md text-ink">On-set skills{!required("skills") && <span className="ml-2 text-body-sm font-normal text-ink-subtle">Optional</span>}</p>
               <Pills label="On-set skills" options={onSetSkills} isOn={(o) => d.skills.includes(o)}
-                onToggle={(o) => { set("skills")(d.skills.includes(o) ? d.skills.filter((s) => s !== o) : [...d.skills, o]); if (!d.position.trim()) set("position")(o); }} />
+                onToggle={(o) => { set("skills")(d.skills.includes(o) ? d.skills.filter((s) => s !== o) : [...d.skills, o]); if (!retired && !d.position.trim()) set("position")(o); }} />
               <GroupError id="f-skills-error">{errors.skills}</GroupError>
             </div>
             <Field label="Years in the Entertainment Industry" optional={!required("years")} error={errors.years}>
