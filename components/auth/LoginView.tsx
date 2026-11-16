@@ -9,7 +9,7 @@ import * as React from "react";
 import { data, type RequestCodeResult, type SignInResult } from "@/lib/data";
 import { SAMPLE_OWNER } from "@/lib/data/fields";
 import { clerkEnabled } from "@/lib/auth/clerk";
-import { resolveLoginCallback, type CallbackClerk, type CallbackOutcome } from "@/lib/auth/sso-callback";
+import { runLoginCallback, type CallbackClerk, type CallbackOutcome } from "@/lib/auth/sso-callback";
 import { useAuthActions } from "@/lib/auth/context";
 import { useSession } from "@/lib/session";
 import { basePath } from "@/lib/site";
@@ -58,29 +58,22 @@ function destination(next: string | null, role: "owner" | "gigster") {
   return path === "/login" || path === "/join" || (role === "owner" && (path === "/profile" || path.startsWith("/profile/"))) ? fallback : local;
 }
 
-const CALLBACK_GIVE_UP_MS = 20_000;
-
 /**
  * Back from Google at /login/#/sso-callback: a Google account with no Between Gigs account goes on to sign-up; anything
- * that can't finish says so with a way back. Never an endless spinner. Renders nothing while all is well.
+ * that can't finish says so with a way back. Never an endless spinner. Idle while all is well.
  */
 function useLoginCallback(): CallbackOutcome {
   const clerk = useClerk();
   const { isSignedIn } = useUser();
   const [outcome, setOutcome] = React.useState<CallbackOutcome>({ kind: "idle" });
-  const ran = React.useRef(false);
   React.useEffect(() => {
-    if (!clerk.loaded || isSignedIn || ran.current || !window.location.hash.startsWith("#/sso-callback")) return;
-    const run = async (timedOut: boolean) => {
-      const result = await resolveLoginCallback(clerk as unknown as CallbackClerk, { timedOut });
-      if (result.kind === "redirect") { ran.current = true; window.location.replace(`${basePath}${result.to}`); }
-      else if (result.kind === "error") { ran.current = true; setOutcome(result); }
-      return result.kind;
-    };
-    let alive = true;
-    void run(false);
-    const timer = window.setTimeout(() => { if (alive && !ran.current) void run(true); }, CALLBACK_GIVE_UP_MS);
-    return () => { alive = false; window.clearTimeout(timer); };
+    if (!clerk.loaded || isSignedIn || !window.location.hash.startsWith("#/sso-callback")) return;
+    return runLoginCallback(clerk as unknown as CallbackClerk, {
+      onOutcome: (result) => {
+        if (result.kind === "redirect") window.location.replace(`${basePath}${result.to}`);
+        else setOutcome(result);
+      },
+    });
   }, [clerk, clerk.loaded, isSignedIn]);
   return outcome;
 }
