@@ -1,5 +1,6 @@
 import { customServiceError, customServiceReviewEnabled } from "./custom-service";
 import { departmentFieldRetired } from "./department-retirement";
+import { postalCodeError, validPostalCode } from "./postal";
 import type { ProfileFields, ProfileSection, ReviewNote } from "@/lib/data/types";
 import { stageTwoLimits, startDateLabel } from "./stage-two";
 import { profileFieldParts, readProfileTemplate, requiredProfileParts, type ProfileFieldRule, type ProfilePartId, type ProfileTemplate } from "./template";
@@ -119,7 +120,7 @@ export function validateStep(step: number, d: ProfileFields, template = readProf
     if (d.services.some((s) => (d.serviceLines?.[s]?.trim().length ?? 0) > SERVICE_LINE_MAX)) e.serviceLines = `Keep each line to ${SERVICE_LINE_MAX} characters.`;
   }
   if (step === 2) {
-    if (d.zip && !/^\d{5}$/.test(d.zip)) e.zip = missingAnswer.zip;
+    if ((d.zip || e.zip) && !validPostalCode(d.market, d.zip)) e.zip = postalCodeError(d.market);
     if (d.dates.trim().length > DATES_MAX) e.dates = `Keep the dates to ${DATES_MAX} characters.`;
   }
   if (step === 3 && d.about.length > ABOUT_MAX) e.about = `Keep About me to ${ABOUT_MAX} characters. It's ${d.about.length} now.`;
@@ -261,7 +262,7 @@ export function isPartFilled(id: ProfilePartId, d: ProfileFields): boolean {
     case "years": return d.years !== "";
     case "services": return d.services.length > 0 || !!d.other.trim();
     case "skills": return d.skills.length > 0;
-    case "where": return /^\d{5}$/.test(d.zip) && (d.market === "other" ? !!d.otherCity.trim() : d.areas.length > 0);
+    case "where": return validPostalCode(d.market, d.zip) && (d.market === "other" ? !!d.otherCity.trim() : d.areas.length > 0);
     case "availability": return !!d.dates.trim();
     case "rate": return hasRate(d.rate);
     case "about": return !!d.about.trim();

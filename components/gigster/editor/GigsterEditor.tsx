@@ -185,7 +185,13 @@ function Editor({ personId }: { personId: string }) {
     touched.current.add(k);
     setSave((x) => (x.status === "saving" ? x : { status: "saving" }));
     setD((x) => (x ? { ...x, [k]: v } : x));
-    setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
+    setErrors((e) => {
+      if (!e[k] && k !== "market") return e;
+      const n = { ...e }; delete n[k];
+      // A market switch changes the postal format and which location answer is required.
+      if (k === "market") { delete n.zip; delete n.otherCity; delete n.areas; }
+      return n;
+    });
   });
   const required = (field: string) => (template.required as readonly string[]).includes(field);
 
