@@ -23,12 +23,15 @@ export interface CspOptions {
   clerkPublishableKey: string | undefined;
   /** next dev: React's debugging needs eval. Never in a production build. */
   dev?: boolean;
+  /** NEXT_PUBLIC_PROFILE_VIDEO_LINKS is on: the video providers' thumbnail hosts may serve images. */
+  videoLinks?: boolean;
 }
 
 const CLOUDFLARE_CHALLENGES = "https://challenges.cloudflare.com";
+const VIDEO_THUMBNAIL_HOSTS = ["https://i.ytimg.com", "https://i.vimeocdn.com"];
 const CLERK_PROTECT = "https://*.protect.clerk.com";
 
-export function contentSecurityPolicy({ nonce, clerkPublishableKey, dev = false }: CspOptions): string {
+export function contentSecurityPolicy({ nonce, clerkPublishableKey, dev = false, videoLinks = false }: CspOptions): string {
   if (!/^[A-Za-z0-9+/=]+$/.test(nonce)) throw new Error("contentSecurityPolicy: the nonce must be base64");
   const fapi = clerkFrontendApi(clerkPublishableKey);
   const clerk = fapi ? [`https://${fapi}`] : [];
@@ -40,7 +43,7 @@ export function contentSecurityPolicy({ nonce, clerkPublishableKey, dev = false 
     // Clerk's components inject their CSS at runtime.
     "style-src": ["'self'", "'unsafe-inline'"],
     // The two video providers' thumbnail hosts, for work samples that link to a video (images only: no frames, no connections).
-    "img-src": ["'self'", "data:", "blob:", "https://img.clerk.com", "https://i.ytimg.com", "https://i.vimeocdn.com"],
+    "img-src": ["'self'", "data:", "blob:", "https://img.clerk.com", ...(videoLinks ? VIDEO_THUMBNAIL_HOSTS : [])],
     "font-src": ["'self'", "data:"],
     "connect-src": ["'self'", ...clerk, `${CLERK_PROTECT}:*`],
     "frame-src": ["'self'", CLOUDFLARE_CHALLENGES, CLERK_PROTECT],

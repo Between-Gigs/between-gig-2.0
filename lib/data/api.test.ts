@@ -98,13 +98,29 @@ describe("this browser's own copy of the answers (localStorage)", () => {
       expect(kept.title).toBe("Camera operator");
     });
   });
+  it("an older copy of the mobile number and video-era work samples is adopted once, then cleared by the first save", async () => {
+    await withEnv("NEXT_PUBLIC_PROFILE_DETAILS", "1", async () => withEnv("NEXT_PUBLIC_PROFILE_VIDEO_LINKS", "1", async () => {
+      const { m, storage } = store();
+      storage.setItem("bg2-profile-extras:p", JSON.stringify({ bookingMobile: "+1 555 010 0199", workSamples: ["/media/a"] }));
+      const rest: Partial<ReturnType<typeof blankFields>> = blankFields();
+      delete rest.workSamples; delete rest.bookingMobile;
+      const api = createApiSource({ storage, fetch: (async () => Response.json({ result: { personId: "p", fields: rest, profileCreatedAt: null, savedAt: "", step: 0 } })) as typeof fetch });
+      const d = await api.profiles.getDraft("p");
+      expect(d!.fields.bookingMobile).toBe("+1 555 010 0199");
+      expect(d!.fields.workSamples).toEqual(["/media/a"]);
+      await api.profiles.saveDraft("p", d!.fields, 1);
+      const kept = JSON.parse(m.get("bg2-profile-extras:p") ?? "{}");
+      expect(kept).not.toHaveProperty("bookingMobile");
+      expect(kept).not.toHaveProperty("workSamples");
+    }));
+  });
   it("and an older copy already in the browser is not read back into the draft", async () => {
     await withEnv("NEXT_PUBLIC_PROFILE_DETAILS", "1", async () => {
       const { storage } = store();
       storage.setItem("bg2-profile-extras:p", JSON.stringify({ ...private_, title: "Old" }));
       const api = createApiSource({ storage, fetch: (async () => Response.json({ result: { personId: "p", fields: blankFields(), profileCreatedAt: null, savedAt: "", step: 0 } })) as typeof fetch });
       const d = await api.profiles.getDraft("p");
-      for (const k of Object.keys(private_)) expect(d!.fields, k).not.toHaveProperty(k);
+      for (const k of Object.keys(private_).filter((k) => k !== "bookingMobile")) expect(d!.fields, k).not.toHaveProperty(k);
     });
   });
   it("with profile details off the browser keeps them as before", async () => {
