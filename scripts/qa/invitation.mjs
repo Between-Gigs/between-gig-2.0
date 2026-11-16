@@ -63,7 +63,7 @@ try {
     assert.equal(await frame.getByText("Between Gigs · 11766 Wilshire Blvd, Los Angeles, CA 90025", { exact: true }).count(), 1);
     assert.equal(await frame.locator('[data-email-unsubscribe]').getAttribute("aria-disabled"), "true");
     assert.equal(await frame.getByRole("link", { name: "Unsubscribe", exact: true }).count(), 0);
-    assert.equal(await frame.getByRole("link", { name: "Privacy", exact: true }).getAttribute("href"), "https://between-gigs.com/privacy");
+    assert.equal(await frame.getByRole("link", { name: "Privacy", exact: true }).getAttribute("href"), "https://between-gigs.com/privacy/");
     assert.equal(await frame.getByRole("link", { name: "Contact support", exact: true }).getAttribute("href"), "mailto:hello@between-gigs.com");
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "page fits viewport");
     assert.ok(await frame.locator("html").evaluate(el => el.scrollWidth <= innerWidth + 1), "email fits iframe");

@@ -5,6 +5,18 @@ import { renderPreview } from "@/components/emails/preview";
 const props = { inviteUrl: "https://example.test/join/?invite=sample&source=email", email: "sample@example.test" };
 
 describe("canonical Stage 2 invitation", () => {
+  it("matches Patti invitation07–10 in HTML and text with a sentence-case signoff", () => {
+    const email=invite(props);
+    expect(email.text).toContain("Your skills have value beyond the set.\nLet us help you put them to work.");
+    expect(email.html).toContain("Your skills have value beyond the set.<br>Let us help you put them to work.");
+    expect(email.text).toContain("and begin connecting you with new opportunities in the coming weeks.");
+    expect(email.html).toContain("font-size:50px;line-height:52px");
+    expect(email.html).toContain('class="e-invite-eyebrow" style="margin:28px 0 10px;font-size:13px;line-height:18px');
+    expect(email.text).toContain("The Between Gigs Team");
+    expect(email.html).toMatch(/letter-spacing:0\.04em;color:[^>]+>The Between Gigs Team<\/p>/);
+    expect(email.html).not.toContain("YOUR BETWEEN GIGS TEAM");
+  });
+
   it("keeps the approved copy order with matching hero and body actions and removes extra claims", () => {
     const email = invite(props);
     const phrases = [INVITE_COPY.lead, INVITE_COPY.opening, INVITE_COPY.stage, INVITE_COPY.introduction,
@@ -46,6 +58,20 @@ describe("canonical Stage 2 invitation", () => {
     }
     expect(email.html).toContain('href="mailto:hello@between-gigs.com"');
     expect(email.html).toContain(">Contact support</a>");
+  });
+
+  it("uses the sending environment for privacy links in both twins",()=>{const email=invite(props,{assetBase:"https://test.example",siteUrl:"https://test.example"});expect(email.html).toContain('href="https://test.example/privacy/"');expect(email.text).toContain("Privacy: https://test.example/privacy/");});
+
+  it("keeps each sending transport's unsubscribe placeholder explicit", () => {
+    expect(INVITE_UNSUBSCRIBE).toBe("{{{RESEND_UNSUBSCRIBE_URL}}}");
+    const email = invite({ ...props, unsubscribeUrl: "{{links.unsubscribe}}" });
+    expect(email.html).toContain('href="{{links.unsubscribe}}"');
+    expect(email.text).toContain("Unsubscribe: {{links.unsubscribe}}");
+    expect(email.html).not.toContain("RESEND_UNSUBSCRIBE_URL");
+    const preview = renderPreview("invite", { ...props, unsubscribeUrl: "{{links.unsubscribe}}" }, "light");
+    expect(preview.html).not.toContain('href="{{links.unsubscribe}}"');
+    expect(preview.text).not.toContain("{{links.unsubscribe}}");
+    expect(preview.text).toContain("inactive in this sample");
   });
 
   it("disables sample unsubscribing while retaining the template macro for actual HTML", () => {

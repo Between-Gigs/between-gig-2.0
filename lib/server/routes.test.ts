@@ -425,7 +425,7 @@ describe("round 1: invites", () => {
     const { body, calls } = await call("owners.resendInvite", [[PERSON]], undefined, f);
     expect(body.result).toEqual({ invited: 1, skipped: 0 });
     expect(calls.find((c) => c.path === "/invitations")?.body).toMatchObject({ email: "maya@example.org", roleKey: "provider", personId: PERSON });
-    expect(calls.find((c) => c.path === "/api/comms_log")?.body).toMatchObject({ recipient: PERSON, message_key: "invite", vars: { invite_url: "http://localhost:3000/join/?__clerk_ticket=new" } });
+    expect(calls.find((c) => c.path === "/api/comms_log")?.body).toMatchObject({ recipient: PERSON, category: "marketing", message_key: "invite", vars: { invite_url: "http://localhost:3000/join/?__clerk_ticket=new" } });
   });
 
   it("resending skips someone who has already signed up", async () => {

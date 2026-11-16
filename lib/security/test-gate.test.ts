@@ -69,6 +69,20 @@ describe("exempt paths (providers and mail clients have no cookie)", () => {
   }
 });
 
+describe("the unsubscribe page is exempt (a mail client's One-Click POST cannot type a passphrase; the signed token authorizes)", () => {
+  for (const [method, path] of [["GET", "/unsubscribe/?token=x"], ["POST", "/unsubscribe/?token=x"], ["GET", "/unsubscribe?token=x"], ["POST", "/unsubscribe?token=x"]] as const) {
+    it(`passes ${method} ${path}`, async () => {
+      expect(await testGate(req(path, { method }), ENV, NOW)).toBeNull();
+    });
+  }
+  it("stays path-exact and still gates other pages", async () => {
+    for (const path of ["/join/", "/unsubscribe-anything/", "/unsubscribe/x/", "/unsubscribed/", "/api/unsubscribe/"]) {
+      expect((await testGate(req(path), ENV, NOW))?.status, path).toBe(401);
+    }
+    expect((await testGate(req("/unsubscribe/?token=x", { method: "PUT" }), ENV, NOW))?.status).toBe(401);
+  });
+});
+
 describe("the email images' exemption is narrow", () => {
   it("covers reading an image only, never another method", async () => {
     expect((await testGate(req("/email/a.png", { method: "POST" }), ENV, NOW))?.status).toBe(401);
