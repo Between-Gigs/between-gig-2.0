@@ -8,7 +8,7 @@ import * as React from "react";
 import { data, personStatuses, type PeopleQuery, type PeopleSort, type PersonSource, type PersonStatus, type PersonSummary, type ProfileFilter } from "@/lib/data";
 import { crafts } from "@/lib/profile/department";
 import { laServiceAreas, monthStatusLabel, serviceChoices } from "@/lib/data/taxonomy";
-import { PersonStatusBadge, personStatusMeta } from "@/components/people/PersonStatusBadge";
+import { PersonStatusBadge } from "@/components/people/PersonStatusBadge";
 import { PersonSourceBadge, personSourceLabel } from "@/components/people/PersonSourceBadge";
 import { AgoPill, EmptyNote, Meter, OwnerAvatar, OwnerPage, Panel, Row, RowSkeletons } from "./kit";
 import { OwnerShell } from "./OwnerShell";
