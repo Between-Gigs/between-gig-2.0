@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { resolveLoginCallback, type CallbackClerk } from "./sso-callback";
+import { resolveLoginCallback, runLoginCallback, type CallbackClerk, type CallbackOutcome } from "./sso-callback";
 
 // Clerk is mocked at its boundary: only the resources the resolver reads and the calls it makes.
 function clerkWith(opts: {
@@ -70,5 +70,63 @@ describe("resolveLoginCallback", () => {
     const { clerk, create } = clerkWith({});
     expect(await resolveLoginCallback(clerk)).toEqual({ kind: "idle" });
     expect(create).not.toHaveBeenCalled();
+  });
+});
+
+describe("error-code split", () => {
+  it("a network or unknown failure of the transfer shows the generic retry message, not the closed-sign-up one", async () => {
+    const create = vi.fn(async () => { throw new TypeError("Failed to fetch"); });
+    const { clerk } = clerkWith({ verification: transferable, create });
+    const out = await resolveLoginCallback(clerk);
+    expect(out.kind).toBe("error");
+    if (out.kind === "error") expect(out.message).not.toMatch(/hello@between-gigs/);
+  });
+});
+
+describe("runLoginCallback (the controller the login page runs)", () => {
+  const collect = () => { const seen: CallbackOutcome[] = []; return { seen, onOutcome: (o: CallbackOutcome) => { seen.push(o); } }; };
+
+  it("a double start (StrictMode) transfers once and both runs end the same way", async () => {
+    vi.useFakeTimers();
+    const { clerk, create } = clerkWith({ verification: transferable });
+    const a = collect(), b = collect();
+    const stopA = runLoginCallback(clerk, a);
+    stopA(); // StrictMode cleanup, then the effect runs again
+    const stopB = runLoginCallback(clerk, b);
+    await vi.advanceTimersByTimeAsync(600);
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(b.seen).toEqual([{ kind: "redirect", to: "/join/" }]);
+    stopB();
+    vi.useRealTimers();
+  });
+
+  it("picks up Clerk's state when it is populated after mount, without waiting for the cap", async () => {
+    vi.useFakeTimers();
+    const { clerk } = clerkWith({});
+    const c = collect();
+    const stop = runLoginCallback(clerk, c);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(c.seen).toEqual([]);
+    clerk.client.signIn.firstFactorVerification = { status: "failed", error: { code: "oauth_access_denied" } };
+    await vi.advanceTimersByTimeAsync(600);
+    expect(c.seen).toHaveLength(1);
+    expect(c.seen[0].kind).toBe("error");
+    stop();
+    vi.useRealTimers();
+  });
+
+  it("ends in an error at the 20 s cap, and stop() clears the timers", async () => {
+    vi.useFakeTimers();
+    const { clerk } = clerkWith({});
+    const c = collect();
+    runLoginCallback(clerk, c);
+    await vi.advanceTimersByTimeAsync(21_000);
+    expect(c.seen).toHaveLength(1);
+    expect(c.seen[0].kind).toBe("error");
+    const d = collect();
+    const stop = runLoginCallback(clerk, d);
+    stop();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
   });
 });
