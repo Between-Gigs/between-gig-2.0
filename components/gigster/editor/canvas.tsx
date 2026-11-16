@@ -610,7 +610,7 @@ export function CanvasDetails({ d, set }: SectionProps) {
             <Checkbox id="f-mode-business" label="At my office, studio or other place of business." checked={atBusiness} disabled={atBusiness && !atClient}
               onChange={(e) => chooseLocations(atClient, e.target.checked)} />
           </fieldset>
-          <Field label="Tools and equipment" optional><Textarea id="f-tools" rows={4} value={d.tools} placeholder="Special Cameras, Lighting Kit, Box Truck, Makeup kit, etc." maxLength={160} onChange={(e) => set("tools")(e.target.value)} /></Field>
+          <Field label="Tools and equipment" optional hint="One item per line, five or fewer works best."><Textarea id="f-tools" rows={5} value={d.tools} placeholder="Special Cameras, Lighting Kit, Box Truck, Makeup kit, etc." maxLength={160} onChange={(e) => set("tools")(e.target.value)} /></Field>
           <RadioGroup name="f-insurance" label={<>Insurance <span className="font-normal text-ink-subtle">· optional, self-reported</span></>} value={d.insurance} onChange={(v) => set("insurance")(v as typeof d.insurance)}
             options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance yet" }]} />
           {d.insurance === "yes" && <Field label="Describe your liability insurance" optional hint="For the Between Gigs team. Not shown on your public profile.">

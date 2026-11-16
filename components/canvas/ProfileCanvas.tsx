@@ -45,7 +45,7 @@ const thisMonth = () => new Date().toLocaleString("en-US", { month: "long", year
 
 const LABEL: Record<SpotId, string> = {
   photo: "Your photo", name: "Your name", position: "Your department", years: "Years in the business", services: "Services you offer",
-  skills: "On-set skills", where: "Where you work", availability: "This month", rate: "Starting rate", about: "About me",
+  skills: "On-set skills", where: "Where you work", availability: "Availability", rate: "Starting rate", about: "About me",
   credits: "Notable credits", imdb: "IMDb link", languages: "Languages", details: "Work and booking details",
 };
 /** The verb on the Next block's button: what the one tap does. */
@@ -926,7 +926,7 @@ function editorFor(id: SpotId, d: ProfileFields, set: <K extends keyof ProfileFi
       <RadioGroup name="f-basis" label="Rate basis" orientation="horizontal" value={d.basis} onChange={(v) => set("basis")(v as ProfileFields["basis"])} options={Object.entries(basisLabel).map(([value, label]) => ({ value, label }))} />
     </div>;
     case "availability": return <div className="grid gap-4">
-      <RadioGroup name="f-monthStatus" label={`This month · ${d.month}`} value={d.monthStatus} onChange={(v) => set("monthStatus")(v as ProfileFields["monthStatus"])} options={Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))} />
+      <RadioGroup name="f-monthStatus" label="Availability" value={d.monthStatus} onChange={(v) => set("monthStatus")(v as ProfileFields["monthStatus"])} options={Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))} />
       <Field label="Dates or times this month" optional={!required.includes("dates")} hint="Exact project dates are agreed with each client."><Input id="f-dates" maxLength={DATES_MAX} value={d.dates} placeholder="e.g. Weekday mornings" onChange={(e) => set("dates")(e.target.value.slice(0, DATES_MAX))} /></Field>
       <Quick options={["Weekday mornings", "Weekday evenings", "Weekends", "Most days", "Between shoots, ask me"]} onPick={set("dates")} current={d.dates} />
     </div>;
@@ -938,7 +938,7 @@ function editorFor(id: SpotId, d: ProfileFields, set: <K extends keyof ProfileFi
     </>;
     case "skills": return <ChipPicker id="f-skills" label="On-set skills" options={onSetSkills} value={d.skills} onChange={set("skills")} />;
     case "credits": return <Credits credits={d.credits} pins={d.creditPins ?? []} onChange={(c, p) => { set("credits")(c); set("creditPins")(p); }} />;
-    case "imdb": return <Field label="IMDb profile link" optional={!required.includes("imdb")} hint="Your IMDb name page. It helps us confirm credits; clients don't see it."><Input id="f-imdb" type="url" inputMode="url" value={d.imdb} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} /></Field>;
+    case "imdb": return <Field label="IMDb profile link" optional={!required.includes("imdb")}><Input id="f-imdb" type="url" inputMode="url" value={d.imdb} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} /></Field>;
     case "details": return <div className="grid gap-4">
       <RadioGroup name="f-mode" label="Work mode" value={d.mode} onChange={(v) => set("mode")(v as ProfileFields["mode"])} options={[{ value: "on-site", label: "On site" }, { value: "studio", label: "At my studio" }, { value: "both", label: "Both" }]} />
       <RadioGroup name="f-insurance" label="Insurance · self-reported" value={d.insurance} onChange={(v) => set("insurance")(v as ProfileFields["insurance"])} options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance" }]} />

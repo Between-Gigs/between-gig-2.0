@@ -242,7 +242,7 @@ function Builder({ personId }: { personId: string }) {
                         <Field label="Years in the business" optional={optional("years")} error={err("years")}><Input id="f-years" inputMode="numeric" value={d.years} placeholder="e.g. 6" onChange={(e) => set("years")(e.target.value.replace(/\D/g, "").slice(0, 2))} /></Field>
                       </div>
                       <Field label="Industry position / department" optional={optional("position")} error={err("position")}><Input id="f-position" value={d.position} start={<Film />} placeholder="e.g. Costume & wardrobe" onChange={(e) => set("position")(e.target.value)} /></Field>
-                      <Field label="IMDb profile link" optional={optional("imdb")} error={err("imdb")} hint="Your IMDb name page helps us confirm credits."><Input id="f-imdb" type="url" inputMode="url" value={d.imdb} start={<Link2 />} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} /></Field>
+                      <Field label="IMDb profile link" optional={optional("imdb")} error={err("imdb")}><Input id="f-imdb" type="url" inputMode="url" value={d.imdb} start={<Link2 />} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} /></Field>
                       <Credits credits={d.credits} pins={d.creditPins ?? []} error={err("credits")}
                         onChange={(credits, pins) => { set("credits")(credits); set("creditPins")(pins); }} />
                     </div>
@@ -288,7 +288,7 @@ function Builder({ personId }: { personId: string }) {
                       <Field label="Travel notes" optional={optional("travel")} error={err("travel")} hint="Only a limit or exception. No need to repeat the areas above."><Input id="f-travel" value={d.travel} onChange={(e) => set("travel")(e.target.value)} /></Field>
                       <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
                         <Field label="Availability month"><Input id="f-month" value={d.month} readOnly /></Field>
-                        <RadioGroup name="f-monthStatus" label="This month" value={d.monthStatus} onChange={(v) => set("monthStatus")(v as ProfileFields["monthStatus"])} options={Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))} />
+                        <RadioGroup name="f-monthStatus" label="Availability" value={d.monthStatus} onChange={(v) => set("monthStatus")(v as ProfileFields["monthStatus"])} options={Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))} />
                       </div>
                       <Field label="Dates or times this month" optional={optional("dates")} error={err("dates")} hint="Exact project dates are agreed with each client."><Input id="f-dates" value={d.dates} placeholder="e.g. Weekday mornings" onChange={(e) => set("dates")(e.target.value)} /></Field>
                       <Banner tone="success" title="Keep availability fresh">Confirm it each month. Production comes first: pause it when the call comes.</Banner>

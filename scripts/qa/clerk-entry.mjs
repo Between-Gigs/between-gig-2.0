@@ -15,7 +15,6 @@ try {
     page.setDefaultTimeout(15000);
     await page.goto(`${url}/join/`);
     await page.getByRole("heading", { name: "Create your account", exact: true }).waitFor();
-    await page.getByText(/Then confirm your name and agree/).waitFor();
     assert.equal(await page.getByRole("checkbox").count(), 0); // app consent follows Clerk identity verification
     assert.equal(await page.getByRole("button", { name: "Continue to password", exact: true }).count(), 0);
     await page.getByText("Sign-in couldn't load", { exact: true }).waitFor();

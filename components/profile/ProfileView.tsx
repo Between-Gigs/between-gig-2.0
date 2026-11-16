@@ -218,7 +218,7 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
           <div>{P("availability", !!f.dates.trim() || !show, (
             <div className="h-full min-w-0 bg-surface-brand p-5 text-ink-on-brand">
               {/* With no dates the heading is the status itself, so the eyebrow doesn't repeat it. */}
-              <p className="text-eyebrow text-mint-300 uppercase">{datesHead ? monthStatusLabel[f.monthStatus] : "This month"}</p>
+              <p className="text-eyebrow text-mint-300 uppercase">{datesHead ? monthStatusLabel[f.monthStatus] : "Availability"}</p>
               <p className="mt-2 font-display text-heading-md break-words text-ink-on-brand">{datesHead || monthStatusLabel[f.monthStatus]}</p>
               {datesNote && <p className="mt-1 text-body-md break-words text-forest-100 first-letter:uppercase">{datesNote}</p>}
             </div>
