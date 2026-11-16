@@ -76,3 +76,12 @@ describe("lib/profile/validate.ts", () => {
     expect(contentChanged({ ...a, title: "" }, a)).toBe(false);
   });
 });
+
+
+it("compares private insurance notes without making legacy blank notes an unsent change", () => {
+  const fields = blankFields("Insurance Contract");
+  expect(contentChanged(fields, { ...fields, insuranceNotes: "" })).toBe(false);
+  expect(contentChanged(fields, { ...fields, insuranceNotes: "  " })).toBe(false);
+  expect(contentChanged(fields, { ...fields, insuranceNotes: "Fictional coverage" })).toBe(true);
+  expect(contentChanged({ ...fields, insuranceNotes: "Fictional coverage" }, { ...fields, insuranceNotes: " Fictional coverage " })).toBe(false);
+});

@@ -264,6 +264,8 @@ async function publicProfiles(ctx: Ctx, profiles: Row[]) {
   return profiles.map((p) => {
     const photo = photoBy.get(p.id);
     const fields = fromProfile(p.data, itemsOf(itemsBy.get(p.id)), photo ? mediaUrl(photo.id) : "");
+    // Private even if an upstream policy unexpectedly returns the field.
+    delete fields.insuranceNotes;
     // The public page knows the profile, not the person: its id stands in, and nothing private is in it.
     const person: Person = {
       id: p.id, email: "", name: fields.name, slug: str(p.data.public_handle), status: "approved", waitlistZip: "", waitlistCategory: "",

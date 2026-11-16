@@ -174,6 +174,7 @@ const withAvailability = (to: ProfileFields, from: ProfileFields): ProfileFields
 function publicOf(person: Person, profile: Profile): { person: Person; profile: Profile } {
   const f = { ...profile.fields };
   delete f.bookingMobile;
+  delete f.insuranceNotes;
   const credits = pinnedCredits(f);
   return {
     person: { id: person.id, email: "", name: person.name, slug: person.slug, status: "approved", waitlistZip: "", waitlistCategory: "", invitedAt: "", updatedAt: person.updatedAt, ...(person.sample ? { sample: true } : {}) },

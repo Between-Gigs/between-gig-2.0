@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { blankFields } from "@/lib/data/fields";
+import { toProfile } from "@/lib/data/companyos/fields";
+import { INSURANCE_NOTES_MAX } from "@/lib/profile/insurance";
 import { companyOs } from "./companyos";
 import { media } from "./media";
 import { FUNNEL_LIMIT, ROUTES, handle, handleSignup, handleUpload, resetRateLimit, type RouteName } from "./routes";
@@ -608,4 +611,54 @@ describe("open sign-up: POST /api/auth/signup", () => {
     const res = await handleSignup(new Request("http://localhost:3000/api/auth/signup", { method: "GET" }), { cos: fake().cos });
     expect(res.status).toBe(405);
   });
+});
+
+
+describe("private insurance descriptions through the real save route", () => {
+  it.each([undefined, "Fictional updated coverage", ""])("preserves omitted notes and forwards explicit changes (%s)", async (note) => {
+    const fields = { ...blankFields(), insurance: "yes" as const };
+    const data = { ...toProfile(fields).data, person: PERSON, insurance_notes: "Existing private coverage" };
+    const f = fake(c => {
+      if (c.path === "/query") {
+        const entity = (c.body as { entity?: string }).entity;
+        return { body: { data: entity === "profile" ? [{ id: "prof", data, createdAt: "", updatedAt: "" }] : [] } };
+      }
+      if (c.path === "/batch") {
+        for (const op of (c.body as { ops: { data: Record<string, unknown> }[] }).ops) Object.assign(data, op.data);
+        return { body: { ids: ["prof"] } };
+      }
+      return undefined;
+    });
+    const input = note === undefined ? fields : { ...fields, insuranceNotes: note };
+    const result = await call("profiles.saveDraft", [PERSON, input], undefined, f);
+    expect(result.res.status).toBe(200);
+    expect((result.body.result as { fields: { insuranceNotes?: string } }).fields.insuranceNotes).toBe(note ?? "Existing private coverage");
+    const batches = f.calls.filter(c => c.path === "/batch");
+    if (note === undefined) expect(batches).toEqual([]);
+    else expect(batches.map(c => c.body)).toEqual([{ ops: [{ op: "update", entity: "profile", id: "prof", data: { insurance_notes: note } }] }]);
+    expect(f.calls.every(c => c.auth === `Bearer ${SESSION}`)).toBe(true);
+  });
+  it.each([null, 1, {}, ["not text"], "x".repeat(INSURANCE_NOTES_MAX + 1)])("refuses malformed/oversized notes before any backend call", async note => {
+    const f = fake();
+    const result = await call("profiles.saveDraft", [PERSON, { insuranceNotes: note }], undefined, f);
+    expect(result.res.status).toBe(422);
+    expect(result.body.error).toBe("invalid_insurance_notes");
+    expect(f.calls).toEqual([]);
+  });
+});
+
+
+it("public response omits insurance descriptions even if the upstream unexpectedly includes one", async () => {
+  const note = "PRIVATE FICTIONAL INSURANCE DESCRIPTION";
+  const f = fake(c => {
+    if (c.path === "/query") return { body: { data: (c.body as { entity?: string }).entity === "profile"
+      ? [{ id: "prof", data: { display_name: "Fictional Public Profile", public_handle: "fictional-profile", insurance_notes: note }, createdAt: "", updatedAt: "" }] : [] } };
+    return undefined;
+  });
+  const result = await call("people.getPublic", ["fictional-profile"], undefined, f);
+  expect(result.res.status).toBe(200);
+  const fields = (result.body.result as { profile: { fields: Record<string, unknown> } }).profile.fields;
+  expect(fields).not.toHaveProperty("insuranceNotes");
+  expect(JSON.stringify(result.body)).not.toContain(note);
+  expect(f.calls.every(c => c.auth === `Bearer ${READER}`)).toBe(true);
 });

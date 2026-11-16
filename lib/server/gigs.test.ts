@@ -88,3 +88,16 @@ it("multiline equipment stays a tools-only autosave with unchanged legacy transp
   expect(ops[0].data).not.toHaveProperty("transport");
   expect(ops[0].data).not.toHaveProperty("photo");
 });
+
+
+it("private insurance notes autosave alone; legacy payloads preserve existing notes", () => {
+  const previous = stored();
+  previous.profile!.data.insurance_notes = "Existing private description";
+  expect(draftOps(PERSON, fields, previous)).toEqual([]);
+  expect(draftOps(PERSON, { ...fields, insuranceNotes: "Updated private description" }, previous)).toEqual([
+    { op: "update", entity: "profile", id: "prof", data: { insurance_notes: "Updated private description" } },
+  ]);
+  expect(draftOps(PERSON, { ...fields, insuranceNotes: "" }, previous)).toEqual([
+    { op: "update", entity: "profile", id: "prof", data: { insurance_notes: "" } },
+  ]);
+});
