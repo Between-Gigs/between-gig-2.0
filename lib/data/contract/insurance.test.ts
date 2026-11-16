@@ -1,0 +1,21 @@
+import { beforeEach, expect, it } from "vitest";
+import { harness } from "./harness";
+import { drafted } from "./fixtures";
+const h = await harness();
+beforeEach(() => h.reset());
+it("keeps a fictional insurance note for self/team review but omits it from approved public data", async () => {
+  const who = await drafted(h, "private-insurance", "Insurance Contract");
+  const note = "FICTIONAL PRIVATE COVERAGE DESCRIPTION";
+  await h.source.profiles.saveDraft(who.personId, { ...who.fields, insurance: "yes", insuranceNotes: note }, 3);
+  expect((await h.source.profiles.getDraft(who.personId))?.fields.insuranceNotes).toBe(note);
+  await h.source.profiles.submit(who.personId);
+  await h.signInOwner();
+  expect((await h.source.people.get(who.personId))?.fields?.insuranceNotes).toBe(note);
+  await h.source.owners.approve(who.personId);
+  const slug = (await h.source.people.get(who.personId))!.person.slug;
+  await h.signOut();
+  const open = await h.source.people.getPublic(slug);
+  expect(open.profile).not.toBeNull();
+  expect(open.profile?.fields).not.toHaveProperty("insuranceNotes");
+  expect(JSON.stringify(open)).not.toContain(note);
+});

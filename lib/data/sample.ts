@@ -1,3 +1,5 @@
+import { withTravelRequirement } from "@/lib/profile/location-controls";
+import { readProfileTemplate } from "@/lib/profile/template";
 /*
  * The sample DataSource: the whole backend, faked in the browser. State lives in localStorage under
  * one key, seeded from ./seed.ts, and survives reloads until it is reset (QA, or clearing site data).
@@ -6,6 +8,7 @@
 import { renderEmail } from "@/emails";
 import { featuredPeople } from "./featured-people";
 import { craftOf } from "@/lib/profile/department";
+import { customServiceError } from "@/lib/profile/custom-service";
 import { LIVE_FIELDS, NAME_MAX, completeness, contentChanged, pinnedCredits, validateAll } from "@/lib/profile/validate";
 import { absoluteUrl } from "@/lib/site";
 import { blankFields, buildActivity, buildSeed, buildWaitlist, DEMO_TOKENS, SAMPLE_OWNER, seedPeople, type SeedState } from "./seed";
@@ -174,6 +177,7 @@ const withAvailability = (to: ProfileFields, from: ProfileFields): ProfileFields
 function publicOf(person: Person, profile: Profile): { person: Person; profile: Profile } {
   const f = { ...profile.fields };
   delete f.bookingMobile;
+  delete f.insuranceNotes;
   const credits = pinnedCredits(f);
   return {
     person: { id: person.id, email: "", name: person.name, slug: person.slug, status: "approved", waitlistZip: "", waitlistCategory: "", invitedAt: "", updatedAt: person.updatedAt, ...(person.sample ? { sample: true } : {}) },
@@ -451,14 +455,19 @@ export const sampleSource: DataSource = {
       const draft = state.drafts.find((d) => d.personId === personId);
       if (draft) return clone(draft);
       const person = state.people.find((p) => p.id === personId);
-      return person ? { personId, fields: blankFields(person.name), step: 0, savedAt: "" } : null;
+      return person ? { personId, profileCreatedAt: state.profiles.some(p => p.personId === personId) ? undefined : null, fields: blankFields(person.name), step: 0, savedAt: "" } : null;
     },
     async saveDraft(personId, fields, step) {
       // The write lands at once and the answer comes after the pause, so a save started as the page closes still lands.
       const state = load();
       const person = state.people.find((p) => p.id === personId);
       if (!person) throw new Error("No such person");
-      const draft: ProfileDraft = { personId, fields: clone(fields), step, savedAt: now() };
+      const previousDraft = state.drafts.find(d => d.personId === personId);
+      if (fields.travelBeyondLA !== undefined && typeof fields.travelBeyondLA !== "boolean") throw new Error("Choose a boolean travel preference.");
+      // Older clients omit this optional answer; omission never overwrites an explicit stored choice.
+      if (fields.travelBeyondLA === undefined && typeof previousDraft?.fields.travelBeyondLA === "boolean") fields = {...fields,travelBeyondLA:previousDraft.fields.travelBeyondLA};
+      const profileCreatedAt = previousDraft ? previousDraft.profileCreatedAt : state.profiles.some(p => p.personId === personId) ? undefined : now();
+      const draft: ProfileDraft = { personId, profileCreatedAt, fields: clone(fields), step, savedAt: now() };
       state.drafts = [...state.drafts.filter((d) => d.personId !== personId), draft];
       if (person.status === "registered") person.status = "draft";
       /*
@@ -482,7 +491,7 @@ export const sampleSource: DataSource = {
       const person = state.people.find((p) => p.id === personId);
       const draft = state.drafts.find((d) => d.personId === personId);
       if (!person || !draft) throw new Error("Nothing to submit");
-      if (Object.keys(validateAll(draft.fields)).length) throw new Error("The profile has fields that need attention");
+      if (Object.keys(validateAll(draft.fields, withTravelRequirement(readProfileTemplate(), draft.profileCreatedAt))).length || (!draft.fields.services.length && customServiceError(draft.fields.other))) throw new Error("The profile has fields that need attention");
       const t = now();
       const previous = state.profiles.find((p) => p.personId === personId);
       // Sending replaces the version the team has (and, for a live profile, takes it off the site until it's approved
@@ -639,6 +648,8 @@ export const sampleSource: DataSource = {
       const state = load();
       const person = state.people.find((p) => p.id === personId);
       if (!person || person.status !== "submitted") throw new Error("Only submitted profiles can be approved");
+      const submitted = state.profiles.find((p) => p.personId === personId);
+      if (!submitted?.fields.services.length) throw new Error("Add a listed service before this profile can be approved.");
       const t = now();
       Object.assign(person, { status: "approved", approvedAt: t, updatedAt: t, reviewNotes: undefined });
       // The approved version goes live as the team saw it, with the Gigster's latest availability. A newer draft (edited

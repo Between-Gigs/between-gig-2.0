@@ -19,10 +19,10 @@ describe("lib/profile/validate.ts", () => {
     expect(validateStep(3, { ...blankFields("A"), about: "x".repeat(ABOUT_MAX) }).about).toBeUndefined();
   });
 
-  it("caps the name at 60, the department at 40 and the dates at 80", () => {
+  it("caps editable name and dates without blocking on retained retired Department data", () => {
     const f = { ...blankFields("N".repeat(61)), position: "D".repeat(41), dates: "d".repeat(81) };
     expect(validateStep(0, f).name).toMatch(/60/);
-    expect(validateStep(0, f).position).toMatch(/40/);
+    expect(validateStep(0, f).position).toBeUndefined();
     expect(validateStep(2, f).dates).toMatch(/80/);
   });
 
@@ -50,6 +50,15 @@ describe("lib/profile/validate.ts", () => {
     expect(validateStep(1, { ...blankFields("A"), services: ["A"], serviceLines: { A: "x".repeat(121) } }).serviceLines).toMatch(/120/);
   });
 
+  it("counts a named custom service toward the same five-service submission limit", () => {
+    const fields = { ...blankFields("A"), services: ["A", "B", "C", "D", "E"], other: "Fictional custom service\nA short description." };
+    expect(validateStep(1, fields).services).toMatch(/up to 5.*6/);
+    expect(validateStep(1, { ...fields, services: fields.services.slice(0, 4) }).services).toBeUndefined();
+    expect(validateStep(1, { ...fields, other: "  " }).services).toBeUndefined();
+    expect(fields.services).toHaveLength(5);
+    expect(fields.other).toBe("Fictional custom service\nA short description.");
+  });
+
   it("the Gigster editor needs a line for every service and a question for a personality answer", () => {
     const f = { ...completeFields("Sample Crew", "img/people/maya.jpg"), services: ["Event Styling"] };
     expect(validateGigster(f, defaultProfileTemplate).serviceLines).toMatch(/each service/);
@@ -75,4 +84,32 @@ describe("lib/profile/validate.ts", () => {
     expect(contentChanged({ ...a, serviceLines: {} }, { ...a, serviceLines: undefined })).toBe(false);
     expect(contentChanged({ ...a, title: "" }, a)).toBe(false);
   });
+});
+
+
+describe("custom-only Gigster validation",()=>{
+  const f={...completeFields("Fictional Custom Crew","/media/f"),services:[],serviceLines:{},other:"Fictional restoration\nRestore a fictional display prop."};
+  it("accepts a clearly described custom-only service and marks its checklist complete",()=>{
+    expect(validateGigster(f,defaultProfileTemplate).services).toBeUndefined();
+    expect(gigsterChecklist(f,defaultProfileTemplate).required.find(i=>i.id==="services")?.done).toBe(true);
+  });
+  it("refuses blank/missing/oversized custom names or descriptions, preserving the supplied fields",()=>{
+    for(const other of [""," ","\nDescription only","Name only","X".repeat(61)+"\nDescription","Name\n"+"X".repeat(121)])expect(validateGigster({...f,other},defaultProfileTemplate).services).toBeTruthy();
+    expect(f.other).toBe("Fictional restoration\nRestore a fictional display prop.");
+  });
+});
+
+
+it("keeps the new custom-only UI disabled for an explicit legacy/live configuration",()=>{
+ const f={...completeFields("Fictional Custom Crew","/media/f"),services:[],other:"Name\nDescription"};
+ expect(validateGigster(f,defaultProfileTemplate,false).services).toBeTruthy();
+ expect(gigsterChecklist(f,defaultProfileTemplate,false).required.find(i=>i.id==="services")?.done).toBe(false);
+});
+
+it("compares private insurance notes without making legacy blank notes an unsent change", () => {
+  const fields = blankFields("Insurance Contract");
+  expect(contentChanged(fields, { ...fields, insuranceNotes: "" })).toBe(false);
+  expect(contentChanged(fields, { ...fields, insuranceNotes: "  " })).toBe(false);
+  expect(contentChanged(fields, { ...fields, insuranceNotes: "Fictional coverage" })).toBe(true);
+  expect(contentChanged({ ...fields, insuranceNotes: "Fictional coverage" }, { ...fields, insuranceNotes: " Fictional coverage " })).toBe(false);
 });
