@@ -209,3 +209,9 @@ describe("private insurance descriptions", () => {
     expect(fromProfile(data, items, "")).toMatchObject({ insurance: "private", insuranceNotes: "Keep fictional private draft" });
   });
 });
+
+it("keeps custom skill labels lossless and separate from service/area label dictionaries",()=>{
+ const skills=["Set decoration","Foley & practical effects","interior_styling","eastside","  Historical custom label  "];
+ const encoded=toProfile({...filled,skills});expect(encoded.items.filter(i=>i.kind==="skill").map(i=>i.value)).toEqual(["set_decoration",...skills.slice(1)]);
+ expect(fromProfile(encoded.data,encoded.items,filled.photo).skills).toEqual(skills);
+});

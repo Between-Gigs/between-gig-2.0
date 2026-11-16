@@ -140,3 +140,9 @@ it("changing a mileage choice only patches existing travel_notes and preserves h
  expect(previous.items.filter(i=>i.data.kind==="area")).toHaveLength(legacy.areas.length);expect(previous.profile.data.insurance_notes).toBe("Fictional private coverage");
  expect(toProfile({...legacy,areas:[]}).items.filter(i=>i.kind==="area")).toHaveLength(0);
 });
+
+it("unrelated edits never slugify or recreate a stored custom skill label",()=>{
+ const previous=stored({...fields,skills:["Set decoration"]});previous.items.push({id:"custom-skill",data:{profile:"prof",kind:"skill",value:"Foley & practical effects",position:1,visible:true},createdAt:"",updatedAt:""});
+ const read=fromProfile(previous.profile.data,previous.items.map(i=>i.data) as Parameters<typeof fromProfile>[1],fields.photo);
+ expect(draftOps(PERSON,{...read,about:"Updated fictional experience."},previous)).toEqual([{op:"update",entity:"profile",id:"prof",data:{about:"Updated fictional experience."}}]);
+});
