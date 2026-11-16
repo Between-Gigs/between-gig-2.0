@@ -15,6 +15,8 @@ import { data } from "@/lib/data";
 import { basePath } from "@/lib/site";
 import { professionalExamples } from "@/lib/professional-examples";
 
+import { locationControlsEnabled } from "@/lib/profile/location-controls";
+
 type Screen = "canvas" | "form" | "page";
 const fields = (Object.keys(profileFieldParts) as ProfileFieldRule[]).filter((key) => key !== "transport" && (key !== "position" || !departmentFieldRetired()));
 const screenOptions = [{ value: "canvas", label: "Guided editor" }, { value: "form", label: "Questionnaire" }, { value: "page", label: "Client page" }];
@@ -137,7 +139,7 @@ export function ProfileTemplateEditor() {
                       <span>{rules.length > 1 ? ruleLabels[k] : "Required before submission"}</span>
                       <span className="inline-flex items-center gap-2">
                         {rules.length > 1 && <span className="text-ink-muted">{draft.required.includes(k) ? "Required" : "Optional"}</span>}
-                        <input type="checkbox" checked={draft.required.includes(k)} aria-label={`Require ${ruleLabels[k]}`}
+                        <input type="checkbox" checked={draft.required.includes(k) || (k === "travel" && locationControlsEnabled())} disabled={k === "travel" && locationControlsEnabled()} aria-label={`Require ${ruleLabels[k]}`}
                           onChange={(e) => edit({ ...draft, required: e.target.checked ? [...draft.required, k] : draft.required.filter((id) => id !== k) })}
                           className="size-5 accent-action" />
                       </span>

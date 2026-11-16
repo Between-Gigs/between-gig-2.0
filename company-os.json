@@ -16,6 +16,13 @@
         "test": null,
         "production": null
       }
+    },
+    "locationControls": {
+      "apiCommit": null,
+      "settingsEvidence": {
+        "test": null,
+        "production": null
+      }
     }
   }
 }

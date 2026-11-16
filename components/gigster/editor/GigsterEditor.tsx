@@ -15,6 +15,7 @@ import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
 import { DataError, sendNow } from "@/lib/data/api";
 import { useRequireRole } from "@/lib/guard";
+import { requiredProfileRules } from "@/lib/profile/template";
 import { useProfileTemplate } from "@/lib/profile/use-profile-template";
 import { contentChanged, fieldLabel, gigsterChecklist, gigsterFieldLabel, gigsterItemOf, gigsterItems, readNotes, sectionLabel, validateGigster, type FieldErrors, type GigsterItemId } from "@/lib/profile/validate";
 import { SaveIndicator, type SaveState } from "@/components/builder/ProfileBuilder";
@@ -193,7 +194,7 @@ function Editor({ personId }: { personId: string }) {
       return n;
     });
   });
-  const required = (field: string) => (template.required as readonly string[]).includes(field);
+  const required = (field: string) => (requiredProfileRules(template) as readonly string[]).includes(field);
 
   const first = d.name.trim().split(/\s+/)[0] || "there";
   const status = person.status;

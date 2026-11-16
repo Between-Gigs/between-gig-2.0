@@ -34,3 +34,12 @@ it("does not combine readiness declarations for different deployed API source co
  const manifest=JSON.parse(ready);manifest.profileFeatures.departmentRetirement={apiCommit:"b".repeat(40),settingsEvidence:{test:"libfile_fictional_test"}};
  expect(checkProfileActivation({RAILWAY_ENV:"test",NEXT_PUBLIC_PROFILE_NO_DEPARTMENT:"1",CUSTOM_SERVICE_REVIEW_ENABLED:"1"},JSON.stringify(manifest)).ok).toBe(false);
 });
+
+describe("location controls activation",()=>{
+ it("refuses hiding areas/requiring travel until this environment's settings declaration exists",()=>expect(checkProfileActivation({RAILWAY_ENV:"test",NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS:"1"},pending).ok).toBe(false));
+ it("can gate metadata-only location changes without pretending a new API release is reserved",()=>{
+  const manifest=JSON.stringify({requires:">=1.14.0",profileFeatures:{locationControls:{apiCommit:"a".repeat(40),settingsEvidence:{test:"libfile_fictional_location",production:null}}}});
+  expect(checkProfileActivation({RAILWAY_ENV:"test",NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS:"1"},manifest).ok).toBe(true);
+  expect(checkProfileActivation({RAILWAY_ENV:"production",NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS:"1"},manifest).ok).toBe(false);
+ });
+});

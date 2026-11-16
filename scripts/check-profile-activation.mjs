@@ -10,7 +10,7 @@ function settingsDeclared(feature, environment) {
 }
 
 export function checkProfileActivation(env, manifest) {
-  for (const name of ["NEXT_PUBLIC_PROFILE_NO_DEPARTMENT", "NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW"]) {
+  for (const name of ["NEXT_PUBLIC_PROFILE_NO_DEPARTMENT", "NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW", "NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS"]) {
     if (![undefined, "", "0", "1"].includes(env[name])) return { ok: false, error: `${name} must be absent, 0 or 1` };
   }
   // Do not turn off a previously activated runtime guard during an ordinary UI rollback.
@@ -23,8 +23,13 @@ export function checkProfileActivation(env, manifest) {
     if (!release.ok) return release;
     if (!settingsDeclared(declaration?.profileFeatures?.customServiceReview, env.RAILWAY_ENV)) return { ok: false, error: "Custom-service activation needs this environment's private settings-verification receipt and deployed API commit declaration" };
   }
-  if (env.NEXT_PUBLIC_PROFILE_NO_DEPARTMENT === "1" && !settingsDeclared(declaration?.profileFeatures?.departmentRetirement, env.RAILWAY_ENV)) return { ok: false, error: "Department retirement needs this environment's private settings-verification receipt and deployed API commit declaration" };
-  if (env.NEXT_PUBLIC_PROFILE_NO_DEPARTMENT === "1" && env.CUSTOM_SERVICE_REVIEW_ENABLED === "1" && declaration.profileFeatures.departmentRetirement.apiCommit !== declaration.profileFeatures.customServiceReview.apiCommit) return { ok: false, error: "Enabled profile features must identify the same deployed API source commit" };
+  const enabled = [
+    ...(env.NEXT_PUBLIC_PROFILE_NO_DEPARTMENT === "1" ? ["departmentRetirement"] : []),
+    ...(env.CUSTOM_SERVICE_REVIEW_ENABLED === "1" ? ["customServiceReview"] : []),
+    ...(env.NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS === "1" ? ["locationControls"] : []),
+  ];
+  for (const name of enabled) if (!settingsDeclared(declaration?.profileFeatures?.[name], env.RAILWAY_ENV)) return { ok: false, error: `${name} needs this environment's private settings-verification receipt and deployed API commit declaration` };
+  if (new Set(enabled.map(name => declaration.profileFeatures[name].apiCommit)).size > 1) return { ok: false, error: "Enabled profile features must identify the same deployed API source commit" };
   return { ok: true };
 }
 

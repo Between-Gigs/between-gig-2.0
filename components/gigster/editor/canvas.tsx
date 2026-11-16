@@ -16,6 +16,7 @@ import { laServiceAreas, onSetSkills, serviceChoices } from "@/lib/data/taxonomy
 import { personalityQuestions } from "@/lib/profile/personality";
 import { departmentFieldRetired } from "@/lib/profile/department-retirement";
 import { serviceDescription } from "@/lib/profile/service-descriptions";
+import { locationControlsEnabled, travelRadiusOptions } from "@/lib/profile/location-controls";
 import { POSTAL_CODE_MAX } from "@/lib/profile/postal";
 import { INSURANCE_NOTES_MAX } from "@/lib/profile/insurance";
 import { stageTwoLimits } from "@/lib/profile/stage-two";
@@ -108,19 +109,21 @@ export function CanvasIdentity({ d, set, errors, personId, confirmPhoto, require
                     onChange={(e) => set("zip")(d.market === "la" ? e.target.value.replace(/\D/g, "").slice(0, 5) : e.target.value.slice(0, POSTAL_CODE_MAX))} />
                 </Field>
                 <Field label="Travel radius" optional={!required("travel")} error={errors.travel}>
-                  <Input id="f-travel" value={d.travel} placeholder="e.g. Up to 15 miles" onChange={(e) => set("travel")(e.target.value.slice(0, 80))} />
+                  {locationControlsEnabled()
+                    ? <Select id="f-travel" aria-label="Travel radius" value={d.travel} placeholder="Choose a travel radius" options={travelRadiusOptions(d.travel)} onValueChange={set("travel")} />
+                    : <Input id="f-travel" value={d.travel} placeholder="e.g. Up to 15 miles" onChange={(e) => set("travel")(e.target.value.slice(0, 80))} />}
                 </Field>
               </div>
               {d.market === "other"
                 ? <Field label="City / region and country" optional={!required("location")} error={errors.otherCity} hint="Los Angeles is the launch market. Your profile is held for a future market.">
                     <Input id="f-otherCity" value={d.otherCity} onChange={(e) => set("otherCity")(e.target.value)} />
                   </Field>
-                : <div className="grid gap-2">
+                : !locationControlsEnabled() ? <div className="grid gap-2">
                     <p className="text-label-md text-ink">Areas you serve{!required("location") && <span className="ml-2 text-body-sm font-normal text-ink-subtle">Optional</span>}</p>
                     <Pills label="Areas you serve" options={laServiceAreas} isOn={(o) => d.areas.includes(o)}
                       onToggle={(o) => set("areas")(d.areas.includes(o) ? d.areas.filter((a) => a !== o) : [...d.areas, o])} />
                     <GroupError id="f-areas-error">{errors.areas}</GroupError>
-                  </div>}
+                  </div> : null}
             </div>
           ) : <AddLink onClick={openWhere}>ZIP or postal code &amp; travel radius</AddLink>}
           <p className="text-body-sm text-ink-muted italic">Your home address stays private.</p>

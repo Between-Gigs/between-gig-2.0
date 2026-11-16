@@ -132,3 +132,11 @@ it("private insurance notes autosave alone; legacy payloads preserve existing no
     { op: "update", entity: "profile", id: "prof", data: { insurance_notes: "" } },
   ]);
 });
+
+it("changing a mileage choice only patches existing travel_notes and preserves historical areas/private notes/media",()=>{
+ const legacy={...fields,travel:"Within 20 miles, by arrangement"};const previous=stored(legacy);previous.profile.data.insurance_notes="Fictional private coverage";
+ expect(draftOps(PERSON,{...legacy,travel:"Up to 25 miles"},previous)).toEqual([{op:"update",entity:"profile",id:"prof",data:{travel_notes:"Up to 25 miles"}}]);
+ expect(draftOps(PERSON,{...legacy,about:"Updated fictional experience."},previous)).toEqual([{op:"update",entity:"profile",id:"prof",data:{about:"Updated fictional experience."}}]);
+ expect(previous.items.filter(i=>i.data.kind==="area")).toHaveLength(legacy.areas.length);expect(previous.profile.data.insurance_notes).toBe("Fictional private coverage");
+ expect(toProfile({...legacy,areas:[]}).items.filter(i=>i.kind==="area")).toHaveLength(0);
+});

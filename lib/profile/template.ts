@@ -1,3 +1,4 @@
+import { locationControlsEnabled } from "./location-controls";
 import { departmentFieldRetired } from "./department-retirement";
 /** Profile configuration in the sample preview. Live and server builds always use the product defaults. */
 export const profileParts = {
@@ -21,7 +22,7 @@ export const profileFieldParts = {
 export type ProfileFieldRule = keyof typeof profileFieldParts;
 export const ruleLabels: Record<ProfileFieldRule, string> = {
   name: "Public name", position: "Department", years: "Years in the business", services: "Services offered", skills: "On-set skills",
-  zip: "Home ZIP code", location: "Service areas or city", travel: "Travel notes", dates: "Available dates or times",
+  zip: "Home ZIP code", location: locationControlsEnabled() ? "City / region outside Los Angeles" : "Service areas or city", travel: "Travel notes", dates: "Available dates or times",
   rate: "Starting rate", about: "About me", credits: "Notable credits", photo: "Profile photo",
   imdb: "IMDb profile link", languages: "Languages", tools: "Tools and equipment", transport: "Transport",
   bookingMobile: "Private booking mobile", earliestStart: "Earliest start date", bookingMinimum: "Minimum booking",
@@ -36,7 +37,7 @@ export interface ProfileTemplate {
 const fields = Object.keys(profileFieldParts) as ProfileFieldRule[];
 export const defaultProfileTemplate: ProfileTemplate = {
   // Credits are optional (client, 13 Nov 2026): plenty of good Gigsters have none to name yet.
-  required: (["name", "position", "years", "services", "skills", "zip", "location", "dates", "about", "photo"] as ProfileFieldRule[]).filter((key) => key !== "position" || !departmentFieldRetired()),
+  required: (["name", "position", "years", "services", "skills", "zip", "location", "dates", "about", "photo", ...(locationControlsEnabled() ? ["travel" as const] : [])] as ProfileFieldRule[]).filter((key) => key !== "position" || !departmentFieldRetired()),
   order: Object.keys(profileParts) as ProfilePartId[],
   sections: Object.keys(profileSections) as ProfileSectionId[],
 };
@@ -58,12 +59,12 @@ export function parseProfileTemplate(raw: string): ProfileTemplate | null {
       Array.isArray(v) && v.length <= allowed.length && (!all || v.length === allowed.length) &&
       v.every((k) => typeof k === "string" && allowed.includes(k)) && new Set(v).size === v.length;
     if (!valid(x.required, fields, false) || !valid(x.order, defaultProfileTemplate.order, true) || !valid(x.sections, defaultProfileTemplate.sections, true)) return null;
-    return { required: fields.filter((k) => k !== "transport" && (k !== "position" || !departmentFieldRetired()) && x.required.includes(k)), order: x.order, sections: x.sections };
+    return { required: fields.filter((k) => k !== "transport" && (k !== "position" || !departmentFieldRetired()) && (x.required.includes(k) || (k === "travel" && locationControlsEnabled()))), order: x.order, sections: x.sections };
   } catch { return null; }
 }
 
 export function encodeProfileTemplate(template: ProfileTemplate) {
-  return JSON.stringify({ version: 1, required: fields.filter((k) => k !== "transport" && (k !== "position" || !departmentFieldRetired()) && template.required.includes(k)), order: template.order, sections: template.sections });
+  return JSON.stringify({ version: 1, required: fields.filter((k) => k !== "transport" && (k !== "position" || !departmentFieldRetired()) && (template.required.includes(k) || (k === "travel" && locationControlsEnabled()))), order: template.order, sections: template.sections });
 }
 
 export function readProfileTemplate(): ProfileTemplate {
@@ -101,6 +102,11 @@ export function subscribeProfileTemplate(listener: () => void) {
   return () => { window.removeEventListener("storage", onStorage); window.removeEventListener(changeEvent, listener); };
 }
 
+/** New location mode requires travel even for callers holding an older in-memory template. */
+export function requiredProfileRules(template: ProfileTemplate): readonly ProfileFieldRule[] {
+  return locationControlsEnabled() && !template.required.includes("travel") ? [...template.required, "travel"] : template.required;
+}
+
 export function requiredProfileParts(template: ProfileTemplate) {
-  return template.order.filter((id) => template.required.some((k) => profileFieldParts[k] === id));
+  return template.order.filter((id) => requiredProfileRules(template).some((k) => profileFieldParts[k] === id));
 }

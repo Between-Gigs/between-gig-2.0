@@ -1,3 +1,4 @@
+import { locationControlsEnabled } from "./location-controls";
 import type { ProfileFields } from "@/lib/data/types";
 
 /**
@@ -6,3 +7,7 @@ import type { ProfileFields } from "@/lib/data/types";
  */
 export const locationLabel = (f: Pick<ProfileFields, "market" | "areas" | "otherCity">) =>
   f.market === "la" ? `${f.areas.join(" · ") || "Los Angeles"}, Los Angeles area` : f.otherCity || "Another market";
+
+/** Visible profile location: the new editor can submit LA profiles without area tags. */
+export const profileLocationLabel = (f: Pick<ProfileFields, "market" | "areas" | "otherCity">, noServiceAreas = locationControlsEnabled()) =>
+  f.market === "la" && !f.areas.length ? (noServiceAreas ? "Los Angeles area" : "") : locationLabel(f);

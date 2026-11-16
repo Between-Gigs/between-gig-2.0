@@ -1,9 +1,10 @@
+import { locationControlsEnabled } from "./location-controls";
 import { customServiceError, customServiceReviewEnabled } from "./custom-service";
 import { departmentFieldRetired } from "./department-retirement";
 import { postalCodeError, validPostalCode } from "./postal";
 import type { ProfileFields, ProfileSection, ReviewNote } from "@/lib/data/types";
 import { stageTwoLimits, startDateLabel } from "./stage-two";
-import { profileFieldParts, readProfileTemplate, requiredProfileParts, type ProfileFieldRule, type ProfilePartId, type ProfileTemplate } from "./template";
+import { profileFieldParts, readProfileTemplate, requiredProfileParts, requiredProfileRules, type ProfileFieldRule, type ProfilePartId, type ProfileTemplate } from "./template";
 export type { ProfilePartId } from "./template";
 
 /** The builder's five steps. The first four are profile sections; the fifth is the review. */
@@ -86,7 +87,7 @@ const missingAnswer: Record<ProfileFieldRule, string> = {
 
 function answered(key: ProfileFieldRule, d: ProfileFields): boolean {
   switch (key) {
-    case "location": return d.market === "other" ? !!d.otherCity.trim() : d.areas.length > 0;
+    case "location": return d.market === "other" ? !!d.otherCity.trim() : locationControlsEnabled() || d.areas.length > 0;
     case "services": return d.services.length > 0 || !!d.other.trim();
     case "credits": return d.credits.some((c) => c.trim());
     case "skills": return d.skills.length > 0;
@@ -99,10 +100,10 @@ const answerKey = (key: ProfileFieldRule, d: ProfileFields) => key === "location
 
 export function validateStep(step: number, d: ProfileFields, template = readProfileTemplate()): FieldErrors {
   const e: FieldErrors = {};
-  for (const rule of template.required) {
+  for (const rule of requiredProfileRules(template)) {
     const key = answerKey(rule, d);
     if (fieldStep[key] === step && !answered(rule, d)) {
-      e[key] = key === "otherCity" ? "Enter your city, region and country." : missingAnswer[rule];
+      e[key] = key === "otherCity" ? "Enter your city, region and country." : rule === "travel" && locationControlsEnabled() ? "Choose a travel radius." : missingAnswer[rule];
     }
   }
   // Optional answers can be empty; a supplied answer must still have a valid format.
@@ -206,7 +207,7 @@ export function gigsterChecklist(d: ProfileFields, template = readProfileTemplat
   const errors = validateGigster(d, template, allowCustomOnly);
   const always: GigsterItemId[] = ["services"];
   const out = gigsterItems.map((item) => {
-    const required = always.includes(item.id) || item.fields.some((f) => (template.required as readonly string[]).includes(f === "areas" || f === "otherCity" ? "location" : f));
+    const required = always.includes(item.id) || item.fields.some((f) => (requiredProfileRules(template) as readonly string[]).includes(f === "areas" || f === "otherCity" ? "location" : f));
     const invalid = item.fields.some((f) => errors[f]);
     return { id: item.id, label: item.label, required, done: !invalid && itemFilled(item.id, d, allowCustomOnly) };
   });
@@ -226,9 +227,9 @@ export function validateAll(d: ProfileFields, template = readProfileTemplate()):
 /** Share of configured required answers that are valid. */
 export function completeness(d: ProfileFields | null, template = readProfileTemplate()): number {
   if (!d) return 0;
-  if (!template.required.length) return 1;
+  if (!requiredProfileRules(template).length) return 1;
   const errors = Object.assign({}, ...Object.values(validateAll(d, template))) as FieldErrors;
-  return template.required.filter((k) => !errors[answerKey(k, d)]).length / template.required.length;
+  return requiredProfileRules(template).filter((k) => !errors[answerKey(k, d)]).length / requiredProfileRules(template).length;
 }
 
 /** Which step a field lives on, so the error summary can link to it. */
@@ -263,7 +264,7 @@ export function isPartFilled(id: ProfilePartId, d: ProfileFields): boolean {
     case "years": return d.years !== "";
     case "services": return d.services.length > 0 || !!d.other.trim();
     case "skills": return d.skills.length > 0;
-    case "where": return validPostalCode(d.market, d.zip) && (d.market === "other" ? !!d.otherCity.trim() : d.areas.length > 0);
+    case "where": return validPostalCode(d.market, d.zip) && (d.market === "other" ? !!d.otherCity.trim() : locationControlsEnabled() || d.areas.length > 0) && (!locationControlsEnabled() || !!d.travel.trim());
     case "availability": return !!d.dates.trim();
     case "rate": return hasRate(d.rate);
     case "about": return !!d.about.trim();
@@ -276,7 +277,7 @@ export function isPartFilled(id: ProfilePartId, d: ProfileFields): boolean {
 
 /** Use all configured answers within a combined spot (e.g. service areas and private ZIP). */
 export function partComplete(id: ProfilePartId, d: ProfileFields, template: ProfileTemplate, errors: FieldErrors): boolean {
-  const members = template.required.filter((k) => profileFieldParts[k] === id);
+  const members = requiredProfileRules(template).filter((k) => profileFieldParts[k] === id);
   if (!members.length) return isPartFilled(id, d);
   return members.every((k) => !errors[answerKey(k, d)]);
 }

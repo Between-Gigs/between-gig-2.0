@@ -7,7 +7,7 @@ import Link from "next/link";
 import * as React from "react";
 import { data, type Person, type Profile, type ProfileFields } from "@/lib/data";
 import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/data/taxonomy";
-import { locationLabel } from "@/lib/profile/location";
+import { profileLocationLabel } from "@/lib/profile/location";
 import { absoluteUrl, asset } from "@/lib/site";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { hasRate, pinnedCredits } from "@/lib/profile/validate";
@@ -83,7 +83,7 @@ function profileContent({ person, fields: f, extras, mode, draft = false, part }
     portfolio: (f.workSamples ?? []).filter(Boolean).length ? (f.workSamples ?? []).filter(Boolean).map((src, i) => ({ src, caption: `Work sample ${i + 1}` })) : extras?.portfolio ?? [],
     resumeUrl: /^https?:\/\//.test(f.resumeUrl ?? "") ? f.resumeUrl! : "",
     rate: priced ? `$${f.rate}/${basisShort[f.basis]}` : null,
-    where: f.market === "la" ? (f.areas.length ? locationLabel(f) : "") : locationLabel(f),
+    where: profileLocationLabel(f),
     creditRows: credits.map(splitCredit),
     questions: faqs(first).map((item, i) => ({ id: `${person.id}-faq-${i}`, title: item.q, content: item.a })),
   };

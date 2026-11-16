@@ -175,3 +175,9 @@ describe("profile feature activation deployment", () => {
     expect(readFileSync(new URL("../.railway/railway.ts",import.meta.url),"utf8")).toMatch(/CUSTOM_SERVICE_REVIEW_ENABLED:\s*preserve\(\)/);
   });
 });
+
+it("both deployed builds and their preflights get the optional location-controls flag",()=>{
+ for(const name of ["deploy-test.yml","deploy-prod.yml"]){
+  const s=steps(read(name));for(const step of [s.find(x=>x.includes("Require ")&&x.includes(" configuration")),s.find(x=>x.includes("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY")&&x.includes("pnpm build:server"))])expect(step).toContain("NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS: ${{ vars.PROFILE_LOCATION_CONTROLS }}");
+ }
+});
