@@ -219,3 +219,8 @@ it("keeps custom skill labels lossless and separate from service/area label dict
 it.each(['constructor','__proto__','toString'])('keeps prototype-like custom skill %s as exact text',value=>{
  const encoded=toProfile({...filled,skills:[value]});expect(fromProfile(encoded.data,encoded.items,'').skills).toEqual([value]);
 });
+
+it('round-trips explicit travel preference booleans without inventing an answer for legacy profiles',()=>{
+ for(const travelBeyondLA of[true,false]){const encoded=toProfile({...filled,travelBeyondLA});expect(encoded.data.travel_outside_home_market).toBe(travelBeyondLA);expect(fromProfile(encoded.data,encoded.items,'').travelBeyondLA).toBe(travelBeyondLA);}
+ expect(toProfile(filled).data).not.toHaveProperty('travel_outside_home_market');for(const v of[undefined,null,'true',1])expect(fromProfile({travel_outside_home_market:v},[],'')).not.toHaveProperty('travelBeyondLA');
+});

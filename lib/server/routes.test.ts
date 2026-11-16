@@ -718,3 +718,8 @@ it("save replies preserve actual creation metadata while client timestamp fields
  expect(JSON.stringify(f.calls.filter(c=>c.method==="PATCH"||c.path==="/batch"))).not.toContain("profileCreatedAt");
  const pub=await call("people.getPublic",["fictional"],{token:null},f);expect(JSON.stringify(pub.body)).not.toContain("profileCreatedAt");expect(JSON.stringify(pub.body)).not.toContain(createdAt);
 });
+
+it('accepts only explicit boolean travel preference, preserving legacy omission and refusing coercion',async()=>{
+ const{cleanFields}=await import('./routes');for(const v of[true,false])expect(cleanFields({travelBeyondLA:v}).travelBeyondLA).toBe(v);
+ expect(cleanFields({})).not.toHaveProperty('travelBeyondLA');for(const v of[null,'true','false',0,1,{},[]])expect(()=>cleanFields({travelBeyondLA:v})).toThrow();
+});

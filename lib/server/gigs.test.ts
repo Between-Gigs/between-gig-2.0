@@ -154,3 +154,9 @@ it('preserves raw catalog-label history and prototype-like skills on unrelated e
  expect(draftOps(PERSON,{...read,about:'Updated fictional experience.'},previous)).toEqual([{op:'update',entity:'profile',id:'prof',data:{about:'Updated fictional experience.'}}]);
  const reordered={...read,skills:[...read.skills].reverse()};const ops=draftOps(PERSON,reordered,previous);expect(ops.every(op=>op.op==='update'&&op.entity==='profile_item'&&Object.keys(op.data??{}).join()==='position')).toBe(true);
 });
+
+it.each([true,false])('omitted legacy travel-preference payload preserves stored %s and explicit change patches only its boolean',value=>{
+ const previous=stored();previous.profile.data.travel_outside_home_market=value;
+ expect(draftOps(PERSON,{...fields,about:'Fictional unrelated edit.'},previous)).toEqual([{op:'update',entity:'profile',id:'prof',data:{about:'Fictional unrelated edit.'}}]);
+ expect(draftOps(PERSON,{...fields,travelBeyondLA:!value},previous)).toEqual([{op:'update',entity:'profile',id:'prof',data:{travel_outside_home_market:!value}}]);
+});
