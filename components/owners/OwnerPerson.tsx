@@ -5,6 +5,7 @@ import * as React from "react";
 import { data, type PersonSummary, type Profile } from "@/lib/data";
 import { waitlistCategoryLabel } from "@/lib/data/taxonomy";
 import { useSettleWhen } from "@/lib/motion";
+import { customServiceReviewEnabled } from "@/lib/profile/custom-service";
 import { readNotes, sectionLabel } from "@/lib/profile/validate";
 import { basePath } from "@/lib/site";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
@@ -147,6 +148,12 @@ function Person({ id }: { id: string }) {
     </div>
   );
 
+  const customReview = fields?.other.trim() ? <section aria-labelledby="owner-custom-service-heading" className="mt-8 grid min-w-0 gap-2 border-y border-line py-5">
+    <h2 id="owner-custom-service-heading" className="font-display text-heading-lg text-ink">Custom service for private review</h2>
+    <p className="text-body-sm text-ink-muted">{!fields.services.length && customServiceReviewEnabled() ? "This request is private. A listed service must be added before this profile can be approved." : "This custom-service request is private and is not shown on the public profile."}</p>
+    <p id="owner-custom-service-text" className="max-w-prose whitespace-pre-wrap break-words text-body-md text-ink">{fields.other}</p>
+  </section> : null;
+
   // The profile as clients would see it, framed (hairline sides and foot under the section's rule) so its own
   // sections don't read as part of this page. `number` is this section's place on the page.
   const preview = (number: string) => fields ? (
@@ -164,7 +171,7 @@ function Person({ id }: { id: string }) {
     return (
       <OwnerShell section={section}>
         {crumbs(name)}
-        <ReviewWorkspace person={p} fields={fields} queue={queue} history={history} scrolled={pastHero} header={<>{header}{heroMark}</>}>{preview("02")}</ReviewWorkspace>
+        <ReviewWorkspace person={p} fields={fields} queue={queue} history={history} scrolled={pastHero} header={<>{header}{heroMark}</>}>{customReview}{preview("02")}</ReviewWorkspace>
       </OwnerShell>
     );
   }
@@ -175,6 +182,7 @@ function Person({ id }: { id: string }) {
       {condensed(false)}
       {header}
       {heroMark}
+      {customReview}
       {history.unsentDraft && <UnsentDraftFlag className="mt-4" />}
       {/* Where they stand, as the page's first section: the notes they're working on, or that they're live. */}
       {p.status === "changes_requested" && (

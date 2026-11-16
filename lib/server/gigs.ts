@@ -5,6 +5,7 @@
  * Company OS's to decide (row policies, Super Admin routes), never this file's.
  */
 import { craftOf } from "@/lib/profile/department";
+import { customServiceError } from "@/lib/profile/custom-service";
 import { completeness } from "@/lib/profile/validate";
 import { fromProfile, toProfile, type ProfileItem } from "@/lib/data/companyos/fields";
 import { personStatuses, inviteStatuses } from "@/lib/data/types";
@@ -264,6 +265,7 @@ async function publicProfiles(ctx: Ctx, profiles: Row[]) {
   return profiles.map((p) => {
     const photo = photoBy.get(p.id);
     const fields = fromProfile(p.data, itemsOf(itemsBy.get(p.id)), photo ? mediaUrl(photo.id) : "");
+    fields.other = ""; // Private review text never belongs in a public response, even on upstream over-return.
     // The public page knows the profile, not the person: its id stands in, and nothing private is in it.
     const person: Person = {
       id: p.id, email: "", name: fields.name, slug: str(p.data.public_handle), status: "approved", waitlistZip: "", waitlistCategory: "",
@@ -381,7 +383,20 @@ export async function submit(ctx: Ctx, personId: string) {
   const own = await ownProfile(ctx, personId);
   if (!own.profile) throw new CompanyOsError(422, "profile_incomplete", "nothing to submit");
   // Already with the team or live: nothing to send (an edit to a live profile has already sent it back, N-09).
-  if (own.profile.data.status !== "submitted" && own.profile.data.status !== "approved") await ctx.cos.patch(ctx.cred, "profile", own.profile.id, { status: "submitted" });
+  if (own.profile.data.status !== "submitted" && own.profile.data.status !== "approved") {
+    const fields = fieldsFrom(own);
+    if (!fields.services.length) {
+      const enabled = process.env.CUSTOM_SERVICE_REVIEW_ENABLED === "1";
+      if (process.env.NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW === "1" && !enabled) throw new CompanyOsError(503, "custom_service_review_unavailable");
+      // Both flags absent preserves the older client's existing submit contract.
+      if (enabled) {
+        if (!fields.other.trim()) throw new CompanyOsError(422, "profile_incomplete", "Choose a service or describe a custom service.");
+        const error = customServiceError(fields.other);
+        if (error) throw new CompanyOsError(422, "invalid_custom_service", error);
+      }
+    }
+    await ctx.cos.patch(ctx.cred, "profile", own.profile.id, { status: "submitted" });
+  }
   const summary = await getPerson(ctx, personId);
   const profile = await getProfile(ctx, personId);
   if (!summary || !profile) throw new CompanyOsError(404, "not found");
@@ -625,6 +640,11 @@ async function decide(ctx: Ctx, personId: string, status: "approved" | "changes_
   const profile = await profileOf(ctx, personId);
   // Only a submitted profile is decided on. Company OS would take a review of an approved profile as a note.
   if (profile.data.status !== "submitted") throw new CompanyOsError(422, "invalid_status_transition", "only a submitted profile can be reviewed");
+  if (status === "approved" && str(profile.data.services_other).trim() && (process.env.CUSTOM_SERVICE_REVIEW_ENABLED === "1" || process.env.NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW === "1")) {
+    if (process.env.CUSTOM_SERVICE_REVIEW_ENABLED !== "1") throw new CompanyOsError(503, "custom_service_review_unavailable");
+    const items = await ctx.cos.all(ctx.cred, { entity: "profile_item", filter: and(eq("profile", profile.id), eq("kind", "service")) });
+    if (!items.some((item) => item.data.kind === "service" && item.data.visible !== false)) throw new CompanyOsError(422, "profile_incomplete", "Add a listed service before approving a private custom-service request.");
+  }
   const sections = Object.fromEntries(notes.map((n) => [n.section, n.note]));
   const label: Record<ProfileSection, string> = { about: "About you", skills: "Skills & services", where: "Where & when", story: "Your story", photo: "Photo" };
   const note = notes.length ? notes.map((n) => `${label[n.section]}: ${n.note}`).join("\n") : "Approved";

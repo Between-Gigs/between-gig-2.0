@@ -1,3 +1,4 @@
+import { customServiceError, customServiceReviewEnabled } from "./custom-service";
 import type { ProfileFields, ProfileSection, ReviewNote } from "@/lib/data/types";
 import { stageTwoLimits, startDateLabel } from "./stage-two";
 import { profileFieldParts, readProfileTemplate, requiredProfileParts, type ProfileFieldRule, type ProfilePartId, type ProfileTemplate } from "./template";
@@ -135,9 +136,12 @@ export function validateStep(step: number, d: ProfileFields, template = readProf
  * editor asks for on top. At least one service, each with its own line of what you'll do ("One clearly described
  * service is enough to start"), and a personality answer says which question it answers. Empty when it can be sent.
  */
-export function validateGigster(d: ProfileFields, template = readProfileTemplate()): FieldErrors {
+export function validateGigster(d: ProfileFields, template = readProfileTemplate(), allowCustomOnly = customServiceReviewEnabled()): FieldErrors {
   const e: FieldErrors = Object.assign({}, ...Object.values(validateAll(d, template)));
-  if (!d.services.length && !e.services) e.services = missingAnswer.services;
+  if (!d.services.length && !e.services) {
+    const error = allowCustomOnly && d.other.trim() ? customServiceError(d.other) : missingAnswer.services;
+    if (error) e.services = error;
+  }
   if (!e.serviceLines && d.services.some((s) => !d.serviceLines?.[s]?.trim())) e.serviceLines = "Add one line about what you'll do for each service.";
   if (d.personality?.trim() && !d.personalityQuestion) e.personalityQuestion = "Choose the question you're answering.";
   // The editor asks about entertainment industry experience, not an "About me".
@@ -173,11 +177,11 @@ export type GigsterItemId = (typeof gigsterItems)[number]["id"];
 export const gigsterItemOf = (field: keyof ProfileFields): GigsterItemId | undefined =>
   gigsterItems.find((i) => (i.fields as readonly string[]).includes(field))?.id;
 
-function itemFilled(id: GigsterItemId, d: ProfileFields): boolean {
+function itemFilled(id: GigsterItemId, d: ProfileFields, allowCustomOnly: boolean): boolean {
   switch (id) {
     case "photo": return !!d.photo;
     case "name": return !!d.name.trim();
-    case "services": return d.services.length > 0 && d.services.every((s) => !!d.serviceLines?.[s]?.trim());
+    case "services": return d.services.length > 0 ? d.services.every((s) => !!d.serviceLines?.[s]?.trim()) : allowCustomOnly && !!d.other.trim() && !customServiceError(d.other);
     case "film": return !!d.position.trim() && d.skills.length > 0 && d.years !== "";
     case "experience": return !!d.about.trim();
     case "credits": return d.credits.some((c) => c.trim());
@@ -195,13 +199,13 @@ function itemFilled(id: GigsterItemId, d: ProfileFields): boolean {
  * required when the editor always asks for it (photo, name, a service) or when the profile template requires any of
  * its fields; otherwise it can come later.
  */
-export function gigsterChecklist(d: ProfileFields, template = readProfileTemplate()) {
-  const errors = validateGigster(d, template);
+export function gigsterChecklist(d: ProfileFields, template = readProfileTemplate(), allowCustomOnly = customServiceReviewEnabled()) {
+  const errors = validateGigster(d, template, allowCustomOnly);
   const always: GigsterItemId[] = ["services"];
   const out = gigsterItems.map((item) => {
     const required = always.includes(item.id) || item.fields.some((f) => (template.required as readonly string[]).includes(f === "areas" || f === "otherCity" ? "location" : f));
     const invalid = item.fields.some((f) => errors[f]);
-    return { id: item.id, label: item.label, required, done: !invalid && itemFilled(item.id, d) };
+    return { id: item.id, label: item.label, required, done: !invalid && itemFilled(item.id, d, allowCustomOnly) };
   });
   return { required: out.filter((i) => i.required), optional: out.filter((i) => !i.required), errors };
 }

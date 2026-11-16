@@ -98,3 +98,10 @@ describe("custom-only Gigster validation",()=>{
     expect(f.other).toBe("Fictional restoration\nRestore a fictional display prop.");
   });
 });
+
+
+it("keeps the new custom-only UI disabled for an explicit legacy/live configuration",()=>{
+ const f={...completeFields("Fictional Custom Crew","/media/f"),services:[],other:"Name\nDescription"};
+ expect(validateGigster(f,defaultProfileTemplate,false).services).toBeTruthy();
+ expect(gigsterChecklist(f,defaultProfileTemplate,false).required.find(i=>i.id==="services")?.done).toBe(false);
+});

@@ -12,6 +12,8 @@ describe("private custom-only service submission",()=>{
   const outboxBefore=await h.source.emails.outbox();await expect(h.source.owners.approve(who.personId)).rejects.toThrow();
   expect((await h.source.people.get(who.personId))?.person.status).toBe("submitted");expect(await h.source.emails.outbox()).toEqual(outboxBefore);
   await h.signOut();expect((await h.source.people.getPublic(submitted.person.slug)).profile).toBeNull();
+  await h.signIn(who.email,who.name);await h.source.profiles.saveDraft(who.personId,{...fields,services:["Interior Styling"],serviceLines:{"Interior Styling":"Style a fictional display."}},1);await h.source.profiles.submit(who.personId);
+  await h.signInOwner();expect((await h.source.owners.approve(who.personId)).status).toBe("approved");await h.signOut();const shown=await h.source.people.getPublic(submitted.person.slug);expect(shown.profile?.fields.services).toContain("Interior Styling");expect(shown.profile?.fields.other).toBe("");
  });
  it("keeps partial custom text autosaved but refuses custom-only submission until it has a description",async()=>{
   const who=await registered(h,"custom-incomplete","Fictional Partial Crew");const fields={...completeFields(who.name,await photo(h,who.personId)),services:[],other:"Fictional prop restoration"};

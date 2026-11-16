@@ -288,7 +288,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
             <div className="grid gap-1 sm:col-span-5 sm:pr-5">
               <label htmlFor={`f-service-${rows.length}`} className="sr-only">{rows.length ? `Service ${rows.length + 1}` : "Your first service"}</label>
               <Select id={`f-service-${rows.length}`} options={optionsFor()} placeholder="Choose a service" invalid={!rows.length && !otherVisible && !!errors.services} onValueChange={pickNew} />
-              {!rows.length && errors.services && <p className="text-body-sm text-danger">{errors.services}</p>}
+              {!rows.length && !otherVisible && errors.services && <p className="text-body-sm text-danger">{errors.services}</p>}
             </div>
             <div className="grid gap-1 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
               <p className="text-body-md text-ink-muted">What can a customer hire you to do?</p>
@@ -299,7 +299,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
         )}
       </ol>
       <p role="status" aria-live="polite" className="sr-only">{said}</p>
-      <GroupError id="f-services-error">{rows.length ? errors.services : undefined}</GroupError>
+      <GroupError id="f-services-error">{rows.length || otherVisible ? errors.services : undefined}</GroupError>
       {!showBlank && (count < MAX_SERVICES
         ? <div><Button variant="secondary" iconStart={<Plus />} onClick={() => setAdding(true)}>Add another service <span className="text-ink-muted">· {count} of {MAX_SERVICES}</span></Button></div>
         : <p className="text-body-sm text-ink-muted">That&apos;s the most: {MAX_SERVICES} services. Remove one to add another.</p>)}

@@ -609,3 +609,40 @@ describe("open sign-up: POST /api/auth/signup", () => {
     expect(res.status).toBe(405);
   });
 });
+
+describe("custom-only BFF submission safety",()=>{
+ const custom=(other:string,status="draft",catalog=false)=>{
+  let current=status;
+  return fake(c=>{const q=c.body as {entity?:string}|undefined;
+   if(c.path==="/query"&&q?.entity==="profile")return {body:{data:[{id:"prof",data:{person:PERSON,status:current,display_name:"Fictional Custom Crew",services_other:other,submitted_at:"2026-11-16T10:00:00Z"},createdAt:"",updatedAt:""}]}};
+   if(c.path==="/query"&&q?.entity==="profile_item")return {body:{data:catalog?[{id:"svc",data:{profile:"prof",kind:"service",value:"interior_styling",visible:true},createdAt:"",updatedAt:""}]:[]}};
+   if(c.path==="/query"&&q?.entity==="person")return {body:{data:[{id:PERSON,data:{name:"Fictional Custom Crew",email:"fictional@example.org"},createdAt:"",updatedAt:""}]}};
+   if(c.method==="PATCH"){current="submitted";return {body:{}};}return undefined;
+  });
+ };
+ it("preserves the older server submit contract with both feature flags absent",async()=>{
+  vi.stubEnv("CUSTOM_SERVICE_REVIEW_ENABLED","");vi.stubEnv("NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW","");try{const r=await call("profiles.submit",[PERSON],undefined,custom("Legacy custom service"));expect(r.res.status).toBe(200);expect(r.calls.filter(c=>c.method==="PATCH")).toHaveLength(1);}finally{vi.unstubAllEnvs();}
+ });
+ it("allows the explicitly enabled described custom-only submit with the person's existing credential",async()=>{
+  vi.stubEnv("CUSTOM_SERVICE_REVIEW_ENABLED","1");try{const r=await call("profiles.submit",[PERSON],undefined,custom("Fictional restoration\nRestore a fictional display prop."));expect(r.res.status).toBe(200);expect(r.calls.filter(c=>c.method==="PATCH")).toHaveLength(1);expect(r.calls.every(c=>c.auth===`Bearer ${SESSION}`)).toBe(true);}finally{vi.unstubAllEnvs();}
+ });
+ it("refuses malformed custom-only names/descriptions before any write while leaving autosave separate",async()=>{
+  vi.stubEnv("CUSTOM_SERVICE_REVIEW_ENABLED","1");try{for(const other of ["","Name only","\nDescription only","N".repeat(61)+"\nDescription","Name\n"+"D".repeat(121)]){const r=await call("profiles.submit",[PERSON],undefined,custom(other));expect(r.res.status).toBe(422);expect(r.calls.some(c=>c.method==="PATCH"||c.path==="/batch")).toBe(false);}}finally{vi.unstubAllEnvs();}
+ });
+ it("refuses publishing a submitted private custom-only request before creating a review batch",async()=>{
+  vi.stubEnv("CUSTOM_SERVICE_REVIEW_ENABLED","1");try{const r=await call("owners.approve",[PERSON],undefined,custom("Fictional restoration\nRestore a fictional display prop.","submitted"));expect(r.res.status).toBe(422);expect(r.calls.some(c=>c.path==="/batch")).toBe(false);}finally{vi.unstubAllEnvs();}
+ });
+});
+
+it("public profile projection strips private custom text even if upstream unexpectedly returns it",async()=>{
+ const f=fake(c=>{const q=c.body as {entity?:string}|undefined;if(c.path==="/query"&&q?.entity==="profile")return {body:{data:[{id:"prof",data:{display_name:"Fictional Custom Crew",status:"approved",public_handle:"fictional-custom",services_other:"PRIVATE CUSTOM REQUEST"},createdAt:"",updatedAt:""}]}};return undefined;});
+ const r=await call("people.getPublic",["fictional-custom"],{token:null},f);expect(r.res.status).toBe(200);expect(JSON.stringify(r.body)).not.toContain("PRIVATE CUSTOM REQUEST");
+});
+
+
+it("fails closed before submit if the new live UI is enabled without its server capability",async()=>{
+ vi.stubEnv("NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW","1");vi.stubEnv("CUSTOM_SERVICE_REVIEW_ENABLED","");try{
+  const f=fake(c=>{const q=c.body as {entity?:string}|undefined;if(c.path==="/query"&&q?.entity==="profile")return{body:{data:[{id:"prof",data:{person:PERSON,status:"draft",services_other:"Name\nDescription"},createdAt:"",updatedAt:""}]}};return undefined;});
+  const r=await call("profiles.submit",[PERSON],undefined,f);expect(r.res.status).toBe(503);expect(r.calls.some(c=>c.method==="PATCH"||c.path==="/batch")).toBe(false);
+ }finally{vi.unstubAllEnvs();}
+});
