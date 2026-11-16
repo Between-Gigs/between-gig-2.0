@@ -1,4 +1,5 @@
 import { customServiceError, customServiceReviewEnabled } from "./custom-service";
+import { departmentFieldRetired } from "./department-retirement";
 import type { ProfileFields, ProfileSection, ReviewNote } from "@/lib/data/types";
 import { stageTwoLimits, startDateLabel } from "./stage-two";
 import { profileFieldParts, readProfileTemplate, requiredProfileParts, type ProfileFieldRule, type ProfilePartId, type ProfileTemplate } from "./template";
@@ -106,7 +107,7 @@ export function validateStep(step: number, d: ProfileFields, template = readProf
   if (step === 0) {
     if (d.name.trim().length > NAME_MAX) e.name = `Keep your name to ${NAME_MAX} characters.`;
     if (d.years !== "" && Number.isNaN(Number(d.years))) e.years = missingAnswer.years;
-    if (d.position.trim().length > DEPARTMENT_MAX) e.position = `Keep your department to ${DEPARTMENT_MAX} characters.`;
+    if (!departmentFieldRetired() && d.position.trim().length > DEPARTMENT_MAX) e.position = `Keep your department to ${DEPARTMENT_MAX} characters.`;
     if ((d.title?.trim().length ?? 0) > TITLE_MAX) e.title = `Keep your title to ${TITLE_MAX} characters.`;
     if (d.imdb.trim() && !IMDB_RE.test(d.imdb.trim())) e.imdb = template.required.includes("imdb")
       ? "Use an IMDb name-profile link, like https://www.imdb.com/name/nm1234567/."
@@ -182,7 +183,7 @@ function itemFilled(id: GigsterItemId, d: ProfileFields, allowCustomOnly: boolea
     case "photo": return !!d.photo;
     case "name": return !!d.name.trim();
     case "services": return d.services.length > 0 ? d.services.every((s) => !!d.serviceLines?.[s]?.trim()) : allowCustomOnly && !!d.other.trim() && !customServiceError(d.other);
-    case "film": return !!d.position.trim() && d.skills.length > 0 && d.years !== "";
+    case "film": return (departmentFieldRetired() || !!d.position.trim()) && d.skills.length > 0 && d.years !== "";
     case "experience": return !!d.about.trim();
     case "credits": return d.credits.some((c) => c.trim());
     case "where": return isPartFilled("where", d);

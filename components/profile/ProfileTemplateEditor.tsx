@@ -10,12 +10,13 @@ import {
   defaultProfileTemplate, encodeProfileTemplate, parseProfileTemplate, profileFieldParts, profileParts, profileSections,
   ruleLabels, saveProfileTemplate, type ProfileFieldRule, type ProfileTemplate,
 } from "@/lib/profile/template";
+import { departmentFieldRetired } from "@/lib/profile/department-retirement";
 import { data } from "@/lib/data";
 import { basePath } from "@/lib/site";
 import { professionalExamples } from "@/lib/professional-examples";
 
 type Screen = "canvas" | "form" | "page";
-const fields = (Object.keys(profileFieldParts) as ProfileFieldRule[]).filter((key) => key !== "transport");
+const fields = (Object.keys(profileFieldParts) as ProfileFieldRule[]).filter((key) => key !== "transport" && (key !== "position" || !departmentFieldRetired()));
 const screenOptions = [{ value: "canvas", label: "Guided editor" }, { value: "form", label: "Questionnaire" }, { value: "page", label: "Client page" }];
 
 function move<T>(items: readonly T[], index: number, direction: -1 | 1): T[] {

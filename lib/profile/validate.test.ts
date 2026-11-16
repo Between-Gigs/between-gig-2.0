@@ -19,10 +19,10 @@ describe("lib/profile/validate.ts", () => {
     expect(validateStep(3, { ...blankFields("A"), about: "x".repeat(ABOUT_MAX) }).about).toBeUndefined();
   });
 
-  it("caps the name at 60, the department at 40 and the dates at 80", () => {
+  it("caps editable name and dates without blocking on retained retired Department data", () => {
     const f = { ...blankFields("N".repeat(61)), position: "D".repeat(41), dates: "d".repeat(81) };
     expect(validateStep(0, f).name).toMatch(/60/);
-    expect(validateStep(0, f).position).toMatch(/40/);
+    expect(validateStep(0, f).position).toBeUndefined();
     expect(validateStep(2, f).dates).toMatch(/80/);
   });
 

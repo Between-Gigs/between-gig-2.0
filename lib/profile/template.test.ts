@@ -51,10 +51,10 @@ describe("profile template", () => {
     expect(partsDone(f, "", rules)).toEqual({ done: 1, total: 1 });
   });
 
-  it("keeps the existing sample and live defaults until a template is explicitly applied", () => {
-    // Credits became optional (client, 13 Nov 2026): nine required parts, not ten.
-    expect(partsDone(blankFields("Sam"))).toEqual({ done: 1, total: 9 });
-    expect(completeness(blankFields("Sam"))).toBeCloseTo(1 / 10);
+  it("uses the revised sample defaults without Department until a template is explicitly applied", () => {
+    // Credits are optional; the revised sample no longer requires Department.
+    expect(partsDone(blankFields("Sam"))).toEqual({ done: 1, total: 8 });
+    expect(completeness(blankFields("Sam"))).toBeCloseTo(1 / 9);
     expect(validateAll(blankFields())[0]).toHaveProperty("photo");
   });
 });

@@ -147,3 +147,11 @@ describe("the workflows", () => {
     expect(live!).toMatch(/pnpm build:server && node scripts\/check-split\.mjs/);
   });
 });
+
+it("forwards the Department retirement flag only as a public variable into deployed API builds",()=>{
+ for(const name of ["deploy-test.yml","deploy-prod.yml"]){
+  const build=steps(read(name)).find(step=>step.includes("NEXT_PUBLIC_DATA_SOURCE: api")&&step.includes("pnpm build:server"));
+  expect(build,name).toBeDefined();expect(build).toContain("NEXT_PUBLIC_PROFILE_NO_DEPARTMENT: ${{ vars.PROFILE_NO_DEPARTMENT }}");
+  expect(read(name)).not.toContain("secrets.PROFILE_NO_DEPARTMENT");
+ }
+});
