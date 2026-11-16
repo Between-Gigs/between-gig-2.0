@@ -38,7 +38,7 @@ const AUTOSAVE_MS = 700;
 const thisMonth = () => new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
-export type SaveState = { status: "idle" | "saving" | "saved" | "error"; at?: string };
+export type SaveState = { status: "idle" | "saving" | "saved" | "error"; at?: string; /** Replaces "Not saved." (e.g. the work samples were refused). */ message?: string };
 
 /** /profile/edit: the questionnaire. Five steps, autosaved, resumable, checked once on Submit, with a live preview. */
 export function ProfileBuilder() {
@@ -460,7 +460,7 @@ export function SaveIndicator({ state, onRetry }: { state: SaveState; onRetry: (
     <p role="status" aria-live="polite" className={cx("flex shrink-0 items-center gap-1.5 text-body-sm", state.status === "error" ? "text-danger" : "text-ink-subtle")}>
       {state.status === "saving" && <><LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />Saving…</>}
       {state.status === "saved" && <><CloudCheck className="size-4 text-success" aria-hidden="true" />Saved{state.at && <span className="hidden sm:inline">&nbsp;· {timeOf(state.at)}</span>}</>}
-      {state.status === "error" && <><AlertCircle className="size-4" aria-hidden="true" />Not saved. <button type="button" onClick={onRetry} className="inline-flex min-h-6 items-center underline underline-offset-2">Retry</button></>}
+      {state.status === "error" && <><AlertCircle className="size-4" aria-hidden="true" />{state.message ?? "Not saved."} <button type="button" onClick={onRetry} className="inline-flex min-h-6 items-center underline underline-offset-2">Retry</button></>}
       {state.status === "idle" && <span className="sr-only">Changes save automatically</span>}
     </p>
   );

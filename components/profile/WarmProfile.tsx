@@ -1,6 +1,7 @@
 "use client";
 import { PublicBookingDetails } from "./PublicBookingDetails";
-import { FittedImg } from "@/components/profile/FittedImg";
+import { WorkTile } from "@/components/profile/WorkTile";
+import { workMeta } from "@/lib/profile/video-links";
 import { data } from "@/lib/data";
 import { Accordion, Button, cx } from "@ds/components";
 import { ArrowRight, Check, Heart, Info, Share } from "lucide-react";
@@ -170,18 +171,16 @@ export function WarmProfile({ person, fields: f, mode, embedded, similar = [], d
       </Section>
     ),
     work: portfolio.length > 0 && (
-      <Section title="Work" icon="framed_picture" meta={`${portfolio.length} photos`}>
+      <Section title="Work" icon="framed_picture" meta={workMeta(portfolio)}>
         <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0">
-          {portfolio.slice(0, 4).map((it, i) => (
+          {portfolio.slice(0, 4).map((it) => (
             <li key={it.src} className="w-4/5 shrink-0 snap-start sm:w-auto">
-              <button type="button" onClick={() => onPhoto(i)} aria-label={`Open image: ${it.caption}`} className="group relative block aspect-video w-full overflow-hidden rounded-lg">
-                <FittedImg sample={it.src} loading="lazy" imgClassName="transition duration-base group-hover:scale-105" />
-              </button>
+              <WorkTile it={it} onPhoto={onPhoto} buttonClassName="group relative block aspect-video w-full overflow-hidden rounded-lg" imgClassName="transition duration-base group-hover:scale-105" />
             </li>
           ))}
         </ul>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Button variant="secondary" size="sm" onClick={() => onPhoto(0)}>Show all {portfolio.length} photos</Button>
+          {portfolio.some((it) => !it.video) && <Button variant="secondary" size="sm" onClick={() => onPhoto(0)}>Show all {portfolio.filter((it) => !it.video).length} photos</Button>}
           {sample && <p className="inline-flex items-start gap-2 rounded-lg bg-tint-sand px-3 py-2 text-body-sm text-tint-ink"><Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />Concept images showing the kind of work to discuss, not completed client projects.</p>}
         </div>
       </Section>

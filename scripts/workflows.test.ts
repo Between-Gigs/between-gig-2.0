@@ -191,6 +191,10 @@ it('passes the dormant travel preference flag to preflight and build in both env
 });
 it("passes the publish gate flag to preflight and the checked build",()=>{for(const name of["deploy-test.yml","deploy-prod.yml"]){const s=steps(read(name));for(const step of[s.find(x=>x.includes("Require ")&&x.includes(" configuration")),s.find(x=>x.includes("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY")&&x.includes("pnpm build:server"))])expect(step).toContain("NEXT_PUBLIC_PROFILE_PUBLISH_GATE: ${{ vars.PROFILE_PUBLISH_GATE }}");}});
 
+it('passes the dormant video-links flag to preflight and build in both environments',()=>{
+ for(const name of['deploy-test.yml','deploy-prod.yml']){const s=steps(read(name));for(const step of[s.find(x=>x.includes('Require ')&&x.includes(' configuration')),s.find(x=>x.includes('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY')&&x.includes('pnpm build:server'))])expect(step).toContain('NEXT_PUBLIC_PROFILE_VIDEO_LINKS: ${{ vars.PROFILE_VIDEO_LINKS }}');}
+});
+
 it('passes the dormant profile details flag to preflight and build in both environments',()=>{
  for(const name of['deploy-test.yml','deploy-prod.yml']){const s=steps(read(name));for(const step of[s.find(x=>x.includes('Require ')&&x.includes(' configuration')),s.find(x=>x.includes('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY')&&x.includes('pnpm build:server'))])expect(step).toContain('NEXT_PUBLIC_PROFILE_DETAILS: ${{ vars.PROFILE_DETAILS }}');}
 });

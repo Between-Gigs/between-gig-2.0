@@ -47,6 +47,12 @@ describe("contentSecurityPolicy", () => {
     expect(d.get("frame-src")).toEqual(expect.arrayContaining(["https://challenges.cloudflare.com", "https://*.protect.clerk.com"]));
   });
 
+  it("allows only YouTube's and Vimeo's thumbnail hosts as images, and no frames or connections to them", () => {
+    expect(d.get("img-src")).toEqual(expect.arrayContaining(["https://i.ytimg.com", "https://i.vimeocdn.com"]));
+    expect(d.get("img-src")).toEqual(["'self'", "data:", "blob:", "https://img.clerk.com", "https://i.ytimg.com", "https://i.vimeocdn.com"]);
+    for (const name of ["frame-src", "connect-src", "script-src", "media-src"]) expect((d.get(name) ?? []).join(" ")).not.toMatch(/youtube|ytimg|vimeo/);
+  });
+
   it("locks everything else down", () => {
     expect(d.get("default-src")).toEqual(["'self'"]);
     expect(d.get("object-src")).toEqual(["'none'"]);

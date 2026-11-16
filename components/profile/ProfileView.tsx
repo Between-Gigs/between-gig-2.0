@@ -1,7 +1,8 @@
 "use client";
 import { APPROVED_NOT_PUBLIC, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
 import { Accordion, Button, Field, Input, Modal, Select, Textarea, cx, useToast } from "@ds/components";
-import { FittedImg } from "@/components/profile/FittedImg";
+import { WorkTile } from "@/components/profile/WorkTile";
+import { portfolioItems, videoLinksEnabled, workMeta, type PortfolioItem } from "@/lib/profile/video-links";
 import { parseSample } from "@/lib/profile/work-fit";
 import { ArrowRight, Check, ChevronLeft, ChevronRight, CircleDashed, Heart, Info, MapPin, MessageSquare, Share } from "lucide-react";
 import Link from "next/link";
@@ -75,6 +76,7 @@ function profileContent({ person, fields: f, extras, mode, draft = false, part }
   const services = f.services, credits = pinnedCredits(f);
   const editing = !!part, show = draft || editing;
   const priced = hasRate(f.rate);
+  const ownWork = portfolioItems(f.workSamples ?? [], videoLinksEnabled());
   const P = (id: ProfilePart, filled: boolean, content: React.ReactNode, hint: string, kind: PartKind = "line") =>
     part ? <React.Fragment key={id}>{part(id, { content, hint, kind })}</React.Fragment>
       : filled ? content : draft ? <Placeholder key={id} kind={kind}>{hint}</Placeholder> : null;
@@ -85,7 +87,7 @@ function profileContent({ person, fields: f, extras, mode, draft = false, part }
     unseen: mode === "public" && data.kind === "live",
     sample: !!person.sample, helps: extras?.helps ?? [],
     // The Gigster's own work samples come first; the fictional sample people keep their curated portfolio.
-    portfolio: (f.workSamples ?? []).filter(Boolean).length ? (f.workSamples ?? []).filter(Boolean).map((src, i) => ({ src, caption: `Work sample ${i + 1}` })) : extras?.portfolio ?? [],
+    portfolio: ownWork.length ? ownWork : (extras?.portfolio ?? []).map((it, i): PortfolioItem => ({ ...it, photoIndex: i })),
     resumeUrl: /^https?:\/\//.test(f.resumeUrl ?? "") ? f.resumeUrl! : "",
     rate: priced ? `$${f.rate}/${basisShort[f.basis]}` : null,
     where: profileLocationLabel(f),
@@ -128,7 +130,7 @@ export function ProfileView(props: Props) {
 
       <Layout {...props} {...model} sections={sections} ids={ids} saved={saved} onSave={() => setSaved(!saved)}
         onShare={share} onPhoto={setLightbox} onRequest={() => setRequest(true)} />
-      <Lightbox name={fields.name} items={model.portfolio} index={lightbox} onIndex={setLightbox} />
+      <Lightbox name={fields.name} items={model.portfolio.filter((it) => !it.video)} index={lightbox} onIndex={setLightbox} />
       <RequestModal first={model.callName} open={request} onClose={() => setRequest(false)} />
     </div>
   );
@@ -320,20 +322,18 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
       ),
     },
     work: portfolio.length > 0 && {
-      title: "Work", meta: `${portfolio.length} photos`,
+      title: "Work", meta: workMeta(portfolio),
       content: (
         <>
           <ul className="grid grid-cols-6 gap-3 sm:gap-6">
             {shownPhotos.map((it, i) => (
               <li key={it.src} className={cx("relative", shownPhotos.length === 1 ? "col-span-6 aspect-video" : tile[i])}>
-                <button type="button" onClick={() => onPhoto(i)} aria-label={`Open image: ${it.caption}`} className="group absolute inset-0 block overflow-hidden">
-                  <FittedImg sample={it.src} loading="lazy" imgClassName="transition duration-base group-hover:scale-105 motion-reduce:transition-none" />
-                </button>
+                <WorkTile it={it} onPhoto={onPhoto} buttonClassName="group absolute inset-0 block overflow-hidden" imgClassName="transition duration-base group-hover:scale-105 motion-reduce:transition-none" />
               </li>
             ))}
           </ul>
           <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
-            <Button variant="secondary" size="md" onClick={() => onPhoto(0)}>Show all {portfolio.length} photos</Button>
+            {portfolio.some((it) => !it.video) && <Button variant="secondary" size="md" onClick={() => onPhoto(0)}>Show all {portfolio.filter((it) => !it.video).length} photos</Button>}
             {sample && <p className="flex items-start gap-2.5 text-body-md text-ink-muted"><b className="font-display text-ink">Note</b>Concept images showing the kind of work to discuss, not completed client projects.</p>}
           </div>
         </>

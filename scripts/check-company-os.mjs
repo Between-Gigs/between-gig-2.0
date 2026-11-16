@@ -6,14 +6,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export function checkRequirement(text, { allowTodo = false, customServiceReview = false, locationControls = false, customSkills = false, travelPreference = false, publishGate = false, profileDetails = false } = {}) {
+export function checkRequirement(text, { allowTodo = false, customServiceReview = false, locationControls = false, customSkills = false, travelPreference = false, publishGate = false, videoLinks = false, profileDetails = false } = {}) {
   let v;
   try { v = JSON.parse(text); } catch { return { ok: false, error: "company-os.json is not JSON" }; }
   const requires = v && typeof v.requires === "string" ? v.requires : null;
   if (!requires || !/^>=\d+\.\d+\.\d+$/.test(requires)) return { ok: false, error: 'company-os.json needs { "requires": ">=MAJOR.MINOR.PATCH" }' };
   const todo = v.todo !== undefined;
   if (todo && !allowTodo) return { ok: false, todo, requires, error: "company-os.json still has the owner's placeholder (its \"todo\" key): set the Company OS release it needs first" };
-  for (const [enabled, key, moduleVersion, label] of [[customServiceReview, "customServiceReview", "1.5.0", "Custom-service"], [locationControls, "locationControls", "1.6.0", "Location cohort"], [customSkills, "customSkills", "1.7.0", "Custom skills"], [travelPreference, "travelPreference", "1.8.0", "Travel preference"], [publishGate, "publishGate", "1.9.0", "Publish gate"], [profileDetails, "profileDetails", "1.10.0", "Profile details"]]) {
+  for (const [enabled, key, moduleVersion, label] of [[customServiceReview, "customServiceReview", "1.5.0", "Custom-service"], [locationControls, "locationControls", "1.6.0", "Location cohort"], [customSkills, "customSkills", "1.7.0", "Custom skills"], [travelPreference, "travelPreference", "1.8.0", "Travel preference"], [videoLinks, "videoLinks", "1.10.0", "Video links"], [publishGate, "publishGate", "1.9.0", "Publish gate"], [profileDetails, "profileDetails", "1.10.0", "Profile details"]]) {
     if (!enabled) continue;
     const feature = v.profileFeatures?.[key];
     const version = (range) => typeof range === "string" && /^>=\d+\.\d+\.\d+$/.test(range) ? range.slice(2).split(".").map(Number) : null;

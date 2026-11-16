@@ -125,7 +125,7 @@ export function companyOs(cfg: CompanyOsConfig) {
     // The API route needs no auth; the reader token is only the frontend's standard service call, so a missing COMPANY_OS_READ_TOKEN makes opt-out fail with 503.
     unsubscribe: (token: string, confirm = false) => call<{ ok: boolean }>({ kind: "reader" }, confirm ? "POST" : "GET", "/comms/unsubscribe" + (confirm ? "" : "?token=" + encodeURIComponent(token)), confirm ? { token } : undefined),
     /** Starts an upload: the file record (pending) and the one-time link its bytes go to. */
-    startUpload: (cred: Credential, body: { ownerEntity: string; ownerId: string; kind: string; filename: string; mime: string; sizeBytes: number }) =>
+    startUpload: (cred: Credential, body: { ownerEntity: string; ownerId: string; kind: string; filename: string; mime: string; sizeBytes: number; position?: number }) =>
       call<{ file: Row & { id: string }; uploadUrl: string }>(cred, "POST", "/files", body),
     confirmUpload: (cred: Credential, id: string) => call<{ file: unknown }>(cred, "POST", `/files/${encodeURIComponent(id)}/confirm`),
     /** A 60-second link to a private file, for this server to fetch; never handed to a browser. */
