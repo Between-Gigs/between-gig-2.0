@@ -7,6 +7,7 @@ import { ArrowRight, BadgeCheck, BriefcaseBusiness, Camera, Clapperboard, Clipbo
   Hammer, Heart, House, Info, MapPin, Paintbrush, Scissors, Share, Sparkles, Wrench, type LucideIcon } from "lucide-react";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { data } from "@/lib/data";
+import { extendedTravelLabel } from "@/lib/profile/travel-preference";
 import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/data/taxonomy";
 import { craftIcon } from "@/lib/icons3d";
 import type { ProfileSectionId } from "@/lib/profile/template";
@@ -31,7 +32,7 @@ export function ModernProfile({ person, fields: f, mode, embedded, draft, part, 
   const Name = embedded || mode === "owner" ? "h2" : "h1";
   const offered = helps.length ? helps : services;
   const dates = monthStatusLabel[f.monthStatus];
-  const how = [modeLabel[f.mode], f.travel, f.transport, !unseen && f.insurance === "yes" ? insuranceLabel.yes : ""].filter(Boolean).join(" · ");
+  const how = [modeLabel[f.mode], f.travel, extendedTravelLabel(f.travelBeyondLA), f.transport, !unseen && f.insurance === "yes" ? insuranceLabel.yes : ""].filter(Boolean).join(" · ");
   const start = data.kind === "sample" ? startDateLabel(f.earliestStart) : "";
   const minimum = data.kind === "sample" ? f.bookingMinimum?.trim() : "";
   const availability = <div className="modern-availability">
@@ -46,7 +47,7 @@ export function ModernProfile({ person, fields: f, mode, embedded, draft, part, 
   if (priced) stats.push(["Starting rate", <>${f.rate}<small>/{basisShort[f.basis]}</small></>]);
 
   const facts = [
-    ["Works in", where], ["Where", modeLabel[f.mode]], ["Travel", [f.travel, f.transport].filter(Boolean).join(" · ")],
+    ["Works in", where], ["Where", modeLabel[f.mode]], ["Travel", [f.travel, extendedTravelLabel(f.travelBeyondLA), f.transport].filter(Boolean).join(" · ")],
     ["Speaks", f.languages], ["Brings", f.tools],
   ].filter(([,value]) => value);
 

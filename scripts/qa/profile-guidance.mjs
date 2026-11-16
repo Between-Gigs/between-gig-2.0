@@ -30,7 +30,7 @@ for(const width of [320,390,768,1440])for(const theme of ['light','dark']){
  await page.getByRole('button',{name:/^Years in the Entertainment Industry:/}).waitFor();
  await page.getByRole('button',{name:/^How can customers benefit from your entertainment industry experience\?: Tell clients how your entertainment industry experience helps you deliver this service\./}).waitFor();
  await page.getByRole('button',{name:/^Years in the Entertainment Industry:/}).click();
- await page.waitForFunction(()=>document.activeElement?.id==='f-position');
+ await page.waitForFunction(()=>document.activeElement?.id==='f-years');
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'page overflow');
  assert.equal(external.length,0,'external network attempts');
  await page.locator('#sec-work').screenshot({path:root+`/deliverables/profile-guidance/LOCAL-NOT-LIVE-showcase-${width}-${theme}.png`});

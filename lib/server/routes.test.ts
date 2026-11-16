@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { blankFields } from "@/lib/data/fields";
+import { toProfile } from "@/lib/data/companyos/fields";
+import { INSURANCE_NOTES_MAX } from "@/lib/profile/insurance";
 import { companyOs } from "./companyos";
 import { media } from "./media";
 import { FUNNEL_LIMIT, ROUTES, handle, handleSignup, handleUpload, resetRateLimit, type RouteName } from "./routes";
@@ -608,4 +611,115 @@ describe("open sign-up: POST /api/auth/signup", () => {
     const res = await handleSignup(new Request("http://localhost:3000/api/auth/signup", { method: "GET" }), { cos: fake().cos });
     expect(res.status).toBe(405);
   });
+});
+
+describe("custom-only BFF submission safety",()=>{
+ const custom=(other:string,status="draft",catalog=false)=>{
+  let current=status;
+  return fake(c=>{const q=c.body as {entity?:string}|undefined;
+   if(c.path==="/query"&&q?.entity==="profile")return {body:{data:[{id:"prof",data:{person:PERSON,status:current,display_name:"Fictional Custom Crew",services_other:other,submitted_at:"2026-11-16T10:00:00Z"},createdAt:"",updatedAt:""}]}};
+   if(c.path==="/query"&&q?.entity==="profile_item")return {body:{data:catalog?[{id:"svc",data:{profile:"prof",kind:"service",value:"interior_styling",visible:true},createdAt:"",updatedAt:""}]:[]}};
+   if(c.path==="/query"&&q?.entity==="person")return {body:{data:[{id:PERSON,data:{name:"Fictional Custom Crew",email:"fictional@example.org"},createdAt:"",updatedAt:""}]}};
+   if(c.method==="PATCH"){current="submitted";return {body:{}};}return undefined;
+  });
+ };
+ it("preserves the older server submit contract with both feature flags absent",async()=>{
+  vi.stubEnv("CUSTOM_SERVICE_REVIEW_ENABLED","");vi.stubEnv("NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW","");try{const r=await call("profiles.submit",[PERSON],undefined,custom("Legacy custom service"));expect(r.res.status).toBe(200);expect(r.calls.filter(c=>c.method==="PATCH")).toHaveLength(1);}finally{vi.unstubAllEnvs();}
+ });
+ it("allows the explicitly enabled described custom-only submit with the person's existing credential",async()=>{
+  vi.stubEnv("CUSTOM_SERVICE_REVIEW_ENABLED","1");try{const r=await call("profiles.submit",[PERSON],undefined,custom("Fictional restoration\nRestore a fictional display prop."));expect(r.res.status).toBe(200);expect(r.calls.filter(c=>c.method==="PATCH")).toHaveLength(1);expect(r.calls.every(c=>c.auth===`Bearer ${SESSION}`)).toBe(true);}finally{vi.unstubAllEnvs();}
+ });
+ it("refuses malformed custom-only names/descriptions before any write while leaving autosave separate",async()=>{
+  vi.stubEnv("CUSTOM_SERVICE_REVIEW_ENABLED","1");try{for(const other of ["","Name only","\nDescription only","N".repeat(61)+"\nDescription","Name\n"+"D".repeat(121)]){const r=await call("profiles.submit",[PERSON],undefined,custom(other));expect(r.res.status).toBe(422);expect(r.calls.some(c=>c.method==="PATCH"||c.path==="/batch")).toBe(false);}}finally{vi.unstubAllEnvs();}
+ });
+ it("refuses publishing a submitted private custom-only request before creating a review batch",async()=>{
+  vi.stubEnv("CUSTOM_SERVICE_REVIEW_ENABLED","1");try{const r=await call("owners.approve",[PERSON],undefined,custom("Fictional restoration\nRestore a fictional display prop.","submitted"));expect(r.res.status).toBe(422);expect(r.calls.some(c=>c.path==="/batch")).toBe(false);}finally{vi.unstubAllEnvs();}
+ });
+});
+
+it("public profile projection strips private custom text even if upstream unexpectedly returns it",async()=>{
+ const f=fake(c=>{const q=c.body as {entity?:string}|undefined;if(c.path==="/query"&&q?.entity==="profile")return {body:{data:[{id:"prof",data:{display_name:"Fictional Custom Crew",status:"approved",public_handle:"fictional-custom",services_other:"PRIVATE CUSTOM REQUEST"},createdAt:"",updatedAt:""}]}};return undefined;});
+ const r=await call("people.getPublic",["fictional-custom"],{token:null},f);expect(r.res.status).toBe(200);expect(JSON.stringify(r.body)).not.toContain("PRIVATE CUSTOM REQUEST");
+});
+
+
+it("fails closed before submit if the new live UI is enabled without its server capability",async()=>{
+ vi.stubEnv("NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW","1");vi.stubEnv("CUSTOM_SERVICE_REVIEW_ENABLED","");try{
+  const f=fake(c=>{const q=c.body as {entity?:string}|undefined;if(c.path==="/query"&&q?.entity==="profile")return{body:{data:[{id:"prof",data:{person:PERSON,status:"draft",services_other:"Name\nDescription"},createdAt:"",updatedAt:""}]}};return undefined;});
+  const r=await call("profiles.submit",[PERSON],undefined,f);expect(r.res.status).toBe(503);expect(r.calls.some(c=>c.method==="PATCH"||c.path==="/batch")).toBe(false);
+ }finally{vi.unstubAllEnvs();}
+});
+
+describe("private insurance descriptions through the real save route", () => {
+  it.each([undefined, "Fictional updated coverage", ""])("preserves omitted notes and forwards explicit changes (%s)", async (note) => {
+    const fields = { ...blankFields(), insurance: "yes" as const };
+    const data = { ...toProfile(fields).data, person: PERSON, insurance_notes: "Existing private coverage" };
+    const f = fake(c => {
+      if (c.path === "/query") {
+        const entity = (c.body as { entity?: string }).entity;
+        return { body: { data: entity === "profile" ? [{ id: "prof", data, createdAt: "", updatedAt: "" }] : [] } };
+      }
+      if (c.path === "/batch") {
+        for (const op of (c.body as { ops: { data: Record<string, unknown> }[] }).ops) Object.assign(data, op.data);
+        return { body: { ids: ["prof"] } };
+      }
+      return undefined;
+    });
+    const input = note === undefined ? fields : { ...fields, insuranceNotes: note };
+    const result = await call("profiles.saveDraft", [PERSON, input], undefined, f);
+    expect(result.res.status).toBe(200);
+    expect((result.body.result as { fields: { insuranceNotes?: string } }).fields.insuranceNotes).toBe(note ?? "Existing private coverage");
+    const batches = f.calls.filter(c => c.path === "/batch");
+    if (note === undefined) expect(batches).toEqual([]);
+    else expect(batches.map(c => c.body)).toEqual([{ ops: [{ op: "update", entity: "profile", id: "prof", data: { insurance_notes: note } }] }]);
+    expect(f.calls.every(c => c.auth === `Bearer ${SESSION}`)).toBe(true);
+  });
+  it.each([null, 1, {}, ["not text"], "x".repeat(INSURANCE_NOTES_MAX + 1)])("refuses malformed/oversized notes before any backend call", async note => {
+    const f = fake();
+    const result = await call("profiles.saveDraft", [PERSON, { insuranceNotes: note }], undefined, f);
+    expect(result.res.status).toBe(422);
+    expect(result.body.error).toBe("invalid_insurance_notes");
+    expect(f.calls).toEqual([]);
+  });
+});
+
+
+it("public response omits insurance descriptions even if the upstream unexpectedly includes one", async () => {
+  const note = "PRIVATE FICTIONAL INSURANCE DESCRIPTION";
+  const f = fake(c => {
+    if (c.path === "/query") return { body: { data: (c.body as { entity?: string }).entity === "profile"
+      ? [{ id: "prof", data: { display_name: "Fictional Public Profile", public_handle: "fictional-profile", insurance_notes: note }, createdAt: "", updatedAt: "" }] : [] } };
+    return undefined;
+  });
+  const result = await call("people.getPublic", ["fictional-profile"], undefined, f);
+  expect(result.res.status).toBe(200);
+  const fields = (result.body.result as { profile: { fields: Record<string, unknown> } }).profile.fields;
+  expect(fields).not.toHaveProperty("insuranceNotes");
+  expect(JSON.stringify(result.body)).not.toContain(note);
+  expect(f.calls.every(c => c.auth === `Bearer ${READER}`)).toBe(true);
+});
+
+it("draft metadata uses server row creation, not updatedAt or writable fields",async()=>{
+ const createdAt="2026-10-01T00:00:00.000Z",updatedAt="2027-01-01T00:00:00.000Z";
+ const f=fake(c=>{const q=c.body as {entity?:string}|undefined;if(c.path==="/query"&&q?.entity==="profile")return{body:{data:[{id:"prof",createdAt,updatedAt,data:{person:PERSON,status:"draft",profileCreatedAt:updatedAt,createdAt:updatedAt}}]}};return undefined;});
+ const r=await call("profiles.getDraft",[PERSON],undefined,f);expect(r.res.status).toBe(200);expect(r.body.result).toMatchObject({profileCreatedAt:createdAt,savedAt:updatedAt});expect((r.body.result as {fields:object}).fields).not.toHaveProperty("profileCreatedAt");expect(r.calls.every(c=>c.auth===`Bearer ${SESSION}`)).toBe(true);
+});
+it("a genuinely new draft reports no stored profile while missing old row metadata stays unknown",async()=>{
+ const f=fake(c=>{const q=c.body as {entity?:string}|undefined;if(c.path==="/query"&&q?.entity==="person")return{body:{data:[{id:PERSON,data:{name:"Fictional New Crew"}}]}};return undefined;});
+ expect((await call("profiles.getDraft",[PERSON],undefined,f)).body.result).toMatchObject({profileCreatedAt:null});
+ const legacy=fake(c=>{const q=c.body as {entity?:string}|undefined;if(c.path==="/query"&&q?.entity==="profile")return{body:{data:[{id:"prof",data:{person:PERSON,status:"draft"},updatedAt:"2027-01-01T00:00:00.000Z"}]}};return undefined;});
+ expect((await call("profiles.getDraft",[PERSON],undefined,legacy)).body.result).not.toHaveProperty("profileCreatedAt");
+});
+it("save replies preserve actual creation metadata while client timestamp fields never become writes",async()=>{
+ const createdAt="2026-10-01T00:00:00.000Z",fields={...blankFields("Fictional Metadata Crew"),profileCreatedAt:"1900-01-01T00:00:00.000Z"};
+ const row={id:"prof",createdAt,updatedAt:"2027-01-01T00:00:00.000Z",data:{...toProfile(fields).data,person:PERSON,status:"draft"}};
+ const f=fake(c=>{const q=c.body as {entity?:string}|undefined;if(c.path==="/query"&&q?.entity==="profile")return{body:{data:[row]}};return undefined;});
+ const result=await call("profiles.saveDraft",[PERSON,fields],undefined,f);expect(result.res.status).toBe(200);expect(result.body.result).toMatchObject({profileCreatedAt:createdAt});
+ expect(JSON.stringify(f.calls.filter(c=>c.method==="PATCH"||c.path==="/batch"))).not.toContain("profileCreatedAt");
+ const pub=await call("people.getPublic",["fictional"],{token:null},f);expect(JSON.stringify(pub.body)).not.toContain("profileCreatedAt");expect(JSON.stringify(pub.body)).not.toContain(createdAt);
+});
+
+it('accepts only explicit boolean travel preference, preserving legacy omission and refusing coercion',async()=>{
+ const{cleanFields}=await import('./routes');for(const v of[true,false])expect(cleanFields({travelBeyondLA:v}).travelBeyondLA).toBe(v);
+ expect(cleanFields({})).not.toHaveProperty('travelBeyondLA');for(const v of[null,'true','false',0,1,{},[]])expect(()=>cleanFields({travelBeyondLA:v})).toThrow();
 });

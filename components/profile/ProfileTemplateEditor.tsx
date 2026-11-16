@@ -10,12 +10,15 @@ import {
   defaultProfileTemplate, encodeProfileTemplate, parseProfileTemplate, profileFieldParts, profileParts, profileSections,
   ruleLabels, saveProfileTemplate, type ProfileFieldRule, type ProfileTemplate,
 } from "@/lib/profile/template";
+import { departmentFieldRetired } from "@/lib/profile/department-retirement";
 import { data } from "@/lib/data";
 import { basePath } from "@/lib/site";
 import { professionalExamples } from "@/lib/professional-examples";
 
+import { locationControlsEnabled } from "@/lib/profile/location-controls";
+
 type Screen = "canvas" | "form" | "page";
-const fields = Object.keys(profileFieldParts) as ProfileFieldRule[];
+const fields = (Object.keys(profileFieldParts) as ProfileFieldRule[]).filter((key) => key !== "transport" && (key !== "position" || !departmentFieldRetired()));
 const screenOptions = [{ value: "canvas", label: "Guided editor" }, { value: "form", label: "Questionnaire" }, { value: "page", label: "Client page" }];
 
 function move<T>(items: readonly T[], index: number, direction: -1 | 1): T[] {
@@ -135,8 +138,8 @@ export function ProfileTemplateEditor() {
                     {rules.map((k) => <label key={k} className="flex min-h-10 cursor-pointer items-center justify-between gap-3 rounded-md bg-surface-sunken px-3 text-body-sm">
                       <span>{rules.length > 1 ? ruleLabels[k] : "Required before submission"}</span>
                       <span className="inline-flex items-center gap-2">
-                        {rules.length > 1 && <span className="text-ink-muted">{draft.required.includes(k) ? "Required" : "Optional"}</span>}
-                        <input type="checkbox" checked={draft.required.includes(k)} aria-label={`Require ${ruleLabels[k]}`}
+                        {rules.length > 1 && <span className="text-ink-muted">{k === "travel" && locationControlsEnabled() ? "Required for new profiles" : draft.required.includes(k) ? "Required" : "Optional"}</span>}
+                        <input type="checkbox" checked={draft.required.includes(k)} disabled={k === "travel" && locationControlsEnabled()} aria-label={`Require ${ruleLabels[k]}`}
                           onChange={(e) => edit({ ...draft, required: e.target.checked ? [...draft.required, k] : draft.required.filter((id) => id !== k) })}
                           className="size-5 accent-action" />
                       </span>
