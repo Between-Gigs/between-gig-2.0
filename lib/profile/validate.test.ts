@@ -105,3 +105,11 @@ it("keeps the new custom-only UI disabled for an explicit legacy/live configurat
  expect(validateGigster(f,defaultProfileTemplate,false).services).toBeTruthy();
  expect(gigsterChecklist(f,defaultProfileTemplate,false).required.find(i=>i.id==="services")?.done).toBe(false);
 });
+
+it("compares private insurance notes without making legacy blank notes an unsent change", () => {
+  const fields = blankFields("Insurance Contract");
+  expect(contentChanged(fields, { ...fields, insuranceNotes: "" })).toBe(false);
+  expect(contentChanged(fields, { ...fields, insuranceNotes: "  " })).toBe(false);
+  expect(contentChanged(fields, { ...fields, insuranceNotes: "Fictional coverage" })).toBe(true);
+  expect(contentChanged({ ...fields, insuranceNotes: "Fictional coverage" }, { ...fields, insuranceNotes: " Fictional coverage " })).toBe(false);
+});

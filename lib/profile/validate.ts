@@ -41,6 +41,7 @@ export function contentChanged(a: ProfileFields, b: ProfileFields): boolean {
     // The editor's answers as sorted pairs (a replacer list would drop nested keys), and absent when empty.
     const lines = Object.entries(f.serviceLines ?? {}).filter(([, v]) => v.trim()).sort(([a], [b]) => a.localeCompare(b));
     if (lines.length) rest.serviceLines = lines; else delete rest.serviceLines;
+    if (f.insuranceNotes?.trim()) rest.insuranceNotes = f.insuranceNotes.trim(); else delete rest.insuranceNotes;
     for (const key of ["personalityQuestion", "title"] as const) if (!f[key]) delete rest[key];
     // A draft saved before the booking questions existed has the same answers as blank inputs.
     for (const key of Object.keys(stageTwoLimits) as (keyof typeof stageTwoLimits)[]) {

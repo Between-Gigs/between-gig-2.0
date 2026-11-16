@@ -17,6 +17,7 @@ import { personalityQuestions } from "@/lib/profile/personality";
 import { departmentFieldRetired } from "@/lib/profile/department-retirement";
 import { serviceDescription } from "@/lib/profile/service-descriptions";
 import { POSTAL_CODE_MAX } from "@/lib/profile/postal";
+import { INSURANCE_NOTES_MAX } from "@/lib/profile/insurance";
 import { stageTwoLimits } from "@/lib/profile/stage-two";
 import { ABOUT_MAX, DATES_MAX, DEPARTMENT_MAX, MAX_SERVICES, NAME_MAX, SERVICE_LINE_MAX, TITLE_MAX, hasRate } from "@/lib/profile/validate";
 import { Credits } from "@/components/builder/ProfileBuilder";
@@ -570,7 +571,7 @@ export function CanvasColumns({ d, set, errors, required }: SectionProps & { req
 
 /** "Details · Optional": what the profile's Details block shows (languages and how they work), asked right here. */
 export function CanvasDetails({ d, set }: SectionProps) {
-  const filled = !!(d.languages.trim() || d.tools.trim() || d.mode !== "on-site" || d.insurance !== "private");
+  const filled = !!(d.languages.trim() || d.tools.trim() || d.mode !== "on-site" || d.insurance !== "private" || d.insuranceNotes?.trim());
   const [open, openIt] = useOpen(filled);
   const atClient = d.mode === "on-site" || d.mode === "both";
   const atBusiness = d.mode === "studio" || d.mode === "both";
@@ -600,6 +601,9 @@ export function CanvasDetails({ d, set }: SectionProps) {
           <Field label="Tools and equipment" optional><Textarea id="f-tools" rows={4} value={d.tools} placeholder="Special Cameras, Lighting Kit, Box Truck, Makeup kit, etc." maxLength={160} onChange={(e) => set("tools")(e.target.value)} /></Field>
           <RadioGroup name="f-insurance" label={<>Insurance <span className="font-normal text-ink-subtle">· optional, self-reported</span></>} value={d.insurance} onChange={(v) => set("insurance")(v as typeof d.insurance)}
             options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance yet" }]} />
+          {d.insurance === "yes" && <Field label="Describe your liability insurance" optional hint="For the Between Gigs team. Not shown on your public profile.">
+            <Textarea id="f-insurance-notes" rows={3} maxLength={INSURANCE_NOTES_MAX} showCount value={d.insuranceNotes ?? ""} onChange={(e) => set("insuranceNotes")(e.target.value)} />
+          </Field>}
         </div>
       )}
     </section>

@@ -192,3 +192,20 @@ describe("work locations use the existing work-mode contract", () => {
     expect(data).not.toHaveProperty("work_locations");
   });
 });
+
+describe("private insurance descriptions", () => {
+  it("round-trips an explicit private note through the existing core field without extras activation", () => {
+    const { data, items } = toProfile({ ...filled, insurance: "yes", insuranceNotes: " Fictional project coverage " });
+    expect(data.insurance_notes).toBe("Fictional project coverage");
+    expect(fromProfile(data, items, "").insuranceNotes).toBe("Fictional project coverage");
+  });
+  it("omits unknown legacy/public fields while allowing explicit clearing", () => {
+    expect(toProfile(filled).data).not.toHaveProperty("insurance_notes");
+    expect(fromProfile({}, [], "")).not.toHaveProperty("insuranceNotes");
+    expect(toProfile({ ...filled, insuranceNotes: "" }).data).toHaveProperty("insurance_notes", "");
+  });
+  it("does not discard a private note when the disclosure answer changes", () => {
+    const { data, items } = toProfile({ ...filled, insurance: "private", insuranceNotes: "Keep fictional private draft" });
+    expect(fromProfile(data, items, "")).toMatchObject({ insurance: "private", insuranceNotes: "Keep fictional private draft" });
+  });
+});

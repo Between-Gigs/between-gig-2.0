@@ -99,6 +99,8 @@ export interface ProfileFields {
   about: string;
   languages: string;
   insurance: InsuranceAnswer;
+  /** Optional private description; existing Company OS insurance_notes field, never public. */
+  insuranceNotes?: string;
   tools: string;
   transport: string;
   mode: WorkMode;

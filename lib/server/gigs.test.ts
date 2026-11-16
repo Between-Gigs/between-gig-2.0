@@ -120,3 +120,15 @@ it("changing both work locations updates only work_mode and preserves private no
   const ops = draftOps(PERSON, { ...fields, mode: "both" }, previous);
   expect(ops).toEqual([{ op: "update", entity: "profile", id: "prof", data: { work_mode: "on_site_or_at_provider" } }]);
 });
+
+it("private insurance notes autosave alone; legacy payloads preserve existing notes", () => {
+  const previous = stored();
+  previous.profile!.data.insurance_notes = "Existing private description";
+  expect(draftOps(PERSON, fields, previous)).toEqual([]);
+  expect(draftOps(PERSON, { ...fields, insuranceNotes: "Updated private description" }, previous)).toEqual([
+    { op: "update", entity: "profile", id: "prof", data: { insurance_notes: "Updated private description" } },
+  ]);
+  expect(draftOps(PERSON, { ...fields, insuranceNotes: "" }, previous)).toEqual([
+    { op: "update", entity: "profile", id: "prof", data: { insurance_notes: "" } },
+  ]);
+});
