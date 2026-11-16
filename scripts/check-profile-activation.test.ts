@@ -1,0 +1,36 @@
+import { describe, expect, it } from "vitest";
+import { checkProfileActivation } from "./check-profile-activation.mjs";
+const pending=JSON.stringify({requires:">=1.14.0",profileFeatures:{customServiceReview:{requires:null,apiCommit:null,profilesModule:"1.5.0"}}});
+// Fictional release declarations, never a real reservation or deployed capability claim.
+const ready=JSON.stringify({requires:">=2.7.0",profileFeatures:{customServiceReview:{requires:">=2.7.0",apiCommit:"a".repeat(40),profilesModule:"1.5.0",settingsEvidence:{test:"libfile_fictional_test",production:null}}}});
+describe("profile activation preflight",()=>{
+ it.each([{}, {NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW:"0"}, {NEXT_PUBLIC_PROFILE_NO_DEPARTMENT:"0"}])("permits a dormant build and preserves an absent runtime flag (%j)",env=>expect(checkProfileActivation(env,pending).ok).toBe(true));
+ it("does not treat a diagnostic/baseline API version as the custom feature",()=>expect(checkProfileActivation({NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW:"1",CUSTOM_SERVICE_REVIEW_ENABLED:"1"},pending).ok).toBe(false));
+ it.each([undefined,"","0"])("refuses UI activation without the explicit server guard (%s)",runtime=>expect(checkProfileActivation({NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW:"1",CUSTOM_SERVICE_REVIEW_ENABLED:runtime},ready).ok).toBe(false));
+ it("accepts paired activation declarations only after version coordination",()=>expect(checkProfileActivation({RAILWAY_ENV:"test",NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW:"1",CUSTOM_SERVICE_REVIEW_ENABLED:"1"},ready).ok).toBe(true));
+ it("supports hiding the UI while retaining enforcement",()=>expect(checkProfileActivation({RAILWAY_ENV:"test",NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW:"0",CUSTOM_SERVICE_REVIEW_ENABLED:"1"},ready).ok).toBe(true));
+ it("refuses an ordinary workflow reset of the installed runtime guard",()=>expect(checkProfileActivation({NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW:"0",CUSTOM_SERVICE_REVIEW_ENABLED:"0"},ready).ok).toBe(false));
+ it.each(["NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW","NEXT_PUBLIC_PROFILE_NO_DEPARTMENT","CUSTOM_SERVICE_REVIEW_ENABLED"])("rejects malformed %s without echoing its value",name=>{const result=checkProfileActivation({[name]:"\n::notice::untrusted"},ready);expect(result.ok).toBe(false);expect(result.error).not.toContain("untrusted");});
+});
+
+describe("Department-only activation readiness",()=>{
+ it("refuses hiding Department with only the baseline and unverified settings",()=>expect(checkProfileActivation({RAILWAY_ENV:"test",NEXT_PUBLIC_PROFILE_NO_DEPARTMENT:"1"},pending).ok).toBe(false));
+ it("does not reuse test settings evidence for production",()=>{
+  const manifest=JSON.stringify({requires:">=1.14.0",profileFeatures:{departmentRetirement:{apiCommit:"a".repeat(40),settingsEvidence:{test:"libfile_fictional_test",production:null}}}});
+  expect(checkProfileActivation({RAILWAY_ENV:"test",NEXT_PUBLIC_PROFILE_NO_DEPARTMENT:"1"},manifest).ok).toBe(true);
+  expect(checkProfileActivation({RAILWAY_ENV:"production",NEXT_PUBLIC_PROFILE_NO_DEPARTMENT:"1"},manifest).ok).toBe(false);
+ });
+});
+
+describe("custom-service settings evidence stays environment scoped",()=>{
+ it.each([undefined,"production"])("does not enable from a test receipt in %s",environment=>expect(checkProfileActivation({RAILWAY_ENV:environment,NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW:"1",CUSTOM_SERVICE_REVIEW_ENABLED:"1"},ready).ok).toBe(false));
+ it("rejects raw/signed URL evidence in the source declaration",()=>{
+  const declaration=JSON.parse(ready);declaration.profileFeatures.customServiceReview.settingsEvidence.test="https://fictional.invalid/token=do-not-publish";
+  expect(checkProfileActivation({RAILWAY_ENV:"test",CUSTOM_SERVICE_REVIEW_ENABLED:"1"},JSON.stringify(declaration)).ok).toBe(false);
+ });
+});
+
+it("does not combine readiness declarations for different deployed API source commits",()=>{
+ const manifest=JSON.parse(ready);manifest.profileFeatures.departmentRetirement={apiCommit:"b".repeat(40),settingsEvidence:{test:"libfile_fictional_test"}};
+ expect(checkProfileActivation({RAILWAY_ENV:"test",NEXT_PUBLIC_PROFILE_NO_DEPARTMENT:"1",CUSTOM_SERVICE_REVIEW_ENABLED:"1"},JSON.stringify(manifest)).ok).toBe(false);
+});

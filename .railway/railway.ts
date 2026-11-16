@@ -46,6 +46,8 @@ export default defineRailway((ctx) => {
       APP_URL: preserve(),
       // Signs the preview's cookie, and on test the gate's (lib/server/preview.ts, lib/security/test-gate.ts).
       COOKIE_SIGNING_SECRET: preserve(),
+      // Optional: absent means legacy mode. Once set, UI rollback must preserve the approval guard.
+      CUSTOM_SERVICE_REVIEW_ENABLED: preserve(),
       // The test site's passphrase gate (Company OS playbook rule D5); production never has one.
       ...(prod ? {} : { TEST_GATE_PASSPHRASE: preserve() }),
     },

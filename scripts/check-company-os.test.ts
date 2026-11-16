@@ -35,7 +35,7 @@ describe("feature API release coordination",()=>{
     expect(checkRequirement('{"requires":">=1.14.0"}',{customServiceReview:true}).ok).toBe(false);
   });
   it("refuses unallocated, unproven or lower-than-feature release declarations",()=>{
-    for(const f of [{...feature,requires:null},{...feature,apiCommit:null},feature])expect(checkRequirement(JSON.stringify({requires:">=1.14.0",profileFeatures:{customServiceReview:f}}),{customServiceReview:true}).ok).toBe(false);
+    for(const f of [{...feature,requires:null},{...feature,requires:[">=2.7.0"]},{...feature,apiCommit:null},{...feature,apiCommit:["a".repeat(40)]},feature])expect(checkRequirement(JSON.stringify({requires:">=1.14.0",profileFeatures:{customServiceReview:f}}),{customServiceReview:true}).ok).toBe(false);
   });
   it("allows coordinated declarations without claiming runtime capability verification",()=>{
     expect(checkRequirement(JSON.stringify({requires:">=2.7.0",profileFeatures:{customServiceReview:feature}}),{customServiceReview:true}).ok).toBe(true);
