@@ -25,6 +25,7 @@ import type { ProfileSectionId } from "@/lib/profile/template";
 import { Divider, Heading, Quote, Status, Text } from "../atoms";
 import { RateBlock, SectionHeading } from "../molecules";
 import { ProfileResultCard } from "../organisms";
+import { LinkedInLink } from "@/components/profile/LinkedInLink";
 
 /** One plain line of the identity meta (Justin's Flow p4: no icons, just the words). */
 function Meta({ children }: { children: React.ReactNode }) {
@@ -195,6 +196,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
           </ol>
         ), "Your notable credits, best first", "block")}
         {resumeUrl && <a className="inline-flex min-h-11 w-fit items-center gap-1.5 text-label-md font-semibold text-link underline underline-offset-4" href={resumeUrl} target="_blank" rel="noreferrer">View résumé<span className="sr-only"> (opens in a new tab)</span></a>}
+        <LinkedInLink value={f.linkedin} />
         {(mode === "owner" || editing || draft) && P("imdb", !!f.imdb, (
           <Text size="sm" muted><a className="inline-flex min-h-11 items-center text-link underline underline-offset-2" href={f.imdb} target="_blank" rel="noreferrer">IMDb page<span className="sr-only"> (opens in a new tab)</span></a> · only the Between Gigs team sees this</Text>
         ), "Your IMDb link. Only the team sees it.", "block")}

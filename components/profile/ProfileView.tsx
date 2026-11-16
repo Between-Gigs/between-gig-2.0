@@ -20,6 +20,7 @@ import { ModernProfile } from "./ModernProfile";
 import { WarmProfile } from "./WarmProfile";
 import { ProfileTemplate } from "@/components/ds/templates/ProfileTemplate";
 import { craftHref } from "@/lib/profile/browse";
+import { LinkedInLink } from "@/components/profile/LinkedInLink";
 
 export type ProfileMode = "public" | "own" | "owner";
 
@@ -334,7 +335,7 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
         </>
       ),
     },
-    credits: (show || f.skills.length > 0 || credits.length > 0 || (mode === "owner" && !!f.imdb)) && {
+    credits: (show || f.skills.length > 0 || credits.length > 0 || !!f.linkedin || (mode === "owner" && !!f.imdb)) && {
       title: "On set",
       content: (
         <div className="grid gap-6 sm:grid-cols-2">
@@ -354,6 +355,7 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
               </ol>
             </div>
           ), "Your notable credits, best first", "block")}</div>
+          <div className="sm:col-span-2"><LinkedInLink value={f.linkedin} /></div>
           {(mode === "owner" || editing || draft) && <div className="sm:col-span-2">{P("imdb", !!f.imdb, (
             <p className="text-body-sm text-ink-muted"><a className="inline-flex min-h-11 items-center text-link underline underline-offset-2" href={f.imdb} target="_blank" rel="noreferrer">IMDb page<span className="sr-only"> (opens in a new tab)</span></a> · only the Between Gigs team sees this</p>
           ), "Your IMDb link. Only the team sees it.", "block")}</div>}

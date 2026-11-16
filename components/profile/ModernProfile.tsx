@@ -13,6 +13,7 @@ import { craftIcon } from "@/lib/icons3d";
 import type { ProfileSectionId } from "@/lib/profile/template";
 import { startDateLabel } from "@/lib/profile/stage-two";
 import { asset } from "@/lib/site";
+import { LinkedInLink } from "@/components/profile/LinkedInLink";
 import type { ProfileLayoutProps } from "./ProfileView";
 import { PublicBookingDetails } from "./PublicBookingDetails";
 
@@ -69,9 +70,10 @@ export function ModernProfile({ person, fields: f, mode, embedded, draft, part, 
       </button></li>))}</ul>
       <div className="mt-3 flex flex-wrap items-center gap-3"><Button size="sm" variant="secondary" onClick={() => onPhoto(0)}>Show all {portfolio.length} photos</Button>
         {sample && <p className="text-body-sm text-ink-muted">Concept images showing the kind of work to discuss, not completed client projects.</p>}</div></>,
-    credits: (show || credits.length > 0 || f.skills.length > 0 || (mode === "owner" && !!f.imdb)) && <div className="grid gap-3">
+    credits: (show || credits.length > 0 || f.skills.length > 0 || !!f.linkedin || (mode === "owner" && !!f.imdb)) && <div className="grid gap-3">
       {P("skills", !!f.skills.length, <div className="flex flex-wrap gap-2">{f.skills.map(s => <span className="modern-label" key={s}>{s}</span>)}</div>, "Your on-set skills", "block")}
       {P("credits", !!credits.length, <ol className="modern-credits">{creditRows.map(({title, role}, i) => <li key={credits[i]}><Clapperboard size={17} aria-hidden="true" /><div><b>{title}</b>{role && <p>{role}</p>}</div></li>)}</ol>, "Your notable credits, best first", "block")}
+      <LinkedInLink value={f.linkedin} />
       {(mode === "owner" || editing || draft) && P("imdb", !!f.imdb, <p className="text-body-sm text-ink-muted"><a href={f.imdb} className="text-link underline" target="_blank" rel="noreferrer">IMDb page</a> · only the Between Gigs team sees this</p>, "Your IMDb link. Only the team sees it.", "block")}
     </div>,
     details: <div className="grid gap-3">
