@@ -85,7 +85,7 @@ describe("gate on", () => {
     const email = (await s.people.get("imani-carter"))!.person.email;
     await s.emails.queue("approved", email, { firstName: "Imani", profileUrl: "x", editUrl: "y" });
     const queued = (await s.emails.outbox()).filter((e) => e.template === "approved" && e.to === email).length;
-    await s.owners.undoReview("imani-carter");
+    await s.owners.undoReview!("imani-carter");
     expect((await s.emails.outbox()).filter((e) => e.template === "approved" && e.to === email).length).toBe(queued);
   });
   it("the funnel's Approved stage and its list agree (approved plus published)", async () => {

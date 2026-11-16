@@ -9,7 +9,7 @@ import type { PersonStatus } from "@/lib/data/types";
 export const publishGateOn = () => process.env.NEXT_PUBLIC_PROFILE_PUBLISH_GATE === "1";
 
 export const APPROVED_NOT_PUBLIC = "Approved, not yet public";
-export const APPROVED_NOT_PUBLIC_LINE = "The Between Gigs team approved your profile. It goes public when we launch the directory.";
+export const APPROVED_NOT_PUBLIC_LINE = "The Between Gigs team approved your profile. It goes public when the team publishes it.";
 export const APPROVED_EDIT_HINT = "Changes you make here go back to the team for review.";
 
 /** The team has approved it (private or public). */
@@ -23,12 +23,12 @@ export const isApprovedPrivate = (s: PersonStatus | string | null | undefined, g
 export function gigstersLabel(s: PersonStatus, gate = publishGateOn()): string {
   if (isApprovedPrivate(s, gate)) return APPROVED_NOT_PUBLIC;
   if (s === "published") return "Live";
-  return ({ invited: "Invited", registered: "Not started", draft: "Draft", submitted: "Submitted for review", changes_requested: "Changes requested", approved: "Approved" } as Record<string, string>)[s] ?? s;
+  return ({ invited: "Invited", registered: "Not started", draft: "Draft", submitted: "Submitted for review", changes_requested: "Changes requested", approved: "Approved" } as Record<string, string>)[s] ?? "Draft";
 }
 
 /** The word an owner sees for the status. */
 export function ownerLabel(s: PersonStatus, gate = publishGateOn()): string {
   if (isApprovedPrivate(s, gate)) return "Approved, not public";
   if (s === "published") return "Live";
-  return ({ invited: "Invited", registered: "Registered", draft: "Draft", submitted: "Submitted", changes_requested: "Changes requested", approved: "Approved" } as Record<string, string>)[s] ?? s;
+  return ({ invited: "Invited", registered: "Registered", draft: "Draft", submitted: "Submitted", changes_requested: "Changes requested", approved: "Approved" } as Record<string, string>)[s] ?? "Draft";
 }

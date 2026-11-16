@@ -701,7 +701,8 @@ export const sampleSource: DataSource = {
       Object.assign(person, { status: "submitted", approvedAt: undefined, reviewNotes: undefined, updatedAt: person.submittedAt ?? now() });
       const event = state.activity?.findIndex((e) => e.personId === personId && e.kind === kind) ?? -1;
       if (event >= 0) state.activity!.splice(event, 1);
-      const email = state.outbox.findIndex((e) => e.to === person.email && e.template === template && e.status === "queued");
+      // With the publish gate, approving queued no email, so there is none of ours to take back.
+      const email = publishGateOn() && template === "approved" ? -1 : state.outbox.findIndex((e) => e.to === person.email && e.template === template && e.status === "queued");
       if (email >= 0) state.outbox.splice(email, 1);
       save(state);
       return clone(person);

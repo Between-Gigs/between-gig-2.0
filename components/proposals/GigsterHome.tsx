@@ -181,10 +181,10 @@ export function GigsterHome({ personId }: { personId: string }) {
             <ul className="grid border-t border-line text-body-md">
               <li className="border-b border-line"><Link href="/profile/" className={rowLink}><Eye className="size-5 shrink-0" strokeWidth={1.75} aria-hidden="true" />See it as clients will<ArrowRight className="ml-auto size-4" aria-hidden="true" /></Link></li>
               <li className="border-b border-line"><Link href="/profile/canvas/" className={rowLink}><PencilLine className="size-5 shrink-0" strokeWidth={1.75} aria-hidden="true" />Edit your profile<ArrowRight className="ml-auto size-4" aria-hidden="true" /></Link></li>
-              {p.status === "approved" && <li className="border-b border-line"><Link href={`/p/${p.slug}/`} className={rowLink}><Link2 className="size-5 shrink-0" strokeWidth={1.75} aria-hidden="true" />Your public page to share<ArrowRight className="ml-auto size-4" aria-hidden="true" /></Link></li>}
+              {isPublicStatus(p.status) && <li className="border-b border-line"><Link href={`/p/${p.slug}/`} className={rowLink}><Link2 className="size-5 shrink-0" strokeWidth={1.75} aria-hidden="true" />Your public page to share<ArrowRight className="ml-auto size-4" aria-hidden="true" /></Link></li>}
             </ul>
             {isPublicStatus(p.status) && <Banner tone="success" title="You're live">Clients across Los Angeles can find you.</Banner>}
-          {isApprovedPrivate(p.status) && <Banner tone="info" title={APPROVED_NOT_PUBLIC}>{APPROVED_NOT_PUBLIC_LINE}</Banner>}
+            {isApprovedPrivate(p.status) && <Banner tone="info" title={APPROVED_NOT_PUBLIC}>{APPROVED_NOT_PUBLIC_LINE}</Banner>}
           </section>
         </div>
         <ProposalNote n={3} />

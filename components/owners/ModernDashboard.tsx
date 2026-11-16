@@ -7,7 +7,7 @@ import { ButtonLink } from "@/components/ui/ButtonLink";
 import type { DashboardSummary, PersonSummary, WaitlistRow } from "@/lib/data";
 import { waitlistCategoryLabel } from "@/lib/data/taxonomy";
 import { ActivityList, ago } from "./activity";
-import type { DashboardView } from "./OwnerDashboard";
+import { funnelView, type DashboardView } from "./OwnerDashboard";
 import { FunnelCompact } from "./Funnel";
 import { OwnerAvatar } from "./kit";
 import { shortDate } from "./format";
@@ -98,7 +98,7 @@ export function ModernDashboard({
       hint: "Sent back for changes",
     },
     { key: gate ? "published" : "approved", label: "Live profiles", value: gate ? d.counts.published : d.counts.approved },
-    ...(gate ? [{ key: "approved" as const, label: "Approved", value: d.counts.approved, hint: "Not public yet" }] : []),
+    ...(gate ? [{ key: "approved" as const, label: "Approved, not public", value: d.counts.approved, hint: "Private until published" }] : []),
     { key: "not_invited", label: "Ready to invite", value: d.waitlist.not_invited },
   ];
   const pick = (next: DashboardView, scope: "all" | "invited" = "all") => {
@@ -329,8 +329,8 @@ export function ModernDashboard({
                 <FunnelCompact
                   bare
                   d={d}
-                  selected={cohort === "invited" || view === "signed_up" ? view : undefined}
-                  onSelect={(x) => pick(x, x === "signed_up" ? "all" : "invited")}
+                  selected={cohort === "invited" || view === "signed_up" ? (view === "reached_approval" ? "approved" : view) : undefined}
+                  onSelect={(x) => pick(funnelView(x), x === "signed_up" ? "all" : "invited")}
                 />
               </div>
             )}
