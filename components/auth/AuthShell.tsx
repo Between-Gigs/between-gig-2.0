@@ -47,7 +47,7 @@ export function AuthShell({ header, lead, children, className, eyebrow, steps: s
         <AuthStageTemplate
           eyebrow={login ? "Welcome back" : "Founding Gigsters"}
           title={login ? <>Pick up where<br className="max-sm:hidden" /> you left off.</> : <>Bring your craft<br className="max-sm:hidden" /> beyond the set.</>}
-          lead={login ? "Log in to keep your profile current and see where it stands." : "Create a profile so people can find the services you offer between gigs."}>
+          lead={login ? "Log in to keep your profile current and see where it stands." : "Create your profile to connect with people and businesses looking for the expertise you bring from behind the scenes."}>
           <div className={className}>
             {eyebrow && <Status tone="brand" className="mb-4">{eyebrow}</Status>}
             {content}

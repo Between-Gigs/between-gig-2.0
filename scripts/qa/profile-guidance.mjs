@@ -6,7 +6,7 @@ import { serve } from './serve.mjs';
 const {server,url}=await serve(root+'/out');
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH || '/usr/bin/chromium'});
 fs.mkdirSync(root+'/deliverables/profile-guidance',{recursive:true});
-const guidance='Show customers what you can do! Upload photos or images of past projects that demonstrate your skills and experience. These can be from your work in film and television or projects you’ve completed outside the industry.';
+const guidance='Show customers what you can do! Upload photos, videos, or examples of past projects that demonstrate your skills and experience. These can be from your work in film and television or projects you’ve completed outside the industry.';
 try{
 for(const width of [320,390,768,1440])for(const theme of ['light','dark']){
  const ctx=await browser.newContext({viewport:{width,height:1100},colorScheme:theme,reducedMotion:'reduce'}),external=[];
