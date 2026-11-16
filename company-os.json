@@ -29,6 +29,15 @@
         "test": null,
         "production": null
       }
+    },
+    "customSkills": {
+      "requires": null,
+      "profilesModule": "1.7.0",
+      "apiCommit": null,
+      "settingsEvidence": {
+        "test": null,
+        "production": null
+      }
     }
   }
 }

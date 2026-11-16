@@ -10,7 +10,7 @@ function settingsDeclared(feature, environment) {
 }
 
 export function checkProfileActivation(env, manifest) {
-  for (const name of ["NEXT_PUBLIC_PROFILE_NO_DEPARTMENT", "NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW", "NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS"]) {
+  for (const name of ["NEXT_PUBLIC_PROFILE_NO_DEPARTMENT", "NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW", "NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS", "NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS"]) {
     if (![undefined, "", "0", "1"].includes(env[name])) return { ok: false, error: `${name} must be absent, 0 or 1` };
   }
   // Do not turn off a previously activated runtime guard during an ordinary UI rollback.
@@ -30,10 +30,15 @@ export function checkProfileActivation(env, manifest) {
     const utc = value => typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString() === value;
     if (!utc(cutoff) || cutoff !== env.NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER) return { ok: false, error: "Location cohort activation needs one reviewed UTC cutoff matching its public build configuration and verified API setting" };
   }
+  if (env.NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS === "1") {
+    const release = checkRequirement(manifest, { customSkills: true });
+    if (!release.ok) return release;
+  }
   const enabled = [
     ...(env.NEXT_PUBLIC_PROFILE_NO_DEPARTMENT === "1" ? ["departmentRetirement"] : []),
     ...(env.CUSTOM_SERVICE_REVIEW_ENABLED === "1" ? ["customServiceReview"] : []),
     ...(env.NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS === "1" ? ["locationControls"] : []),
+    ...(env.NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS === "1" ? ["customSkills"] : []),
   ];
   for (const name of enabled) if (!settingsDeclared(declaration?.profileFeatures?.[name], env.RAILWAY_ENV)) return { ok: false, error: `${name} needs this environment's private settings-verification receipt and deployed API commit declaration` };
   if (new Set(enabled.map(name => declaration.profileFeatures[name].apiCommit)).size > 1) return { ok: false, error: "Enabled profile features must identify the same deployed API source commit" };

@@ -53,3 +53,11 @@ it("does not reuse or move a test cutoff to activate production",()=>{
  expect(checkProfileActivation({RAILWAY_ENV:"production",NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS:"1",NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER:test},manifest).ok).toBe(false);
  expect(checkProfileActivation({RAILWAY_ENV:"production",NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS:"1",NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER:prod},manifest).ok).toBe(true);
 });
+
+describe("custom skill activation",()=>{
+ it("refuses baseline/unknown capability and requires the correct environment's declared receipt",()=>{
+  const env={RAILWAY_ENV:"test",NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS:"1"};expect(checkProfileActivation(env,pending).ok).toBe(false);
+  const manifest=JSON.stringify({requires:">=2.9.0",profileFeatures:{customSkills:{requires:">=2.9.0",profilesModule:"1.7.0",apiCommit:"a".repeat(40),settingsEvidence:{test:"libfile_fictional_skills",production:null}}}});
+  expect(checkProfileActivation(env,manifest).ok).toBe(true);expect(checkProfileActivation({...env,RAILWAY_ENV:"production"},manifest).ok).toBe(false);
+ });
+});

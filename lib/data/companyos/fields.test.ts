@@ -215,3 +215,7 @@ it("keeps custom skill labels lossless and separate from service/area label dict
  const encoded=toProfile({...filled,skills});expect(encoded.items.filter(i=>i.kind==="skill").map(i=>i.value)).toEqual(["set_decoration",...skills.slice(1)]);
  expect(fromProfile(encoded.data,encoded.items,filled.photo).skills).toEqual(skills);
 });
+
+it.each(['constructor','__proto__','toString'])('keeps prototype-like custom skill %s as exact text',value=>{
+ const encoded=toProfile({...filled,skills:[value]});expect(fromProfile(encoded.data,encoded.items,'').skills).toEqual([value]);
+});

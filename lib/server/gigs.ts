@@ -7,7 +7,7 @@
 import { craftOf } from "@/lib/profile/department";
 import { customServiceError } from "@/lib/profile/custom-service";
 import { completeness } from "@/lib/profile/validate";
-import { fromProfile, toProfile, type ProfileItem } from "@/lib/data/companyos/fields";
+import { fromProfile, toProfile, optionKey, type ProfileItem } from "@/lib/data/companyos/fields";
 import { personStatuses, inviteStatuses } from "@/lib/data/types";
 import type {
   ActivityEvent, ActivityKind, DashboardSummary, FunnelCounts, InviteStatus, PeopleQuery, Person, PersonSource, PersonStatus, PersonSummary, Profile,
@@ -15,7 +15,7 @@ import type {
   WaitlistResult, WaitlistRow, WaitlistSignup,
 } from "@/lib/data/types";
 import { blankFields } from "@/lib/data/fields";
-import { waitlistCategories } from "@/lib/data/taxonomy";
+import { onSetSkills, waitlistCategories } from "@/lib/data/taxonomy";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { CompanyOsError, and, eq, type AdminUser, type BatchOp, type CompanyOs, type Credential, type Row } from "./companyos";
 
@@ -353,7 +353,11 @@ export function draftOps(personId: string, fields: ProfileFields, existing: { pr
   for (const k of ["years_experience", "availability_month"]) if (!(k in data) && old[k] != null && old[k] !== "") changed[k] = null;
   const ops: BatchOp[] = Object.keys(changed).length ? [{ op: "update", entity: "profile", id, data: changed }] : [];
   // Credits are matched by text; skills, services and areas by key. One stored item per wanted item.
-  const pool = groupBy(existing.items, (r) => keyOf(r.data));
+  // Historical raw labels that equal a catalog label display identically to its key.
+  // Match both by that display identity, preserving the original row/value instead of recreating it.
+  const pool = groupBy([...existing.items].sort((a,b)=>Number(a.data.position??0)-Number(b.data.position??0)), (r) => keyOf(
+    r.data.kind === "skill" && onSetSkills.includes(str(r.data.value))
+      ? {...r.data,value:optionKey(str(r.data.value))} : r.data));
   for (const want of items) {
     const have = pool.get(keyOf(want))?.shift();
     const visible = want.visible ?? true;

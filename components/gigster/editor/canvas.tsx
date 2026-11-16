@@ -17,6 +17,8 @@ import { personalityQuestions } from "@/lib/profile/personality";
 import { departmentFieldRetired } from "@/lib/profile/department-retirement";
 import { serviceDescription } from "@/lib/profile/service-descriptions";
 import { locationControlsEnabled, travelRadiusOptions } from "@/lib/profile/location-controls";
+import { customSkillsEnabled } from "@/lib/profile/skills";
+import { SkillPicker } from "./SkillPicker";
 import { POSTAL_CODE_MAX } from "@/lib/profile/postal";
 import { INSURANCE_NOTES_MAX } from "@/lib/profile/insurance";
 import { stageTwoLimits } from "@/lib/profile/stage-two";
@@ -505,8 +507,10 @@ export function CanvasExperience({ d, set, errors, required }: SectionProps & { 
             </Field>}
             <div className="grid gap-2">
               <p className="text-label-md text-ink">On-set skills{!required("skills") && <span className="ml-2 text-body-sm font-normal text-ink-subtle">Optional</span>}</p>
-              <Pills label="On-set skills" options={onSetSkills} isOn={(o) => d.skills.includes(o)}
-                onToggle={(o) => { set("skills")(d.skills.includes(o) ? d.skills.filter((s) => s !== o) : [...d.skills, o]); if (!retired && !d.position.trim()) set("position")(o); }} />
+              {customSkillsEnabled()
+                ? <SkillPicker value={d.skills} describedBy={errors.skills ? "f-skills-error" : undefined} onChange={(skills,added) => { set("skills")(skills); if (!retired && !d.position.trim() && added && onSetSkills.includes(added)) set("position")(added); }} />
+                : <Pills label="On-set skills" options={onSetSkills} isOn={(o) => d.skills.includes(o)}
+                    onToggle={(o) => { set("skills")(d.skills.includes(o) ? d.skills.filter((s) => s !== o) : [...d.skills, o]); if (!retired && !d.position.trim()) set("position")(o); }} />}
               <GroupError id="f-skills-error">{errors.skills}</GroupError>
             </div>
             <Field label="Years in the Entertainment Industry" optional={!required("years")} error={errors.years}>

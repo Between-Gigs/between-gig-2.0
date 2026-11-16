@@ -68,13 +68,17 @@ export function toProfile(f: ProfileFields, opts: { extras?: boolean } = {}): { 
     .map((value, i) => ({ value: value.trim(), visible: f.creditPins?.[i] !== false }))
     .filter((c) => c.value)
     .map((c, position) => ({ kind: "credit" as const, value: c.value, position, visible: c.visible }));
-  const list = (kind: ProfileItem["kind"], labels: string[]) => labels.map((label, position) => ({ kind, value: optionKey(label), position }));
+  const list = (kind: ProfileItem["kind"], labels: string[]) => labels.map((label, position) => ({ kind, value: kind === "skill" && !onSetSkills.includes(label) ? label : optionKey(label), position }));
   const items: ProfileItem[] = [...credits, ...list("skill", f.skills), ...list("service", f.services), ...(f.market === "la" ? list("area", f.areas) : [])];
   return { data, items };
 }
 
 const invert = <K extends string>(m: Record<K, string>) => Object.fromEntries(Object.entries(m).map(([k, v]) => [v, k])) as Record<string, K>;
-const labelOf = Object.fromEntries([...onSetSkills, ...offSetServices, ...laServiceAreas].map((l) => [optionKey(l), l]));
+const labelsByKind = {
+  skill: Object.fromEntries(onSetSkills.map(l => [optionKey(l),l])),
+  service: Object.fromEntries(offSetServices.map(l => [optionKey(l),l])),
+  area: Object.fromEntries(laServiceAreas.map(l => [optionKey(l),l])),
+};
 const text = (v: unknown) => (typeof v === "string" ? v : "");
 
 /**
@@ -84,7 +88,7 @@ const text = (v: unknown) => (typeof v === "string" ? v : "");
  */
 export function fromProfile(data: Record<string, unknown>, items: ProfileItem[], photo: string): ProfileFields {
   const of = (kind: ProfileItem["kind"]) => items.filter((i) => i.kind === kind).sort((a, b) => a.position - b.position);
-  const labels = (kind: ProfileItem["kind"]) => of(kind).map((i) => labelOf[i.value] ?? i.value);
+  const labels = (kind: ProfileItem["kind"]) => of(kind).map((i) => (kind === "credit" ? undefined : (Object.hasOwn(labelsByKind[kind],i.value) ? labelsByKind[kind][i.value] : undefined)) ?? i.value);
   const credits = of("credit");
   const years = data.years_experience;
   return {

@@ -181,3 +181,7 @@ it("both deployed builds and their preflights get the optional location-controls
   const s=steps(read(name));for(const step of [s.find(x=>x.includes("Require ")&&x.includes(" configuration")),s.find(x=>x.includes("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY")&&x.includes("pnpm build:server"))])expect(step).toContain("NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS: ${{ vars.PROFILE_LOCATION_CONTROLS }}");
  }
 });
+
+it("passes the optional custom-skills flag to both deployment preflight and checked build",()=>{
+ for(const name of ["deploy-test.yml","deploy-prod.yml"]){const s=steps(read(name));for(const step of [s.find(x=>x.includes("Require ")&&x.includes(" configuration")),s.find(x=>x.includes("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY")&&x.includes("pnpm build:server"))])expect(step).toContain("NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS: ${{ vars.PROFILE_CUSTOM_SKILLS }}");}
+});

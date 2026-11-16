@@ -146,3 +146,11 @@ it("unrelated edits never slugify or recreate a stored custom skill label",()=>{
  const read=fromProfile(previous.profile.data,previous.items.map(i=>i.data) as Parameters<typeof fromProfile>[1],fields.photo);
  expect(draftOps(PERSON,{...read,about:"Updated fictional experience."},previous)).toEqual([{op:"update",entity:"profile",id:"prof",data:{about:"Updated fictional experience."}}]);
 });
+
+it('preserves raw catalog-label history and prototype-like skills on unrelated edits and reorder',()=>{
+ const previous=stored({...fields,skills:[]});const values=['Set decoration','set_decoration','constructor','__proto__','toString'];
+ for(const [position,value] of values.entries())previous.items.push({id:`legacy-${position}`,data:{profile:'prof',kind:'skill',value,position,visible:true},createdAt:'',updatedAt:''});
+ const read=fromProfile(previous.profile.data,previous.items.map(i=>i.data) as Parameters<typeof fromProfile>[1],fields.photo);
+ expect(draftOps(PERSON,{...read,about:'Updated fictional experience.'},previous)).toEqual([{op:'update',entity:'profile',id:'prof',data:{about:'Updated fictional experience.'}}]);
+ const reordered={...read,skills:[...read.skills].reverse()};const ops=draftOps(PERSON,reordered,previous);expect(ops.every(op=>op.op==='update'&&op.entity==='profile_item'&&Object.keys(op.data??{}).join()==='position')).toBe(true);
+});
