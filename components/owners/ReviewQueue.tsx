@@ -1,4 +1,5 @@
 "use client";
+import { publishGateOn } from "@/lib/profile/publish-gate";
 import { Badge, cx } from "@ds/components";
 import { Icon3D } from "@/components/ui/Icon3D";
 import { useLook } from "@/components/site/LookSync";
@@ -87,7 +88,7 @@ function Queue() {
                     leading={<span className={brand ? `grid size-12 place-items-center rounded-md ${approved ? "bg-tint-mint-soft" : "bg-tint-peach"}` : "grid size-12 place-items-center bg-surface-sunken text-ink @md:size-16"}>
                       {brand ? <Icon3D name={approved ? "check_mark_button" : "memo"} className="size-7" /> : approved ? <CircleCheck aria-hidden="true" className="size-5" strokeWidth={1.75} /> : <PencilLine aria-hidden="true" className="size-5" strokeWidth={1.75} />}
                     </span>}
-                    subtitle={approved ? "Approved · live on the site" : "Sent suggested edits"}
+                    subtitle={approved ? (publishGateOn() ? "Approved · not public yet" : "Approved · live on the site") : "Sent suggested edits"}
                     meta={<AgoPill className="min-w-28">{ago(e.at)}</AgoPill>} />
                 );
               })}

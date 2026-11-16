@@ -68,6 +68,13 @@ it('requires actual travel preference field/policy capability and environment re
  expect(checkProfileActivation(env,manifest).ok).toBe(true);expect(checkProfileActivation({...env,RAILWAY_ENV:'production'},manifest).ok).toBe(false);expect(checkProfileActivation({...env,NEXT_PUBLIC_PROFILE_TRAVEL_PREFERENCE:'true'},manifest).ok).toBe(false);
 });
 
+it('requires the publish gate API release, profiles 1.9.0 and an environment receipt before the gate wording shows',()=>{
+ const env={RAILWAY_ENV:'test',NEXT_PUBLIC_PROFILE_PUBLISH_GATE:'1'};expect(checkProfileActivation(env,pending).ok).toBe(false);
+ const manifest=JSON.stringify({requires:'>=1.16.0',profileFeatures:{publishGate:{requires:'>=1.16.0',profilesModule:'1.9.0',apiCommit:'a'.repeat(40),settingsEvidence:{test:'libfile_fictional_publish',production:null}}}});
+ expect(checkProfileActivation(env,manifest).ok).toBe(true);expect(checkProfileActivation({...env,RAILWAY_ENV:'production'},manifest).ok).toBe(false);expect(checkProfileActivation({...env,NEXT_PUBLIC_PROFILE_PUBLISH_GATE:'true'},manifest).ok).toBe(false);
+ expect(checkProfileActivation({...env,NEXT_PUBLIC_PROFILE_PUBLISH_GATE:'1'},JSON.stringify({requires:'>=1.15.0',profileFeatures:{publishGate:{requires:'>=1.16.0',profilesModule:'1.9.0',apiCommit:'a'.repeat(40),settingsEvidence:{test:'libfile_x',production:null}}}})).ok).toBe(false);
+});
+
 it('requires the 1.16.0 API release and the 1.10.0 profiles module before the video-link UI can be built in',()=>{
  const env={RAILWAY_ENV:'test',NEXT_PUBLIC_PROFILE_VIDEO_LINKS:'1'};expect(checkProfileActivation(env,pending).ok).toBe(false);
  const entry=(extra:object)=>({requires:'>=1.16.0',profilesModule:'1.10.0',apiCommit:'a'.repeat(40),settingsEvidence:{test:'libfile_fictional_video',production:null},...extra});

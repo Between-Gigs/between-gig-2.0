@@ -1,4 +1,5 @@
 "use client";
+import { isPublicStatus } from "@/lib/profile/publish-gate";
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -86,7 +87,7 @@ export function ProfileTemplateEditor() {
     try {
       if (screen === "page") {
         const sample = await data.people.get(person);
-        if (!sample?.person.sample || sample.person.status !== "approved" || !sample.person.slug) {
+        if (!sample?.person.sample || !isPublicStatus(sample.person.status) || !sample.person.slug) {
           setMessage("This sample is waiting for review. Open its guided editor to see the draft.");
           return;
         }

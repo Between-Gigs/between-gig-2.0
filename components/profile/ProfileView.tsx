@@ -1,4 +1,5 @@
 "use client";
+import { APPROVED_NOT_PUBLIC, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
 import { Accordion, Button, Field, Input, Modal, Select, Textarea, cx, useToast } from "@ds/components";
 import { WorkTile } from "@/components/profile/WorkTile";
 import { portfolioItems, videoLinksEnabled, workMeta, type PortfolioItem } from "@/lib/profile/video-links";
@@ -81,8 +82,8 @@ function profileContent({ person, fields: f, extras, mode, draft = false, part }
       : filled ? content : draft ? <Placeholder key={id} kind={kind}>{hint}</Placeholder> : null;
   return {
     first, callName: shortName(first), services, credits, editing, show, priced, P,
-    pageLabel: person.status === "approved" ? "Live" : "Your page · private",
-    reviewed: !editing && (mode === "public" || person.status === "approved"),
+    pageLabel: isPublicStatus(person.status) ? "Live" : isApprovedPrivate(person.status) ? APPROVED_NOT_PUBLIC : "Your page · private",
+    reviewed: !editing && (mode === "public" || isReviewedStatus(person.status)),
     unseen: mode === "public" && data.kind === "live",
     sample: !!person.sample, helps: extras?.helps ?? [],
     // The Gigster's own work samples come first; the fictional sample people keep their curated portfolio.
@@ -278,7 +279,7 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
   const checkedList = (
     <ul className="grid text-body-md text-ink">
       {/* Only an approved profile has been reviewed; before that (owner view, the Gigster's preview) it says what will happen. */}
-      {mode === "public" || person.status === "approved"
+      {mode === "public" || isReviewedStatus(person.status)
         ? <li className="flex items-start gap-3 border-t border-line py-3 first:border-t-0 first:pt-0"><Check className="mt-0.5 size-4 shrink-0" strokeWidth={3} aria-hidden="true" /><span><b>Profile reviewed</b> by the Between Gigs team</span></li>
         : <li className="flex items-start gap-3 border-t border-line py-3 first:border-t-0 first:pt-0"><CircleDashed className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span><b>Reviewed by the Between Gigs team</b> before it goes public</span></li>}
       <li className="flex items-start gap-3 border-t border-line py-3"><Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span className="min-w-0 break-words">Credits and details are shared by {first}, not independently verified</span></li>

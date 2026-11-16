@@ -1,8 +1,9 @@
 "use client";
 import { Badge, Button, Skeleton, cx, useToast } from "@ds/components";
-import { ArrowRight, ChevronDown, ChevronUp, Copy, Eye, FilePen, Hourglass, MessageSquareWarning, PencilLine, Share2, Sparkles } from "lucide-react";
+import { ArrowRight, ChevronDown, CircleCheck, ChevronUp, Copy, Eye, FilePen, Hourglass, MessageSquareWarning, PencilLine, Share2, Sparkles } from "lucide-react";
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { APPROVED_EDIT_HINT, APPROVED_NOT_PUBLIC, APPROVED_NOT_PUBLIC_LINE, isApprovedPrivate } from "@/lib/profile/publish-gate";
 import { needsProfileEditor } from "@/lib/profile/entry";
 import { useLook } from "@/components/site/LookSync";
 import { useProfileTemplate } from "@/lib/profile/use-profile-template";
@@ -67,8 +68,11 @@ export function MyProfile() {
   // Show what's submitted when there is something submitted; before that, the working draft.
   const fields = profile?.fields ?? s.fields;
   const started = !!fields && (s.completeness > 0 || !needsProfileEditor(s, false));
-  const reviewed = !!profile || ["submitted", "changes_requested", "approved"].includes(person.status);
-  const state = reviewed ? person.status : !started || !fields ? "new" : person.status;
+  const reviewed = !!profile || ["submitted", "changes_requested", "approved", "published"].includes(person.status);
+  const rawState = reviewed ? person.status : !started || !fields ? "new" : person.status;
+  // "approved" below means live (public). With the publish gate, an approved profile is private: its own state, and
+  // "published" is the live one.
+  const state = isApprovedPrivate(rawState) ? "approved_private" : rawState === "published" ? "approved" : rawState;
 
   const nextStep = state === "approved" && fields
     ? <Live person={person} warm={warm} ruled={ruled} />
@@ -188,9 +192,10 @@ function Status({ person, state, parts, first, warm, ruled }: { warm: boolean; r
     draft: { title: "Draft · not submitted yet", body: `Only you can see it. ${parts.total ? `${parts.done} of ${parts.total} parts done` : "No required parts"}; send it to the Between Gigs team when it's ready.`, cta: "Continue your profile" },
     submitted: { title: "Submitted for review", body: `Thanks, ${first}. Our team is reviewing your profile${person.submittedAt ? ` (sent ${when(person.submittedAt)})` : ""}. We'll email you when it's approved or if we suggest a change.`, cta: null },
     changes_requested: { title: "Changes requested", body: "The Between Gigs team asked for a few changes. Update them, then send it again.", cta: "Make the changes" },
+    approved_private: { title: APPROVED_NOT_PUBLIC, body: `${APPROVED_NOT_PUBLIC_LINE} ${APPROVED_EDIT_HINT}`, cta: null },
   }[state] ?? { title: "Your profile", body: "", cta: "Edit profile" };
-  const Icon = { new: Sparkles, registered: Sparkles, invited: Sparkles, draft: FilePen, submitted: Hourglass, changes_requested: MessageSquareWarning }[state] ?? FilePen;
-  const art: Record<string, Icon3DName> = { new: "sparkles", registered: "sparkles", invited: "sparkles", draft: "memo", submitted: "hourglass_done", changes_requested: "memo" };
+  const Icon = { new: Sparkles, registered: Sparkles, invited: Sparkles, draft: FilePen, submitted: Hourglass, changes_requested: MessageSquareWarning, approved_private: CircleCheck }[state] ?? FilePen;
+  const art: Record<string, Icon3DName> = { new: "sparkles", registered: "sparkles", invited: "sparkles", draft: "memo", submitted: "hourglass_done", changes_requested: "memo", approved_private: "check_mark_button" };
   const tint = { draft: "bg-tint-butter", submitted: "bg-tint-sky", changes_requested: "bg-tint-peach" }[state] ?? "bg-tint-mint-soft";
   const Heading = warm ? "h2" : "h3";
   return (
@@ -286,6 +291,7 @@ function OwnStatus({ person, state, first, parts }: { person: Person; state: str
     draft: `Draft · only you can see it. ${parts.total ? `${parts.done} of ${parts.total} parts done.` : ""}`,
     submitted: `Submitted for review${person.submittedAt ? ` on ${when(person.submittedAt)}` : ""}. We'll email you when it's approved or if we suggest a change.`,
     changes_requested: "Changes requested. Update them, then send it again.",
+    approved_private: `${APPROVED_NOT_PUBLIC}. ${APPROVED_NOT_PUBLIC_LINE} ${APPROVED_EDIT_HINT}`,
     approved: `Your page is live${person.approvedAt ? ` since ${when(person.approvedAt)}` : ""}. Keep this month's availability current.`,
   }[state] ?? "";
   return (
@@ -298,7 +304,7 @@ function OwnStatus({ person, state, first, parts }: { person: Person; state: str
         <div className="flex flex-wrap gap-2">
           {state === "approved" && <Button variant="ghost" iconStart={<Copy />} onClick={copy}>Copy link</Button>}
           {state === "approved" && <ButtonLink href={`/p/${person.slug}/`} variant="ghost" iconStart={<Eye />}>View public page</ButtonLink>}
-          <ButtonLink href="/profile/canvas/" variant={state === "submitted" || state === "approved" ? "secondary" : "primary"} iconStart={<PencilLine />}>
+          <ButtonLink href="/profile/canvas/" variant={state === "submitted" || state === "approved" || state === "approved_private" ? "secondary" : "primary"} iconStart={<PencilLine />}>
             {state === "draft" ? "Continue your profile" : state === "changes_requested" ? "Make the changes" : "Edit profile"}
           </ButtonLink>
         </div>

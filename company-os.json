@@ -39,6 +39,15 @@
         "production": null
       }
     },
+    "publishGate": {
+      "requires": null,
+      "profilesModule": "1.9.0",
+      "apiCommit": null,
+      "settingsEvidence": {
+        "test": null,
+        "production": null
+      }
+    },
     "profileDetails": {
       "requires": ">=1.16.0",
       "profilesModule": "1.10.0",

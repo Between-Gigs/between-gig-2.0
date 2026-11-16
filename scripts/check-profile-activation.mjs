@@ -10,7 +10,7 @@ function settingsDeclared(feature, environment) {
 }
 
 export function checkProfileActivation(env, manifest) {
-  for (const name of ["NEXT_PUBLIC_PROFILE_NO_DEPARTMENT", "NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW", "NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS", "NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS", "NEXT_PUBLIC_PROFILE_TRAVEL_PREFERENCE", "NEXT_PUBLIC_PROFILE_VIDEO_LINKS", "NEXT_PUBLIC_PROFILE_DETAILS"]) {
+  for (const name of ["NEXT_PUBLIC_PROFILE_NO_DEPARTMENT", "NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW", "NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS", "NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS", "NEXT_PUBLIC_PROFILE_TRAVEL_PREFERENCE", "NEXT_PUBLIC_PROFILE_PUBLISH_GATE", "NEXT_PUBLIC_PROFILE_VIDEO_LINKS", "NEXT_PUBLIC_PROFILE_DETAILS"]) {
     if (![undefined, "", "0", "1"].includes(env[name])) return { ok: false, error: `${name} must be absent, 0 or 1` };
   }
   // Do not turn off a previously activated runtime guard during an ordinary UI rollback.
@@ -38,6 +38,10 @@ export function checkProfileActivation(env, manifest) {
     const release = checkRequirement(manifest, { travelPreference: true });
     if (!release.ok) return release;
   }
+  if (env.NEXT_PUBLIC_PROFILE_PUBLISH_GATE === "1") {
+    const release = checkRequirement(manifest, { publishGate: true });
+    if (!release.ok) return release;
+  }
   if (env.NEXT_PUBLIC_PROFILE_VIDEO_LINKS === "1") {
     const release = checkRequirement(manifest, { videoLinks: true });
     if (!release.ok) return release;
@@ -52,6 +56,7 @@ export function checkProfileActivation(env, manifest) {
     ...(env.NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS === "1" ? ["locationControls"] : []),
     ...(env.NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS === "1" ? ["customSkills"] : []),
     ...(env.NEXT_PUBLIC_PROFILE_TRAVEL_PREFERENCE === "1" ? ["travelPreference"] : []),
+    ...(env.NEXT_PUBLIC_PROFILE_PUBLISH_GATE === "1" ? ["publishGate"] : []),
     ...(env.NEXT_PUBLIC_PROFILE_VIDEO_LINKS === "1" ? ["videoLinks"] : []),
     ...(env.NEXT_PUBLIC_PROFILE_DETAILS === "1" ? ["profileDetails"] : []),
   ];

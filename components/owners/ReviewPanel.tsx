@@ -1,4 +1,5 @@
 "use client";
+import { publishGateOn } from "@/lib/profile/publish-gate";
 import { Banner, Button, Checkbox, Field, IconButton, Kbd, Modal, Popover, Tag, Textarea, Tooltip, cx, useToast } from "@ds/components";
 import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, CircleDashed, Keyboard, ListChecks, MessageSquareWarning, PencilLine } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -87,7 +88,7 @@ export function ReviewWorkspace({ person, fields, queue, header, history, scroll
     if (busy || customNeedsService) return;
     setBusy(true);
     try {
-      decided(`${person.name} approved · now live`, await holdDecision(person.id, () => data.owners.approve(person.id), { onError: () => toast({ message: `Couldn't approve ${person.name}. Try again.`, tone: "danger" }) }));
+      decided(`${person.name} approved${publishGateOn() ? " · not public yet" : " · now live"}`, await holdDecision(person.id, () => data.owners.approve(person.id), { onError: () => toast({ message: `Couldn't approve ${person.name}. Try again.`, tone: "danger" }) }));
     } catch { toast({ message: "Couldn't approve. Try again.", tone: "danger" }); setBusy(false); }
   }, [busy, customNeedsService, decided, person.id, person.name, toast]);
 

@@ -1,4 +1,5 @@
 "use client";
+import { publishGateOn } from "@/lib/profile/publish-gate";
 import { Skeleton } from "@ds/components";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -51,7 +52,7 @@ export function PublicProfile({ slug }: { slug: string }) {
         <MissingPage eyebrow={own ? "Profile · Not public yet" : "Profile · Not found"}
           title={own ? "This profile isn't public yet" : "We can't find that profile"}
           line={own
-            ? "Your profile goes public once the Between Gigs team approves it. You can see how it will look on your profile page."
+            ? publishGateOn() ? "Your profile goes public when the Between Gigs team publishes it. You can see how it will look on your profile page." : "Your profile goes public once the Between Gigs team approves it. You can see how it will look on your profile page."
             : "The link may be mistyped, or the profile may have moved."}
           actions={own
             ? <ButtonLink href="/profile/" variant="primary" size="lg" iconEnd={<ArrowRight />}>Go to my profile</ButtonLink>

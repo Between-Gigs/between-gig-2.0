@@ -18,6 +18,7 @@ import type {
 import { blankFields } from "@/lib/data/fields";
 import { onSetSkills, waitlistCategories } from "@/lib/data/taxonomy";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { isReviewedStatus, publishGateOn } from "@/lib/profile/publish-gate";
 import { videoLinksEnabled } from "@/lib/profile/video-links";
 import { SAMPLE_KINDS, sampleRefusalMessage, samplesFrom, saveSamples, serialised } from "./work-samples";
 import { CompanyOsError, and, eq, isIn, type AdminUser, type BatchOp, type CompanyOs, type Credential, type Row } from "./companyos";
@@ -31,8 +32,8 @@ export interface Ctx {
 }
 
 const SECTIONS: ProfileSection[] = ["about", "skills", "where", "story"];
-const PROFILE_STATUSES = new Set(["draft", "submitted", "changes_requested", "approved"]);
-const SENT = new Set(["submitted", "changes_requested", "approved"]);
+const PROFILE_STATUSES = new Set(["draft", "submitted", "changes_requested", "approved", "published"]);
+const SENT = new Set(["submitted", "changes_requested", "approved", "published"]);
 const PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic"]);
 export const PHOTO_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -99,7 +100,7 @@ function fieldsOf(w: World, profile: Row): ProfileFields {
 }
 
 /** 2.0's status: the profile's, else whether the invited person's login has signed in (gap analysis §13.5). */
-function statusOf(profile: Row | undefined, signedUp: boolean): PersonStatus {
+export function statusOf(profile: Row | undefined, signedUp: boolean): PersonStatus {
   const s = str(profile?.data.status);
   if (PROFILE_STATUSES.has(s)) return s as PersonStatus;
   // rejected and hidden (Company OS's extra review states) aren't used by 2.0; they read as a draft to edit.
@@ -139,7 +140,7 @@ function personOf(w: World, row: Row, signedUpSelf = false): Person {
     waitlistCategory: str(answers.category),
     invitedAt: iso(row.createdAt),
     ...(profile?.data.submitted_at ? { submittedAt: iso(profile.data.submitted_at) } : {}),
-    ...(status === "approved" && profile?.data.reviewed_at ? { approvedAt: iso(profile.data.reviewed_at) } : {}),
+    ...(isReviewedStatus(status) && profile?.data.reviewed_at ? { approvedAt: iso(profile.data.reviewed_at) } : {}),
     updatedAt: updated,
     ...(status === "changes_requested" && profile ? { reviewNotes: notesOf(w, profile) } : {}),
   };
@@ -281,7 +282,7 @@ async function publicProfiles(ctx: Ctx, profiles: Row[]) {
     delete fields.insuranceNotes;
     // The public page knows the profile, not the person: its id stands in, and nothing private is in it.
     const person: Person = {
-      id: p.id, email: "", name: fields.name, slug: str(p.data.public_handle), status: "approved", waitlistZip: "", waitlistCategory: "",
+      id: p.id, email: "", name: fields.name, slug: str(p.data.public_handle), status: publishGateOn() ? "published" : "approved", waitlistZip: "", waitlistCategory: "",
       invitedAt: "", updatedAt: iso(p.updatedAt),
     };
     const profile: Profile = { personId: p.id, fields, submittedAt: "" };
@@ -470,7 +471,7 @@ export async function submit(ctx: Ctx, personId: string) {
   const own = await ownProfile(ctx, personId);
   if (!own.profile) throw new CompanyOsError(422, "profile_incomplete", "nothing to submit");
   // Already with the team or live: nothing to send (an edit to a live profile has already sent it back, N-09).
-  if (own.profile.data.status !== "submitted" && own.profile.data.status !== "approved") {
+  if (own.profile.data.status !== "submitted" && !isReviewedStatus(str(own.profile.data.status))) {
     const fields = fieldsFrom(own);
     if (!fields.services.length) {
       const enabled = process.env.CUSTOM_SERVICE_REVIEW_ENABLED === "1";
@@ -825,7 +826,8 @@ export async function dashboard(ctx: Ctx): Promise<DashboardSummary> {
     opened: accounts, // no "opened" stage live (N-10)
     accounts,
     submitted: cohort.filter((s) => SENT.has(s.person.status) || !!s.person.submittedAt).length,
-    approved: invitedCounts.approved,
+    approved: invitedCounts.approved + invitedCounts.published,
+    published: invitedCounts.published,
     signedUp: selfSignedUp.length,
   };
   const reviewQueue = summaries.filter((s) => s.person.status === "submitted").sort((a, b) => (a.person.submittedAt ?? "").localeCompare(b.person.submittedAt ?? ""));

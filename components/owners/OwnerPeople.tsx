@@ -1,4 +1,5 @@
 "use client";
+import { ownerLabel, publishGateOn } from "@/lib/profile/publish-gate";
 import { Button, Drawer, Input, SegmentedControl, Select, cx } from "@ds/components";
 import { ArrowRight, LayoutGrid, List, Mail, MapPin, Search, SlidersHorizontal, X } from "lucide-react";
 import Link from "next/link";
@@ -7,7 +8,7 @@ import * as React from "react";
 import { data, personStatuses, type PeopleQuery, type PeopleSort, type PersonSource, type PersonStatus, type PersonSummary, type ProfileFilter } from "@/lib/data";
 import { crafts } from "@/lib/profile/department";
 import { laServiceAreas, monthStatusLabel, serviceChoices } from "@/lib/data/taxonomy";
-import { PersonStatusBadge, personStatusMeta } from "@/components/people/PersonStatusBadge";
+import { PersonStatusBadge } from "@/components/people/PersonStatusBadge";
 import { PersonSourceBadge, personSourceLabel } from "@/components/people/PersonSourceBadge";
 import { AgoPill, EmptyNote, Meter, OwnerAvatar, OwnerPage, Panel, Row, RowSkeletons } from "./kit";
 import { OwnerShell } from "./OwnerShell";
@@ -120,7 +121,7 @@ function People() {
               <Input aria-label="Search people" type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder="Name, email, ZIP, craft or service" start={<Search />} />
             </div>
             <Select aria-label="Status" value={query.status} onValueChange={set("status")} className="min-w-0 flex-1 basis-40 sm:w-60 sm:flex-none"
-              options={[{ value: "all", label: `Everyone${counts ? ` · ${total}` : ""}` }, ...personStatuses.map((st) => ({ value: st, label: `${personStatusMeta[st].label}${counts ? ` · ${counts[st]}` : ""}` }))]} />
+              options={[{ value: "all", label: `Everyone${counts ? ` · ${total}` : ""}` }, ...personStatuses.filter((st) => st !== "published" || publishGateOn()).map((st) => ({ value: st, label: `${ownerLabel(st)}${counts ? ` · ${counts[st]}` : ""}` }))]} />
             <Button type="button" variant="secondary" className="shrink-0 md:hidden" iconStart={<SlidersHorizontal />} onClick={() => setFilters(true)}
               aria-label={active ? `More filters, ${active} on` : "More filters"}>
               Filters{active > 0 && <span aria-hidden="true" className="ml-1 inline-grid size-5 place-items-center bg-ink text-label-sm text-bg tabular-nums">{active}</span>}

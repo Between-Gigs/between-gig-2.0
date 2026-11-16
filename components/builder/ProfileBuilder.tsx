@@ -8,6 +8,7 @@ import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
 import { basisLabel, insuranceLabel, laServiceAreas, modeLabel, monthStatusLabel, serviceChoices, onSetSkills } from "@/lib/data/taxonomy";
 import { useRequireRole } from "@/lib/guard";
+import { APPROVED_EDIT_HINT, APPROVED_NOT_PUBLIC, APPROVED_NOT_PUBLIC_LINE, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
 import { useProfileTemplate } from "@/lib/profile/use-profile-template";
 import type { ProfileFieldRule } from "@/lib/profile/template";
 import { ABOUT_MAX, SECTIONS, STEPS, completeness, fieldLabel, pinnedCredits, sectionLabel, validateAll, type FieldErrors } from "@/lib/profile/validate";
@@ -175,7 +176,8 @@ function Builder({ personId }: { personId: string }) {
   const notes = person.status === "changes_requested" ? person.reviewNotes ?? [] : [];
   const noteFor = (section: ProfileSection) => notes.filter((n) => n.section === section);
   const errorCount = Object.keys(errors).length;
-  const resubmitting = person.status === "submitted" || person.status === "approved";
+  const resubmitting = person.status === "submitted" || isReviewedStatus(person.status);
+  const approvedPrivate = isApprovedPrivate(person.status);
   // Live, the profile is one record: one that's with the team or live has nothing to send (an edit sends it back itself).
   const nothingToSend = data.kind === "live" && resubmitting;
 
@@ -191,8 +193,8 @@ function Builder({ personId }: { personId: string }) {
             </Banner>
           )}
           {!done && resubmitting && (
-            <Banner tone="info" className="mb-4 shadow-md" title={person.status === "approved" ? "Your profile is live" : "Your profile is with our team"}>
-              {person.status === "approved" ? "Changes to your answers take your profile off the site until we review them; availability updates stay live." : "Changes save here as a draft. Submit again to send the latest version for review."}
+            <Banner tone="info" className="mb-4 shadow-md" title={approvedPrivate ? APPROVED_NOT_PUBLIC : isPublicStatus(person.status) ? "Your profile is live" : "Your profile is with our team"}>
+              {approvedPrivate ? `${APPROVED_NOT_PUBLIC_LINE} ${APPROVED_EDIT_HINT}` : isPublicStatus(person.status) ? "Changes to your answers take your profile off the site until we review them; availability updates stay live." : "Changes save here as a draft. Submit again to send the latest version for review."}
             </Banner>
           )}
           {live.dialog}

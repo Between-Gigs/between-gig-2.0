@@ -1,4 +1,5 @@
 "use client";
+import { isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
 import { Breadcrumbs, cx } from "@ds/components";
 import { Check, Eye, Mail } from "lucide-react";
 import * as React from "react";
@@ -70,7 +71,7 @@ function Person({ id }: { id: string }) {
   // The four steps. The status decides which are done, so a later step always implies the earlier ones (a re-sent
   // invite can't make "Registered" read "Not yet" after they submitted). A date shows only when it fits the order;
   // otherwise the step just reads "Done". The first step not done is "Next", saying who it waits on.
-  const reached = { invited: 0, registered: 1, draft: 1, submitted: 2, changes_requested: 2, approved: 3 }[p.status as string] ?? 0;
+  const reached = { invited: 0, registered: 1, draft: 1, submitted: 2, changes_requested: 2, approved: 3, published: 3 }[p.status as string] ?? 0;
   const stamps = [p.invitedAt, p.registeredAt, p.submittedAt, p.approvedAt];
   const fits = (i: number) => !!stamps[i] && stamps.slice(i + 1, reached + 1).every((later) => !later || later >= stamps[i]!);
   const nextHint = p.status === "changes_requested" ? "Waiting on their edits"
@@ -143,7 +144,7 @@ function Person({ id }: { id: string }) {
           ))}
         </ol>
         {stepAt >= 0 && <span className="hidden text-body-sm whitespace-nowrap text-ink-muted tabular-nums md:inline">{timeline[stepAt][0]} {timeline[stepAt][1]}</span>}
-        {!reviewBar && p.status === "approved" && <ButtonLink href={`/p/${p.slug}/`} size="sm" variant="secondary" iconStart={<Eye />} className="ml-auto md:ml-2">Public page</ButtonLink>}
+        {!reviewBar && isPublicStatus(p.status) && <ButtonLink href={`/p/${p.slug}/`} size="sm" variant="secondary" iconStart={<Eye />} className="ml-auto md:ml-2">Public page</ButtonLink>}
       </div>
     </div>
   );
@@ -157,7 +158,7 @@ function Person({ id }: { id: string }) {
   // The profile as clients would see it, framed (hairline sides and foot under the section's rule) so its own
   // sections don't read as part of this page. `number` is this section's place on the page.
   const preview = (number: string) => fields ? (
-    <Panel className="mt-10" landmark={false} number={number} collapsible="person-preview" title="What clients see" aside={fromDraft ? "Unsubmitted draft, shown as it stands" : p.status === "approved" ? "Live on the site" : "Not public yet"}
+    <Panel className="mt-10" landmark={false} number={number} collapsible="person-preview" title="What clients see" aside={fromDraft ? "Unsubmitted draft, shown as it stands" : isPublicStatus(p.status) ? "Live on the site" : isApprovedPrivate(p.status) ? "Approved, not public yet" : "Not public yet"}
       bodyClassName="border-x border-b border-line p-4 sm:p-6">
       <ProfileView person={p} fields={fields} extras={profile?.extras} mode="owner" />
     </Panel>
@@ -208,7 +209,14 @@ function Person({ id }: { id: string }) {
           </ul>
         </Panel>
       )}
-      {p.status === "approved" && (
+      {isApprovedPrivate(p.status) && (
+        <Panel className="mt-8" number="01" title="Approved, not public" flush>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-line-strong py-3">
+            <p className="text-body-md text-ink">Approved by the team. Clients can&apos;t see this profile until it is published. The Gigster has been told it is approved, not live, and was not emailed.</p>
+          </div>
+        </Panel>
+      )}
+      {isPublicStatus(p.status) && (
         <Panel className="mt-8" number="01" title="Live" flush>
           <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-line-strong py-3">
             <p className="text-body-md text-ink">Clients can find this profile.</p>
@@ -216,7 +224,7 @@ function Person({ id }: { id: string }) {
           </div>
         </Panel>
       )}
-      {preview(p.status === "changes_requested" || p.status === "approved" ? "02" : "01")}
+      {preview(p.status === "changes_requested" || isReviewedStatus(p.status) ? "02" : "01")}
     </OwnerShell>
   );
 }

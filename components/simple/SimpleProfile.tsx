@@ -14,11 +14,12 @@ import { data, type PersonStatus, type ProfileFields } from "@/lib/data";
 import { basisLabel, basisShort, insuranceLabel, laServiceAreas, modeLabel, monthStatusLabel, offSetServices, onSetSkills } from "@/lib/data/taxonomy";
 import { useRequireRole } from "@/lib/guard";
 import { ABOUT_MAX, DATES_MAX, DEPARTMENT_MAX, NAME_MAX, hasRate, validateAll, type FieldErrors } from "@/lib/profile/validate";
+import { APPROVED_EDIT_HINT, APPROVED_NOT_PUBLIC, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
 import { asset } from "@/lib/site";
 
 const statusText: Record<PersonStatus, string> = {
   invited: "Not started", registered: "Not started", draft: "Draft: only you can see it",
-  submitted: "With the team for review", changes_requested: "The team asked for a few changes", approved: "Live: clients can see it",
+  submitted: "With the team for review", changes_requested: "The team asked for a few changes", approved: "Live: clients can see it", published: "Live: clients can see it",
 };
 
 /** The fields in the order they appear on the page, with the label each error links to. */
@@ -121,14 +122,15 @@ export function SimpleProfile() {
       </nav>
 
       <section aria-label="Profile status" className="status">
-        <p><strong>Status:</strong> {status ? statusText[status] : "Unknown"}{status === "approved" && slug && <> · <Link href={`/p/${slug}/`}>See your live page</Link></>}</p>
-        {status === "approved" && <p>Availability updates right away. Other changes wait for the team after you send them.</p>}
+        <p><strong>Status:</strong> {status ? (isApprovedPrivate(status) ? `${APPROVED_NOT_PUBLIC}: not visible to clients yet` : statusText[status]) : "Unknown"}{isPublicStatus(status) && slug && <> · <Link href={`/p/${slug}/`}>See your live page</Link></>}</p>
+        {isApprovedPrivate(status) && <p>{APPROVED_EDIT_HINT}</p>}
+        {isPublicStatus(status) && <p>Availability updates right away. Other changes wait for the team after you send them.</p>}
         <div className="actions">
           {editing ? <>
             <button type="button" onClick={done} disabled={busy}>Save</button>
             <button type="button" onClick={cancel} disabled={busy}>Cancel</button>
           </> : <button type="button" onClick={() => { setEditing(true); setMessage(""); }}>Edit profile</button>}
-          {status !== "submitted" && <button type="button" onClick={send} disabled={busy}>{status === "approved" || status === "changes_requested" ? "Send again" : "Send for review"}</button>}
+          {status !== "submitted" && <button type="button" onClick={send} disabled={busy}>{isReviewedStatus(status) || status === "changes_requested" ? "Send again" : "Send for review"}</button>}
         </div>
         <p role="status" aria-live="polite" className="message">{message}{editing && changed && !message ? "You have unsaved changes." : ""}</p>
       </section>

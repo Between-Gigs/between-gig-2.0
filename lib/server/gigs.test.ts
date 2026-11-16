@@ -160,3 +160,13 @@ it.each([true,false])('omitted legacy travel-preference payload preserves stored
  expect(draftOps(PERSON,{...fields,about:'Fictional unrelated edit.'},previous)).toEqual([{op:'update',entity:'profile',id:'prof',data:{about:'Fictional unrelated edit.'}}]);
  expect(draftOps(PERSON,{...fields,travelBeyondLA:!value},previous)).toEqual([{op:'update',entity:'profile',id:'prof',data:{extended_travel_available:!value}}]);
 });
+
+describe("draftOps on an approved or published profile", () => {
+  it("a content change is still written (the API sends the profile back to review)", () => {
+    for (const status of ["approved", "published"]) {
+      const st = stored();
+      st.profile.data.status = status;
+      expect(draftOps(PERSON, { ...fields, about: "Edited." }, st)).toEqual([{ op: "update", entity: "profile", id: "prof", data: { about: "Edited." } }]);
+    }
+  });
+});
