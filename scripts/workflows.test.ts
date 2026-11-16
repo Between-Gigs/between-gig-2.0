@@ -155,3 +155,23 @@ it("forwards the Department retirement flag only as a public variable into deplo
   expect(read(name)).not.toContain("secrets.PROFILE_NO_DEPARTMENT");
  }
 });
+
+// Local activation candidate: preserve guard independently when hiding new UI.
+describe("profile feature activation deployment", () => {
+  it.each(["deploy-test.yml", "deploy-prod.yml"])("%s validates activation before its first infra mutation and wires the UI", name => {
+    const s=steps(read(name));
+    const require=s.findIndex(x=>x.includes(name==="deploy-test.yml"?"Require test configuration":"Require production configuration"));
+    const mutation=s.findIndex(x=>x.includes("run: railway config plan"));
+    expect(s[require]).toContain("node scripts/check-profile-activation.mjs");
+    expect(mutation).toBeGreaterThan(require);
+    const build=s.find(x=>x.includes("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY")&&x.includes("pnpm build:server"))!;
+    expect(build).toContain("NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW: ${{ vars.CUSTOM_SERVICE_REVIEW }}");
+    const sync=s.find(x=>x.includes("railway variable set"))!;
+    expect(sync).toContain("CUSTOM_SERVICE_REVIEW_ENABLED: ${{ vars.CUSTOM_SERVICE_REVIEW_ENABLED }}");
+    expect(sync).toContain('if [ "$CUSTOM_SERVICE_REVIEW_ENABLED" = "1" ]; then');
+    expect(sync).toContain('railway variable set CUSTOM_SERVICE_REVIEW_ENABLED --stdin');
+  });
+  it("IaC preserves the optional runtime guard without defaulting a previous activation off",()=>{
+    expect(readFileSync(new URL("../.railway/railway.ts",import.meta.url),"utf8")).toMatch(/CUSTOM_SERVICE_REVIEW_ENABLED:\s*preserve\(\)/);
+  });
+});

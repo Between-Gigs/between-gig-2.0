@@ -28,3 +28,16 @@ describe("checkRequirement", () => {
     expect(checkRequirement(readFileSync(new URL("../company-os.json", import.meta.url), "utf8"), { allowTodo: true }).ok).toBe(true);
   });
 });
+
+describe("feature API release coordination",()=>{
+  const feature={requires:">=2.7.0",apiCommit:"a".repeat(40),profilesModule:"1.5.0"}; // Fictional releases, not reservations.
+  it("refuses custom activation when only the baseline API minimum is present",()=>{
+    expect(checkRequirement('{"requires":">=1.14.0"}',{customServiceReview:true}).ok).toBe(false);
+  });
+  it("refuses unallocated, unproven or lower-than-feature release declarations",()=>{
+    for(const f of [{...feature,requires:null},{...feature,apiCommit:null},feature])expect(checkRequirement(JSON.stringify({requires:">=1.14.0",profileFeatures:{customServiceReview:f}}),{customServiceReview:true}).ok).toBe(false);
+  });
+  it("allows coordinated declarations without claiming runtime capability verification",()=>{
+    expect(checkRequirement(JSON.stringify({requires:">=2.7.0",profileFeatures:{customServiceReview:feature}}),{customServiceReview:true}).ok).toBe(true);
+  });
+});
