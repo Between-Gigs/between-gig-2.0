@@ -14,6 +14,8 @@ import type { ProfileSectionId } from "@/lib/profile/template";
 import { startDateLabel } from "@/lib/profile/stage-two";
 import { asset } from "@/lib/site";
 import { LinkedInLink } from "@/components/profile/LinkedInLink";
+import { RatePricing } from "@/components/profile/RatePricing";
+import { pricingLines, profileDetailsEnabled as detailsOn } from "@/lib/profile/details";
 import type { ProfileLayoutProps } from "./ProfileView";
 import { PublicBookingDetails } from "./PublicBookingDetails";
 
@@ -141,7 +143,7 @@ export function ModernProfile({ person, fields: f, mode, embedded, draft, part, 
     </div>
     <aside className="modern-rail" aria-label={aside ? "Editor" : `${first} at a glance`}>{aside ?? <>
       <section aria-label={`Book ${first}`} className="modern-panel modern-book">
-        <p>{priced ? <><b>${f.rate}</b> / {basisShort[f.basis]} · starting rate</> : <b>Rate on request</b>}</p>
+        <p>{detailsOn() && pricingLines(f) ? <RatePricing f={f} /> : priced ? <><b>${f.rate}</b> / {basisShort[f.basis]} · starting rate</> : <b>Rate on request</b>}</p>
         {availability}
         <Button variant="primary" fullWidth disabled={mode !== "public"} iconEnd={<ArrowRight />} onClick={onRequest}>Request {callName}</Button>
         <p>{mode === "public" ? "You won't be charged. Scope and rate are agreed first." : mode === "own" ? "Clients see this card on your profile." : "Owner view: requests are off here."}</p>

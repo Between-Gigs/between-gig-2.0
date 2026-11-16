@@ -20,6 +20,18 @@ const money = (v: string | undefined) => !!v && /^\d+(?:\.\d{1,2})?$/.test(v.tri
 const whole = (v: string | undefined) => !!v && /^\d{1,4}$/.test(v.trim()) && Number(v) >= 1 && Number(v) <= 1000;
 const has = (f: Pick<ProfileFields, "rateOptions">, o: "hourly" | "project") => f.rateOptions?.includes(o) === true;
 
+/** A phone number the module takes: digits with an optional +, spaces, brackets and dashes; 7 to 15 digits. */
+export const validPhone = (v: string | undefined) => !!v && /^\+?[0-9 ()-]{7,32}$/.test(v.trim()) && v.replace(/\D/g, "").length >= 7 && v.replace(/\D/g, "").length <= 15;
+
+const plural = (n: string, unit: string) => `${n} ${unit}${n === "1" ? "" : "s"}`;
+
+/** The public price lines when both options are chosen (Patti 28), or null to keep the existing single-rate display. */
+export function pricingLines(f: ProfileFields): string[] | null {
+  if (!has(f, "hourly") || !has(f, "project") || !money(f.hourlyRate)) return null;
+  const hours = whole(f.minimumHours) ? ` · minimum ${plural(String(Number(f.minimumHours)), "hour")}` : "";
+  return [`$${Number(f.hourlyRate)}/hour${hours}`, money(f.projectMinimum) ? `Projects from $${Number(f.projectMinimum)}` : "Projects: price on request"];
+}
+
 /** A LinkedIn address safe to link to, or "". */
 export const linkedinHref = (value: unknown): string => (typeof value === "string" && LINKEDIN_RE.test(value) ? value : "");
 
@@ -31,6 +43,7 @@ export function detailsErrors(f: ProfileFields): FieldErrors {
   if (has(f, "hourly") && f.minimumHours?.trim() && !whole(f.minimumHours)) e.minimumHours = "Enter a whole number of hours, or leave it blank.";
   if (has(f, "project") && f.projectMinimum?.trim() && !money(f.projectMinimum)) e.projectMinimum = "Enter a minimum greater than zero, or leave it blank.";
   if (f.linkedin?.trim() && !LINKEDIN_RE.test(f.linkedin.trim())) e.linkedin = "Use a link like https://www.linkedin.com/in/your-name or https://www.linkedin.com/company/your-company, or leave it blank.";
+  if (f.bookingMobile?.trim() && !validPhone(f.bookingMobile)) e.bookingMobile = "Enter a valid phone number, including the country code.";
   return e;
 }
 
@@ -54,11 +67,13 @@ export function publicDetails(f: ProfileFields): Record<string, unknown> | undef
 
 /** The `private_details` a save sends. `marketing` is the person's changed choice, or undefined to leave it alone. */
 export function privateDetails(f: ProfileFields, marketing?: boolean): Record<string, unknown> | undefined {
-  const touched = f.contactChannels !== undefined || f.bookingContactConsent !== undefined || marketing !== undefined;
+  const phone = typeof f.bookingMobile === "string" ? (f.bookingMobile.trim() === "" ? "" : validPhone(f.bookingMobile) ? f.bookingMobile.trim() : undefined) : undefined;
+  const touched = phone !== undefined || f.contactChannels !== undefined || f.bookingContactConsent !== undefined || marketing !== undefined;
   if (!touched) return undefined;
   return {
     phone_channels: [...(f.contactChannels ?? [])],
     booking_consent: f.bookingContactConsent === true,
+    ...(phone === undefined ? {} : { phone }),
     ...(marketing === undefined ? {} : { marketing_consent: marketing }),
   };
 }
@@ -96,6 +111,7 @@ export function readPrivateDetails(raw: unknown): Partial<ProfileFields> {
   const out: Partial<ProfileFields> = {};
   if (Array.isArray(d.phone_channels)) out.contactChannels = d.phone_channels.filter((c): c is PhoneChannel => (PHONE_CHANNELS as readonly unknown[]).includes(c));
   if (typeof d.booking_consent === "boolean") out.bookingContactConsent = d.booking_consent;
+  if (typeof d.phone === "string" && d.phone) out.bookingMobile = d.phone;
   return out;
 }
 
@@ -105,6 +121,7 @@ export function cleanDetails(input: Record<string, unknown>): Partial<ProfileFie
   if (Array.isArray(input.rateOptions)) out.rateOptions = [...new Set(input.rateOptions.filter((o): o is "hourly" | "project" => o === "hourly" || o === "project"))];
   for (const k of ["hourlyRate", "minimumHours", "projectMinimum"] as const) if (typeof input[k] === "string") out[k] = (input[k] as string).slice(0, 12);
   if (typeof input.linkedin === "string") out.linkedin = input.linkedin.slice(0, 500);
+  if (typeof input.bookingMobile === "string") out.bookingMobile = input.bookingMobile.slice(0, 32);
   if (Array.isArray(input.contactChannels)) out.contactChannels = [...new Set(input.contactChannels.filter((c): c is PhoneChannel => (PHONE_CHANNELS as readonly unknown[]).includes(c)))];
   for (const k of ["bookingContactConsent", "marketingEmailConsent", "marketingConsentBaseline"] as const) {
     if (input[k] === undefined) continue;

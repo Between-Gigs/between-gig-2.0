@@ -14,6 +14,8 @@ import { craftIcon, iconTint, type Icon3DName } from "@/lib/icons3d";
 import { hasRate } from "@/lib/profile/validate";
 import type { ProfileLayoutProps } from "./ProfileView";
 import { LinkedInLink } from "@/components/profile/LinkedInLink";
+import { RatePricing } from "@/components/profile/RatePricing";
+import { pricingLines, profileDetailsEnabled as detailsOn } from "@/lib/profile/details";
 
 /** A small pill on the identity panel. */
 function Pill({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -82,7 +84,8 @@ export function WarmProfile({ person, fields: f, mode, embedded, similar = [], d
   const booking = (
     <section aria-label={`Book ${first}`} className="grid gap-5 rounded-xl border border-line bg-surface p-6 shadow-md">
       <p className="grid gap-0.5">
-        {priced
+        {detailsOn() && pricingLines(f) ? <RatePricing f={f} />
+          : priced
           ? <><span><span className="font-display text-display-sm text-ink">${f.rate}</span><span className="text-body-md font-semibold text-ink"> / {basisShort[f.basis]}</span></span><span className="text-body-sm text-ink-muted">starting rate</span></>
           : <span className="font-display text-heading-lg text-ink">Rate on request</span>}
       </p>

@@ -26,6 +26,8 @@ import { Divider, Heading, Quote, Status, Text } from "../atoms";
 import { RateBlock, SectionHeading } from "../molecules";
 import { ProfileResultCard } from "../organisms";
 import { LinkedInLink } from "@/components/profile/LinkedInLink";
+import { RatePricing } from "@/components/profile/RatePricing";
+import { pricingLines, profileDetailsEnabled as detailsOn } from "@/lib/profile/details";
 
 /** One plain line of the identity meta (Justin's Flow p4: no icons, just the words). */
 function Meta({ children }: { children: React.ReactNode }) {
@@ -82,7 +84,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
 
   const rateBlock = P("rate", priced || !show, (
     <RateBlock
-      price={priced ? <>${f.rate}<span className="text-display-sm"> / {basisShort[f.basis]}</span></> : <span className="text-heading-lg">Rate on request</span>}
+      price={detailsOn() && pricingLines(f) ? <RatePricing f={f} /> : priced ? <>${f.rate}<span className="text-display-sm"> / {basisShort[f.basis]}</span></> : <span className="text-heading-lg">Rate on request</span>}
       minimum={priced ? <>{f.basis === "hourly" ? "Hourly rate" : f.basis === "day" ? "Day rate" : "Starting price per project"}{minimum ? ` · ${minimum} minimum` : ""}</> : minimum ? `${minimum} minimum` : undefined}
       available={available}
       availability={!available ? <Status tone={f.monthStatus === "away" ? "neutral" : "gold"}>{monthStatusLabel[f.monthStatus]}</Status> : undefined}

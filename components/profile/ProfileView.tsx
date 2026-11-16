@@ -21,6 +21,8 @@ import { WarmProfile } from "./WarmProfile";
 import { ProfileTemplate } from "@/components/ds/templates/ProfileTemplate";
 import { craftHref } from "@/lib/profile/browse";
 import { LinkedInLink } from "@/components/profile/LinkedInLink";
+import { RatePricing } from "@/components/profile/RatePricing";
+import { pricingLines, profileDetailsEnabled as detailsOn } from "@/lib/profile/details";
 
 export type ProfileMode = "public" | "own" | "owner";
 
@@ -251,7 +253,8 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
 
   const booking = (
     <section aria-label={`Book ${first}`} className="@container grid gap-5 rounded-xl bg-tint-mint p-5 text-forest-950">
-      {priced
+      {detailsOn() && pricingLines(f) ? <RatePricing f={f} />
+        : priced
         // The unit wraps under the number when the column is narrow ("/ project" beside "$500" in the 3-column aside).
         // The number sets by the block's own width (a container query) and its length, so it never leaves the block:
         // the owner view's aside is under 150px wide at 1024.

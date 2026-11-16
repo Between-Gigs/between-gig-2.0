@@ -369,7 +369,9 @@ export function draftOps(personId: string, fields: ProfileFields, existing: { pr
   if (priv) {
     // Compared on what the person sets: the server's consent time is not a difference, and the marketing choice is an action.
     const was = (old.private_details ?? {}) as Record<string, unknown>;
-    const same = JSON.stringify(was.phone_channels ?? []) === JSON.stringify(priv.phone_channels) && (was.booking_consent === true) === (priv.booking_consent === true);
+    // A number still being typed is not sent (the module would refuse it): what is stored stays.
+    if (priv.phone === undefined && typeof was.phone === "string") priv.phone = was.phone;
+    const same = (was.phone ?? "") === (priv.phone ?? "") && JSON.stringify(was.phone_channels ?? []) === JSON.stringify(priv.phone_channels) && (was.booking_consent === true) === (priv.booking_consent === true);
     if (!same || priv.marketing_consent !== undefined) changed.private_details = priv;
   }
   // A cleared number or month isn't in toProfile's output: clear it.
