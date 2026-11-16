@@ -404,6 +404,8 @@ export function CanvasSamples({ d, set }: SectionProps) {
     <section id="sec-work" aria-labelledby="sec-work-h" className="grid scroll-mt-40 gap-5">
       <div className="grid gap-2">
         <H id="sec-work-h" tag={samples.length ? `${samples.length} of ${MAX_SAMPLES}` : `Optional · up to ${MAX_SAMPLES}`}>Showcase your work</H>
+        <p className="max-w-prose text-body-md text-ink-muted">Show customers what you can do! Upload photos or images of past projects that demonstrate your skills and experience. These can be from your work in film and television or projects you’ve completed outside the industry.</p>
+        <p className="text-body-sm text-ink-muted">Only share work you have permission to display.</p>
         {samples.length > 0 && <p id="samples-hint" className="text-body-md text-ink-muted">{samples.length > 1 ? "Drag a photo by its handle to change the order. The first one shows first on your profile. " : ""}Use Adjust to choose how each photo fits its frame.</p>}
       </div>
       <p aria-live="polite" className="sr-only">{said}</p>

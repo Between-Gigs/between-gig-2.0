@@ -45,7 +45,7 @@ const ITEM_TARGET: Record<GigsterItemId, string> = {
 };
 /** The team's review notes are per questionnaire section; this is where each one is answered here. */
 /** The team picks a section of the old builder; name it as this editor does. */
-const NOTE_LABEL: Partial<Record<ProfileSection, string>> = { about: "Your name and photo", photo: "Profile photo", skills: "How I can help", where: "Where you work and when", story: "Your film and TV experience" };
+const NOTE_LABEL: Partial<Record<ProfileSection, string>> = { about: "Your name and photo", photo: "Profile photo", skills: "How I can help", where: "Where you work and when", story: "Your entertainment industry experience" };
 const NOTE_TARGET: Record<ProfileSection, string> = { about: "sec-identity", photo: "sec-identity", skills: "sec-help", where: "sec-where", story: "f-about" };
 
 /** Scroll to a field or section and put focus there (the field itself, or the section's first control). */
