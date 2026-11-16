@@ -88,3 +88,9 @@ it("multiline equipment stays a tools-only autosave with unchanged legacy transp
   expect(ops[0].data).not.toHaveProperty("transport");
   expect(ops[0].data).not.toHaveProperty("photo");
 });
+
+it("changing both work locations updates only work_mode and preserves private notes and media", () => {
+  const previous = stored(); previous.profile.data.insurance_notes = "Private fictional coverage";
+  const ops = draftOps(PERSON, { ...fields, mode: "both" }, previous);
+  expect(ops).toEqual([{ op: "update", entity: "profile", id: "prof", data: { work_mode: "on_site_or_at_provider" } }]);
+});
