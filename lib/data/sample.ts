@@ -1,3 +1,5 @@
+import { withTravelRequirement } from "@/lib/profile/location-controls";
+import { readProfileTemplate } from "@/lib/profile/template";
 /*
  * The sample DataSource: the whole backend, faked in the browser. State lives in localStorage under
  * one key, seeded from ./seed.ts, and survives reloads until it is reset (QA, or clearing site data).
@@ -453,14 +455,16 @@ export const sampleSource: DataSource = {
       const draft = state.drafts.find((d) => d.personId === personId);
       if (draft) return clone(draft);
       const person = state.people.find((p) => p.id === personId);
-      return person ? { personId, fields: blankFields(person.name), step: 0, savedAt: "" } : null;
+      return person ? { personId, profileCreatedAt: state.profiles.some(p => p.personId === personId) ? undefined : null, fields: blankFields(person.name), step: 0, savedAt: "" } : null;
     },
     async saveDraft(personId, fields, step) {
       // The write lands at once and the answer comes after the pause, so a save started as the page closes still lands.
       const state = load();
       const person = state.people.find((p) => p.id === personId);
       if (!person) throw new Error("No such person");
-      const draft: ProfileDraft = { personId, fields: clone(fields), step, savedAt: now() };
+      const previousDraft = state.drafts.find(d => d.personId === personId);
+      const profileCreatedAt = previousDraft ? previousDraft.profileCreatedAt : state.profiles.some(p => p.personId === personId) ? undefined : now();
+      const draft: ProfileDraft = { personId, profileCreatedAt, fields: clone(fields), step, savedAt: now() };
       state.drafts = [...state.drafts.filter((d) => d.personId !== personId), draft];
       if (person.status === "registered") person.status = "draft";
       /*
@@ -484,7 +488,7 @@ export const sampleSource: DataSource = {
       const person = state.people.find((p) => p.id === personId);
       const draft = state.drafts.find((d) => d.personId === personId);
       if (!person || !draft) throw new Error("Nothing to submit");
-      if (Object.keys(validateAll(draft.fields)).length || (!draft.fields.services.length && customServiceError(draft.fields.other))) throw new Error("The profile has fields that need attention");
+      if (Object.keys(validateAll(draft.fields, withTravelRequirement(readProfileTemplate(), draft.profileCreatedAt))).length || (!draft.fields.services.length && customServiceError(draft.fields.other))) throw new Error("The profile has fields that need attention");
       const t = now();
       const previous = state.profiles.find((p) => p.personId === personId);
       // Sending replaces the version the team has (and, for a live profile, takes it off the site until it's approved

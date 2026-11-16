@@ -129,6 +129,8 @@ export interface ProfileFields {
 /** The person's working copy: what the builder autosaves. */
 export interface ProfileDraft {
   personId: string;
+  /** Trusted server profile-row creation metadata, outside writable fields. Null means no profile row yet. */
+  readonly profileCreatedAt?: string | null;
   fields: ProfileFields;
   /** Builder step to resume at (0 to 4). */
   step: number;

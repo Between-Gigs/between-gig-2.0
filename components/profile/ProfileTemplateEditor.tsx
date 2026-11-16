@@ -138,8 +138,8 @@ export function ProfileTemplateEditor() {
                     {rules.map((k) => <label key={k} className="flex min-h-10 cursor-pointer items-center justify-between gap-3 rounded-md bg-surface-sunken px-3 text-body-sm">
                       <span>{rules.length > 1 ? ruleLabels[k] : "Required before submission"}</span>
                       <span className="inline-flex items-center gap-2">
-                        {rules.length > 1 && <span className="text-ink-muted">{draft.required.includes(k) ? "Required" : "Optional"}</span>}
-                        <input type="checkbox" checked={draft.required.includes(k) || (k === "travel" && locationControlsEnabled())} disabled={k === "travel" && locationControlsEnabled()} aria-label={`Require ${ruleLabels[k]}`}
+                        {rules.length > 1 && <span className="text-ink-muted">{k === "travel" && locationControlsEnabled() ? "Required for new profiles" : draft.required.includes(k) ? "Required" : "Optional"}</span>}
+                        <input type="checkbox" checked={draft.required.includes(k)} disabled={k === "travel" && locationControlsEnabled()} aria-label={`Require ${ruleLabels[k]}`}
                           onChange={(e) => edit({ ...draft, required: e.target.checked ? [...draft.required, k] : draft.required.filter((id) => id !== k) })}
                           className="size-5 accent-action" />
                       </span>

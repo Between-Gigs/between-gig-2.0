@@ -1,3 +1,5 @@
+> Historical global-required candidate retained for provenance. For the current nonblocking rollout use [Legacy blank-travel compatibility](patti-travel-cohort.md). Do NOT activate the old global `travel_notes` requirement; it is superseded by the dormant creation-cohort successor. Original bf625a34/265a1650 candidates remain untouched on their own branches.
+
 # Patti location12–14 — local integrated candidate, not live
 
 Scope: canonical Gigster editor removes Areas you serve; Travel radius is required and offers exactly Up to 5 miles, Up to 15 miles, Up to 25 miles and Up to 50 miles. No beyond-LA checkbox (item15), new consent, rate model, custom taxonomy, auth, invitation, dashboard or media change. Those remain separate. This branch derives from the reviewed activation pair, whose worktrees/commits/bundles remain untouched.

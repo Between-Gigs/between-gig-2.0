@@ -264,7 +264,7 @@ export function isPartFilled(id: ProfilePartId, d: ProfileFields): boolean {
     case "years": return d.years !== "";
     case "services": return d.services.length > 0 || !!d.other.trim();
     case "skills": return d.skills.length > 0;
-    case "where": return validPostalCode(d.market, d.zip) && (d.market === "other" ? !!d.otherCity.trim() : locationControlsEnabled() || d.areas.length > 0) && (!locationControlsEnabled() || !!d.travel.trim());
+    case "where": return validPostalCode(d.market, d.zip) && (d.market === "other" ? !!d.otherCity.trim() : locationControlsEnabled() || d.areas.length > 0);
     case "availability": return !!d.dates.trim();
     case "rate": return hasRate(d.rate);
     case "about": return !!d.about.trim();

@@ -306,14 +306,20 @@ async function ownProfile(ctx: Ctx, personId: string) {
 
 const fieldsFrom = (p: { profile?: Row; items: Row[]; photo?: Row }) => fromProfile(p.profile!.data, itemsOf(p.items), p.photo ? mediaUrl(p.photo.id) : "");
 
+/** Derive metadata only from the authenticated API row, never a field supplied by a client. */
+function profileCreation(row: Row): string | undefined {
+  const value = iso(row.createdAt);
+  return value && Number.isFinite(Date.parse(value)) ? new Date(value).toISOString() : undefined;
+}
+
 /** The draft is the profile itself (N-09: one record). The builder's step stays in the browser (lib/data/api.ts). */
 export async function getDraft(ctx: Ctx, personId: string): Promise<ProfileDraft | null> {
   const own = await ownProfile(ctx, personId);
-  if (own.profile) return { personId, fields: fieldsFrom(own), step: 0, savedAt: iso(own.profile.updatedAt) };
+  if (own.profile) return { personId, profileCreatedAt: profileCreation(own.profile), fields: fieldsFrom(own), step: 0, savedAt: iso(own.profile.updatedAt) };
   const [person] = await ctx.cos.query(ctx.cred, { entity: "person", filter: eq("id", personId), limit: 1 });
   if (!person) return null;
   const name = str(person.data.name);
-  return { personId, fields: blankFields(name === str(person.data.email) ? "" : name), step: 0, savedAt: "" };
+  return { personId, profileCreatedAt: null, fields: blankFields(name === str(person.data.email) ? "" : name), step: 0, savedAt: "" };
 }
 
 const keyOf = (i: { kind?: unknown; value?: unknown }) => `${String(i.kind)}\u0000${String(i.value)}`;
@@ -378,7 +384,7 @@ export async function saveDraft(ctx: Ctx, personId: string, input: ProfileFields
   // Removing the photo deletes it, on a draft only: a submitted or live profile needs one, so it's replaced by uploading.
   if (!fields.photo && own.photo && own.profile?.data.status === "draft") await ctx.cos.remove(ctx.cred, "file", own.photo.id);
   const after = await ownProfile(ctx, personId);
-  return { personId, fields: after.profile ? fieldsFrom(after) : fields, step: 0, savedAt: after.profile ? iso(after.profile.updatedAt) : nowIso() };
+  return { personId, profileCreatedAt: after.profile ? profileCreation(after.profile) : null, fields: after.profile ? fieldsFrom(after) : fields, step: 0, savedAt: after.profile ? iso(after.profile.updatedAt) : nowIso() };
 }
 
 export async function submit(ctx: Ctx, personId: string) {

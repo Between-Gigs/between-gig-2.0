@@ -22,6 +22,12 @@
       "settingsEvidence": {
         "test": null,
         "production": null
+      },
+      "requires": null,
+      "profilesModule": "1.6.0",
+      "travelRequiredAfter": {
+        "test": null,
+        "production": null
       }
     }
   }

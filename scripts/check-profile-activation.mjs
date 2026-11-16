@@ -23,6 +23,13 @@ export function checkProfileActivation(env, manifest) {
     if (!release.ok) return release;
     if (!settingsDeclared(declaration?.profileFeatures?.customServiceReview, env.RAILWAY_ENV)) return { ok: false, error: "Custom-service activation needs this environment's private settings-verification receipt and deployed API commit declaration" };
   }
+  if (env.NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS === "1") {
+    const release = checkRequirement(manifest, { locationControls: true });
+    if (!release.ok) return release;
+    const cutoff = declaration?.profileFeatures?.locationControls?.travelRequiredAfter?.[env.RAILWAY_ENV];
+    const utc = value => typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString() === value;
+    if (!utc(cutoff) || cutoff !== env.NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER) return { ok: false, error: "Location cohort activation needs one reviewed UTC cutoff matching its public build configuration and verified API setting" };
+  }
   const enabled = [
     ...(env.NEXT_PUBLIC_PROFILE_NO_DEPARTMENT === "1" ? ["departmentRetirement"] : []),
     ...(env.CUSTOM_SERVICE_REVIEW_ENABLED === "1" ? ["customServiceReview"] : []),

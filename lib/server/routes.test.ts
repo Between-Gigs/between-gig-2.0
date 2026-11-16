@@ -698,3 +698,23 @@ it("public response omits insurance descriptions even if the upstream unexpected
   expect(JSON.stringify(result.body)).not.toContain(note);
   expect(f.calls.every(c => c.auth === `Bearer ${READER}`)).toBe(true);
 });
+
+it("draft metadata uses server row creation, not updatedAt or writable fields",async()=>{
+ const createdAt="2026-10-01T00:00:00.000Z",updatedAt="2027-01-01T00:00:00.000Z";
+ const f=fake(c=>{const q=c.body as {entity?:string}|undefined;if(c.path==="/query"&&q?.entity==="profile")return{body:{data:[{id:"prof",createdAt,updatedAt,data:{person:PERSON,status:"draft",profileCreatedAt:updatedAt,createdAt:updatedAt}}]}};return undefined;});
+ const r=await call("profiles.getDraft",[PERSON],undefined,f);expect(r.res.status).toBe(200);expect(r.body.result).toMatchObject({profileCreatedAt:createdAt,savedAt:updatedAt});expect((r.body.result as {fields:object}).fields).not.toHaveProperty("profileCreatedAt");expect(r.calls.every(c=>c.auth===`Bearer ${SESSION}`)).toBe(true);
+});
+it("a genuinely new draft reports no stored profile while missing old row metadata stays unknown",async()=>{
+ const f=fake(c=>{const q=c.body as {entity?:string}|undefined;if(c.path==="/query"&&q?.entity==="person")return{body:{data:[{id:PERSON,data:{name:"Fictional New Crew"}}]}};return undefined;});
+ expect((await call("profiles.getDraft",[PERSON],undefined,f)).body.result).toMatchObject({profileCreatedAt:null});
+ const legacy=fake(c=>{const q=c.body as {entity?:string}|undefined;if(c.path==="/query"&&q?.entity==="profile")return{body:{data:[{id:"prof",data:{person:PERSON,status:"draft"},updatedAt:"2027-01-01T00:00:00.000Z"}]}};return undefined;});
+ expect((await call("profiles.getDraft",[PERSON],undefined,legacy)).body.result).not.toHaveProperty("profileCreatedAt");
+});
+it("save replies preserve actual creation metadata while client timestamp fields never become writes",async()=>{
+ const createdAt="2026-10-01T00:00:00.000Z",fields={...blankFields("Fictional Metadata Crew"),profileCreatedAt:"1900-01-01T00:00:00.000Z"};
+ const row={id:"prof",createdAt,updatedAt:"2027-01-01T00:00:00.000Z",data:{...toProfile(fields).data,person:PERSON,status:"draft"}};
+ const f=fake(c=>{const q=c.body as {entity?:string}|undefined;if(c.path==="/query"&&q?.entity==="profile")return{body:{data:[row]}};return undefined;});
+ const result=await call("profiles.saveDraft",[PERSON,fields],undefined,f);expect(result.res.status).toBe(200);expect(result.body.result).toMatchObject({profileCreatedAt:createdAt});
+ expect(JSON.stringify(f.calls.filter(c=>c.method==="PATCH"||c.path==="/batch"))).not.toContain("profileCreatedAt");
+ const pub=await call("people.getPublic",["fictional"],{token:null},f);expect(JSON.stringify(pub.body)).not.toContain("profileCreatedAt");expect(JSON.stringify(pub.body)).not.toContain(createdAt);
+});

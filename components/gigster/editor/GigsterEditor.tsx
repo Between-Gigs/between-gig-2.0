@@ -15,6 +15,7 @@ import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
 import { DataError, sendNow } from "@/lib/data/api";
 import { useRequireRole } from "@/lib/guard";
+import { withTravelRequirement } from "@/lib/profile/location-controls";
 import { requiredProfileRules } from "@/lib/profile/template";
 import { useProfileTemplate } from "@/lib/profile/use-profile-template";
 import { contentChanged, fieldLabel, gigsterChecklist, gigsterFieldLabel, gigsterItemOf, gigsterItems, readNotes, sectionLabel, validateGigster, type FieldErrors, type GigsterItemId } from "@/lib/profile/validate";
@@ -80,7 +81,9 @@ type View = "edit" | "preview";
 function Editor({ personId }: { personId: string }) {
   const toast = useToast();
   const router = useRouter();
-  const template = useProfileTemplate();
+  const baseTemplate = useProfileTemplate();
+  const [profileCreatedAt, setProfileCreatedAt] = React.useState<string | null | undefined>(undefined);
+  const template = React.useMemo(() => withTravelRequirement(baseTemplate, profileCreatedAt), [baseTemplate, profileCreatedAt]);
   const [person, setPerson] = React.useState<Person | null>(null);
   const [d, setD] = React.useState<ProfileFields | null>(null);
   const [sentVersion, setSentVersion] = React.useState<ProfileFields | null>(null);
@@ -105,6 +108,7 @@ function Editor({ personId }: { personId: string }) {
       if (!current || !s || !draft) return;
       setPerson(s.person);
       setSentVersion(sent?.fields ?? null);
+      setProfileCreatedAt(draft.profileCreatedAt);
       step.current = draft.step;
       known.current = draft.savedAt;
       if (!draft.fields.name) touched.current.add("name");
@@ -134,6 +138,7 @@ function Editor({ personId }: { personId: string }) {
       const theirs = stored?.savedAt && stored.savedAt !== known.current ? stored.fields : null;
       const merged = theirs ? { ...theirs, ...pick(fields, keys) } : fields;
       const saved = await data.profiles.saveDraft(personId, merged, step.current);
+      setProfileCreatedAt(saved.profileCreatedAt);
       known.current = saved.savedAt;
       if (theirs) setD((cur) => (cur ? { ...merged, ...pick(cur, touched.current) } : cur));
       setSave(dirty.current ? { status: "saving" } : { status: "saved", at: saved.savedAt });
@@ -171,6 +176,7 @@ function Editor({ personId }: { personId: string }) {
     return data.auth.onChange(() => {
       void data.profiles.getDraft(personId).then((stored) => {
         if (!stored?.savedAt || stored.savedAt === known.current) return;
+        setProfileCreatedAt(stored.profileCreatedAt);
         known.current = stored.savedAt;
         setD((cur) => (cur ? { ...stored.fields, ...pick(cur, touched.current) } : cur));
       });

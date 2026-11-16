@@ -43,3 +43,7 @@ Before any deeper downgrade, perform a bounded authorized read-only inventory of
 The reviewed pair7d8a76a/49e67bf remains untouched. Activation work is isolated; no live settings, flags, records, releases or email were changed. Existing source-publication denial, tag403 and hosted-isolation gates remain. Potentially unpushed original-worker work is unrecovered. Full receipt, tests and private recovery bundles accompany the local handoff.
 
 Playbook impact: IN-279 (Company OS activation audit).
+
+## Nonblocking location/travel successor
+
+Location12–14 compatibility now uses the generic creation-cohort rule and per-environment future cutoffs described in [Legacy blank-travel compatibility](handoff/patti-travel-cohort.md). This successor needs an actual feature-bearing API/module release; the earlier metadata-only location baseline is insufficient. Pending cutoff and release declarations refuse activation. No global required travel, backfill, real dates or new credentials are configured.

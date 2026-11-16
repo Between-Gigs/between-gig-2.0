@@ -33,11 +33,13 @@ export interface ProfileTemplate {
   required: readonly ProfileFieldRule[];
   order: readonly ProfilePartId[];
   sections: readonly ProfileSectionId[];
+  /** Internal per-profile UI policy, never encoded in shareable template settings. API remains authoritative. */
+  travelRequirement?: "required" | "legacy-optional";
 }
 const fields = Object.keys(profileFieldParts) as ProfileFieldRule[];
 export const defaultProfileTemplate: ProfileTemplate = {
   // Credits are optional (client, 13 Nov 2026): plenty of good Gigsters have none to name yet.
-  required: (["name", "position", "years", "services", "skills", "zip", "location", "dates", "about", "photo", ...(locationControlsEnabled() ? ["travel" as const] : [])] as ProfileFieldRule[]).filter((key) => key !== "position" || !departmentFieldRetired()),
+  required: (["name", "position", "years", "services", "skills", "zip", "location", "dates", "about", "photo"] as ProfileFieldRule[]).filter((key) => key !== "position" || !departmentFieldRetired()),
   order: Object.keys(profileParts) as ProfilePartId[],
   sections: Object.keys(profileSections) as ProfileSectionId[],
 };
@@ -59,12 +61,12 @@ export function parseProfileTemplate(raw: string): ProfileTemplate | null {
       Array.isArray(v) && v.length <= allowed.length && (!all || v.length === allowed.length) &&
       v.every((k) => typeof k === "string" && allowed.includes(k)) && new Set(v).size === v.length;
     if (!valid(x.required, fields, false) || !valid(x.order, defaultProfileTemplate.order, true) || !valid(x.sections, defaultProfileTemplate.sections, true)) return null;
-    return { required: fields.filter((k) => k !== "transport" && (k !== "position" || !departmentFieldRetired()) && (x.required.includes(k) || (k === "travel" && locationControlsEnabled()))), order: x.order, sections: x.sections };
+    return { required: fields.filter((k) => k !== "transport" && (k !== "position" || !departmentFieldRetired()) && x.required.includes(k)), order: x.order, sections: x.sections };
   } catch { return null; }
 }
 
 export function encodeProfileTemplate(template: ProfileTemplate) {
-  return JSON.stringify({ version: 1, required: fields.filter((k) => k !== "transport" && (k !== "position" || !departmentFieldRetired()) && (template.required.includes(k) || (k === "travel" && locationControlsEnabled()))), order: template.order, sections: template.sections });
+  return JSON.stringify({ version: 1, required: fields.filter((k) => k !== "transport" && (k !== "position" || !departmentFieldRetired()) && template.required.includes(k)), order: template.order, sections: template.sections });
 }
 
 export function readProfileTemplate(): ProfileTemplate {
@@ -102,9 +104,11 @@ export function subscribeProfileTemplate(listener: () => void) {
   return () => { window.removeEventListener("storage", onStorage); window.removeEventListener(changeEvent, listener); };
 }
 
-/** New location mode requires travel even for callers holding an older in-memory template. */
+/** A per-profile cohort overrides only travel; no private/client exemption is sent to the API. */
 export function requiredProfileRules(template: ProfileTemplate): readonly ProfileFieldRule[] {
-  return locationControlsEnabled() && !template.required.includes("travel") ? [...template.required, "travel"] : template.required;
+  if (!locationControlsEnabled()) return template.required;
+  if (template.travelRequirement === "legacy-optional") return template.required.filter(k => k !== "travel");
+  return template.travelRequirement === "required" && !template.required.includes("travel") ? [...template.required, "travel"] : template.required;
 }
 
 export function requiredProfileParts(template: ProfileTemplate) {
