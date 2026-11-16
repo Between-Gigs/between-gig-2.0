@@ -50,6 +50,15 @@ describe("lib/profile/validate.ts", () => {
     expect(validateStep(1, { ...blankFields("A"), services: ["A"], serviceLines: { A: "x".repeat(121) } }).serviceLines).toMatch(/120/);
   });
 
+  it("counts a named custom service toward the same five-service submission limit", () => {
+    const fields = { ...blankFields("A"), services: ["A", "B", "C", "D", "E"], other: "Fictional custom service\nA short description." };
+    expect(validateStep(1, fields).services).toMatch(/up to 5.*6/);
+    expect(validateStep(1, { ...fields, services: fields.services.slice(0, 4) }).services).toBeUndefined();
+    expect(validateStep(1, { ...fields, other: "  " }).services).toBeUndefined();
+    expect(fields.services).toHaveLength(5);
+    expect(fields.other).toBe("Fictional custom service\nA short description.");
+  });
+
   it("the Gigster editor needs a line for every service and a question for a personality answer", () => {
     const f = { ...completeFields("Sample Crew", "img/people/maya.jpg"), services: ["Event Styling"] };
     expect(validateGigster(f, defaultProfileTemplate).serviceLines).toMatch(/each service/);
