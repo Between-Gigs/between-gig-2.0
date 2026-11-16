@@ -7,7 +7,7 @@
  * editor is kept as a Hub draft (/preview/drafts/profile-editor-v1/).
  */
 import { departmentFieldRetired } from "@/lib/profile/department-retirement";
-import { videoLinksEnabled } from "@/lib/profile/video-links";
+import { SAMPLE_ERROR_CODES, adoptStored, videoLinksEnabled } from "@/lib/profile/video-links";
 import { Button, Skeleton, useToast } from "@ds/components";
 import { cx } from "@ds/components/cx";
 import { ArrowLeft, ArrowRight, ChevronDown, Eye, FileText, MessageSquareWarning, Save, Send } from "lucide-react";
@@ -145,13 +145,14 @@ function Editor({ personId }: { personId: string }) {
       if (theirs) setD((cur) => (cur ? { ...merged, ...pick(cur, touched.current) } : cur));
       // Work samples live in Company OS (video links on): take its list (photos become /media links), unless they changed meanwhile.
       const stored_ = saved.fields.workSamples;
-      if (videoLinksEnabled() && stored_ && !theirs) setD((cur) => (cur && JSON.stringify(cur.workSamples ?? []) === JSON.stringify(merged.workSamples ?? []) ? { ...cur, workSamples: stored_ } : cur));
+      if (videoLinksEnabled() && stored_ && !theirs) setD((cur) => (cur ? { ...cur, workSamples: adoptStored(merged.workSamples ?? [], stored_, cur.workSamples ?? []) } : cur));
       setSave(dirty.current ? { status: "saving" } : { status: "saved", at: saved.savedAt });
       void refresh();
-    } catch {
+    } catch (e) {
       dirty.current = true;
       keys.forEach((k) => touched.current.add(k));
-      setSave({ status: "error" });
+      const code = (e as { code?: unknown } | null)?.code;
+      setSave(videoLinksEnabled() && typeof code === "string" && SAMPLE_ERROR_CODES.has(code) && e instanceof Error ? { status: "error", message: e.message } : { status: "error" });
     }
   }, [personId, refresh]);
 

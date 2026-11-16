@@ -9,7 +9,7 @@ import { MAX_SAMPLES, decodeSample, encodeVideoSample, mediaPath, parseVideoUrl 
 import { CompanyOsError, type BatchOp, type CompanyOs, type Credential, type Row } from "./companyos";
 
 export const SAMPLE_KINDS = ["portfolio", "video_thumbnail"];
-const MAX_CHARS = 8_000_000;
+const MAX_CHARS = 4_500_000;
 const DATA_IMAGE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
 const MEDIA = /^\/media\/([A-Za-z0-9-]{1,64})(#fit=[\d.]+,[\d.]+,[\d.]+,[\d.]+)?$/;
 const str = (v: unknown) => (typeof v === "string" ? v : "");
@@ -127,8 +127,14 @@ export async function saveSamples({ cos, cred }: { cos: Cos; cred: Credential },
   const upload = async (dataUrl: string, kind: string, position?: number) => {
     const { mime, bytes } = bytesOf(dataUrl);
     const { file, uploadUrl } = await cos.startUpload(cred, { ownerEntity: "profile", ownerId: profileId, kind, filename: `${kind}.${mime.split("/")[1] === "jpeg" ? "jpg" : mime.split("/")[1]}`, mime, sizeBytes: bytes.byteLength, ...(position === undefined ? {} : { position }) });
-    await cos.putBytes(uploadUrl, bytes, mime);
-    await cos.confirmUpload(cred, file.id);
+    try {
+      await cos.putBytes(uploadUrl, bytes, mime);
+      await cos.confirmUpload(cred, file.id);
+    } catch (e) {
+      // No pending file is left counting against the profile's limits.
+      await cos.remove(cred, "file", file.id).catch(() => undefined);
+      throw e;
+    }
     return file.id;
   };
   try {
@@ -149,4 +155,14 @@ export async function saveSamples({ cos, cred }: { cos: Cos; cred: Credential },
     if (e instanceof CompanyOsError && message) throw new CompanyOsError(e.status, e.code, message);
     throw e;
   }
+}
+
+/** Runs jobs with the same key one after another (a failure doesn't stop the next); different keys don't wait for each other. */
+const chains = new Map<string, Promise<unknown>>();
+export function serialised<T>(key: string, job: () => Promise<T>): Promise<T> {
+  const run = (chains.get(key) ?? Promise.resolve()).catch(() => undefined).then(job);
+  const tail = run.catch(() => undefined);
+  chains.set(key, tail);
+  void tail.then(() => { if (chains.get(key) === tail) chains.delete(key); });
+  return run;
 }

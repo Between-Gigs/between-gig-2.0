@@ -10,12 +10,32 @@ export interface VimeoThumbOptions {
   hitMs?: number;
   missMs?: number;
   max?: number;
+  /** Most lookups running at once; more get nothing (the placeholder) without calling Vimeo. */
+  maxInflight?: number;
+  /** Most bytes read from the oEmbed answer. */
+  maxBytes?: number;
 }
 
 const ID = /^\d{1,12}$/;
 const IMAGE = /^https:\/\/i\.vimeocdn\.com\/[^\s@]+$/;
 
-export function createVimeoThumbs({ fetcher = fetch, now = Date.now, timeoutMs = 2500, hitMs = 86_400_000, missMs = 300_000, max = 500 }: VimeoThumbOptions = {}) {
+/** The body as text, read no further than `max` bytes; null when it is longer. */
+async function readCapped(res: Response, max: number): Promise<string | null> {
+  if (!res.body) return "";
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) { await reader.cancel().catch(() => undefined); return null; }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+export function createVimeoThumbs({ fetcher = fetch, now = Date.now, timeoutMs = 2500, hitMs = 86_400_000, missMs = 300_000, max = 500, maxInflight = 5, maxBytes = 64 * 1024 }: VimeoThumbOptions = {}) {
   const cache = new Map<string, { until: number; value: string | null }>();
   const inflight = new Map<string, Promise<string | null>>();
   const lookup = async (id: string): Promise<string | null> => {
@@ -23,7 +43,10 @@ export function createVimeoThumbs({ fetcher = fetch, now = Date.now, timeoutMs =
       const url = "https://vimeo.com/api/oembed.json?url=" + encodeURIComponent(`https://vimeo.com/${id}`);
       const res = await fetcher(url, { signal: AbortSignal.timeout(timeoutMs), redirect: "error", headers: { accept: "application/json" } });
       if (!res.ok) return null;
-      const body = (await res.json()) as { thumbnail_url?: unknown };
+      if (Number(res.headers.get("content-length") ?? 0) > maxBytes) { await res.body?.cancel().catch(() => undefined); return null; }
+      const text = await readCapped(res, maxBytes);
+      if (text === null) return null;
+      const body = JSON.parse(text) as { thumbnail_url?: unknown };
       return typeof body.thumbnail_url === "string" && IMAGE.test(body.thumbnail_url) ? body.thumbnail_url : null;
     } catch { return null; }
   };
@@ -33,6 +56,7 @@ export function createVimeoThumbs({ fetcher = fetch, now = Date.now, timeoutMs =
     if (hit && hit.until > now()) return hit.value;
     const pending = inflight.get(id);
     if (pending) return pending;
+    if (inflight.size >= maxInflight) return null;
     const run = lookup(id).then((value) => {
       cache.delete(id);
       cache.set(id, { until: now() + (value ? hitMs : missMs), value });

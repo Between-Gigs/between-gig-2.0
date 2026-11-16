@@ -168,6 +168,8 @@ export interface Deps {
 }
 
 const MAX_BODY = 256 * 1024;
+/** With video links on, a save can carry up to five resized photos (4.5 MB each at most) and a thumbnail. */
+const SAMPLES_BODY = 24 * 1024 * 1024;
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store", "x-content-type-options": "nosniff" } });
@@ -229,8 +231,9 @@ export async function handle(name: RouteName, req: Request, deps: Deps = {}): Pr
   if (!(req.headers.get("content-type") ?? "").toLowerCase().startsWith("application/json")) return json(415, { error: "unsupported media type" });
   // The public forms' limit comes before anything is read.
   if (route.access === "funnel" && rateLimited(clientIp(req))) return json(429, { error: "rate_limited" });
-  const raw = await readCapped(req, MAX_BODY);
-  if (!raw) return json(413, { error: "too large" });
+  const withSamples = name === "profiles.saveDraft" && videoLinksEnabled();
+  const raw = await readCapped(req, withSamples ? SAMPLES_BODY : MAX_BODY);
+  if (!raw) return withSamples ? json(413, { error: "too_large", message: "Your work samples are too large to save together. Remove one or use smaller images." }) : json(413, { error: "too large" });
   const text = new TextDecoder().decode(raw);
   let args: Args;
   try {

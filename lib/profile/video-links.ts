@@ -59,7 +59,9 @@ const imageData = (v: unknown): v is string => typeof v === "string" && v.length
 const httpsUrl = (v: unknown): v is string => typeof v === "string" && /^https:\/\/[^\s]+$/.test(v) && v.length <= URL_MAX;
 /** A picture of this site's own media route (a file Company OS stored for the profile). */
 export const mediaPath = (v: unknown): v is string => typeof v === "string" && /^\/media\/[A-Za-z0-9-]{1,64}$/.test(v);
-const THUMB_OK = (v: unknown): v is string => imageData(v) || httpsUrl(v) || mediaPath(v);
+/** A provider's own thumbnail host, and no other (the page's CSP allows exactly these two image hosts). */
+const providerImage = (v: unknown): v is string => httpsUrl(v) && /^https:\/\/(?:i\.ytimg\.com|i\.vimeocdn\.com)\/[^\s@]+$/.test(v);
+const THUMB_OK = (v: unknown): v is string => imageData(v) || providerImage(v) || mediaPath(v);
 
 export function encodeVideoSample({ url, thumb, caption }: { url: string; thumb?: string; caption?: string }): string {
   return PREFIX + encodeURIComponent(JSON.stringify({ u: url, ...(thumb ? { t: thumb } : {}), ...(caption ? { c: caption.slice(0, CAPTION_MAX) } : {}) }));
@@ -103,3 +105,21 @@ export function portfolioItems(list: readonly string[], enabled: boolean): Portf
     return [{ src, caption: `Work sample ${i + 1}`, photoIndex: photos++ }];
   });
 }
+
+/**
+ * After a save, the stored version of each sample the save carried (photos become /media links), laid over what is in the
+ * editor now: an entry added or edited meanwhile stays as it is, and a photo already stored is never uploaded again.
+ */
+export function adoptStored(sent: readonly string[], stored: readonly string[], current: readonly string[]): string[] {
+  if (sent.length !== stored.length) return [...current];
+  const used = new Set<number>();
+  return current.map((entry) => {
+    const at = sent.findIndex((s, i) => s === entry && !used.has(i));
+    if (at < 0) return entry;
+    used.add(at);
+    return stored[at]!;
+  });
+}
+
+/** Refusal codes of the work-sample step (their messages come from the server). */
+export const SAMPLE_ERROR_CODES = new Set(["work_samples_not_saved", "too_large", "invalid_video_url", "video_host_not_allowed", "video_links_disabled", "work_sample_limit", "invalid_thumbnail", "file_type_not_allowed", "file_too_large"]);

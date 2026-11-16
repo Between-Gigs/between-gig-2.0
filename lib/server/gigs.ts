@@ -18,7 +18,7 @@ import { blankFields } from "@/lib/data/fields";
 import { onSetSkills, waitlistCategories } from "@/lib/data/taxonomy";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { videoLinksEnabled } from "@/lib/profile/video-links";
-import { SAMPLE_KINDS, samplesFrom, saveSamples } from "./work-samples";
+import { SAMPLE_KINDS, sampleRefusalMessage, samplesFrom, saveSamples, serialised } from "./work-samples";
 import { CompanyOsError, and, eq, isIn, type AdminUser, type BatchOp, type CompanyOs, type Credential, type Row } from "./companyos";
 
 export interface Ctx {
@@ -384,7 +384,10 @@ export function draftOps(personId: string, fields: ProfileFields, existing: { pr
   return ops;
 }
 
-export async function saveDraft(ctx: Ctx, personId: string, input: ProfileFields): Promise<ProfileDraft> {
+/** One save at a time per person, so two overlapping autosaves can't race each other into the work-sample limit. */
+export const saveDraft = (ctx: Ctx, personId: string, input: ProfileFields): Promise<ProfileDraft> => serialised(personId, () => saveDraftNow(ctx, personId, input));
+
+async function saveDraftNow(ctx: Ctx, personId: string, input: ProfileFields): Promise<ProfileDraft> {
   // Names make the public handle (at most 60 characters, getPublic), so they're capped as the editor caps them.
   const fields = typeof input?.name === "string" && input.name.length > 60 ? { ...input, name: input.name.trim().replace(/\s+/g, " ").slice(0, 60).trim() } : input;
   const own = await ownProfile(ctx, personId);
@@ -401,7 +404,13 @@ export async function saveDraft(ctx: Ctx, personId: string, input: ProfileFields
   // Work samples (flag on): photos as files and video links as items, after the profile exists.
   if (videoLinksEnabled() && Array.isArray(fields.workSamples)) {
     const mid = own.profile ? own : await ownProfile(ctx, personId);
-    if (mid.profile) await saveSamples(ctx, mid.profile.id, fields.workSamples, mid.items, mid.sampleFiles);
+    if (mid.profile) {
+      try { await saveSamples(ctx, mid.profile.id, fields.workSamples, mid.items, mid.sampleFiles); } catch (e) {
+        // A refusal about the samples has its own words; anything else must still never look like a save.
+        if (e instanceof CompanyOsError && sampleRefusalMessage(e.code)) throw e;
+        throw new CompanyOsError(422, "work_samples_not_saved", "Your work samples weren't saved. Try again.");
+      }
+    }
   }
   // Removing the photo deletes it, on a draft only: a submitted or live profile needs one, so it's replaced by uploading.
   if (!fields.photo && own.photo && own.profile?.data.status === "draft") await ctx.cos.remove(ctx.cred, "file", own.photo.id);
