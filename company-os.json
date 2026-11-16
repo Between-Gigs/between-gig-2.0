@@ -56,6 +56,15 @@
         "test": null,
         "production": null
       }
+    },
+    "videoLinks": {
+      "requires": ">=1.16.0",
+      "profilesModule": "1.10.0",
+      "apiCommit": null,
+      "settingsEvidence": {
+        "test": null,
+        "production": null
+      }
     }
   }
 }

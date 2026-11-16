@@ -9,7 +9,7 @@
  */
 import { Button, Checkbox, Field, Input, RadioGroup, Select, Switch, Textarea } from "@ds/components";
 import { cx } from "@ds/components/cx";
-import { Camera, Crop as CropIcon, GripVertical, Lock, MapPin, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { Camera, Crop as CropIcon, GripVertical, Lock, MapPin, Pencil, Play, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { data } from "@/lib/data";
 import { laServiceAreas, onSetSkills, serviceChoices } from "@/lib/data/taxonomy";
@@ -29,6 +29,8 @@ import { PhotoPicker } from "@/components/profile/PhotoPicker";
 import { FittedImg } from "@/components/profile/FittedImg";
 import { withFit, type Fit } from "@/lib/profile/work-fit";
 import { FitCropper } from "./FitCropper";
+import { VideoLinkForm, VideoSampleThumb } from "./VideoLinkForm";
+import { decodeSample, videoLinksEnabled, visibleSamples } from "@/lib/profile/video-links";
 import { ContactChoices, LinkedInField, RateOptionFields } from "./DetailFields";
 import { profileDetailsEnabled } from "@/lib/profile/details";
 import { DateField } from "@/components/ui/DateField";
@@ -398,7 +400,16 @@ async function resize(file: File, max = 1200): Promise<string> {
 
 /** "Work samples · Optional": three slots to start, up to five; the next empty one is labelled. */
 export function CanvasSamples({ d, set }: SectionProps) {
-  const samples = (d.workSamples ?? []).filter(Boolean);
+  // Video links (Nov 2026) are behind NEXT_PUBLIC_PROFILE_VIDEO_LINKS; with it off the section is photos only, as before.
+  const videos = videoLinksEnabled();
+  const samples = visibleSamples(d.workSamples ?? [], videos);
+  // "menu": choosing Photo or Video link; "link": the link form (for slot `linkAt`, or a new one when null).
+  const [adding, setAdding] = React.useState<"menu" | "link" | null>(null);
+  const [linkAt, setLinkAt] = React.useState<number | null>(null);
+  const saveLink = (sample: string) => {
+    set("workSamples")(linkAt === null ? [...samples, sample].slice(0, MAX_SAMPLES) : samples.map((x, j) => (j === linkAt ? sample : x)));
+    setAdding(null); setLinkAt(null);
+  };
   const input = React.useRef<HTMLInputElement>(null);
   // Which filled slot the next chosen photo replaces; null adds new ones.
   const replacing = React.useRef<number | null>(null);
@@ -448,9 +459,11 @@ export function CanvasSamples({ d, set }: SectionProps) {
     <section id="sec-work" aria-labelledby="sec-work-h" className="grid scroll-mt-40 gap-5">
       <div className="grid gap-2">
         <H id="sec-work-h" tag={samples.length ? `${samples.length} of ${MAX_SAMPLES}` : `Optional · up to ${MAX_SAMPLES}`}>Showcase your work</H>
-        <p className="max-w-prose text-body-md text-ink-muted">Show customers what you can do! Upload photos or images of past projects that demonstrate your skills and experience. These can be from your work in film and television or projects you’ve completed outside the industry.</p>
+        <p className="max-w-prose text-body-md text-ink-muted">{videos
+          ? "Show customers what you can do! Upload photos, videos, or examples of past projects that demonstrate your skills and experience. These can be from your work in film and television or projects you’ve completed outside the industry."
+          : "Show customers what you can do! Upload photos or images of past projects that demonstrate your skills and experience. These can be from your work in film and television or projects you’ve completed outside the industry."}</p>
         <p className="text-body-sm text-ink-muted">Only share work you have permission to display.</p>
-        {samples.length > 0 && <p id="samples-hint" className="text-body-md text-ink-muted">{samples.length > 1 ? "Drag a photo by its handle to change the order. The first one shows first on your profile. " : ""}Use Adjust to choose how each photo fits its frame.</p>}
+        {samples.length > 0 && <p id="samples-hint" className="text-body-md text-ink-muted">{samples.length > 1 ? `Drag a ${videos ? "sample" : "photo"} by its handle to change the order. The first one shows first on your profile. ` : ""}Use Adjust to choose how each photo fits its frame.{videos ? " A video link opens on YouTube or Vimeo." : ""}</p>}
       </div>
       <p aria-live="polite" className="sr-only">{said}</p>
       <input ref={input} type="file" accept="image/*" multiple className="sr-only" tabIndex={-1} aria-label="Add work samples"
@@ -458,12 +471,15 @@ export function CanvasSamples({ d, set }: SectionProps) {
       <ul className="grid gap-4 sm:grid-cols-3">
         {Array.from({ length: Math.min(MAX_SAMPLES, Math.max(FIRST_SLOTS, samples.length + 1)) }, (_, i) => {
           const src = samples[i];
+          const video = src && videos ? decodeSample(src) : null;
+          const clip = video && video.kind === "video" ? video : null;
           return (
             <li key={i} ref={(el) => { tiles.current[i] = el; }} className="min-w-0">
               {src ? (
                 <figure className={cx("relative aspect-video overflow-hidden rounded-lg border bg-surface transition-shadow duration-fast",
                   dragging === i ? "border-ink-brand shadow-lg ring-2 ring-ink-brand" : "border-line")}>
-                  <FittedImg sample={src} alt={`Work sample ${i + 1}`} />
+                  {clip ? <VideoSampleThumb video={clip} /> : <FittedImg sample={src} alt={`Work sample ${i + 1}`} />}
+                  {clip && <span className="absolute top-2 right-2 rounded-full bg-surface px-2.5 py-1 text-label-sm text-ink shadow-sm">Video{clip.caption ? <span className="sr-only">: {clip.caption}</span> : null}</span>}
                   {samples.length > 1 && (
                     <button type="button" id={`sample-grip-${i}`} aria-label={`Move work sample ${i + 1} of ${samples.length}`} aria-describedby="samples-hint"
                       title="Drag to reorder, or use the arrow keys"
@@ -475,16 +491,16 @@ export function CanvasSamples({ d, set }: SectionProps) {
                     </button>
                   )}
                   <span className="absolute inset-x-2 bottom-2 flex justify-end gap-2">
-                    <button type="button" aria-label={`Adjust the fit of work sample ${i + 1}`} title="Adjust the fit" onClick={() => setFitting(i)}
-                      className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><CropIcon aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">Adjust</span></button>
-                    <button type="button" aria-label={`Replace work sample ${i + 1}`} title="Replace" onClick={() => choose(i)}
-                      className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><RefreshCw aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">Replace</span></button>
+                    {!videos && !clip && <button type="button" aria-label={`Adjust the fit of work sample ${i + 1}`} title="Adjust the fit" onClick={() => setFitting(i)}
+                      className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><CropIcon aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">Adjust</span></button>}
+                    <button type="button" aria-label={clip ? `Edit video link ${i + 1}` : `Replace work sample ${i + 1}`} title={clip ? "Edit the link" : "Replace"} onClick={() => (clip ? (setLinkAt(i), setAdding("link")) : choose(i))}
+                      className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><RefreshCw aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">{clip ? "Edit" : "Replace"}</span></button>
                     <button type="button" aria-label={`Remove work sample ${i + 1}`} title="Remove" onClick={() => set("workSamples")(samples.filter((_, j) => j !== i))}
                       className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><X aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">Remove</span></button>
                   </span>
                 </figure>
               ) : (
-                <button type="button" onClick={() => choose(null)} aria-label={i === samples.length ? undefined : "Add a work sample"} disabled={i > samples.length}
+                <button type="button" onClick={() => (videos ? (setLinkAt(null), setAdding("menu")) : choose(null))} aria-label={i === samples.length ? undefined : "Add a work sample"} aria-expanded={videos && i === samples.length ? adding !== null : undefined} disabled={i > samples.length}
                   className="grid aspect-video w-full place-content-center justify-items-center gap-2 rounded-lg border-2 border-dashed border-line-dashed bg-surface/60 text-ink transition-colors duration-fast hover:border-ink-brand hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-default disabled:hover:border-line-dashed disabled:hover:bg-surface/60">
                   <Camera aria-hidden="true" className={cx("size-7", i === samples.length ? "text-ink" : "text-ink-subtle")} strokeWidth={1.5} />
                   {i === samples.length && <span className="flex items-center gap-1.5 text-body-md"><Plus aria-hidden="true" className="size-4" />Add a work sample</span>}
@@ -495,6 +511,15 @@ export function CanvasSamples({ d, set }: SectionProps) {
         })}
       </ul>
       {problem && <p className="text-body-sm text-danger">{problem}</p>}
+      {videos && adding === "menu" && (
+        <div role="group" aria-label="Add a work sample" className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-surface p-4">
+          <span className="text-label-md text-ink">What would you like to add? <span className="font-normal text-ink-muted">{samples.length} of {MAX_SAMPLES} used</span></span>
+          <Button type="button" variant="secondary" size="md" iconStart={<Camera />} onClick={() => { setAdding(null); choose(null); }}>Photo</Button>
+          <Button type="button" variant="secondary" size="md" iconStart={<Play />} onClick={() => setAdding("link")}>Video link</Button>
+          <Button type="button" variant="ghost" size="md" onClick={() => setAdding(null)}>Cancel</Button>
+        </div>
+      )}
+      {videos && adding === "link" && <VideoLinkForm initial={linkAt === null ? undefined : samples[linkAt]} onSave={saveLink} onCancel={() => { setAdding(null); setLinkAt(null); }} toImage={(f) => resize(f, 800)} />}
       {fitting !== null && samples[fitting] && <FitCropper sample={samples[fitting]} onCancel={() => setFitting(null)} onSave={saveFit} />}
     </section>
   );

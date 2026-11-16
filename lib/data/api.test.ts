@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { blankFields } from "./fields";
 import { createApiSource, sendNow } from "./api";
 
 // The live source's requests: a fresh token per call; only a call made as the page closes uses the last one, with keepalive.
@@ -62,4 +63,19 @@ describe("live authentication session notifications", () => {
       expect(sessionReads).toBe(1);
     });
   }
+});
+
+describe("work samples that live on the server (NEXT_PUBLIC_PROFILE_VIDEO_LINKS=1)", () => {
+  it("are not copied into this browser's extras, and the server's list is never replaced by an old local one", async () => {
+    vi.stubEnv("NEXT_PUBLIC_PROFILE_VIDEO_LINKS", "1");
+    const store = new Map<string, string>();
+    const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), removeItem: (k: string) => void store.delete(k) } as unknown as Storage;
+    const f = { ...blankFields(), name: "Maya", workSamples: ["/media/f0"] };
+    const respond = vi.fn(async () => new Response(JSON.stringify({ result: { personId: "p", fields: { ...f, workSamples: [] }, step: 0, savedAt: "t" } }), { status: 200 }));
+    const src = createApiSource({ fetch: respond as unknown as typeof fetch, storage, baseUrl: "" });
+    const saved = await src.profiles.saveDraft("p", f, 0);
+    expect(store.get("bg2-profile-extras:p") ?? "").not.toContain("/media/f0");
+    expect(saved.fields.workSamples).toEqual([]);
+    vi.unstubAllEnvs();
+  });
 });

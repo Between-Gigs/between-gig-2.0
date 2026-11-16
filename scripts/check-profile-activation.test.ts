@@ -68,6 +68,19 @@ it('requires actual travel preference field/policy capability and environment re
  expect(checkProfileActivation(env,manifest).ok).toBe(true);expect(checkProfileActivation({...env,RAILWAY_ENV:'production'},manifest).ok).toBe(false);expect(checkProfileActivation({...env,NEXT_PUBLIC_PROFILE_TRAVEL_PREFERENCE:'true'},manifest).ok).toBe(false);
 });
 
+it('requires the 1.16.0 API release and the 1.10.0 profiles module before the video-link UI can be built in',()=>{
+ const env={RAILWAY_ENV:'test',NEXT_PUBLIC_PROFILE_VIDEO_LINKS:'1'};expect(checkProfileActivation(env,pending).ok).toBe(false);
+ const entry=(extra:object)=>({requires:'>=1.16.0',profilesModule:'1.10.0',apiCommit:'a'.repeat(40),settingsEvidence:{test:'libfile_fictional_video',production:null},...extra});
+ const manifest=(requires:string,extra:object={})=>JSON.stringify({requires,profileFeatures:{videoLinks:entry(extra)}});
+ expect(checkProfileActivation(env,manifest('>=1.16.0')).ok).toBe(true);
+ expect(checkProfileActivation(env,manifest('>=1.15.0')).ok).toBe(false);
+ expect(checkProfileActivation(env,manifest('>=1.16.0',{requires:'>=1.15.0'})).ok).toBe(true);
+ expect(checkProfileActivation(env,manifest('>=1.16.0',{profilesModule:'1.9.0'})).ok).toBe(false);
+ expect(checkProfileActivation({...env,RAILWAY_ENV:'production'},manifest('>=1.16.0')).ok).toBe(false);
+ expect(checkProfileActivation({...env,NEXT_PUBLIC_PROFILE_VIDEO_LINKS:'true'},manifest('>=1.16.0')).ok).toBe(false);
+ expect(checkProfileActivation({RAILWAY_ENV:'test'},pending).ok).toBe(true);
+});
+
 it('requires the profile details API release, module version and environment receipt before showing the new fields',()=>{
  const env={RAILWAY_ENV:'test',NEXT_PUBLIC_PROFILE_DETAILS:'1'};
  expect(checkProfileActivation(env,pending).ok).toBe(false);

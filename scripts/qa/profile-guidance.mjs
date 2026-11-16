@@ -6,7 +6,9 @@ import { serve } from './serve.mjs';
 const {server,url}=await serve(root+'/out');
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH || '/usr/bin/chromium'});
 fs.mkdirSync(root+'/deliverables/profile-guidance',{recursive:true});
-const guidance='Show customers what you can do! Upload photos or images of past projects that demonstrate your skills and experience. These can be from your work in film and television or projects you’ve completed outside the industry.';
+// Item 36: the sentence names videos only while video links exist (NEXT_PUBLIC_PROFILE_VIDEO_LINKS=1 at build time). Both states are asserted.
+const videos=process.env.NEXT_PUBLIC_PROFILE_VIDEO_LINKS==='1';
+const guidance=`Show customers what you can do! Upload ${videos?'photos, videos, or examples':'photos or images'} of past projects that demonstrate your skills and experience. These can be from your work in film and television or projects you’ve completed outside the industry.`;
 try{
 for(const width of [320,390,768,1440])for(const theme of ['light','dark']){
  const ctx=await browser.newContext({viewport:{width,height:1100},colorScheme:theme,reducedMotion:'reduce'}),external=[];
@@ -18,7 +20,12 @@ for(const width of [320,390,768,1440])for(const theme of ['light','dark']){
  await page.locator('#sec-work').getByText(guidance,{exact:true}).waitFor();
  assert.equal(await page.locator('#sec-work').getByText('Only share work you have permission to display.',{exact:true}).count(),1);
  assert.equal(await page.locator('#sec-work input[type=file]').getAttribute('accept'),'image/*');
- assert.doesNotMatch(await page.locator('#sec-work').innerText(),/YouTube|Vimeo|upload.*video|video links/i);
+ const work=await page.locator('#sec-work').innerText();
+ if(videos){assert.match(work,/Photo/i);await page.locator('#sec-work').getByRole('button',{name:'Add a work sample'}).first().click();await page.locator('#sec-work').getByRole('button',{name:'Video link'}).click();
+  assert.equal(await page.locator('#f-video-url').count(),1);assert.equal(await page.locator('#sec-work input[type=file][accept*=video]').count(),0,'no video upload');
+  await page.locator('#f-video-url').fill('https://youtube.com.evil.com/watch?v=dQw4w9WgXcQ');await page.getByRole('button',{name:'Add video link'}).click();
+  await page.getByText('Only YouTube and Vimeo links can be added.').waitFor();await page.getByRole('button',{name:'Cancel'}).click();}
+ else assert.doesNotMatch(work,/YouTube|Vimeo|upload.*video|video links|Video link/i);
  await page.getByRole('button',{name:/^Ready to submit/}).click();
  await page.getByRole('button',{name:/^Your entertainment industry work/}).waitFor();
  await page.getByRole('button',{name:/^How customers benefit from your experience/}).waitFor();
@@ -34,7 +41,7 @@ for(const width of [320,390,768,1440])for(const theme of ['light','dark']){
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'page overflow');
  assert.equal(external.length,0,'external network attempts');
  await page.locator('#sec-work').screenshot({path:root+`/deliverables/profile-guidance/LOCAL-NOT-LIVE-showcase-${width}-${theme}.png`});
- console.log(`PASS ${width}/${theme}: image-only guidance/permission, unchanged image input, industry readiness/errors/reviewer label, error focus, no overflow, zero external requests`);
+ console.log(`PASS ${width}/${theme}: ${videos?'video-link':'image-only'} guidance/permission, unchanged image input, industry readiness/errors/reviewer label, error focus, no overflow, zero external requests`);
  await ctx.close();
 }
 }finally{await browser.close();server.close();}

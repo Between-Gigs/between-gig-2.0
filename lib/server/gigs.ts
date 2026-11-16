@@ -18,7 +18,9 @@ import type {
 import { blankFields } from "@/lib/data/fields";
 import { onSetSkills, waitlistCategories } from "@/lib/data/taxonomy";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { CompanyOsError, and, eq, type AdminUser, type BatchOp, type CompanyOs, type Credential, type Row } from "./companyos";
+import { videoLinksEnabled } from "@/lib/profile/video-links";
+import { SAMPLE_KINDS, sampleRefusalMessage, samplesFrom, saveSamples, serialised } from "./work-samples";
+import { CompanyOsError, and, eq, isIn, type AdminUser, type BatchOp, type CompanyOs, type Credential, type Row } from "./companyos";
 
 export interface Ctx {
   cos: CompanyOs;
@@ -55,6 +57,8 @@ interface World {
   profileByPerson: Map<string, Row>;
   itemsByProfile: Map<string, Row[]>;
   photoByProfile: Map<string, Row>;
+  /** Portfolio and thumbnail files (the video-links flag only). */
+  sampleFilesByProfile: Map<string, Row[]>;
   reviewsByProfile: Map<string, Row[]>;
   submissionByPerson: Map<string, Row>;
   users: Map<string, AdminUser>;
@@ -65,9 +69,10 @@ async function loadWorld(ctx: Ctx, persons: Row[], { owner }: { owner: boolean }
   const ids = persons.map((p) => p.id);
   const profiles = ids.length ? await cos.byIds(cred, "profile", "person", ids) : [];
   const profileIds = profiles.map((p) => p.id);
-  const [items, files, reviews, submissions, users] = await Promise.all([
+  const [items, files, sampleFiles, reviews, submissions, users] = await Promise.all([
     profileIds.length ? cos.byIds(cred, "profile_item", "profile", profileIds) : [],
     profileIds.length ? cos.byIds(cred, "file", "owner_id", profileIds, and(eq("kind", "photo"), eq("status", "ready"))) : [],
+    videoLinksEnabled() && profileIds.length ? cos.byIds(cred, "file", "owner_id", profileIds, and(isIn("kind", SAMPLE_KINDS), eq("status", "ready"))) : [],
     profileIds.length ? cos.byIds(cred, "profile_review", "profile", profileIds) : [],
     owner && ids.length ? cos.byIds(cred, "form_submission", "person", ids, eq("form_key", "call_sheet")) : [],
     owner ? cos.adminUsers(cred) : [],
@@ -77,6 +82,7 @@ async function loadWorld(ctx: Ctx, persons: Row[], { owner }: { owner: boolean }
     profileByPerson: new Map(profiles.map((p) => [str(p.data.person), p])),
     itemsByProfile: groupBy(items, (i) => str(i.data.profile)),
     photoByProfile: new Map(files.map((f) => [str(f.data.owner_id), f])),
+    sampleFilesByProfile: groupBy(sampleFiles, (f) => str(f.data.owner_id)),
     reviewsByProfile: groupBy(reviews, (r) => str(r.data.profile)),
     submissionByPerson: new Map(submissions.map((s) => [str(s.data.person), s])),
     users: new Map(users.map((u) => [u.userId, u])),
@@ -84,11 +90,12 @@ async function loadWorld(ctx: Ctx, persons: Row[], { owner }: { owner: boolean }
 }
 
 const itemsOf = (rows: Row[] | undefined): ProfileItem[] =>
-  (rows ?? []).map((r) => ({ kind: r.data.kind as ProfileItem["kind"], value: str(r.data.value), position: Number(r.data.position ?? 0), ...(r.data.visible === false ? { visible: false } : {}) }));
+  (rows ?? []).filter((r) => r.data.kind !== "video_link").map((r) => ({ kind: r.data.kind as ProfileItem["kind"], value: str(r.data.value), position: Number(r.data.position ?? 0), ...(r.data.visible === false ? { visible: false } : {}) }));
 
 function fieldsOf(w: World, profile: Row): ProfileFields {
   const photo = w.photoByProfile.get(profile.id);
-  return fromProfile(profile.data, itemsOf(w.itemsByProfile.get(profile.id)), photo ? mediaUrl(photo.id) : "");
+  return fromProfile(profile.data, itemsOf(w.itemsByProfile.get(profile.id)), photo ? mediaUrl(photo.id) : "",
+    videoLinksEnabled() ? samplesFrom(w.itemsByProfile.get(profile.id) ?? [], w.sampleFilesByProfile.get(profile.id) ?? []) : undefined);
 }
 
 /** 2.0's status: the profile's, else whether the invited person's login has signed in (gap analysis §13.5). */
@@ -258,14 +265,17 @@ export async function getPerson(ctx: Ctx, id: string): Promise<PersonSummary | n
 /** What the public page reads, with public_reader: only approved profiles resolve (its row policy), never contact details. */
 async function publicProfiles(ctx: Ctx, profiles: Row[]) {
   const ids = profiles.map((p) => p.id);
-  const [items, files] = ids.length
-    ? await Promise.all([ctx.cos.byIds(ctx.cred, "profile_item", "profile", ids), ctx.cos.byIds(ctx.cred, "file", "owner_id", ids, eq("kind", "photo"))])
-    : [[], []];
+  const [items, files, sampleFiles] = ids.length
+    ? await Promise.all([ctx.cos.byIds(ctx.cred, "profile_item", "profile", ids), ctx.cos.byIds(ctx.cred, "file", "owner_id", ids, eq("kind", "photo")),
+      videoLinksEnabled() ? ctx.cos.byIds(ctx.cred, "file", "owner_id", ids, isIn("kind", SAMPLE_KINDS)) : []])
+    : [[], [], []];
+  const sampleFilesBy = groupBy(sampleFiles, (f) => str(f.data.owner_id));
   const itemsBy = groupBy(items, (i) => str(i.data.profile));
   const photoBy = new Map(files.map((f) => [str(f.data.owner_id), f]));
   return profiles.map((p) => {
     const photo = photoBy.get(p.id);
-    const fields = withoutPrivateDetails(fromProfile(p.data, itemsOf(itemsBy.get(p.id)), photo ? mediaUrl(photo.id) : ""));
+    const fields = withoutPrivateDetails(fromProfile(p.data, itemsOf(itemsBy.get(p.id)), photo ? mediaUrl(photo.id) : "",
+      videoLinksEnabled() ? samplesFrom(itemsBy.get(p.id) ?? [], sampleFilesBy.get(p.id) ?? []) : undefined));
     fields.other = ""; // Private review text never belongs in a public response, even on upstream over-return.
     // Private even if an upstream policy unexpectedly returns the field.
     delete fields.insuranceNotes;
@@ -297,15 +307,17 @@ export async function similar(ctx: Ctx, id: string, limit = 3) {
 
 async function ownProfile(ctx: Ctx, personId: string) {
   const [profile] = await ctx.cos.query(ctx.cred, { entity: "profile", filter: eq("person", personId), limit: 1 });
-  if (!profile) return { profile: undefined, items: [] as Row[], photo: undefined as Row | undefined };
-  const [items, files] = await Promise.all([
+  if (!profile) return { profile: undefined, items: [] as Row[], photo: undefined as Row | undefined, sampleFiles: [] as Row[] };
+  const [items, files, sampleFiles] = await Promise.all([
     ctx.cos.all(ctx.cred, { entity: "profile_item", filter: eq("profile", profile.id) }),
     ctx.cos.query(ctx.cred, { entity: "file", filter: and(eq("owner_id", profile.id), eq("kind", "photo"), eq("status", "ready")), limit: 1 }),
+    videoLinksEnabled() ? ctx.cos.all(ctx.cred, { entity: "file", filter: and(eq("owner_id", profile.id), isIn("kind", SAMPLE_KINDS), eq("status", "ready")) }) : [],
   ]);
-  return { profile, items, photo: files[0] };
+  return { profile, items, photo: files[0], sampleFiles };
 }
 
-const fieldsFrom = (p: { profile?: Row; items: Row[]; photo?: Row }) => fromProfile(p.profile!.data, itemsOf(p.items), p.photo ? mediaUrl(p.photo.id) : "");
+const fieldsFrom = (p: { profile?: Row; items: Row[]; photo?: Row; sampleFiles?: Row[] }) =>
+  fromProfile(p.profile!.data, itemsOf(p.items), p.photo ? mediaUrl(p.photo.id) : "", videoLinksEnabled() ? samplesFrom(p.items, p.sampleFiles ?? []) : undefined);
 
 /** Derive metadata only from the authenticated API row, never a field supplied by a client. */
 function profileCreation(row: Row): string | undefined {
@@ -382,7 +394,8 @@ export function draftOps(personId: string, fields: ProfileFields, existing: { pr
   // Credits are matched by text; skills, services and areas by key. One stored item per wanted item.
   // Historical raw labels that equal a catalog label display identically to its key.
   // Match both by that display identity, preserving the original row/value instead of recreating it.
-  const pool = groupBy([...existing.items].sort((a,b)=>Number(a.data.position??0)-Number(b.data.position??0)), (r) => keyOf(
+  // Video links are work samples, kept by saveSamples (lib/server/work-samples.ts), never by this diff.
+  const pool = groupBy([...existing.items].filter((r) => r.data.kind !== "video_link").sort((a,b)=>Number(a.data.position??0)-Number(b.data.position??0)), (r) => keyOf(
     r.data.kind === "skill" && onSetSkills.includes(str(r.data.value))
       ? {...r.data,value:optionKey(str(r.data.value))} : r.data));
   for (const want of items) {
@@ -398,7 +411,10 @@ export function draftOps(personId: string, fields: ProfileFields, existing: { pr
   return ops;
 }
 
-export async function saveDraft(ctx: Ctx, personId: string, input: ProfileFields): Promise<ProfileDraft> {
+/** One save at a time per person, so two overlapping autosaves can't race each other into the work-sample limit. */
+export const saveDraft = (ctx: Ctx, personId: string, input: ProfileFields): Promise<ProfileDraft> => serialised(personId, () => saveDraftNow(ctx, personId, input));
+
+async function saveDraftNow(ctx: Ctx, personId: string, input: ProfileFields): Promise<ProfileDraft> {
   // Names make the public handle (at most 60 characters, getPublic), so they're capped as the editor caps them.
   const fields = typeof input?.name === "string" && input.name.length > 60 ? { ...input, name: input.name.trim().replace(/\s+/g, " ").slice(0, 60).trim() } : input;
   const own = await ownProfile(ctx, personId);
@@ -429,6 +445,17 @@ export async function saveDraft(ctx: Ctx, personId: string, input: ProfileFields
     if (marketing === undefined || !(e instanceof CompanyOsError) || e.code !== "contact_suppressed") throw e;
     suppressed = true;
     await send(undefined);
+  }
+  // Work samples (flag on): photos as files and video links as items, after the profile exists.
+  if (videoLinksEnabled() && Array.isArray(fields.workSamples)) {
+    const mid = own.profile ? own : await ownProfile(ctx, personId);
+    if (mid.profile) {
+      try { await saveSamples(ctx, mid.profile.id, fields.workSamples, mid.items, mid.sampleFiles); } catch (e) {
+        // A refusal about the samples has its own words; anything else must still never look like a save.
+        if (e instanceof CompanyOsError && sampleRefusalMessage(e.code)) throw e;
+        throw new CompanyOsError(422, "work_samples_not_saved", "Your work samples weren't saved. Try again.");
+      }
+    }
   }
   // Removing the photo deletes it, on a draft only: a submitted or live profile needs one, so it's replaced by uploading.
   if (!fields.photo && own.photo && own.profile?.data.status === "draft") await ctx.cos.remove(ctx.cred, "file", own.photo.id);

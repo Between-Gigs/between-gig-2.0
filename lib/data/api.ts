@@ -5,6 +5,7 @@
  * instead, N-10), no invite lookup (Clerk's invitation ticket, N-05). Emails are sent by Company OS, so the outbox is empty.
  */
 import { basePath } from "@/lib/site";
+import { videoLinksEnabled } from "@/lib/profile/video-links";
 import type { DataSource } from "./source";
 import type { Profile, ProfileDraft, ProfileFields } from "./types";
 
@@ -14,6 +15,8 @@ import type { Profile, ProfileDraft, ProfileFields } from "./types";
  * stay in this browser beside the builder's step, so a Gigster's own editor and preview keep them across reloads. They
  * don't reach the team or the public page on live: those need the backend fields.
  */
+/** With video links on, work samples live in Company OS (photos as files, links as items), not in this browser. */
+const localOnly = () => (videoLinksEnabled() ? LOCAL_ONLY_FIELDS.filter((k) => k !== "workSamples") : LOCAL_ONLY_FIELDS);
 export const LOCAL_ONLY_FIELDS = ["serviceLines", "personalityQuestion", "personality", "title", "workSamples", "resumeUrl", "bookingMinimum", "earliestStart", "bookingMobile", "hireableJobs", "contactChannels", "bookingContactConsent", "marketingEmailConsent", "marketingConsentBaseline"] as const satisfies readonly (keyof ProfileFields)[];
 
 /** A refusal from the server: Company OS's status and code (e.g. 422 profile_incomplete), with its English fallback. */
@@ -75,18 +78,18 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
   const readExtras = (personId: string): Partial<ProfileFields> => {
     try {
       const raw = JSON.parse(storage.getItem(extrasKey(personId)) ?? "{}") as Record<string, unknown>;
-      return Object.fromEntries(LOCAL_ONLY_FIELDS.filter((k) => raw[k] !== undefined).map((k) => [k, raw[k]])) as Partial<ProfileFields>;
+      return Object.fromEntries(localOnly().filter((k) => raw[k] !== undefined).map((k) => [k, raw[k]])) as Partial<ProfileFields>;
     } catch { return {}; }
   };
   const keepExtras = (personId: string, f: ProfileFields) => {
-    try { storage.setItem(extrasKey(personId), JSON.stringify(Object.fromEntries(LOCAL_ONLY_FIELDS.map((k) => [k, f[k]])))); } catch { /* storage blocked */ }
+    try { storage.setItem(extrasKey(personId), JSON.stringify(Object.fromEntries(localOnly().map((k) => [k, f[k]])))); } catch { /* storage blocked */ }
   };
   // The server's answer, with this browser's answers for the fields it doesn't store (a server value wins once it has one).
   const withExtras = <T extends { personId: string; fields: ProfileFields } | null>(d: T): T => {
     if (!d) return d;
     const local = readExtras(d.personId);
     const fields = { ...d.fields };
-    for (const k of LOCAL_ONLY_FIELDS) if (fields[k] === undefined && local[k] !== undefined) (fields as Record<string, unknown>)[k] = local[k];
+    for (const k of localOnly()) if (fields[k] === undefined && local[k] !== undefined) (fields as Record<string, unknown>)[k] = local[k];
     return { ...d, fields };
   };
   const withStep = (d: ProfileDraft | null) => (d ? { ...withExtras(d), step: Number(storage.getItem(stepKey(d.personId)) ?? 0) || 0 } : d);
