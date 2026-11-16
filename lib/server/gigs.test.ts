@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toProfile } from "@/lib/data/companyos/fields";
+import { fromProfile, toProfile } from "@/lib/data/companyos/fields";
 import { completeFields } from "@/lib/data/contract/fixtures";
 import type { Row } from "./companyos";
 import { draftOps } from "./gigs";

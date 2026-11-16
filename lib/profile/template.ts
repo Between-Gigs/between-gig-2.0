@@ -57,12 +57,13 @@ export function parseProfileTemplate(raw: string): ProfileTemplate | null {
       Array.isArray(v) && v.length <= allowed.length && (!all || v.length === allowed.length) &&
       v.every((k) => typeof k === "string" && allowed.includes(k)) && new Set(v).size === v.length;
     if (!valid(x.required, fields, false) || !valid(x.order, defaultProfileTemplate.order, true) || !valid(x.sections, defaultProfileTemplate.sections, true)) return null;
-    return { required: fields.filter((k) => x.required.includes(k)), order: x.order, sections: x.sections };
+    // Transport is retired from the current editor; accept old settings without resetting other choices.
+    return { required: fields.filter((k) => k !== "transport" && x.required.includes(k)), order: x.order, sections: x.sections };
   } catch { return null; }
 }
 
 export function encodeProfileTemplate(template: ProfileTemplate) {
-  return JSON.stringify({ version: 1, required: fields.filter((k) => template.required.includes(k)), order: template.order, sections: template.sections });
+  return JSON.stringify({ version: 1, required: fields.filter((k) => k !== "transport" && template.required.includes(k)), order: template.order, sections: template.sections });
 }
 
 export function readProfileTemplate(): ProfileTemplate {
