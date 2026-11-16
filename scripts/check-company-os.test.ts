@@ -41,3 +41,15 @@ describe("feature API release coordination",()=>{
     expect(checkRequirement(JSON.stringify({requires:">=2.7.0",profileFeatures:{customServiceReview:feature}}),{customServiceReview:true}).ok).toBe(true);
   });
 });
+
+describe("the shipped company-os.json", () => {
+  const shipped = JSON.parse(readFileSync(new URL("../company-os.json", import.meta.url), "utf8")) as { requires: string; profileFeatures: Record<string, { requires: string | null }> };
+  const atLeast = (range: string, floor: number[]) => { const v = range.slice(2).split(".").map(Number); return v[0] > floor[0] || (v[0] === floor[0] && (v[1] > floor[1] || (v[1] === floor[1] && v[2] >= floor[2]))); };
+  it("needs API 1.16.0 overall: this release ships insurance notes, free-text postal codes and service counting that need it", () => {
+    expect(atLeast(shipped.requires, [1, 16, 0])).toBe(true);
+  });
+  it("declares the publish gate at API 1.16.0 or later", () => {
+    expect(shipped.profileFeatures.publishGate.requires).not.toBeNull();
+    expect(atLeast(shipped.profileFeatures.publishGate.requires as string, [1, 16, 0])).toBe(true);
+  });
+});

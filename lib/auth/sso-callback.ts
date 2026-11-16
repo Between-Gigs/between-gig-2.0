@@ -69,7 +69,10 @@ export function runLoginCallback(clerk: CallbackClerk, h: { onOutcome: (o: Callb
   const stop = () => { done = true; clearInterval(poll); clearTimeout(cap); };
   const check = async (timedOut: boolean) => {
     const out = await resolveLoginCallback(clerk, { timedOut });
-    if (done || out.kind === "idle") return;
+    if (out.kind === "idle") return;
+    // The transfer's own setActive signs the person in, which re-renders the page and runs the effect's cleanup (stop())
+    // before this answer arrives: a redirect must still happen then. Anything else is dropped once stopped.
+    if (done && out.kind !== "redirect") return;
     stop();
     h.onOutcome(out);
   };

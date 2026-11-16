@@ -79,3 +79,38 @@ describe("work samples that live on the server (NEXT_PUBLIC_PROFILE_VIDEO_LINKS=
     vi.unstubAllEnvs();
   });
 });
+
+describe("this browser's own copy of the answers (localStorage)", () => {
+  const withEnv = async (name: string, value: string, run: () => Promise<void>) => {
+    const before = process.env[name]; process.env[name] = value;
+    try { await run(); } finally { if (before === undefined) delete process.env[name]; else process.env[name] = before; }
+  };
+  const store = () => { const m = new Map<string, string>(); return { m, storage: { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v) } }; };
+  const private_ = { contactChannels: ["sms" as const], bookingContactConsent: true, marketingEmailConsent: true, marketingConsentBaseline: false, bookingMobile: "+1 555 010 0199" };
+
+  it("with profile details on, private contact answers and consents are never kept in the browser", async () => {
+    await withEnv("NEXT_PUBLIC_PROFILE_DETAILS", "1", async () => {
+      const { m, storage } = store();
+      const api = createApiSource({ storage, fetch: (async () => Response.json({ result: { personId: "p", fields: blankFields(), profileCreatedAt: null, savedAt: "", step: 0 } })) as typeof fetch });
+      await api.profiles.saveDraft("p", { ...blankFields(), ...private_, title: "Camera operator" }, 1);
+      const kept = JSON.parse(m.get("bg2-profile-extras:p") ?? "{}");
+      for (const k of Object.keys(private_)) expect(kept, k).not.toHaveProperty(k);
+      expect(kept.title).toBe("Camera operator");
+    });
+  });
+  it("and an older copy already in the browser is not read back into the draft", async () => {
+    await withEnv("NEXT_PUBLIC_PROFILE_DETAILS", "1", async () => {
+      const { storage } = store();
+      storage.setItem("bg2-profile-extras:p", JSON.stringify({ ...private_, title: "Old" }));
+      const api = createApiSource({ storage, fetch: (async () => Response.json({ result: { personId: "p", fields: blankFields(), profileCreatedAt: null, savedAt: "", step: 0 } })) as typeof fetch });
+      const d = await api.profiles.getDraft("p");
+      for (const k of Object.keys(private_)) expect(d!.fields, k).not.toHaveProperty(k);
+    });
+  });
+  it("with profile details off the browser keeps them as before", async () => {
+    const { m, storage } = store();
+    const api = createApiSource({ storage, fetch: (async () => Response.json({ result: { personId: "p", fields: blankFields(), profileCreatedAt: null, savedAt: "", step: 0 } })) as typeof fetch });
+    await api.profiles.saveDraft("p", { ...blankFields(), ...private_ }, 1);
+    expect(JSON.parse(m.get("bg2-profile-extras:p") ?? "{}")).toHaveProperty("bookingContactConsent", true);
+  });
+});

@@ -5,6 +5,7 @@
  * instead, N-10), no invite lookup (Clerk's invitation ticket, N-05). Emails are sent by Company OS, so the outbox is empty.
  */
 import { basePath } from "@/lib/site";
+import { profileDetailsEnabled } from "@/lib/profile/details";
 import { videoLinksEnabled } from "@/lib/profile/video-links";
 import type { DataSource } from "./source";
 import type { Profile, ProfileDraft, ProfileFields } from "./types";
@@ -16,7 +17,9 @@ import type { Profile, ProfileDraft, ProfileFields } from "./types";
  * don't reach the team or the public page on live: those need the backend fields.
  */
 /** With video links on, work samples live in Company OS (photos as files, links as items), not in this browser. */
-const localOnly = () => (videoLinksEnabled() ? LOCAL_ONLY_FIELDS.filter((k) => k !== "workSamples") : LOCAL_ONLY_FIELDS);
+const DETAIL_ANSWERS: readonly string[] = ["contactChannels", "bookingContactConsent", "marketingEmailConsent", "marketingConsentBaseline", "bookingMobile"];
+/** With profile details on, the private contact answers and consents live in Company OS, never in this browser's storage. */
+const localOnly = () => LOCAL_ONLY_FIELDS.filter((k) => !(k === "workSamples" && videoLinksEnabled()) && !(profileDetailsEnabled() && DETAIL_ANSWERS.includes(k)));
 export const LOCAL_ONLY_FIELDS = ["serviceLines", "personalityQuestion", "personality", "title", "workSamples", "resumeUrl", "bookingMinimum", "earliestStart", "bookingMobile", "hireableJobs", "contactChannels", "bookingContactConsent", "marketingEmailConsent", "marketingConsentBaseline"] as const satisfies readonly (keyof ProfileFields)[];
 
 /** A refusal from the server: Company OS's status and code (e.g. 422 profile_incomplete), with its English fallback. */

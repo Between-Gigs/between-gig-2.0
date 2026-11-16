@@ -8,7 +8,9 @@
  */
 import { APPROVED_EDIT_HINT, APPROVED_NOT_PUBLIC, APPROVED_NOT_PUBLIC_LINE, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
 import { departmentFieldRetired } from "@/lib/profile/department-retirement";
-import { SAMPLE_ERROR_CODES, adoptStored, videoLinksEnabled } from "@/lib/profile/video-links";
+import { adoptStored, videoLinksEnabled } from "@/lib/profile/video-links";
+import { profileDetailsEnabled } from "@/lib/profile/details";
+import { adoptSavedMarketing, saveErrorMessage, saveThenSubmit, urgentFields } from "@/lib/profile/save-flow";
 import { Button, Skeleton, useToast } from "@ds/components";
 import { cx } from "@ds/components/cx";
 import { ArrowLeft, ArrowRight, ChevronDown, Eye, FileText, MessageSquareWarning, Save, Send } from "lucide-react";
@@ -128,9 +130,10 @@ function Editor({ personId }: { personId: string }) {
     setSentVersion(sent?.fields ?? null);
   }, [personId]);
 
-  const flush = React.useCallback(async () => {
+  /** Saves what changed; true when nothing was left to save or the save worked, false when it failed (the error stays shown). */
+  const flush = React.useCallback(async (): Promise<boolean> => {
     const fields = latest.current;
-    if (!fields || !dirty.current) return;
+    if (!fields || !dirty.current) return true;
     dirty.current = false;
     const keys = [...touched.current];
     touched.current.clear();
@@ -147,13 +150,17 @@ function Editor({ personId }: { personId: string }) {
       // Work samples live in Company OS (video links on): take its list (photos become /media links), unless they changed meanwhile.
       const stored_ = saved.fields.workSamples;
       if (videoLinksEnabled() && stored_ && !theirs) setD((cur) => (cur ? { ...cur, workSamples: adoptStored(merged.workSamples ?? [], stored_, cur.workSamples ?? []) } : cur));
+      // The marketing choice lives in Company OS: take the stored choice as the new baseline (unless the box was changed meanwhile).
+      if (profileDetailsEnabled()) setD((cur) => (cur ? adoptSavedMarketing(cur, saved.fields, touched.current.has("marketingEmailConsent")) : cur));
       setSave(dirty.current ? { status: "saving" } : { status: "saved", at: saved.savedAt });
       void refresh();
+      return true;
     } catch (e) {
       dirty.current = true;
       keys.forEach((k) => touched.current.add(k));
-      const code = (e as { code?: unknown } | null)?.code;
-      setSave(videoLinksEnabled() && typeof code === "string" && SAMPLE_ERROR_CODES.has(code) && e instanceof Error ? { status: "error", message: e.message } : { status: "error" });
+      const message = saveErrorMessage(e, { samples: videoLinksEnabled() });
+      setSave(message ? { status: "error", message } : { status: "error" });
+      return false;
     }
   }, [personId, refresh]);
 
@@ -170,7 +177,7 @@ function Editor({ personId }: { personId: string }) {
       if (!fields || !dirty.current) return;
       dirty.current = false;
       touched.current.clear();
-      sendNow(() => { void data.profiles.saveDraft(personId, fields, step.current).then((saved) => { known.current = saved.savedAt; }).catch(() => { dirty.current = true; }); });
+      sendNow(() => { void data.profiles.saveDraft(personId, urgentFields(fields), step.current).then((saved) => { known.current = saved.savedAt; }).catch(() => { dirty.current = true; }); });
     };
     const hidden = () => { if (document.visibilityState === "hidden") now(); };
     window.addEventListener("pagehide", now);
@@ -242,9 +249,14 @@ function Editor({ personId }: { personId: string }) {
     }
     setSubmitting(true);
     dirty.current = true;
-    await flush();
     try {
-      await data.profiles.submit(personId);
+      // Nothing is sent when the save before it failed: the save error stays on screen.
+      const result = await saveThenSubmit(flush, async () => { await data.profiles.submit(personId); });
+      if (result === "not-saved") {
+        toast({ message: "Your latest changes didn't save, so nothing was sent. Fix what the save message says, then try again.", tone: "danger" });
+        setSubmitting(false);
+        return;
+      }
       router.push("/profile/submitted/");
     } catch (e) {
       const message = e instanceof DataError && e.code === "profile_incomplete" ? "Some answers are still missing. Check each section, then try again." : "We couldn't send your profile. Try again.";

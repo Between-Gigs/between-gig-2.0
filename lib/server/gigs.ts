@@ -267,8 +267,8 @@ export async function getPerson(ctx: Ctx, id: string): Promise<PersonSummary | n
 async function publicProfiles(ctx: Ctx, profiles: Row[]) {
   const ids = profiles.map((p) => p.id);
   const [items, files, sampleFiles] = ids.length
-    ? await Promise.all([ctx.cos.byIds(ctx.cred, "profile_item", "profile", ids), ctx.cos.byIds(ctx.cred, "file", "owner_id", ids, eq("kind", "photo")),
-      videoLinksEnabled() ? ctx.cos.byIds(ctx.cred, "file", "owner_id", ids, isIn("kind", SAMPLE_KINDS)) : []])
+    ? await Promise.all([ctx.cos.byIds(ctx.cred, "profile_item", "profile", ids), ctx.cos.byIds(ctx.cred, "file", "owner_id", ids, and(eq("kind", "photo"), eq("status", "ready"))),
+      videoLinksEnabled() ? ctx.cos.byIds(ctx.cred, "file", "owner_id", ids, and(isIn("kind", SAMPLE_KINDS), eq("status", "ready"))) : []])
     : [[], [], []];
   const sampleFilesBy = groupBy(sampleFiles, (f) => str(f.data.owner_id));
   const itemsBy = groupBy(items, (i) => str(i.data.profile));
@@ -728,7 +728,7 @@ async function decide(ctx: Ctx, personId: string, status: "approved" | "changes_
   const profile = await profileOf(ctx, personId);
   // Only a submitted profile is decided on. Company OS would take a review of an approved profile as a note.
   if (profile.data.status !== "submitted") throw new CompanyOsError(422, "invalid_status_transition", "only a submitted profile can be reviewed");
-  if (status === "approved" && str(profile.data.services_other).trim() && (process.env.CUSTOM_SERVICE_REVIEW_ENABLED === "1" || process.env.NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW === "1")) {
+  if (status === "approved" && str(profile.data.services_other).trim() && (process.env.CUSTOM_SERVICE_REVIEW_ENABLED === "1" || process.env.NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW === "1")) { // approved-ok: the decision being made, not a visibility check
     if (process.env.CUSTOM_SERVICE_REVIEW_ENABLED !== "1") throw new CompanyOsError(503, "custom_service_review_unavailable");
     const items = await ctx.cos.all(ctx.cred, { entity: "profile_item", filter: and(eq("profile", profile.id), eq("kind", "service")) });
     if (!items.some((item) => item.data.kind === "service" && item.data.visible !== false)) throw new CompanyOsError(422, "profile_incomplete", "Add a listed service before approving a private custom-service request.");

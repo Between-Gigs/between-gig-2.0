@@ -83,7 +83,7 @@ describe("m4: a failed sample step is shown, not 'saved'", () => {
     expect(renderToStaticMarkup(React.createElement(SaveIndicator, { state: { status: "error" }, onRetry: () => undefined }))).toContain("Not saved.");
   });
   it("the editor keeps the server's message for a sample failure", () => {
-    expect(fs.readFileSync("components/gigster/editor/GigsterEditor.tsx", "utf8")).toMatch(/status: "error", message:/);
+    expect(fs.readFileSync("components/gigster/editor/GigsterEditor.tsx", "utf8")).toMatch(/saveErrorMessage\(e, \{ samples: videoLinksEnabled\(\) \}\)[\s\S]*status: "error", message/);
   });
 });
 
