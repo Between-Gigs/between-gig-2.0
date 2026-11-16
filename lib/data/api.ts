@@ -19,6 +19,9 @@ import type { Profile, ProfileDraft, ProfileFields } from "./types";
 /** With video links on, work samples live in Company OS (photos as files, links as items), not in this browser. */
 const DETAIL_ANSWERS: readonly string[] = ["contactChannels", "bookingContactConsent", "marketingEmailConsent", "marketingConsentBaseline", "bookingMobile"];
 /** With profile details on, the private contact answers and consents live in Company OS, never in this browser's storage. */
+/** Answers an older build kept only in this browser and the server now stores: still read once (until the server has a value), never written again. */
+const ADOPTABLE = ["workSamples", "bookingMobile"] as const;
+const adoptable = () => ADOPTABLE.filter((k) => (k === "workSamples" ? videoLinksEnabled() : profileDetailsEnabled()));
 const localOnly = () => LOCAL_ONLY_FIELDS.filter((k) => !(k === "workSamples" && videoLinksEnabled()) && !(profileDetailsEnabled() && DETAIL_ANSWERS.includes(k)));
 export const LOCAL_ONLY_FIELDS = ["serviceLines", "personalityQuestion", "personality", "title", "workSamples", "resumeUrl", "bookingMinimum", "earliestStart", "bookingMobile", "hireableJobs", "contactChannels", "bookingContactConsent", "marketingEmailConsent", "marketingConsentBaseline"] as const satisfies readonly (keyof ProfileFields)[];
 
@@ -81,18 +84,22 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
   const readExtras = (personId: string): Partial<ProfileFields> => {
     try {
       const raw = JSON.parse(storage.getItem(extrasKey(personId)) ?? "{}") as Record<string, unknown>;
-      return Object.fromEntries(localOnly().filter((k) => raw[k] !== undefined).map((k) => [k, raw[k]])) as Partial<ProfileFields>;
+      return Object.fromEntries([...localOnly(), ...adoptable()].filter((k) => raw[k] !== undefined).map((k) => [k, raw[k]])) as Partial<ProfileFields>;
     } catch { return {}; }
   };
-  const keepExtras = (personId: string, f: ProfileFields) => {
-    try { storage.setItem(extrasKey(personId), JSON.stringify(Object.fromEntries(localOnly().map((k) => [k, f[k]])))); } catch { /* storage blocked */ }
+  // `settled` false: the save is still in flight, so the older browser-only answers stay until the server has them.
+  const keepExtras = (personId: string, f: ProfileFields, settled = true) => {
+    try {
+      const held = settled ? {} : Object.fromEntries(Object.entries(readExtras(personId)).filter(([k]) => (adoptable() as readonly string[]).includes(k)));
+      storage.setItem(extrasKey(personId), JSON.stringify({ ...held, ...Object.fromEntries(localOnly().map((k) => [k, f[k]])) }));
+    } catch { /* storage blocked */ }
   };
   // The server's answer, with this browser's answers for the fields it doesn't store (a server value wins once it has one).
   const withExtras = <T extends { personId: string; fields: ProfileFields } | null>(d: T): T => {
     if (!d) return d;
     const local = readExtras(d.personId);
     const fields = { ...d.fields };
-    for (const k of localOnly()) if (fields[k] === undefined && local[k] !== undefined) (fields as Record<string, unknown>)[k] = local[k];
+    for (const k of [...localOnly(), ...adoptable()]) if (fields[k] === undefined && local[k] !== undefined) (fields as Record<string, unknown>)[k] = local[k];
     return { ...d, fields };
   };
   const withStep = (d: ProfileDraft | null) => (d ? { ...withExtras(d), step: Number(storage.getItem(stepKey(d.personId)) ?? 0) || 0 } : d);
@@ -146,8 +153,10 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
       getDraft: async (personId) => withStep(await call<ProfileDraft | null>("profiles.getDraft", [personId])),
       async saveDraft(personId, fields: ProfileFields, step) {
         try { storage.setItem(stepKey(personId), String(step)); } catch { /* storage blocked: the builder starts at step 1 */ }
+        keepExtras(personId, fields, false);
+        const saved = await inOrder(personId, () => call<ProfileDraft>("profiles.saveDraft", [personId, fields]));
         keepExtras(personId, fields);
-        return withStep(await inOrder(personId, () => call<ProfileDraft>("profiles.saveDraft", [personId, fields])))!;
+        return withStep(saved)!;
       },
       submit: (personId) => call("profiles.submit", [personId]),
       getProfile: async (personId) => withExtras(await call<Profile | null>("profiles.getProfile", [personId])),

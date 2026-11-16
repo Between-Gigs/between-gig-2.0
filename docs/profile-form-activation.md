@@ -38,6 +38,10 @@ Retain optional-position metadata for existing blank Department values. Revertin
 
 Before any deeper downgrade, perform a bounded authorized read-only inventory of affected pending/approved profiles and historical fields, establish a reviewed drain/compatibility plan and retain supported server protections. Do not clear custom requests, change visibility, assign catalog services, delete/migrate media or reset a database. Existing approval also publishes eligible profiles; separate approve/publish permissions are not implemented here. The visible-service check is an approval-transition guard, not an invariant against later visibility-only edits.
 
+## Rollback once video links or profile details have been on
+
+Once `PROFILE_VIDEO_LINKS` (or `PROFILE_DETAILS`) has been on, roll back by deploying the **same 1.4.x tag with the flag off** (set the variable to `0` and re-run the deploy), never by deploying 1.3.0. The 1.3.0 editor's save writes its own work-sample list and so deletes the stored `video_link` items, and it ignores `public_details` (rates, LinkedIn), which the next save would then leave stale or lose. With the flag off, 1.4.x stops showing the new fields but does not send the older shape over the stored data. Answers that an older build kept only in the browser (mobile number, work samples) are read once into the draft and cleared by the next save, so a flag-on window loses nothing.
+
 ## Scope and preserved state
 
 The reviewed pair7d8a76a/49e67bf remains untouched. Activation work is isolated; no live settings, flags, records, releases or email were changed. Existing source-publication denial, tag403 and hosted-isolation gates remain. Potentially unpushed original-worker work is unrecovered. Full receipt, tests and private recovery bundles accompany the local handoff.
