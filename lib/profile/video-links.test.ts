@@ -36,7 +36,7 @@ describe("parseVideoUrl refuses hostile and wrong links, with a reason", () => {
     if (!r.ok) expect(r.error.length).toBeGreaterThan(10);
   });
   it("names the problem in plain words", () => {
-    expect(parseVideoUrl("").ok === false && parseVideoUrl("").error).toMatch(/Paste a YouTube or Vimeo link/);
+    expect(parseVideoUrl("")).toMatchObject({ ok: false, error: expect.stringMatching(/Paste a YouTube or Vimeo link/) });
     expect(parseVideoUrl("https://example.com/x")).toMatchObject({ ok: false, error: expect.stringMatching(/Only YouTube and Vimeo/) });
     expect(parseVideoUrl("http://youtu.be/dQw4w9WgXcQ")).toMatchObject({ ok: false, error: expect.stringMatching(/https:\/\//) });
   });

@@ -9,7 +9,7 @@
  * same: only the presentation changes.
  */
 import { Accordion, Button, cx } from "@ds/components";
-import { FittedImg } from "@/components/profile/FittedImg";
+import { WorkTile } from "@/components/profile/WorkTile";
 import { BadgeCheck, BriefcaseBusiness, Heart, Info, Languages, Share } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -211,11 +211,9 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
     work: portfolio.length > 0 && (
       <Block id="work" title="Work samples">
         <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          {portfolio.slice(0, 5).map((it, i) => (
+          {portfolio.slice(0, 5).map((it) => (
             <li key={it.src} className="min-w-0">
-              <button type="button" onClick={() => onPhoto(i)} aria-label={`Open image: ${it.caption}`} className="group relative block aspect-4/3 w-full overflow-hidden rounded-lg bg-surface-sunken">
-                <FittedImg sample={it.src} loading="lazy" imgClassName="transition duration-base group-hover:scale-105" />
-              </button>
+              <WorkTile it={it} onPhoto={onPhoto} buttonClassName="group relative block aspect-4/3 w-full overflow-hidden rounded-lg bg-surface-sunken" imgClassName="transition duration-base group-hover:scale-105" />
             </li>
           ))}
         </ul>

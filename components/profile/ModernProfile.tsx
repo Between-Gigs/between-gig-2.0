@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
-import { parseSample } from "@/lib/profile/work-fit";
+import { WorkTile } from "@/components/profile/WorkTile";
+import { workMeta } from "@/lib/profile/video-links";
 import Link from "next/link";
 import { Accordion, Button } from "@ds/components";
 import { ArrowRight, BadgeCheck, BriefcaseBusiness, Camera, Clapperboard, ClipboardList,
@@ -12,7 +13,6 @@ import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/d
 import { craftIcon } from "@/lib/icons3d";
 import type { ProfileSectionId } from "@/lib/profile/template";
 import { startDateLabel } from "@/lib/profile/stage-two";
-import { asset } from "@/lib/site";
 import type { ProfileLayoutProps } from "./ProfileView";
 import { PublicBookingDetails } from "./PublicBookingDetails";
 
@@ -64,10 +64,8 @@ export function ModernProfile({ person, fields: f, mode, embedded, draft, part, 
         {editing && f.other && <p className="text-ink-muted">Something else, in private review: {f.other}</p>}
       </div>, "The services you'd offer clients between gigs", "block"),
     work: portfolio.length > 0 && <><ul className="modern-work">{portfolio.slice(0, 4).map((item, i) => (
-      <li key={item.src}><button type="button" onClick={() => onPhoto(i)} aria-label={`Open image: ${item.caption}`}>
-        <img src={asset(parseSample(item.src).src)} alt="" loading="lazy" /><small>{String(i + 1).padStart(2, "0")}</small>
-      </button></li>))}</ul>
-      <div className="mt-3 flex flex-wrap items-center gap-3"><Button size="sm" variant="secondary" onClick={() => onPhoto(0)}>Show all {portfolio.length} photos</Button>
+      <li key={item.src}><WorkTile it={item} onPhoto={onPhoto} buttonClassName="relative block w-full overflow-hidden"><small>{String(i + 1).padStart(2, "0")}</small></WorkTile></li>))}</ul>
+      <div className="mt-3 flex flex-wrap items-center gap-3">{portfolio.some((it) => !it.video) && <Button size="sm" variant="secondary" onClick={() => onPhoto(0)}>Show all {portfolio.filter((it) => !it.video).length} photos</Button>}
         {sample && <p className="text-body-sm text-ink-muted">Concept images showing the kind of work to discuss, not completed client projects.</p>}</div></>,
     credits: (show || credits.length > 0 || f.skills.length > 0 || (mode === "owner" && !!f.imdb)) && <div className="grid gap-3">
       {P("skills", !!f.skills.length, <div className="flex flex-wrap gap-2">{f.skills.map(s => <span className="modern-label" key={s}>{s}</span>)}</div>, "Your on-set skills", "block")}
@@ -133,7 +131,7 @@ export function ModernProfile({ person, fields: f, mode, embedded, draft, part, 
       {!aside && <div className="modern-mobile-status">{availability}</div>}
       {present.map(key => <section id={`${ids}-${key}`} data-profile-section={key} key={key} className="modern-content">
         <header><h2>{sectionTitles[key]}</h2>{key === "services" && offered.length > 0 && <small>{offered.length} offered</small>}
-          {key === "work" && <small>{portfolio.length} photos</small>}</header>{body[key]}
+          {key === "work" && <small>{workMeta(portfolio)}</small>}</header>{body[key]}
       </section>)}
       {sample && !editing && <p className="mt-6 text-body-sm text-ink-muted">This is a fictional sample profile: the person, biography and credits are made up for the preview.</p>}
     </div>
