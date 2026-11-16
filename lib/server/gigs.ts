@@ -8,6 +8,7 @@ import { craftOf } from "@/lib/profile/department";
 import { customServiceError } from "@/lib/profile/custom-service";
 import { completeness } from "@/lib/profile/validate";
 import { fromProfile, toProfile, optionKey, type ProfileItem } from "@/lib/data/companyos/fields";
+import { marketingChange, privateDetails, profileDetailsEnabled, withoutPrivateDetails } from "@/lib/profile/details";
 import { personStatuses, inviteStatuses } from "@/lib/data/types";
 import type {
   ActivityEvent, ActivityKind, DashboardSummary, FunnelCounts, InviteStatus, PeopleQuery, Person, PersonSource, PersonStatus, PersonSummary, Profile,
@@ -265,7 +266,7 @@ async function publicProfiles(ctx: Ctx, profiles: Row[]) {
   const photoBy = new Map(files.map((f) => [str(f.data.owner_id), f]));
   return profiles.map((p) => {
     const photo = photoBy.get(p.id);
-    const fields = fromProfile(p.data, itemsOf(itemsBy.get(p.id)), photo ? mediaUrl(photo.id) : "");
+    const fields = withoutPrivateDetails(fromProfile(p.data, itemsOf(itemsBy.get(p.id)), photo ? mediaUrl(photo.id) : ""));
     fields.other = ""; // Private review text never belongs in a public response, even on upstream over-return.
     // Private even if an upstream policy unexpectedly returns the field.
     delete fields.insuranceNotes;
@@ -313,14 +314,29 @@ function profileCreation(row: Row): string | undefined {
   return value && Number.isFinite(Date.parse(value)) ? new Date(value).toISOString() : undefined;
 }
 
+const EMAIL_PREFERENCE_RETRY = "Couldn't save your email preference. Try again.";
+
+/** The person's own email-marketing choice (Company OS GET /comms/email-preference), or null when it can't be read (comms not installed, no person). */
+async function emailPreference(ctx: Ctx): Promise<{ enabled: boolean; configured: boolean; suppressed?: boolean } | null> {
+  if (ctx.cred.kind !== "session") return null;
+  try { return await ctx.cos.call<{ enabled: boolean; configured: boolean; suppressed?: boolean }>(ctx.cred, "GET", "/comms/email-preference"); } catch { return null; }
+}
+
+/** With profile details on, the editor's marketing checkbox shows the stored choice, and remembers it as the baseline. */
+async function withMarketing(ctx: Ctx, fields: ProfileFields): Promise<ProfileFields> {
+  if (!profileDetailsEnabled()) return fields;
+  const pref = await emailPreference(ctx);
+  return pref ? { ...fields, marketingEmailConsent: pref.enabled, marketingConsentBaseline: pref.enabled, ...(pref.suppressed ? { marketingSuppressed: true } : {}) } : fields;
+}
+
 /** The draft is the profile itself (N-09: one record). The builder's step stays in the browser (lib/data/api.ts). */
 export async function getDraft(ctx: Ctx, personId: string): Promise<ProfileDraft | null> {
   const own = await ownProfile(ctx, personId);
-  if (own.profile) return { personId, profileCreatedAt: profileCreation(own.profile), fields: fieldsFrom(own), step: 0, savedAt: iso(own.profile.updatedAt) };
+  if (own.profile) return { personId, profileCreatedAt: profileCreation(own.profile), fields: await withMarketing(ctx, fieldsFrom(own)), step: 0, savedAt: iso(own.profile.updatedAt) };
   const [person] = await ctx.cos.query(ctx.cred, { entity: "person", filter: eq("id", personId), limit: 1 });
   if (!person) return null;
   const name = str(person.data.name);
-  return { personId, profileCreatedAt: null, fields: blankFields(name === str(person.data.email) ? "" : name), step: 0, savedAt: "" };
+  return { personId, profileCreatedAt: null, fields: await withMarketing(ctx, blankFields(name === str(person.data.email) ? "" : name)), step: 0, savedAt: "" };
 }
 
 const keyOf = (i: { kind?: unknown; value?: unknown }) => `${String(i.kind)}\u0000${String(i.value)}`;
@@ -329,11 +345,14 @@ const keyOf = (i: { kind?: unknown; value?: unknown }) => `${String(i.kind)}\u00
 /** Company OS has the editor's tenant fields (title, service lines, personality): set once the recipe is applied. */
 const profileExtras = () => process.env.COMPANY_OS_PROFILE_EXTRAS === "1";
 
-export function draftOps(personId: string, fields: ProfileFields, existing: { profile?: Row; items: Row[] }, extras = profileExtras()): BatchOp[] {
-  const { data, items } = toProfile(fields, { extras });
+export function draftOps(personId: string, fields: ProfileFields, existing: { profile?: Row; items: Row[] }, extras = profileExtras(), opts: { details?: boolean; marketing?: boolean } = {}): BatchOp[] {
+  // Profile details (1.10.0) only with the flag; `marketing` is the person's changed email choice (details.marketingChange).
+  const details = opts.details ?? profileDetailsEnabled();
+  const { data, items } = toProfile(fields, { extras, details });
+  const priv = details ? privateDetails(fields, opts.marketing) : undefined;
   if (!existing.profile) {
     return [
-      { op: "create", entity: "profile", data: { ...data, person: personId } },
+      { op: "create", entity: "profile", data: { ...data, ...(priv ? { private_details: priv } : {}), person: personId } },
       ...items.map((i) => ({ op: "create" as const, entity: "profile_item", data: { ...i, profile: { $ref: 0 } } })),
     ];
   }
@@ -341,7 +360,7 @@ export function draftOps(personId: string, fields: ProfileFields, existing: { pr
   const old = existing.profile.data;
   // Compared with the stored profile as 2.0 reads it: a value 2.0 shows as its nearest (work mode "remote" as on site)
   // goes back only if the person changed that answer, so no stored value is lost and no edit is made by accident.
-  const shown = toProfile(fromProfile(old, itemsOf(existing.items), fields.photo), { extras }).data;
+  const shown = toProfile(fromProfile(old, itemsOf(existing.items), fields.photo), { extras, details }).data;
   const changed: Record<string, unknown> = {};
   // An empty object (no service lines) is as unset as an empty string.
   const blank = (v: unknown) => v == null || v === "" || (typeof v === "object" && !Array.isArray(v) && !Object.keys(v as object).length);
@@ -349,6 +368,14 @@ export function draftOps(personId: string, fields: ProfileFields, existing: { pr
     const unset = blank(old[k]);
     if (unset && blank(v)) continue;
     if (JSON.stringify(old[k] ?? "") !== JSON.stringify(v) && (unset || JSON.stringify(shown[k] ?? "") !== JSON.stringify(v))) changed[k] = v;
+  }
+  if (priv) {
+    // Compared on what the person sets: the server's consent time is not a difference, and the marketing choice is an action.
+    const was = (old.private_details ?? {}) as Record<string, unknown>;
+    // A number still being typed is not sent (the module would refuse it): what is stored stays.
+    if (priv.phone === undefined && typeof was.phone === "string") priv.phone = was.phone;
+    const same = (was.phone ?? "") === (priv.phone ?? "") && JSON.stringify(was.phone_channels ?? []) === JSON.stringify(priv.phone_channels) && (was.booking_consent === true) === (priv.booking_consent === true);
+    if (!same || priv.marketing_consent !== undefined) changed.private_details = priv;
   }
   // A cleared number or month isn't in toProfile's output: clear it.
   for (const k of ["years_experience", "availability_month"]) if (!(k in data) && old[k] != null && old[k] !== "") changed[k] = null;
@@ -381,15 +408,36 @@ export async function saveDraft(ctx: Ctx, personId: string, input: ProfileFields
     const [person] = await ctx.cos.query(ctx.cred, { entity: "person", filter: eq("id", personId), limit: 1 });
     if (!person) throw new CompanyOsError(404, "not found");
   }
-  const ops = draftOps(personId, fields, own);
-  for (let i = 0; i < ops.length; i += 200) {
-    // The first batch creates the profile when there is none; later chunks only touch items (rare: over 200 changes).
-    await ctx.cos.batch(ctx.cred, ops.slice(i, i + 200));
+  // The marketing choice goes only when the person changed the checkbox and the server still holds what the editor loaded.
+  let marketing: boolean | undefined;
+  let marketingNotice = "";
+  if (profileDetailsEnabled() && typeof fields.marketingEmailConsent === "boolean" && fields.marketingEmailConsent !== (fields.marketingConsentBaseline === true)) {
+    const pref = await emailPreference(ctx);
+    // A suppressed address is never sent a marketing choice; an unreadable preference keeps the change pending for the next save.
+    if (pref && !pref.suppressed) marketing = marketingChange(fields, pref.enabled);
+    if (!pref) marketingNotice = EMAIL_PREFERENCE_RETRY;
+  }
+  let suppressed = false;
+  const send = async (m: boolean | undefined) => {
+    const ops = draftOps(personId, fields, own, undefined, { marketing: m });
+    for (let i = 0; i < ops.length; i += 200) {
+      // The first batch creates the profile when there is none; later chunks only touch items (rare: over 200 changes).
+      await ctx.cos.batch(ctx.cred, ops.slice(i, i + 200));
+    }
+  };
+  try { await send(marketing); } catch (e) {
+    // Company OS refused the marketing choice for a suppressed contact: save everything else without it.
+    if (marketing === undefined || !(e instanceof CompanyOsError) || e.code !== "contact_suppressed") throw e;
+    suppressed = true;
+    await send(undefined);
   }
   // Removing the photo deletes it, on a draft only: a submitted or live profile needs one, so it's replaced by uploading.
   if (!fields.photo && own.photo && own.profile?.data.status === "draft") await ctx.cos.remove(ctx.cred, "file", own.photo.id);
   const after = await ownProfile(ctx, personId);
-  return { personId, profileCreatedAt: after.profile ? profileCreation(after.profile) : null, fields: after.profile ? fieldsFrom(after) : fields, step: 0, savedAt: after.profile ? iso(after.profile.updatedAt) : nowIso() };
+  let saved = after.profile ? await withMarketing(ctx, fieldsFrom(after)) : fields;
+  if (suppressed) saved = { ...saved, marketingSuppressed: true };
+  if (marketingNotice) saved = { ...saved, marketingEmailConsent: fields.marketingEmailConsent, marketingConsentBaseline: fields.marketingConsentBaseline, marketingNotice };
+  return { personId, profileCreatedAt: after.profile ? profileCreation(after.profile) : null, fields: saved, step: 0, savedAt: after.profile ? iso(after.profile.updatedAt) : nowIso() };
 }
 
 export async function submit(ctx: Ctx, personId: string) {

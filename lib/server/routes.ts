@@ -13,6 +13,7 @@ import type { PeopleQuery, ProfileFields, ReviewNoteInput, SketchKind, WaitlistQ
 import { randomBytes } from "node:crypto";
 import { blankFields } from "@/lib/data/fields";
 import { INSURANCE_NOTES_MAX } from "@/lib/profile/insurance";
+import { cleanDetails } from "@/lib/profile/details";
 import { CompanyOsError, companyOs, configFromEnv, type CompanyOs, type Credential } from "./companyos";
 import * as gigs from "./gigs";
 import { diagnosticRequest } from "./diagnostic";
@@ -51,6 +52,7 @@ export function cleanFields(v: unknown): ProfileFields {
     }
     out.insuranceNotes = input.insuranceNotes;
   }
+  try { Object.assign(out, cleanDetails(input)); } catch (e) { throw new CompanyOsError(422, "invalid_private_details", e instanceof Error ? e.message : undefined); }
   if (Array.isArray(input.creditPins)) out.creditPins = input.creditPins.slice(0, 50).map((e) => e !== false);
   return out as unknown as ProfileFields;
 }

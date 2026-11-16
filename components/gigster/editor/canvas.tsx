@@ -29,6 +29,8 @@ import { PhotoPicker } from "@/components/profile/PhotoPicker";
 import { FittedImg } from "@/components/profile/FittedImg";
 import { withFit, type Fit } from "@/lib/profile/work-fit";
 import { FitCropper } from "./FitCropper";
+import { ContactChoices, LinkedInField, RateOptionFields } from "./DetailFields";
+import { profileDetailsEnabled } from "@/lib/profile/details";
 import { DateField } from "@/components/ui/DateField";
 import { GroupError, Pills, type SectionProps } from "./ui";
 import { takeHome } from "./sections";
@@ -323,6 +325,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
 /** Rates and availability, in the narrow column beside How I can help. */
 export function CanvasRates({ d, set, errors, required }: SectionProps & { required: (field: string) => boolean }) {
   const priced = hasRate(d.rate);
+  const detailsOn = profileDetailsEnabled();
   const basis = d.basis === "day" ? "day" : d.basis;
   const [datesOpen, openDates] = useOpen(!!(d.dates || errors.dates));
   const [startOpen, openStart] = useOpen(!!(d.earliestStart || errors.earliestStart));
@@ -330,10 +333,11 @@ export function CanvasRates({ d, set, errors, required }: SectionProps & { requi
   return (
     <section id="sec-rates" aria-labelledby="sec-rates-h" className="grid min-w-0 scroll-mt-40 content-start gap-4">
       <H id="sec-rates-h">Rates</H>
+      {detailsOn ? <RateOptionFields d={d} set={set} errors={errors} /> : (
       <RadioGroup name="f-basis" label="How you charge" value={basis} onChange={(v) => set("basis")(v as typeof d.basis)}
-        options={[{ value: "hourly", label: "Hourly" }, { value: "project", label: "By Project" }, ...(d.basis === "day" ? [{ value: "day", label: "Day rate" }] : [])]} />
+        options={[{ value: "hourly", label: "Hourly" }, { value: "project", label: "By Project" }, ...(d.basis === "day" ? [{ value: "day", label: "Day rate" }] : [])]} />)}
       <p className="text-body-sm text-ink-muted">Materials and travel can be agreed to separately as needed.</p>
-      <div className="grid gap-1.5">
+      {!detailsOn && <div className="grid gap-1.5">
         <label htmlFor="f-rate" className="sr-only">{basis === "hourly" ? "Amount per hour" : basis === "day" ? "Amount per day" : "Starting price per project"}{required("rate") ? "" : " (optional)"}</label>
         <Input id="f-rate" inputMode="numeric" value={d.rate} placeholder="Amount" invalid={!!errors.rate} start={<span className="text-label-md">$</span>} end={<span className="text-label-sm text-ink-subtle">USD</span>}
           onChange={(e) => set("rate")(e.target.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 4))} />
@@ -342,7 +346,7 @@ export function CanvasRates({ d, set, errors, required }: SectionProps & { requi
           {priced ? <>You&apos;d receive <b className="font-semibold text-ink">{takeHome(d.rate)}</b> {basis === "hourly" ? "an hour" : basis === "day" ? "a day" : "for a project at this price"} after the 10% Between Gigs fee.</>
             : "Leave it empty to show “Rate on request”."}
         </p>
-      </div>
+      </div>}
       <div className="grid gap-1.5">
         <label htmlFor="f-minimum" className="sr-only">Minimum booking (optional)</label>
         <Input id="f-minimum" maxLength={stageTwoLimits.bookingMinimum} value={d.bookingMinimum ?? ""} placeholder="Minimum booking, if any" invalid={!!errors.bookingMinimum}
@@ -533,7 +537,7 @@ export function CanvasExperience({ d, set, errors, required }: SectionProps & { 
 
 /** The remaining ruled columns: Credits and the personality question. */
 export function CanvasColumns({ d, set, errors, required }: SectionProps & { required: (field: string) => boolean }) {
-  const [credOpen, openCred] = useOpen(!!(d.credits.some((c) => c.trim()) || d.imdb || d.resumeUrl || errors.credits || errors.imdb));
+  const [credOpen, openCred] = useOpen(!!(d.credits.some((c) => c.trim()) || d.imdb || d.resumeUrl || d.linkedin || errors.credits || errors.imdb || errors.linkedin));
   const [qOpen, openQ] = useOpen(!!(d.personalityQuestion || d.personality || errors.personality || errors.personalityQuestion));
   const question = personalityQuestions.find((q) => q.id === d.personalityQuestion)?.text;
   const col = "grid min-w-0 scroll-mt-40 content-start gap-4";
@@ -548,6 +552,7 @@ export function CanvasColumns({ d, set, errors, required }: SectionProps & { req
             <Field label="IMDb profile link" optional={!required("imdb")} error={errors.imdb}>
               <Input id="f-imdb" type="url" inputMode="url" value={d.imdb} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} />
             </Field>
+            {profileDetailsEnabled() && <LinkedInField d={d} set={set} errors={errors} />}
             <Field label="Résumé link" optional hint="A website, Google Drive or Dropbox link. Clients see “View résumé”.">
               <Input id="f-resume" type="url" inputMode="url" value={d.resumeUrl ?? ""} placeholder="https://" onChange={(e) => set("resumeUrl")(e.target.value.trim().slice(0, 300))} />
             </Field>
@@ -610,7 +615,7 @@ export function CanvasDetails({ d, set }: SectionProps) {
             <Checkbox id="f-mode-business" label="At my office, studio or other place of business." checked={atBusiness} disabled={atBusiness && !atClient}
               onChange={(e) => chooseLocations(atClient, e.target.checked)} />
           </fieldset>
-          <Field label="Tools and equipment" optional><Textarea id="f-tools" rows={4} value={d.tools} placeholder="Special Cameras, Lighting Kit, Box Truck, Makeup kit, etc." maxLength={160} onChange={(e) => set("tools")(e.target.value)} /></Field>
+          <Field label="Tools and equipment" optional hint="One item per line, five or fewer works best."><Textarea id="f-tools" rows={5} value={d.tools} placeholder="Special Cameras, Lighting Kit, Box Truck, Makeup kit, etc." maxLength={160} onChange={(e) => set("tools")(e.target.value)} /></Field>
           <RadioGroup name="f-insurance" label={<>Insurance <span className="font-normal text-ink-subtle">· optional, self-reported</span></>} value={d.insurance} onChange={(v) => set("insurance")(v as typeof d.insurance)}
             options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance yet" }]} />
           {d.insurance === "yes" && <Field label="Describe your liability insurance" optional hint="For the Between Gigs team. Not shown on your public profile.">
@@ -624,7 +629,8 @@ export function CanvasDetails({ d, set }: SectionProps) {
 
 /** The private booking contact: one strip, never on the public profile. */
 export function CanvasContact({ d, set, errors, email }: SectionProps & { email: string }) {
-  const [open, setOpen] = React.useState(!!(d.bookingMobile || errors.bookingMobile));
+  const detailsOn = profileDetailsEnabled();
+  const [open, setOpen] = React.useState(detailsOn || !!(d.bookingMobile || errors.bookingMobile));
   return (
     <section id="sec-contact" aria-labelledby="sec-contact-h" className="grid scroll-mt-40 gap-4">
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
@@ -644,6 +650,7 @@ export function CanvasContact({ d, set, errors, email }: SectionProps & { email:
             <p className="text-label-md text-ink">Email</p>
             <p className="flex min-h-10 items-center break-all text-body-md text-ink-muted">{email || "Your account email"}</p>
           </div>
+          {detailsOn && <div className="sm:col-span-2"><ContactChoices d={d} set={set} /></div>}
         </div>
       )}
     </section>

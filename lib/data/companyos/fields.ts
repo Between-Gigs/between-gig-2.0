@@ -4,6 +4,7 @@
  * taxonomy labels by `optionKey`; `fromProfile` reads them back. Mapping table: Company OS docs/customers/between-gigs/gap-analysis.md §13.4.
  */
 import { laServiceAreas, offSetServices, onSetSkills } from "../taxonomy.ts";
+import { publicDetails, readPrivateDetails, readPublicDetails } from "../../profile/details.ts";
 import type { InsuranceAnswer, MonthStatus, ProfileFields, RateBasis, WorkMode } from "../types.ts";
 
 /** A taxonomy label as the recipe's option key: "Wardrobe & costume" → "wardrobe_costume". */
@@ -37,7 +38,7 @@ function extrasOf(f: ProfileFields): Record<string, unknown> {
 }
 
 /** The profile's data (without `person`, `status` or the photo) and its items, in 2.0's order. */
-export function toProfile(f: ProfileFields, opts: { extras?: boolean } = {}): { data: Record<string, unknown>; items: ProfileItem[] } {
+export function toProfile(f: ProfileFields, opts: { extras?: boolean; details?: boolean } = {}): { data: Record<string, unknown>; items: ProfileItem[] } {
   const years = f.years.trim() === "" ? NaN : Number(f.years);
   const data: Record<string, unknown> = {
     display_name: f.name.trim(),
@@ -65,6 +66,18 @@ export function toProfile(f: ProfileFields, opts: { extras?: boolean } = {}): { 
     services_other: f.other.trim(),
     ...(opts.extras ? extrasOf(f) : {}),
   };
+  if (opts.details) {
+    // Profile details (1.10.0). Private details are written by the save (lib/server/gigs.ts), never with these.
+    data.public_details = publicDetails(f) ?? {};
+    if (f.rateOptions) {
+      // The older rate fields follow the new answer, so cards and browse keep showing a price.
+      const hourly = data.public_details && (data.public_details as Record<string, unknown>).hourly_amount;
+      const project = (data.public_details as Record<string, unknown>).minimum_project_price;
+      if (hourly !== undefined) { data.rate_text = String(hourly); data.rate_basis = "hourly"; }
+      else if (project !== undefined) { data.rate_text = String(project); data.rate_basis = "project"; }
+      else data.rate_text = "";
+    }
+  }
   const credits = f.credits
     .map((value, i) => ({ value: value.trim(), visible: f.creditPins?.[i] !== false }))
     .filter((c) => c.value)
@@ -122,6 +135,8 @@ export function fromProfile(data: Record<string, unknown>, items: ProfileItem[],
     transport: text(data.transport),
     mode: invert(mode)[text(data.work_mode)] ?? "on-site",
     ...extrasFrom(data),
+    ...readPublicDetails(data.public_details),
+    ...readPrivateDetails(data.private_details),
   };
 }
 

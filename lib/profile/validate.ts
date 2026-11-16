@@ -1,6 +1,7 @@
 import { locationControlsEnabled } from "./location-controls";
 import { customServiceError, customServiceReviewEnabled } from "./custom-service";
 import { departmentFieldRetired } from "./department-retirement";
+import { detailsErrors, profileDetailsEnabled } from "./details";
 import { postalCodeError, validPostalCode } from "./postal";
 import type { ProfileFields, ProfileSection, ReviewNote } from "@/lib/data/types";
 import { stageTwoLimits, startDateLabel } from "./stage-two";
@@ -147,6 +148,11 @@ export function validateGigster(d: ProfileFields, template = readProfileTemplate
     if (error) e.services = error;
   }
   if (!e.serviceLines && d.services.some((s) => !d.serviceLines?.[s]?.trim())) e.serviceLines = "Add one line about what you'll do for each service.";
+  if (profileDetailsEnabled()) {
+    // The rate is the details' own: hourly and/or project, so the older single-rate answer is not asked for again.
+    delete e.rate; delete e.basis;
+    Object.assign(e, detailsErrors(d));
+  }
   if (d.personality?.trim() && !d.personalityQuestion) e.personalityQuestion = "Choose the question you're answering.";
   // The editor asks about entertainment industry experience, not an "About me".
   if (e.about === missingAnswer.about) e.about = "Tell clients how your entertainment industry experience helps you deliver this service.";
@@ -158,6 +164,7 @@ export const gigsterFieldLabel: Partial<Record<keyof ProfileFields, string>> = {
   photo: "Profile photo", name: "Your name", services: "How I can help", serviceLines: "What you'll do", dates: "When you're usually free",
   monthStatus: "This month", areas: "Where you work", zip: "ZIP code", otherCity: "Where you work", position: "Your entertainment industry work",
   skills: "On-set skills", years: "Years in the Entertainment Industry", about: "How can customers benefit from your entertainment industry experience?", credits: "Credits", imdb: "IMDb link",
+  rateOptions: "How you charge", hourlyRate: "Hourly amount", minimumHours: "Minimum number of hours", projectMinimum: "Minimum project price", linkedin: "LinkedIn link",
 };
 
 /** The editor's checklist: what's needed to submit, and what can come later. Each item names the fields it covers. */
@@ -169,9 +176,9 @@ export const gigsterItems = [
   { id: "where", label: "Where you work", fields: ["zip", "areas", "otherCity", "market", "travel"] },
   { id: "film", label: "Your entertainment industry work", fields: ["position", "skills", "years"] },
   { id: "experience", label: "How customers benefit from your experience", fields: ["about"] },
-  { id: "credits", label: "A credit", fields: ["credits", "imdb"] },
+  { id: "credits", label: "A credit", fields: ["credits", "imdb", "linkedin"] },
   { id: "title", label: "A professional title", fields: ["title"] },
-  { id: "rate", label: "Your rate and minimum", fields: ["rate", "basis", "bookingMinimum"] },
+  { id: "rate", label: "Your rate and minimum", fields: ["rate", "basis", "bookingMinimum", "rateOptions", "hourlyRate", "minimumHours", "projectMinimum"] },
   { id: "personality", label: "A personality question", fields: ["personality", "personalityQuestion"] },
   { id: "contact", label: "Private booking contact", fields: ["bookingMobile"] },
 ] as const satisfies readonly { id: string; label: string; fields: readonly (keyof ProfileFields)[] }[];
