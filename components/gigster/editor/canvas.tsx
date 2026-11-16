@@ -167,16 +167,38 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
   };
   // Order: drag the grip, or focus it and use the arrow keys. The first service leads the profile.
   const items = React.useRef<(HTMLLIElement | null)[]>([]);
+  const list = React.useRef<HTMLOListElement | null>(null);
+  const activePointer = React.useRef<{ id: number; service: string; capture: HTMLOListElement } | null>(null);
   const [dragging, setDragging] = React.useState<number | null>(null);
   const [said, setSaid] = React.useState("");
   const swap = (i: number, j: number) => { const next = [...rows]; [next[i], next[j]] = [next[j], next[i]]; set("services")(next); };
-  const drag = (e: React.PointerEvent) => {
-    if (dragging === null) return;
-    const up = items.current[dragging - 1]?.getBoundingClientRect(), down = items.current[dragging + 1]?.getBoundingClientRect();
-    if (up && e.clientY < up.top + up.height / 2) { swap(dragging, dragging - 1); setDragging(dragging - 1); }
-    else if (down && e.clientY > down.top + down.height / 2) { swap(dragging, dragging + 1); setDragging(dragging + 1); }
+  const finish = (pointerId: number, stopped = false) => {
+    const active = activePointer.current;
+    if (!active || active.id !== pointerId) return;
+    activePointer.current = null;
+    // Clear ownership before releasing capture: the browser may synchronously report its loss.
+    try { if (active.capture.hasPointerCapture(pointerId)) active.capture.releasePointerCapture(pointerId); } catch { /* Already released by the browser. */ }
+    const position = rows.indexOf(active.service);
+    setSaid(!stopped && position >= 0 ? `Moved to position ${position + 1} of ${rows.length}.` : "Reordering stopped.");
+    setDragging(null);
   };
-  const drop = () => { if (dragging !== null) setSaid(`Moved to position ${dragging + 1} of ${rows.length}.`); setDragging(null); };
+  const start = (e: React.PointerEvent, i: number) => {
+    const capture = list.current, service = rows[i];
+    if (!e.isPrimary || e.button !== 0 || activePointer.current || !capture || !service) return;
+    // The list stays mounted while its rows move; a moved row can lose pointer capture.
+    try { capture.setPointerCapture(e.pointerId); } catch { return; }
+    activePointer.current = { id: e.pointerId, service, capture };
+    setDragging(i);
+  };
+  const drag = (e: React.PointerEvent) => {
+    const active = activePointer.current;
+    if (!active || active.id !== e.pointerId) return;
+    const i = rows.indexOf(active.service);
+    if (i < 0 || (e.pointerType === "mouse" && !(e.buttons & 1))) { finish(e.pointerId, true); return; }
+    const up = items.current[i - 1]?.getBoundingClientRect(), down = items.current[i + 1]?.getBoundingClientRect();
+    if (up && e.clientY < up.top + up.height / 2) { swap(i, i - 1); setDragging(i - 1); }
+    else if (down && e.clientY > down.top + down.height / 2) { swap(i, i + 1); setDragging(i + 1); }
+  };
   const key = (e: React.KeyboardEvent, i: number) => {
     const j = e.key === "ArrowUp" ? i - 1 : e.key === "ArrowDown" ? i + 1 : -1;
     if (j < 0 || j >= rows.length) return;
@@ -191,7 +213,8 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
         <H id="sec-help-h">How I can help</H>
         <p id="services-hint" className="max-w-xl text-body-md text-ink-muted">The most important part of your profile. Choose a service, then say in one line what a customer can hire you to do. One clear service is enough to start. Five is the maximum.{rows.length > 1 && " Drag the grip to put your main service first."}</p>
       </div>
-      <ol className="grid gap-5">
+      <ol ref={list} className="grid gap-5" onPointerMove={drag}
+        onPointerUp={(e) => finish(e.pointerId)} onPointerCancel={(e) => finish(e.pointerId, true)} onLostPointerCapture={(e) => finish(e.pointerId, true)}>
         {rows.map((s, i) => {
           const standard = serviceDescription(s);
           const line = lines[s] ?? "";
@@ -206,8 +229,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
                       title="Drag to reorder, or use the arrow keys"
                       className={cx("grid size-10 shrink-0 touch-none place-items-center rounded-md text-ink-subtle transition-colors hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-ink-brand",
                         dragging === i ? "cursor-grabbing text-ink-brand" : "cursor-grab")}
-                      onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDragging(i); }}
-                      onPointerMove={drag} onPointerUp={drop} onPointerCancel={drop} onKeyDown={(e) => key(e, i)}>
+                      onPointerDown={(e) => start(e, i)} onKeyDown={(e) => key(e, i)}>
                       <GripVertical aria-hidden="true" className="size-5" />
                     </button>
                   )}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toProfile } from "@/lib/data/companyos/fields";
+import { fromProfile, toProfile } from "@/lib/data/companyos/fields";
 import { completeFields } from "@/lib/data/contract/fixtures";
 import type { Row } from "./companyos";
 import { draftOps } from "./gigs";
@@ -87,4 +87,24 @@ it("multiline equipment stays a tools-only autosave with unchanged legacy transp
   expect(ops[0]).toMatchObject({ op: "update", entity: "profile", id: "prof", data: { tools } });
   expect(ops[0].data).not.toHaveProperty("transport");
   expect(ops[0].data).not.toHaveProperty("photo");
+});
+
+
+it("reorders service item positions without rewriting descriptions, private fields or service identities", () => {
+  const services = ["Interior Styling", "Event Styling", "Photography & Portraits"];
+  const serviceLines = Object.fromEntries(services.map((name, i) => [name, `Fictional service ${i + 1}`]));
+  const start = { ...fields, services, serviceLines };
+  const raw = toProfile(start, { extras: true });
+  const old = { profile: { id: "prof", data: { ...raw.data, person: PERSON, insurance_notes: "Private fictional note" }, createdAt: "", updatedAt: "" },
+    items: raw.items.map((data, i) => ({ id: `item-${i}`, data: { ...data, profile: "prof" }, createdAt: "", updatedAt: "" })) };
+  const ordered = [services[1], services[2], services[0]];
+  const ops = draftOps(PERSON, { ...start, services: ordered }, old, true);
+  expect(ops).toHaveLength(3);
+  for (const op of ops) {
+    expect(op).toMatchObject({ op: "update", entity: "profile_item" });
+    expect(Object.keys(op.data ?? {})).toEqual(["position"]);
+  }
+  const items = old.items.map(row => { const op = ops.find(op => "id" in op && op.id === row.id); return { ...row.data, ...(op && "data" in op ? op.data : {}) }; });
+  expect(fromProfile(old.profile.data, items as Parameters<typeof fromProfile>[1], start.photo)).toMatchObject({ services: ordered, serviceLines });
+  expect(old.profile.data.insurance_notes).toBe("Private fictional note");
 });
