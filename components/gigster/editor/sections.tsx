@@ -217,7 +217,7 @@ export function RatesSection({ d, set, errors, required }: SectionProps & { requ
 
       <EditorSection id="sec-availability" title="Availability" size="h2" need={required("dates")}
         lead="Clients see when you're usually free. Exact dates are agreed with each client.">
-        <RadioGroup name="f-monthStatus" label={`This month${d.month ? ` · ${d.month}` : ""}`} value={d.monthStatus} onChange={(v) => set("monthStatus")(v as typeof d.monthStatus)}
+        <RadioGroup name="f-monthStatus" label="Availability" value={d.monthStatus} onChange={(v) => set("monthStatus")(v as typeof d.monthStatus)}
           options={Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label: value === "available" ? "Available for work" : label }))} />
         <Field label="General availability" optional={!required("dates")} error={errors.dates}>
           <Input id="f-dates" maxLength={DATES_MAX} value={d.dates} placeholder="e.g. Weekday mornings" onChange={(e) => set("dates")(e.target.value.slice(0, DATES_MAX))} />

@@ -21,6 +21,7 @@ export function NativeSignup({ inviteToken, email }: { inviteToken?: string; ema
   return (
     <AuthShell header="Sign up">
       <div className="grid gap-6">
+        <h1 className="sr-only">Create your account</h1>
         <ClerkSlot label="Loading sign-up">
           <SignUp routing="hash" signInUrl={`${basePath}/login/`} initialValues={email ? { emailAddress: email } : undefined}
             unsafeMetadata={inviteToken ? { inviteToken } : undefined}
