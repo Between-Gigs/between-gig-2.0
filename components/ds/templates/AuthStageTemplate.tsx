@@ -35,7 +35,7 @@ export function AuthStageTemplate({ eyebrow, title, lead, children, className }:
       ))}
       <div className="grid w-full flex-1 gap-10 px-4 pt-40 pb-12 sm:px-6 sm:pt-72 sm:pb-16 lg:min-h-180 lg:grid-cols-20 lg:items-center lg:gap-0 lg:px-0 lg:py-20">
         <aside aria-label="Welcome to Between Gigs" className="mx-auto grid w-full max-w-sm content-start gap-5 sm:max-w-lg sm:gap-6 lg:col-span-9 lg:col-start-3 lg:mx-0 lg:max-w-none lg:gap-7 lg:pr-10 xl:col-span-8 xl:col-start-4">
-          <Eyebrow rule className="gap-4">{eyebrow}</Eyebrow>
+          <Eyebrow rule className="gap-4 text-label-lg sm:text-heading-sm">{eyebrow}</Eyebrow>
           <Heading level="h1" as="p" className="max-[22rem]:text-display-sm sm:text-display-lg xl:text-display-xl">{title}</Heading>
           <Text size="lg" className="max-w-xs text-pretty sm:max-w-md">{lead}</Text>
         </aside>
