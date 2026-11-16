@@ -80,3 +80,13 @@ it('requires the 1.16.0 API release and the 1.10.0 profiles module before the vi
  expect(checkProfileActivation({...env,NEXT_PUBLIC_PROFILE_VIDEO_LINKS:'true'},manifest('>=1.16.0')).ok).toBe(false);
  expect(checkProfileActivation({RAILWAY_ENV:'test'},pending).ok).toBe(true);
 });
+
+it('requires the profile details API release, module version and environment receipt before showing the new fields',()=>{
+ const env={RAILWAY_ENV:'test',NEXT_PUBLIC_PROFILE_DETAILS:'1'};
+ expect(checkProfileActivation(env,pending).ok).toBe(false);
+ const manifest=JSON.stringify({requires:'>=1.16.0',profileFeatures:{profileDetails:{requires:'>=1.16.0',profilesModule:'1.10.0',apiCommit:'a'.repeat(40),settingsEvidence:{test:'libfile_fictional_details',production:null}}}});
+ expect(checkProfileActivation(env,manifest).ok).toBe(true);
+ expect(checkProfileActivation({...env,RAILWAY_ENV:'production'},manifest).ok).toBe(false);
+ expect(checkProfileActivation({...env,NEXT_PUBLIC_PROFILE_DETAILS:'true'},manifest).ok).toBe(false);
+ expect(checkProfileActivation({...env,NEXT_PUBLIC_PROFILE_DETAILS:'0'},pending).ok).toBe(true);
+});

@@ -113,6 +113,22 @@ export interface ProfileFields {
   personality?: string;
   /** Private to the Gigster and booking team. Excluded from public profiles and browse results. */
   bookingMobile?: string;
+  /** Profile details (profiles 1.10.0, flag NEXT_PUBLIC_PROFILE_DETAILS). Public: rates and LinkedIn. */
+  rateOptions?: ("hourly" | "project")[];
+  hourlyRate?: string;
+  minimumHours?: string;
+  projectMinimum?: string;
+  linkedin?: string;
+  /** Private (owner only, never public): which channels the number works on, and the two consents. */
+  contactChannels?: ("sms" | "phone" | "whatsapp")[];
+  bookingContactConsent?: boolean;
+  marketingEmailConsent?: boolean;
+  /** The marketing choice as loaded from Company OS; a save sends the choice only if the checkbox moved from this. */
+  marketingConsentBaseline?: boolean;
+  /** Set by the server, never by the person: Company OS will not send this contact marketing email (contact_suppressed). */
+  marketingSuppressed?: boolean;
+  /** Set by the server: a note to show under the marketing checkbox (the choice is still pending). */
+  marketingNotice?: string;
   /**
    * The Gigster editor (Nov 2026). The Gigster's own one line per service ("what you'll do", in customer words), keyed
    * by the service name in `services`. The standard description beside it is lib/profile/service-descriptions.ts.

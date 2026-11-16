@@ -21,6 +21,9 @@ import { ModernProfile } from "./ModernProfile";
 import { WarmProfile } from "./WarmProfile";
 import { ProfileTemplate } from "@/components/ds/templates/ProfileTemplate";
 import { craftHref } from "@/lib/profile/browse";
+import { LinkedInLink } from "@/components/profile/LinkedInLink";
+import { RatePricing } from "@/components/profile/RatePricing";
+import { pricingLines, profileDetailsEnabled as detailsOn } from "@/lib/profile/details";
 
 export type ProfileMode = "public" | "own" | "owner";
 
@@ -252,7 +255,8 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
 
   const booking = (
     <section aria-label={`Book ${first}`} className="@container grid gap-5 rounded-xl bg-tint-mint p-5 text-forest-950">
-      {priced
+      {detailsOn() && pricingLines(f) ? <RatePricing f={f} />
+        : priced
         // The unit wraps under the number when the column is narrow ("/ project" beside "$500" in the 3-column aside).
         // The number sets by the block's own width (a container query) and its length, so it never leaves the block:
         // the owner view's aside is under 150px wide at 1024.
@@ -334,7 +338,7 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
         </>
       ),
     },
-    credits: (show || f.skills.length > 0 || credits.length > 0 || (mode === "owner" && !!f.imdb)) && {
+    credits: (show || f.skills.length > 0 || credits.length > 0 || !!f.linkedin || (mode === "owner" && !!f.imdb)) && {
       title: "On set",
       content: (
         <div className="grid gap-6 sm:grid-cols-2">
@@ -354,6 +358,7 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
               </ol>
             </div>
           ), "Your notable credits, best first", "block")}</div>
+          <div className="sm:col-span-2"><LinkedInLink value={f.linkedin} /></div>
           {(mode === "owner" || editing || draft) && <div className="sm:col-span-2">{P("imdb", !!f.imdb, (
             <p className="text-body-sm text-ink-muted"><a className="inline-flex min-h-11 items-center text-link underline underline-offset-2" href={f.imdb} target="_blank" rel="noreferrer">IMDb page<span className="sr-only"> (opens in a new tab)</span></a> · only the Between Gigs team sees this</p>
           ), "Your IMDb link. Only the team sees it.", "block")}</div>}

@@ -17,7 +17,7 @@ import type { Profile, ProfileDraft, ProfileFields } from "./types";
  */
 /** With video links on, work samples live in Company OS (photos as files, links as items), not in this browser. */
 const localOnly = () => (videoLinksEnabled() ? LOCAL_ONLY_FIELDS.filter((k) => k !== "workSamples") : LOCAL_ONLY_FIELDS);
-export const LOCAL_ONLY_FIELDS = ["serviceLines", "personalityQuestion", "personality", "title", "workSamples", "resumeUrl", "bookingMinimum", "earliestStart", "bookingMobile", "hireableJobs"] as const satisfies readonly (keyof ProfileFields)[];
+export const LOCAL_ONLY_FIELDS = ["serviceLines", "personalityQuestion", "personality", "title", "workSamples", "resumeUrl", "bookingMinimum", "earliestStart", "bookingMobile", "hireableJobs", "contactChannels", "bookingContactConsent", "marketingEmailConsent", "marketingConsentBaseline"] as const satisfies readonly (keyof ProfileFields)[];
 
 /** A refusal from the server: Company OS's status and code (e.g. 422 profile_incomplete), with its English fallback. */
 export class DataError extends Error {
