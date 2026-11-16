@@ -313,17 +313,19 @@ function profileCreation(row: Row): string | undefined {
   return value && Number.isFinite(Date.parse(value)) ? new Date(value).toISOString() : undefined;
 }
 
+const EMAIL_PREFERENCE_RETRY = "Couldn't save your email preference. Try again.";
+
 /** The person's own email-marketing choice (Company OS GET /comms/email-preference), or null when it can't be read (comms not installed, no person). */
-async function emailPreference(ctx: Ctx): Promise<{ enabled: boolean; configured: boolean } | null> {
+async function emailPreference(ctx: Ctx): Promise<{ enabled: boolean; configured: boolean; suppressed?: boolean } | null> {
   if (ctx.cred.kind !== "session") return null;
-  try { return await ctx.cos.call<{ enabled: boolean; configured: boolean }>(ctx.cred, "GET", "/comms/email-preference"); } catch { return null; }
+  try { return await ctx.cos.call<{ enabled: boolean; configured: boolean; suppressed?: boolean }>(ctx.cred, "GET", "/comms/email-preference"); } catch { return null; }
 }
 
 /** With profile details on, the editor's marketing checkbox shows the stored choice, and remembers it as the baseline. */
 async function withMarketing(ctx: Ctx, fields: ProfileFields): Promise<ProfileFields> {
   if (!profileDetailsEnabled()) return fields;
   const pref = await emailPreference(ctx);
-  return pref ? { ...fields, marketingEmailConsent: pref.enabled, marketingConsentBaseline: pref.enabled } : fields;
+  return pref ? { ...fields, marketingEmailConsent: pref.enabled, marketingConsentBaseline: pref.enabled, ...(pref.suppressed ? { marketingSuppressed: true } : {}) } : fields;
 }
 
 /** The draft is the profile itself (N-09: one record). The builder's step stays in the browser (lib/data/api.ts). */
@@ -407,19 +409,34 @@ export async function saveDraft(ctx: Ctx, personId: string, input: ProfileFields
   }
   // The marketing choice goes only when the person changed the checkbox and the server still holds what the editor loaded.
   let marketing: boolean | undefined;
+  let marketingNotice = "";
   if (profileDetailsEnabled() && typeof fields.marketingEmailConsent === "boolean" && fields.marketingEmailConsent !== (fields.marketingConsentBaseline === true)) {
     const pref = await emailPreference(ctx);
-    if (pref) marketing = marketingChange(fields, pref.enabled);
+    // A suppressed address is never sent a marketing choice; an unreadable preference keeps the change pending for the next save.
+    if (pref && !pref.suppressed) marketing = marketingChange(fields, pref.enabled);
+    if (!pref) marketingNotice = EMAIL_PREFERENCE_RETRY;
   }
-  const ops = draftOps(personId, fields, own, undefined, { marketing });
-  for (let i = 0; i < ops.length; i += 200) {
-    // The first batch creates the profile when there is none; later chunks only touch items (rare: over 200 changes).
-    await ctx.cos.batch(ctx.cred, ops.slice(i, i + 200));
+  let suppressed = false;
+  const send = async (m: boolean | undefined) => {
+    const ops = draftOps(personId, fields, own, undefined, { marketing: m });
+    for (let i = 0; i < ops.length; i += 200) {
+      // The first batch creates the profile when there is none; later chunks only touch items (rare: over 200 changes).
+      await ctx.cos.batch(ctx.cred, ops.slice(i, i + 200));
+    }
+  };
+  try { await send(marketing); } catch (e) {
+    // Company OS refused the marketing choice for a suppressed contact: save everything else without it.
+    if (marketing === undefined || !(e instanceof CompanyOsError) || e.code !== "contact_suppressed") throw e;
+    suppressed = true;
+    await send(undefined);
   }
   // Removing the photo deletes it, on a draft only: a submitted or live profile needs one, so it's replaced by uploading.
   if (!fields.photo && own.photo && own.profile?.data.status === "draft") await ctx.cos.remove(ctx.cred, "file", own.photo.id);
   const after = await ownProfile(ctx, personId);
-  return { personId, profileCreatedAt: after.profile ? profileCreation(after.profile) : null, fields: after.profile ? await withMarketing(ctx, fieldsFrom(after)) : fields, step: 0, savedAt: after.profile ? iso(after.profile.updatedAt) : nowIso() };
+  let saved = after.profile ? await withMarketing(ctx, fieldsFrom(after)) : fields;
+  if (suppressed) saved = { ...saved, marketingSuppressed: true };
+  if (marketingNotice) saved = { ...saved, marketingEmailConsent: fields.marketingEmailConsent, marketingConsentBaseline: fields.marketingConsentBaseline, marketingNotice };
+  return { personId, profileCreatedAt: after.profile ? profileCreation(after.profile) : null, fields: saved, step: 0, savedAt: after.profile ? iso(after.profile.updatedAt) : nowIso() };
 }
 
 export async function submit(ctx: Ctx, personId: string) {

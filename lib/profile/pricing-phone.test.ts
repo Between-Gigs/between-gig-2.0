@@ -64,3 +64,84 @@ describe("phone number under the flag", () => {
     expect(cleanFields({ ...base(), bookingMobile: "+1 213 555 0123" }).bookingMobile).toBe("+1 213 555 0123");
   });
 });
+
+describe("review fixes", () => {
+  it("m2: a phone number may have 7 to 20 digits", async () => {
+    const { validPhone } = await import("./details");
+    expect(validPhone("+1 213 555 0123")).toBe(true);
+    expect(validPhone("+" + "1".repeat(20))).toBe(true);
+    expect(validPhone("+" + "1".repeat(21))).toBe(false);
+    expect(validPhone("123456")).toBe(false);
+  });
+  it("m4: an hourly-only profile with a minimum shows it publicly; without one the existing display stays", () => {
+    expect(pricingLines(base({ rateOptions: ["hourly"], hourlyRate: "45", minimumHours: "3" }))).toEqual(["$45/hour · minimum 3 hours"]);
+    expect(pricingLines(base({ rateOptions: ["hourly"], hourlyRate: "45" }))).toBeNull();
+    expect(pricingLines(base({ rateOptions: ["project"], projectMinimum: "500" }))).toBeNull();
+  });
+  it("m1: private answers are local-only in the browser source and stripped from the sample public view", () => {
+    for (const k of ["contactChannels", "bookingContactConsent", "marketingEmailConsent", "marketingConsentBaseline"]) expect(LOCAL_ONLY_FIELDS).toContain(k);
+    expect(readFileSync("lib/data/sample.ts", "utf8")).toContain("withoutPrivateDetails(");
+  });
+  it("M1: the suppressed state disables the marketing checkbox with the note", () => {
+    const src = readFileSync("components/gigster/editor/DetailFields.tsx", "utf8");
+    expect(src).toContain("You asked us not to send marketing email. Contact hello@between-gigs.com to change this.");
+    expect(src).toContain("marketingSuppressed");
+    expect(src).toContain("disabled");
+  });
+});
+
+import { saveDraft, getDraft, type Ctx } from "@/lib/server/gigs";
+import { CompanyOsError, type Row } from "@/lib/server/companyos";
+
+describe("saving the marketing choice", () => {
+  const profileRow: Row = { id: "prof", data: { ...toProfile(base(), { details: true }).data, person: "x", status: "draft", private_details: { phone_channels: [], booking_consent: false } }, createdAt: "", updatedAt: "" };
+  function ctxWith(pref: unknown | Error, onBatch: (ops: { data?: Record<string, unknown> }[]) => void, failFirstBatch = false) {
+    let batches = 0;
+    const cos = {
+      query: async (_c: unknown, spec: { entity: string }) => (spec.entity === "profile" ? [profileRow] : []),
+      all: async () => [],
+      call: async () => { if (pref instanceof Error) throw pref; return pref; },
+      batch: async (_c: unknown, ops: { data?: Record<string, unknown> }[]) => {
+        onBatch(ops);
+        if (failFirstBatch && batches++ === 0) throw new CompanyOsError(422, "contact_suppressed");
+        return { ids: [] };
+      },
+    };
+    return { cos, cred: { kind: "session", token: "t" } } as unknown as Ctx;
+  }
+  const want = (over: Partial<ProfileFields> = {}) => base({ marketingEmailConsent: true, marketingConsentBaseline: false, ...over });
+  const sent = (batches: { data?: Record<string, unknown> }[][]) => JSON.stringify(batches);
+
+  it("suppressed: the read says so and a marketing choice is never sent", async () => {
+    vi.stubEnv("NEXT_PUBLIC_PROFILE_DETAILS", "1");
+    const batches: { data?: Record<string, unknown> }[][] = [];
+    const out = await saveDraft(ctxWith({ enabled: false, configured: true, suppressed: true }, (o) => batches.push(o)), "x", want({ about: "Hello" }));
+    expect(sent(batches)).not.toContain("marketing_consent");
+    expect(out.fields.marketingSuppressed).toBe(true);
+  });
+  it("a save that still gets contact_suppressed is retried without marketing_consent and says so", async () => {
+    vi.stubEnv("NEXT_PUBLIC_PROFILE_DETAILS", "1");
+    const batches: { data?: Record<string, unknown> }[][] = [];
+    const out = await saveDraft(ctxWith({ enabled: false, configured: true }, (o) => batches.push(o), true), "x", want({ about: "Hello" }));
+    expect(batches).toHaveLength(2);
+    expect(JSON.stringify(batches[0])).toContain("marketing_consent");
+    expect(JSON.stringify(batches[1])).not.toContain("marketing_consent");
+    expect(JSON.stringify(batches[1])).toContain("Hello");
+    expect(out.fields.marketingSuppressed).toBe(true);
+  });
+  it("m3: an unreadable preference saves the rest, keeps the change pending and says to try again", async () => {
+    vi.stubEnv("NEXT_PUBLIC_PROFILE_DETAILS", "1");
+    const batches: { data?: Record<string, unknown> }[][] = [];
+    const out = await saveDraft(ctxWith(new CompanyOsError(502, "company_os_unreachable"), (o) => batches.push(o)), "x", want({ about: "Hello" }));
+    expect(sent(batches)).toContain("Hello");
+    expect(sent(batches)).not.toContain("marketing_consent");
+    expect(out.fields.marketingEmailConsent).toBe(true);
+    expect(out.fields.marketingConsentBaseline).toBe(false);
+    expect(out.fields.marketingNotice).toBe("Couldn't save your email preference. Try again.");
+  });
+  it("getDraft carries the suppressed state", async () => {
+    vi.stubEnv("NEXT_PUBLIC_PROFILE_DETAILS", "1");
+    const d = await getDraft(ctxWith({ enabled: false, configured: true, suppressed: true }, () => {}), "x");
+    expect(d!.fields.marketingSuppressed).toBe(true);
+  });
+});

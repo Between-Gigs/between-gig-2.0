@@ -1,3 +1,4 @@
+import { withoutPrivateDetails } from "@/lib/profile/details";
 import { withTravelRequirement } from "@/lib/profile/location-controls";
 import { readProfileTemplate } from "@/lib/profile/template";
 /*
@@ -175,7 +176,7 @@ const withAvailability = (to: ProfileFields, from: ProfileFields): ProfileFields
  * hidden credits left out.
  */
 function publicOf(person: Person, profile: Profile): { person: Person; profile: Profile } {
-  const f = { ...profile.fields };
+  const f = withoutPrivateDetails({ ...profile.fields });
   delete f.bookingMobile;
   delete f.insuranceNotes;
   const credits = pinnedCredits(f);

@@ -125,6 +125,10 @@ export interface ProfileFields {
   marketingEmailConsent?: boolean;
   /** The marketing choice as loaded from Company OS; a save sends the choice only if the checkbox moved from this. */
   marketingConsentBaseline?: boolean;
+  /** Set by the server, never by the person: Company OS will not send this contact marketing email (contact_suppressed). */
+  marketingSuppressed?: boolean;
+  /** Set by the server: a note to show under the marketing checkbox (the choice is still pending). */
+  marketingNotice?: string;
   /**
    * The Gigster editor (Nov 2026). The Gigster's own one line per service ("what you'll do", in customer words), keyed
    * by the service name in `services`. The standard description beside it is lib/profile/service-descriptions.ts.

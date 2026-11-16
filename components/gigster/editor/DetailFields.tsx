@@ -79,8 +79,10 @@ export function ContactChoices({ d, set }: Pick<SectionProps, "d" | "set">) {
       </fieldset>
       <Checkbox id="f-bookingContactConsent" checked={d.bookingContactConsent === true} onChange={(e) => set("bookingContactConsent")(e.target.checked)}
         label="Between Gigs may share my contact details with clients and contact me about bookings and projects." />
-      <Checkbox id="f-marketingEmailConsent" checked={d.marketingEmailConsent === true} onChange={(e) => set("marketingEmailConsent")(e.target.checked)}
+      <Checkbox id="f-marketingEmailConsent" disabled={d.marketingSuppressed === true} aria-describedby={d.marketingSuppressed || d.marketingNotice ? "f-marketing-note" : undefined} checked={d.marketingEmailConsent === true} onChange={(e) => set("marketingEmailConsent")(e.target.checked)}
         label="Send me Between Gigs news, opportunities and updates by email. I can unsubscribe at any time." />
+      {d.marketingSuppressed ? <p id="f-marketing-note" role="status" className="text-body-sm text-ink-muted">You asked us not to send marketing email. Contact hello@between-gigs.com to change this.</p>
+        : d.marketingNotice ? <p id="f-marketing-note" role="alert" className="text-body-sm text-danger">{d.marketingNotice}</p> : null}
       <p className="text-body-sm text-ink-muted">We never sell your details. See our <a className="text-link underline underline-offset-2" href="/privacy/">Privacy Policy</a>.</p>
     </div>
   );

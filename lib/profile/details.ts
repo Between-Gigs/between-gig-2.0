@@ -14,21 +14,23 @@ export const profileDetailsEnabled = () => process.env.NEXT_PUBLIC_PROFILE_DETAI
 export const LINKEDIN_RE = /^https:\/\/(www\.)?linkedin\.com\/(in|company)\/[A-Za-z0-9._%-]{1,100}\/?$/;
 export const PHONE_CHANNELS = ["sms", "phone", "whatsapp"] as const;
 export type PhoneChannel = (typeof PHONE_CHANNELS)[number];
-export const PRIVATE_ANSWER_KEYS = ["contactChannels", "bookingContactConsent", "marketingEmailConsent", "marketingConsentBaseline", "bookingMobile"] as const;
+export const PRIVATE_ANSWER_KEYS = ["contactChannels", "bookingContactConsent", "marketingEmailConsent", "marketingConsentBaseline", "marketingSuppressed", "marketingNotice", "bookingMobile"] as const;
 
 const money = (v: string | undefined) => !!v && /^\d+(?:\.\d{1,2})?$/.test(v.trim()) && Number(v) > 0 && Number(v) <= 100000;
 const whole = (v: string | undefined) => !!v && /^\d{1,4}$/.test(v.trim()) && Number(v) >= 1 && Number(v) <= 1000;
 const has = (f: Pick<ProfileFields, "rateOptions">, o: "hourly" | "project") => f.rateOptions?.includes(o) === true;
 
-/** A phone number the module takes: digits with an optional +, spaces, brackets and dashes; 7 to 15 digits. */
-export const validPhone = (v: string | undefined) => !!v && /^\+?[0-9 ()-]{7,32}$/.test(v.trim()) && v.replace(/\D/g, "").length >= 7 && v.replace(/\D/g, "").length <= 15;
+/** A phone number the module takes: digits with an optional +, spaces, brackets and dashes; 7 to 20 digits. */
+export const validPhone = (v: string | undefined) => !!v && /^\+?[0-9 ()-]{7,40}$/.test(v.trim()) && v.replace(/\D/g, "").length >= 7 && v.replace(/\D/g, "").length <= 20;
 
 const plural = (n: string, unit: string) => `${n} ${unit}${n === "1" ? "" : "s"}`;
 
 /** The public price lines when both options are chosen (Patti 28), or null to keep the existing single-rate display. */
 export function pricingLines(f: ProfileFields): string[] | null {
-  if (!has(f, "hourly") || !has(f, "project") || !money(f.hourlyRate)) return null;
+  if (!has(f, "hourly") || !money(f.hourlyRate)) return null;
   const hours = whole(f.minimumHours) ? ` · minimum ${plural(String(Number(f.minimumHours)), "hour")}` : "";
+  // Hourly only: the existing single-rate display, unless there is a minimum to show too.
+  if (!has(f, "project")) return hours ? [`$${Number(f.hourlyRate)}/hour${hours}`] : null;
   return [`$${Number(f.hourlyRate)}/hour${hours}`, money(f.projectMinimum) ? `Projects from $${Number(f.projectMinimum)}` : "Projects: price on request"];
 }
 
