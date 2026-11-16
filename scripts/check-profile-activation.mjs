@@ -10,7 +10,7 @@ function settingsDeclared(feature, environment) {
 }
 
 export function checkProfileActivation(env, manifest) {
-  for (const name of ["NEXT_PUBLIC_PROFILE_NO_DEPARTMENT", "NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW", "NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS", "NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS", "NEXT_PUBLIC_PROFILE_TRAVEL_PREFERENCE"]) {
+  for (const name of ["NEXT_PUBLIC_PROFILE_NO_DEPARTMENT", "NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW", "NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS", "NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS", "NEXT_PUBLIC_PROFILE_TRAVEL_PREFERENCE", "NEXT_PUBLIC_PROFILE_DETAILS"]) {
     if (![undefined, "", "0", "1"].includes(env[name])) return { ok: false, error: `${name} must be absent, 0 or 1` };
   }
   // Do not turn off a previously activated runtime guard during an ordinary UI rollback.
@@ -38,12 +38,17 @@ export function checkProfileActivation(env, manifest) {
     const release = checkRequirement(manifest, { travelPreference: true });
     if (!release.ok) return release;
   }
+  if (env.NEXT_PUBLIC_PROFILE_DETAILS === "1") {
+    const release = checkRequirement(manifest, { profileDetails: true });
+    if (!release.ok) return release;
+  }
   const enabled = [
     ...(env.NEXT_PUBLIC_PROFILE_NO_DEPARTMENT === "1" ? ["departmentRetirement"] : []),
     ...(env.CUSTOM_SERVICE_REVIEW_ENABLED === "1" ? ["customServiceReview"] : []),
     ...(env.NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS === "1" ? ["locationControls"] : []),
     ...(env.NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS === "1" ? ["customSkills"] : []),
     ...(env.NEXT_PUBLIC_PROFILE_TRAVEL_PREFERENCE === "1" ? ["travelPreference"] : []),
+    ...(env.NEXT_PUBLIC_PROFILE_DETAILS === "1" ? ["profileDetails"] : []),
   ];
   for (const name of enabled) if (!settingsDeclared(declaration?.profileFeatures?.[name], env.RAILWAY_ENV)) return { ok: false, error: `${name} needs this environment's private settings-verification receipt and deployed API commit declaration` };
   if (new Set(enabled.map(name => declaration.profileFeatures[name].apiCommit)).size > 1) return { ok: false, error: "Enabled profile features must identify the same deployed API source commit" };

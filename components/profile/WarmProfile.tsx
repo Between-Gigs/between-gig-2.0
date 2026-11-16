@@ -13,6 +13,9 @@ import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/d
 import { craftIcon, iconTint, type Icon3DName } from "@/lib/icons3d";
 import { hasRate } from "@/lib/profile/validate";
 import type { ProfileLayoutProps } from "./ProfileView";
+import { LinkedInLink } from "@/components/profile/LinkedInLink";
+import { RatePricing } from "@/components/profile/RatePricing";
+import { pricingLines, profileDetailsEnabled as detailsOn } from "@/lib/profile/details";
 
 /** A small pill on the identity panel. */
 function Pill({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -81,7 +84,8 @@ export function WarmProfile({ person, fields: f, mode, embedded, similar = [], d
   const booking = (
     <section aria-label={`Book ${first}`} className="grid gap-5 rounded-xl border border-line bg-surface p-6 shadow-md">
       <p className="grid gap-0.5">
-        {priced
+        {detailsOn() && pricingLines(f) ? <RatePricing f={f} />
+          : priced
           ? <><span><span className="font-display text-display-sm text-ink">${f.rate}</span><span className="text-body-md font-semibold text-ink"> / {basisShort[f.basis]}</span></span><span className="text-body-sm text-ink-muted">starting rate</span></>
           : <span className="font-display text-heading-lg text-ink">Rate on request</span>}
       </p>
@@ -182,7 +186,7 @@ export function WarmProfile({ person, fields: f, mode, embedded, similar = [], d
         </div>
       </Section>
     ),
-    credits: (show || credits.length > 0 || f.skills.length > 0 || (mode === "owner" && !!f.imdb)) && (
+    credits: (show || credits.length > 0 || f.skills.length > 0 || !!f.linkedin || (mode === "owner" && !!f.imdb)) && (
       <Section title="On set" icon="clapper_board">
         <div className="grid gap-3 sm:grid-cols-5">
           <div className="sm:col-span-2">{P("skills", f.skills.length > 0, (
@@ -204,6 +208,7 @@ export function WarmProfile({ person, fields: f, mode, embedded, similar = [], d
               </ol>
             </div>
           ), "Your notable credits, best first", "block")}</div>
+          <div className="sm:col-span-5"><LinkedInLink value={f.linkedin} /></div>
           {(mode === "owner" || editing || draft) && <div className="sm:col-span-5">{P("imdb", !!f.imdb, (
             <p className="text-body-sm text-ink-muted"><a className="inline-flex min-h-11 items-center text-link underline underline-offset-2" href={f.imdb} target="_blank" rel="noreferrer">IMDb page<span className="sr-only"> (opens in a new tab)</span></a> · only the Between Gigs team sees this</p>
           ), "Your IMDb link. Only the team sees it.", "block")}</div>}
