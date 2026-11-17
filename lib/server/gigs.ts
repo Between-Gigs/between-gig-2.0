@@ -267,8 +267,10 @@ export async function getPerson(ctx: Ctx, id: string): Promise<PersonSummary | n
 async function publicProfiles(ctx: Ctx, profiles: Row[]) {
   const ids = profiles.map((p) => p.id);
   const [items, files, sampleFiles] = ids.length
-    ? await Promise.all([ctx.cos.byIds(ctx.cred, "profile_item", "profile", ids), ctx.cos.byIds(ctx.cred, "file", "owner_id", ids, and(eq("kind", "photo"), eq("status", "ready"))),
-      videoLinksEnabled() ? ctx.cos.byIds(ctx.cred, "file", "owner_id", ids, and(isIn("kind", SAMPLE_KINDS), eq("status", "ready"))) : []])
+    // No status filter here: public_reader may filter files only on its allow-listed fields (status is not one, so
+    // naming it is refused), and its row policy already returns only ready, published files of a visible profile.
+    ? await Promise.all([ctx.cos.byIds(ctx.cred, "profile_item", "profile", ids), ctx.cos.byIds(ctx.cred, "file", "owner_id", ids, eq("kind", "photo")),
+      videoLinksEnabled() ? ctx.cos.byIds(ctx.cred, "file", "owner_id", ids, isIn("kind", SAMPLE_KINDS)) : []])
     : [[], [], []];
   const sampleFilesBy = groupBy(sampleFiles, (f) => str(f.data.owner_id));
   const itemsBy = groupBy(items, (i) => str(i.data.profile));
