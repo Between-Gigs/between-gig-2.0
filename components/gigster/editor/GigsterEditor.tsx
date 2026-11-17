@@ -6,6 +6,11 @@
  * review checks everything once and lands on "Profile submitted" (/profile/submitted/). The earlier edit-on-page
  * editor is kept as a Hub draft (/preview/drafts/profile-editor-v1/).
  */
+import { APPROVED_EDIT_HINT, APPROVED_NOT_PUBLIC, APPROVED_NOT_PUBLIC_LINE, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
+import { departmentFieldRetired } from "@/lib/profile/department-retirement";
+import { adoptStored, videoLinksEnabled } from "@/lib/profile/video-links";
+import { profileDetailsEnabled } from "@/lib/profile/details";
+import { adoptSavedMarketing, saveErrorMessage, saveThenSubmit, urgentFields } from "@/lib/profile/save-flow";
 import { Button, Skeleton, useToast } from "@ds/components";
 import { cx } from "@ds/components/cx";
 import { ArrowLeft, ArrowRight, ChevronDown, Eye, FileText, MessageSquareWarning, Save, Send } from "lucide-react";
@@ -15,6 +20,8 @@ import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
 import { DataError, sendNow } from "@/lib/data/api";
 import { useRequireRole } from "@/lib/guard";
+import { withTravelRequirement } from "@/lib/profile/location-controls";
+import { requiredProfileRules } from "@/lib/profile/template";
 import { useProfileTemplate } from "@/lib/profile/use-profile-template";
 import { contentChanged, fieldLabel, gigsterChecklist, gigsterFieldLabel, gigsterItemOf, gigsterItems, readNotes, sectionLabel, validateGigster, type FieldErrors, type GigsterItemId } from "@/lib/profile/validate";
 import { SaveIndicator, type SaveState } from "@/components/builder/ProfileBuilder";
@@ -41,7 +48,7 @@ const dayOf = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-US",
 /** Where each checklist item lives on the page: the field to focus. */
 const ITEM_TARGET: Record<GigsterItemId, string> = {
   photo: "sec-identity", name: "f-name", title: "f-title", where: "sec-where", services: "sec-help", rate: "f-rate", availability: "f-dates",
-  film: "f-position", experience: "f-about", credits: "f-credits", personality: "sec-personality", contact: "f-mobile",
+  film: departmentFieldRetired() ? "f-years" : "f-position", experience: "f-about", credits: "f-credits", personality: "sec-personality", contact: "f-mobile",
 };
 /** The team's review notes are per questionnaire section; this is where each one is answered here. */
 /** The team picks a section of the old builder; name it as this editor does. */
@@ -79,7 +86,9 @@ type View = "edit" | "preview";
 function Editor({ personId }: { personId: string }) {
   const toast = useToast();
   const router = useRouter();
-  const template = useProfileTemplate();
+  const baseTemplate = useProfileTemplate();
+  const [profileCreatedAt, setProfileCreatedAt] = React.useState<string | null | undefined>(undefined);
+  const template = React.useMemo(() => withTravelRequirement(baseTemplate, profileCreatedAt), [baseTemplate, profileCreatedAt]);
   const [person, setPerson] = React.useState<Person | null>(null);
   const [d, setD] = React.useState<ProfileFields | null>(null);
   const [sentVersion, setSentVersion] = React.useState<ProfileFields | null>(null);
@@ -104,6 +113,7 @@ function Editor({ personId }: { personId: string }) {
       if (!current || !s || !draft) return;
       setPerson(s.person);
       setSentVersion(sent?.fields ?? null);
+      setProfileCreatedAt(draft.profileCreatedAt);
       step.current = draft.step;
       known.current = draft.savedAt;
       if (!draft.fields.name) touched.current.add("name");
@@ -120,9 +130,10 @@ function Editor({ personId }: { personId: string }) {
     setSentVersion(sent?.fields ?? null);
   }, [personId]);
 
-  const flush = React.useCallback(async () => {
+  /** Saves what changed; true when nothing was left to save or the save worked, false when it failed (the error stays shown). */
+  const flush = React.useCallback(async (): Promise<boolean> => {
     const fields = latest.current;
-    if (!fields || !dirty.current) return;
+    if (!fields || !dirty.current) return true;
     dirty.current = false;
     const keys = [...touched.current];
     touched.current.clear();
@@ -133,14 +144,23 @@ function Editor({ personId }: { personId: string }) {
       const theirs = stored?.savedAt && stored.savedAt !== known.current ? stored.fields : null;
       const merged = theirs ? { ...theirs, ...pick(fields, keys) } : fields;
       const saved = await data.profiles.saveDraft(personId, merged, step.current);
+      setProfileCreatedAt(saved.profileCreatedAt);
       known.current = saved.savedAt;
       if (theirs) setD((cur) => (cur ? { ...merged, ...pick(cur, touched.current) } : cur));
+      // Work samples live in Company OS (video links on): take its list (photos become /media links), unless they changed meanwhile.
+      const stored_ = saved.fields.workSamples;
+      if (videoLinksEnabled() && stored_ && !theirs) setD((cur) => (cur ? { ...cur, workSamples: adoptStored(merged.workSamples ?? [], stored_, cur.workSamples ?? []) } : cur));
+      // The marketing choice lives in Company OS: take the stored choice as the new baseline (unless the box was changed meanwhile).
+      if (profileDetailsEnabled()) setD((cur) => (cur ? adoptSavedMarketing(cur, saved.fields, touched.current.has("marketingEmailConsent")) : cur));
       setSave(dirty.current ? { status: "saving" } : { status: "saved", at: saved.savedAt });
       void refresh();
-    } catch {
+      return true;
+    } catch (e) {
       dirty.current = true;
       keys.forEach((k) => touched.current.add(k));
-      setSave({ status: "error" });
+      const message = saveErrorMessage(e, { samples: videoLinksEnabled() });
+      setSave(message ? { status: "error", message } : { status: "error" });
+      return false;
     }
   }, [personId, refresh]);
 
@@ -157,7 +177,7 @@ function Editor({ personId }: { personId: string }) {
       if (!fields || !dirty.current) return;
       dirty.current = false;
       touched.current.clear();
-      sendNow(() => { void data.profiles.saveDraft(personId, fields, step.current).then((saved) => { known.current = saved.savedAt; }).catch(() => { dirty.current = true; }); });
+      sendNow(() => { void data.profiles.saveDraft(personId, urgentFields(fields), step.current).then((saved) => { known.current = saved.savedAt; }).catch(() => { dirty.current = true; }); });
     };
     const hidden = () => { if (document.visibilityState === "hidden") now(); };
     window.addEventListener("pagehide", now);
@@ -170,6 +190,7 @@ function Editor({ personId }: { personId: string }) {
     return data.auth.onChange(() => {
       void data.profiles.getDraft(personId).then((stored) => {
         if (!stored?.savedAt || stored.savedAt === known.current) return;
+        setProfileCreatedAt(stored.profileCreatedAt);
         known.current = stored.savedAt;
         setD((cur) => (cur ? { ...stored.fields, ...pick(cur, touched.current) } : cur));
       });
@@ -185,13 +206,21 @@ function Editor({ personId }: { personId: string }) {
     touched.current.add(k);
     setSave((x) => (x.status === "saving" ? x : { status: "saving" }));
     setD((x) => (x ? { ...x, [k]: v } : x));
-    setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
+    setErrors((e) => {
+      if (!e[k] && k !== "market") return e;
+      const n = { ...e }; delete n[k];
+      // A market switch changes the postal format and which location answer is required.
+      if (k === "market") { delete n.zip; delete n.otherCity; delete n.areas; }
+      return n;
+    });
   });
-  const required = (field: string) => (template.required as readonly string[]).includes(field);
+  const required = (field: string) => (requiredProfileRules(template) as readonly string[]).includes(field);
 
   const first = d.name.trim().split(/\s+/)[0] || "there";
   const status = person.status;
-  const sentAlready = status === "submitted" || status === "approved";
+  const sentAlready = status === "submitted" || isReviewedStatus(status);
+  const isLive = isPublicStatus(status);
+  const approvedPrivate = isApprovedPrivate(status);
   const unsent = KEEPS_DRAFT && sentAlready && !!sentVersion && contentChanged(d, sentVersion);
   // With the team or live, there's something to send only once something has changed. Live keeps one record, so an
   // edit sends it back by itself and there is never anything to send.
@@ -199,7 +228,8 @@ function Editor({ personId }: { personId: string }) {
   const notes = status === "changes_requested" ? readNotes(person.reviewNotes ?? []) : [];
   const resubmit = sentAlready || notes.length > 0;
   const sendLabel = resubmit ? "Send again for review" : "Submit for review";
-  const stateLabel = status === "approved" ? (unsent ? "Live · unsent changes" : "Live")
+  const stateLabel = approvedPrivate ? (unsent ? `${APPROVED_NOT_PUBLIC} · unsent changes` : APPROVED_NOT_PUBLIC)
+    : isLive ? (unsent ? "Live · unsent changes" : "Live")
     : status === "submitted" ? (unsent ? "In review · unsent changes" : `In review since ${dayOf(person.submittedAt)}`)
     : status === "changes_requested" ? "Changes requested" : "Private draft";
   // In page order, so the list reads top to bottom like the form.
@@ -219,9 +249,14 @@ function Editor({ personId }: { personId: string }) {
     }
     setSubmitting(true);
     dirty.current = true;
-    await flush();
     try {
-      await data.profiles.submit(personId);
+      // Nothing is sent when the save before it failed: the save error stays on screen.
+      const result = await saveThenSubmit(flush, async () => { await data.profiles.submit(personId); });
+      if (result === "not-saved") {
+        toast({ message: "Your latest changes didn't save, so nothing was sent. Fix what the save message says, then try again.", tone: "danger" });
+        setSubmitting(false);
+        return;
+      }
       router.push("/profile/submitted/");
     } catch (e) {
       const message = e instanceof DataError && e.code === "profile_incomplete" ? "Some answers are still missing. Check each section, then try again." : "We couldn't send your profile. Try again.";
@@ -235,7 +270,7 @@ function Editor({ personId }: { personId: string }) {
 
   const sendButton = (size: "md" | "lg", full = false) => nothingToSend
     ? <Link href="/profile/submitted/" className={cx("inline-flex min-h-11 items-center justify-center gap-2 text-label-md font-semibold text-ink underline underline-offset-4", full && "w-full")}>
-        {status === "approved" ? "Your page is live" : "Submitted · view status"}
+        {isLive ? "Your page is live" : approvedPrivate ? APPROVED_NOT_PUBLIC : "Submitted · view status"}
       </Link>
     : <Button variant="primary" size={size} fullWidth={full} loading={submitting} iconEnd={<Send />} onClick={submit}>{sendLabel}</Button>;
 
@@ -283,7 +318,9 @@ function Editor({ personId }: { personId: string }) {
               ? <h1 className="font-display text-heading-lg text-ink wrap-anywhere">Welcome, {first}. This is your page.</h1>
               : <h1 className="font-display text-heading-lg text-ink wrap-anywhere">Edit your profile</h1>}
             <p className="max-w-2xl text-body-md text-pretty text-ink-muted">
-              {status === "approved"
+              {approvedPrivate
+                ? `${APPROVED_NOT_PUBLIC_LINE} ${APPROVED_EDIT_HINT}`
+                : isLive
                 ? data.kind === "live" ? "Availability changes go live as you save. Other changes take your page off the site until the team approves them." : "Availability changes go live as you save. Other changes wait here until you send them again."
                 : "This is your profile as clients will see it: fill it in right here. It saves as you go and stays private until the Between Gigs team approves it."}
             </p>
@@ -339,8 +376,8 @@ function Editor({ personId }: { personId: string }) {
 
           <section aria-labelledby="next-h" className="grid gap-4 border-t border-line-strong pt-8 sm:flex sm:items-center sm:justify-between sm:gap-6">
             <div className="grid gap-1">
-              <h2 id="next-h" className="font-display text-heading-lg text-ink">{nothingToSend ? (status === "approved" ? "Your page is live" : "Your profile is with the team") : "You’re Almost There!"}</h2>
-              <p className="text-body-md text-ink-muted">{nothingToSend ? (status === "approved" ? "Availability saves as you go. Edit anything else and you can send it for review here." : "Changes you make here save as you go. We'll email you when there's an update.") : "Preview your profile to see how it will appear to potential customers. Once you’re happy with it, submit it to the Between Gigs team for review."}</p>
+              <h2 id="next-h" className="font-display text-heading-lg text-ink">{nothingToSend ? (isLive ? "Your page is live" : approvedPrivate ? APPROVED_NOT_PUBLIC : "Your profile is with the team") : "You’re Almost There!"}</h2>
+              <p className="text-body-md text-ink-muted">{nothingToSend ? (approvedPrivate ? `${APPROVED_NOT_PUBLIC_LINE} ${APPROVED_EDIT_HINT}` : isLive ? "Availability saves as you go. Edit anything else and you can send it for review here." : "Changes you make here save as you go. We'll email you when there's an update.") : "Preview your profile to see how it will appear to potential customers. Once you’re happy with it, submit it to the Between Gigs team for review."}</p>
               {!nothingToSend && <p className="text-body-md text-ink-muted">Your profile will remain private until it’s approved and we’re ready to make it public.</p>}
             </div>
             <div className="flex flex-wrap gap-2 sm:shrink-0">

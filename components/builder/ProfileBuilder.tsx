@@ -8,6 +8,7 @@ import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
 import { basisLabel, insuranceLabel, laServiceAreas, modeLabel, monthStatusLabel, serviceChoices, onSetSkills } from "@/lib/data/taxonomy";
 import { useRequireRole } from "@/lib/guard";
+import { APPROVED_EDIT_HINT, APPROVED_NOT_PUBLIC, APPROVED_NOT_PUBLIC_LINE, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
 import { useProfileTemplate } from "@/lib/profile/use-profile-template";
 import type { ProfileFieldRule } from "@/lib/profile/template";
 import { ABOUT_MAX, SECTIONS, STEPS, completeness, fieldLabel, pinnedCredits, sectionLabel, validateAll, type FieldErrors } from "@/lib/profile/validate";
@@ -37,7 +38,7 @@ const AUTOSAVE_MS = 700;
 const thisMonth = () => new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
-export type SaveState = { status: "idle" | "saving" | "saved" | "error"; at?: string };
+export type SaveState = { status: "idle" | "saving" | "saved" | "error"; at?: string; /** Replaces "Not saved." (e.g. the work samples were refused). */ message?: string };
 
 /** /profile/edit: the questionnaire. Five steps, autosaved, resumable, checked once on Submit, with a live preview. */
 export function ProfileBuilder() {
@@ -175,7 +176,8 @@ function Builder({ personId }: { personId: string }) {
   const notes = person.status === "changes_requested" ? person.reviewNotes ?? [] : [];
   const noteFor = (section: ProfileSection) => notes.filter((n) => n.section === section);
   const errorCount = Object.keys(errors).length;
-  const resubmitting = person.status === "submitted" || person.status === "approved";
+  const resubmitting = person.status === "submitted" || isReviewedStatus(person.status);
+  const approvedPrivate = isApprovedPrivate(person.status);
   // Live, the profile is one record: one that's with the team or live has nothing to send (an edit sends it back itself).
   const nothingToSend = data.kind === "live" && resubmitting;
 
@@ -191,8 +193,8 @@ function Builder({ personId }: { personId: string }) {
             </Banner>
           )}
           {!done && resubmitting && (
-            <Banner tone="info" className="mb-4 shadow-md" title={person.status === "approved" ? "Your profile is live" : "Your profile is with our team"}>
-              {person.status === "approved" ? "Changes to your answers take your profile off the site until we review them; availability updates stay live." : "Changes save here as a draft. Submit again to send the latest version for review."}
+            <Banner tone="info" className="mb-4 shadow-md" title={approvedPrivate ? APPROVED_NOT_PUBLIC : isPublicStatus(person.status) ? "Your profile is live" : "Your profile is with our team"}>
+              {approvedPrivate ? `${APPROVED_NOT_PUBLIC_LINE} ${APPROVED_EDIT_HINT}` : isPublicStatus(person.status) ? "Changes to your answers take your profile off the site until we review them; availability updates stay live." : "Changes save here as a draft. Submit again to send the latest version for review."}
             </Banner>
           )}
           {live.dialog}
@@ -242,7 +244,7 @@ function Builder({ personId }: { personId: string }) {
                         <Field label="Years in the business" optional={optional("years")} error={err("years")}><Input id="f-years" inputMode="numeric" value={d.years} placeholder="e.g. 6" onChange={(e) => set("years")(e.target.value.replace(/\D/g, "").slice(0, 2))} /></Field>
                       </div>
                       <Field label="Industry position / department" optional={optional("position")} error={err("position")}><Input id="f-position" value={d.position} start={<Film />} placeholder="e.g. Costume & wardrobe" onChange={(e) => set("position")(e.target.value)} /></Field>
-                      <Field label="IMDb profile link" optional={optional("imdb")} error={err("imdb")} hint="Your IMDb name page helps us confirm credits."><Input id="f-imdb" type="url" inputMode="url" value={d.imdb} start={<Link2 />} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} /></Field>
+                      <Field label="IMDb profile link" optional={optional("imdb")} error={err("imdb")}><Input id="f-imdb" type="url" inputMode="url" value={d.imdb} start={<Link2 />} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} /></Field>
                       <Credits credits={d.credits} pins={d.creditPins ?? []} error={err("credits")}
                         onChange={(credits, pins) => { set("credits")(credits); set("creditPins")(pins); }} />
                     </div>
@@ -288,7 +290,7 @@ function Builder({ personId }: { personId: string }) {
                       <Field label="Travel notes" optional={optional("travel")} error={err("travel")} hint="Only a limit or exception. No need to repeat the areas above."><Input id="f-travel" value={d.travel} onChange={(e) => set("travel")(e.target.value)} /></Field>
                       <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
                         <Field label="Availability month"><Input id="f-month" value={d.month} readOnly /></Field>
-                        <RadioGroup name="f-monthStatus" label="This month" value={d.monthStatus} onChange={(v) => set("monthStatus")(v as ProfileFields["monthStatus"])} options={Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))} />
+                        <RadioGroup name="f-monthStatus" label="Availability" value={d.monthStatus} onChange={(v) => set("monthStatus")(v as ProfileFields["monthStatus"])} options={Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))} />
                       </div>
                       <Field label="Dates or times this month" optional={optional("dates")} error={err("dates")} hint="Exact project dates are agreed with each client."><Input id="f-dates" value={d.dates} placeholder="e.g. Weekday mornings" onChange={(e) => set("dates")(e.target.value)} /></Field>
                       <Banner tone="success" title="Keep availability fresh">Confirm it each month. Production comes first: pause it when the call comes.</Banner>
@@ -458,7 +460,7 @@ export function SaveIndicator({ state, onRetry }: { state: SaveState; onRetry: (
     <p role="status" aria-live="polite" className={cx("flex shrink-0 items-center gap-1.5 text-body-sm", state.status === "error" ? "text-danger" : "text-ink-subtle")}>
       {state.status === "saving" && <><LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />Saving…</>}
       {state.status === "saved" && <><CloudCheck className="size-4 text-success" aria-hidden="true" />Saved{state.at && <span className="hidden sm:inline">&nbsp;· {timeOf(state.at)}</span>}</>}
-      {state.status === "error" && <><AlertCircle className="size-4" aria-hidden="true" />Not saved. <button type="button" onClick={onRetry} className="inline-flex min-h-6 items-center underline underline-offset-2">Retry</button></>}
+      {state.status === "error" && <><AlertCircle className="size-4" aria-hidden="true" />{state.message ?? "Not saved."} <button type="button" onClick={onRetry} className="inline-flex min-h-6 items-center underline underline-offset-2">Retry</button></>}
       {state.status === "idle" && <span className="sr-only">Changes save automatically</span>}
     </p>
   );

@@ -6,6 +6,7 @@ import { basisShort } from "@/lib/data/taxonomy";
 import { pinnedCredits } from "@/lib/profile/validate";
 import type { ProfilePartId } from "@/lib/profile/template";
 import { asset } from "@/lib/site";
+import { APPROVED_NOT_PUBLIC, isApprovedPrivate, isPublicStatus } from "@/lib/profile/publish-gate";
 import { markArea } from "@/lib/split-area";
 
 markArea("bg-split:dashboard");
@@ -52,7 +53,7 @@ export function ModernCanvas({ fields: d, person, order, required, editing, next
     about: d.about, services: d.services.join(" · "), skills: d.skills.join(" · "), credits: credits.join(" · "),
     imdb: d.imdb, details: [d.hireableJobs, d.tools, d.transport, d.personality].filter(Boolean).join(" · "),
   };
-  const status = person.status === "approved" ? "Live profile" : person.status === "submitted" ? "In review" : "Private draft";
+  const status = isApprovedPrivate(person.status) ? APPROVED_NOT_PUBLIC : isPublicStatus(person.status) ? "Live profile" : person.status === "submitted" ? "In review" : "Private draft";
   const editorHere = (part: Part) => inline && editing === part;
   const buttonLabel = (part: Part) => `${filled(part) ? "Edit" : "Add"} ${part === "photo" ? "your photo" : names[part].toLowerCase()}${required.includes(part) ? "" : " (optional)"}`;
 

@@ -258,7 +258,7 @@
   .modern-services b { font-size:.86rem; line-height:1.35; font-weight:560; }
   .modern-services small { margin-left:auto; color:var(--ink-subtle); font: .67rem var(--font-mono); }
   .modern-work, .modern-similar { display:grid; gap:.65rem; grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .modern-work button { position:relative; display:block; width:100%; overflow:hidden; border-radius:var(--radius-md); aspect-ratio:1.65; }
+  .modern-work button, .modern-work a { position:relative; display:block; width:100%; overflow:hidden; border-radius:var(--radius-md); aspect-ratio:1.65; }
   .modern-work img { height:100%; width:100%; object-fit:cover; }
   .modern-work small { position:absolute; left:.5rem; bottom:.5rem; color:white; background:rgb(6 20 12 / 82%); padding:.12rem .27rem; border-radius:3px; font: .7rem var(--font-mono); }
   .modern-similar { grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr)); }

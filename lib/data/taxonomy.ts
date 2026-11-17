@@ -26,7 +26,7 @@ export const waitlistCategories = [
 
 export const waitlistCategoryLabel = (value: string) => waitlistCategories.find(([id]) => id === value)?.[1] ?? value;
 
-export const monthStatusLabel = { available: "Available this month", limited: "Limited availability", away: "Not available this month" } as const;
+export const monthStatusLabel = { available: "Available this month", limited: "Limited Availability", away: "Not available this month" } as const;
 export const basisLabel = { hourly: "Hourly", project: "Per project", day: "Day rate" } as const;
 export const basisShort = { hourly: "hr", project: "project", day: "day" } as const;
 export const insuranceLabel = { private: "Prefer to discuss privately", yes: "Has liability insurance (self-reported)", no: "No insurance" } as const;

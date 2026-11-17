@@ -5,8 +5,10 @@
  * Company OS's to decide (row policies, Super Admin routes), never this file's.
  */
 import { craftOf } from "@/lib/profile/department";
+import { customServiceError } from "@/lib/profile/custom-service";
 import { completeness } from "@/lib/profile/validate";
-import { fromProfile, toProfile, type ProfileItem } from "@/lib/data/companyos/fields";
+import { fromProfile, toProfile, optionKey, type ProfileItem } from "@/lib/data/companyos/fields";
+import { marketingChange, privateDetails, profileDetailsEnabled, withoutPrivateDetails } from "@/lib/profile/details";
 import { personStatuses, inviteStatuses } from "@/lib/data/types";
 import type {
   ActivityEvent, ActivityKind, DashboardSummary, FunnelCounts, InviteStatus, PeopleQuery, Person, PersonSource, PersonStatus, PersonSummary, Profile,
@@ -14,9 +16,12 @@ import type {
   WaitlistResult, WaitlistRow, WaitlistSignup,
 } from "@/lib/data/types";
 import { blankFields } from "@/lib/data/fields";
-import { waitlistCategories } from "@/lib/data/taxonomy";
+import { onSetSkills, waitlistCategories } from "@/lib/data/taxonomy";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { CompanyOsError, and, eq, type AdminUser, type BatchOp, type CompanyOs, type Credential, type Row } from "./companyos";
+import { isReviewedStatus, publishGateOn } from "@/lib/profile/publish-gate";
+import { videoLinksEnabled } from "@/lib/profile/video-links";
+import { SAMPLE_KINDS, sampleRefusalMessage, samplesFrom, saveSamples, serialised } from "./work-samples";
+import { CompanyOsError, and, eq, isIn, type AdminUser, type BatchOp, type CompanyOs, type Credential, type Row } from "./companyos";
 
 export interface Ctx {
   cos: CompanyOs;
@@ -27,8 +32,8 @@ export interface Ctx {
 }
 
 const SECTIONS: ProfileSection[] = ["about", "skills", "where", "story"];
-const PROFILE_STATUSES = new Set(["draft", "submitted", "changes_requested", "approved"]);
-const SENT = new Set(["submitted", "changes_requested", "approved"]);
+const PROFILE_STATUSES = new Set(["draft", "submitted", "changes_requested", "approved", "published"]);
+const SENT = new Set(["submitted", "changes_requested", "approved", "published"]);
 const PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic"]);
 export const PHOTO_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -53,6 +58,8 @@ interface World {
   profileByPerson: Map<string, Row>;
   itemsByProfile: Map<string, Row[]>;
   photoByProfile: Map<string, Row>;
+  /** Portfolio and thumbnail files (the video-links flag only). */
+  sampleFilesByProfile: Map<string, Row[]>;
   reviewsByProfile: Map<string, Row[]>;
   submissionByPerson: Map<string, Row>;
   users: Map<string, AdminUser>;
@@ -63,9 +70,10 @@ async function loadWorld(ctx: Ctx, persons: Row[], { owner }: { owner: boolean }
   const ids = persons.map((p) => p.id);
   const profiles = ids.length ? await cos.byIds(cred, "profile", "person", ids) : [];
   const profileIds = profiles.map((p) => p.id);
-  const [items, files, reviews, submissions, users] = await Promise.all([
+  const [items, files, sampleFiles, reviews, submissions, users] = await Promise.all([
     profileIds.length ? cos.byIds(cred, "profile_item", "profile", profileIds) : [],
     profileIds.length ? cos.byIds(cred, "file", "owner_id", profileIds, and(eq("kind", "photo"), eq("status", "ready"))) : [],
+    videoLinksEnabled() && profileIds.length ? cos.byIds(cred, "file", "owner_id", profileIds, and(isIn("kind", SAMPLE_KINDS), eq("status", "ready"))) : [],
     profileIds.length ? cos.byIds(cred, "profile_review", "profile", profileIds) : [],
     owner && ids.length ? cos.byIds(cred, "form_submission", "person", ids, eq("form_key", "call_sheet")) : [],
     owner ? cos.adminUsers(cred) : [],
@@ -75,6 +83,7 @@ async function loadWorld(ctx: Ctx, persons: Row[], { owner }: { owner: boolean }
     profileByPerson: new Map(profiles.map((p) => [str(p.data.person), p])),
     itemsByProfile: groupBy(items, (i) => str(i.data.profile)),
     photoByProfile: new Map(files.map((f) => [str(f.data.owner_id), f])),
+    sampleFilesByProfile: groupBy(sampleFiles, (f) => str(f.data.owner_id)),
     reviewsByProfile: groupBy(reviews, (r) => str(r.data.profile)),
     submissionByPerson: new Map(submissions.map((s) => [str(s.data.person), s])),
     users: new Map(users.map((u) => [u.userId, u])),
@@ -82,15 +91,16 @@ async function loadWorld(ctx: Ctx, persons: Row[], { owner }: { owner: boolean }
 }
 
 const itemsOf = (rows: Row[] | undefined): ProfileItem[] =>
-  (rows ?? []).map((r) => ({ kind: r.data.kind as ProfileItem["kind"], value: str(r.data.value), position: Number(r.data.position ?? 0), ...(r.data.visible === false ? { visible: false } : {}) }));
+  (rows ?? []).filter((r) => r.data.kind !== "video_link").map((r) => ({ kind: r.data.kind as ProfileItem["kind"], value: str(r.data.value), position: Number(r.data.position ?? 0), ...(r.data.visible === false ? { visible: false } : {}) }));
 
 function fieldsOf(w: World, profile: Row): ProfileFields {
   const photo = w.photoByProfile.get(profile.id);
-  return fromProfile(profile.data, itemsOf(w.itemsByProfile.get(profile.id)), photo ? mediaUrl(photo.id) : "");
+  return fromProfile(profile.data, itemsOf(w.itemsByProfile.get(profile.id)), photo ? mediaUrl(photo.id) : "",
+    videoLinksEnabled() ? samplesFrom(w.itemsByProfile.get(profile.id) ?? [], w.sampleFilesByProfile.get(profile.id) ?? []) : undefined);
 }
 
 /** 2.0's status: the profile's, else whether the invited person's login has signed in (gap analysis §13.5). */
-function statusOf(profile: Row | undefined, signedUp: boolean): PersonStatus {
+export function statusOf(profile: Row | undefined, signedUp: boolean): PersonStatus {
   const s = str(profile?.data.status);
   if (PROFILE_STATUSES.has(s)) return s as PersonStatus;
   // rejected and hidden (Company OS's extra review states) aren't used by 2.0; they read as a draft to edit.
@@ -130,7 +140,7 @@ function personOf(w: World, row: Row, signedUpSelf = false): Person {
     waitlistCategory: str(answers.category),
     invitedAt: iso(row.createdAt),
     ...(profile?.data.submitted_at ? { submittedAt: iso(profile.data.submitted_at) } : {}),
-    ...(status === "approved" && profile?.data.reviewed_at ? { approvedAt: iso(profile.data.reviewed_at) } : {}),
+    ...(isReviewedStatus(status) && profile?.data.reviewed_at ? { approvedAt: iso(profile.data.reviewed_at) } : {}),
     updatedAt: updated,
     ...(status === "changes_requested" && profile ? { reviewNotes: notesOf(w, profile) } : {}),
   };
@@ -256,17 +266,23 @@ export async function getPerson(ctx: Ctx, id: string): Promise<PersonSummary | n
 /** What the public page reads, with public_reader: only approved profiles resolve (its row policy), never contact details. */
 async function publicProfiles(ctx: Ctx, profiles: Row[]) {
   const ids = profiles.map((p) => p.id);
-  const [items, files] = ids.length
-    ? await Promise.all([ctx.cos.byIds(ctx.cred, "profile_item", "profile", ids), ctx.cos.byIds(ctx.cred, "file", "owner_id", ids, eq("kind", "photo"))])
-    : [[], []];
+  const [items, files, sampleFiles] = ids.length
+    ? await Promise.all([ctx.cos.byIds(ctx.cred, "profile_item", "profile", ids), ctx.cos.byIds(ctx.cred, "file", "owner_id", ids, and(eq("kind", "photo"), eq("status", "ready"))),
+      videoLinksEnabled() ? ctx.cos.byIds(ctx.cred, "file", "owner_id", ids, and(isIn("kind", SAMPLE_KINDS), eq("status", "ready"))) : []])
+    : [[], [], []];
+  const sampleFilesBy = groupBy(sampleFiles, (f) => str(f.data.owner_id));
   const itemsBy = groupBy(items, (i) => str(i.data.profile));
   const photoBy = new Map(files.map((f) => [str(f.data.owner_id), f]));
   return profiles.map((p) => {
     const photo = photoBy.get(p.id);
-    const fields = fromProfile(p.data, itemsOf(itemsBy.get(p.id)), photo ? mediaUrl(photo.id) : "");
+    const fields = withoutPrivateDetails(fromProfile(p.data, itemsOf(itemsBy.get(p.id)), photo ? mediaUrl(photo.id) : "",
+      videoLinksEnabled() ? samplesFrom(itemsBy.get(p.id) ?? [], sampleFilesBy.get(p.id) ?? []) : undefined));
+    fields.other = ""; // Private review text never belongs in a public response, even on upstream over-return.
+    // Private even if an upstream policy unexpectedly returns the field.
+    delete fields.insuranceNotes;
     // The public page knows the profile, not the person: its id stands in, and nothing private is in it.
     const person: Person = {
-      id: p.id, email: "", name: fields.name, slug: str(p.data.public_handle), status: "approved", waitlistZip: "", waitlistCategory: "",
+      id: p.id, email: "", name: fields.name, slug: str(p.data.public_handle), status: publishGateOn() ? "published" : "approved", waitlistZip: "", waitlistCategory: "",
       invitedAt: "", updatedAt: iso(p.updatedAt),
     };
     const profile: Profile = { personId: p.id, fields, submittedAt: "" };
@@ -292,24 +308,47 @@ export async function similar(ctx: Ctx, id: string, limit = 3) {
 
 async function ownProfile(ctx: Ctx, personId: string) {
   const [profile] = await ctx.cos.query(ctx.cred, { entity: "profile", filter: eq("person", personId), limit: 1 });
-  if (!profile) return { profile: undefined, items: [] as Row[], photo: undefined as Row | undefined };
-  const [items, files] = await Promise.all([
+  if (!profile) return { profile: undefined, items: [] as Row[], photo: undefined as Row | undefined, sampleFiles: [] as Row[] };
+  const [items, files, sampleFiles] = await Promise.all([
     ctx.cos.all(ctx.cred, { entity: "profile_item", filter: eq("profile", profile.id) }),
     ctx.cos.query(ctx.cred, { entity: "file", filter: and(eq("owner_id", profile.id), eq("kind", "photo"), eq("status", "ready")), limit: 1 }),
+    videoLinksEnabled() ? ctx.cos.all(ctx.cred, { entity: "file", filter: and(eq("owner_id", profile.id), isIn("kind", SAMPLE_KINDS), eq("status", "ready")) }) : [],
   ]);
-  return { profile, items, photo: files[0] };
+  return { profile, items, photo: files[0], sampleFiles };
 }
 
-const fieldsFrom = (p: { profile?: Row; items: Row[]; photo?: Row }) => fromProfile(p.profile!.data, itemsOf(p.items), p.photo ? mediaUrl(p.photo.id) : "");
+const fieldsFrom = (p: { profile?: Row; items: Row[]; photo?: Row; sampleFiles?: Row[] }) =>
+  fromProfile(p.profile!.data, itemsOf(p.items), p.photo ? mediaUrl(p.photo.id) : "", videoLinksEnabled() ? samplesFrom(p.items, p.sampleFiles ?? []) : undefined);
+
+/** Derive metadata only from the authenticated API row, never a field supplied by a client. */
+function profileCreation(row: Row): string | undefined {
+  const value = iso(row.createdAt);
+  return value && Number.isFinite(Date.parse(value)) ? new Date(value).toISOString() : undefined;
+}
+
+const EMAIL_PREFERENCE_RETRY = "Couldn't save your email preference. Try again.";
+
+/** The person's own email-marketing choice (Company OS GET /comms/email-preference), or null when it can't be read (comms not installed, no person). */
+async function emailPreference(ctx: Ctx): Promise<{ enabled: boolean; configured: boolean; suppressed?: boolean } | null> {
+  if (ctx.cred.kind !== "session") return null;
+  try { return await ctx.cos.call<{ enabled: boolean; configured: boolean; suppressed?: boolean }>(ctx.cred, "GET", "/comms/email-preference"); } catch { return null; }
+}
+
+/** With profile details on, the editor's marketing checkbox shows the stored choice, and remembers it as the baseline. */
+async function withMarketing(ctx: Ctx, fields: ProfileFields): Promise<ProfileFields> {
+  if (!profileDetailsEnabled()) return fields;
+  const pref = await emailPreference(ctx);
+  return pref ? { ...fields, marketingEmailConsent: pref.enabled, marketingConsentBaseline: pref.enabled, ...(pref.suppressed ? { marketingSuppressed: true } : {}) } : fields;
+}
 
 /** The draft is the profile itself (N-09: one record). The builder's step stays in the browser (lib/data/api.ts). */
 export async function getDraft(ctx: Ctx, personId: string): Promise<ProfileDraft | null> {
   const own = await ownProfile(ctx, personId);
-  if (own.profile) return { personId, fields: fieldsFrom(own), step: 0, savedAt: iso(own.profile.updatedAt) };
+  if (own.profile) return { personId, profileCreatedAt: profileCreation(own.profile), fields: await withMarketing(ctx, fieldsFrom(own)), step: 0, savedAt: iso(own.profile.updatedAt) };
   const [person] = await ctx.cos.query(ctx.cred, { entity: "person", filter: eq("id", personId), limit: 1 });
   if (!person) return null;
   const name = str(person.data.name);
-  return { personId, fields: blankFields(name === str(person.data.email) ? "" : name), step: 0, savedAt: "" };
+  return { personId, profileCreatedAt: null, fields: await withMarketing(ctx, blankFields(name === str(person.data.email) ? "" : name)), step: 0, savedAt: "" };
 }
 
 const keyOf = (i: { kind?: unknown; value?: unknown }) => `${String(i.kind)}\u0000${String(i.value)}`;
@@ -318,11 +357,14 @@ const keyOf = (i: { kind?: unknown; value?: unknown }) => `${String(i.kind)}\u00
 /** Company OS has the editor's tenant fields (title, service lines, personality): set once the recipe is applied. */
 const profileExtras = () => process.env.COMPANY_OS_PROFILE_EXTRAS === "1";
 
-export function draftOps(personId: string, fields: ProfileFields, existing: { profile?: Row; items: Row[] }, extras = profileExtras()): BatchOp[] {
-  const { data, items } = toProfile(fields, { extras });
+export function draftOps(personId: string, fields: ProfileFields, existing: { profile?: Row; items: Row[] }, extras = profileExtras(), opts: { details?: boolean; marketing?: boolean } = {}): BatchOp[] {
+  // Profile details (1.10.0) only with the flag; `marketing` is the person's changed email choice (details.marketingChange).
+  const details = opts.details ?? profileDetailsEnabled();
+  const { data, items } = toProfile(fields, { extras, details });
+  const priv = details ? privateDetails(fields, opts.marketing) : undefined;
   if (!existing.profile) {
     return [
-      { op: "create", entity: "profile", data: { ...data, person: personId } },
+      { op: "create", entity: "profile", data: { ...data, ...(priv ? { private_details: priv } : {}), person: personId } },
       ...items.map((i) => ({ op: "create" as const, entity: "profile_item", data: { ...i, profile: { $ref: 0 } } })),
     ];
   }
@@ -330,7 +372,7 @@ export function draftOps(personId: string, fields: ProfileFields, existing: { pr
   const old = existing.profile.data;
   // Compared with the stored profile as 2.0 reads it: a value 2.0 shows as its nearest (work mode "remote" as on site)
   // goes back only if the person changed that answer, so no stored value is lost and no edit is made by accident.
-  const shown = toProfile(fromProfile(old, itemsOf(existing.items), fields.photo), { extras }).data;
+  const shown = toProfile(fromProfile(old, itemsOf(existing.items), fields.photo), { extras, details }).data;
   const changed: Record<string, unknown> = {};
   // An empty object (no service lines) is as unset as an empty string.
   const blank = (v: unknown) => v == null || v === "" || (typeof v === "object" && !Array.isArray(v) && !Object.keys(v as object).length);
@@ -339,11 +381,24 @@ export function draftOps(personId: string, fields: ProfileFields, existing: { pr
     if (unset && blank(v)) continue;
     if (JSON.stringify(old[k] ?? "") !== JSON.stringify(v) && (unset || JSON.stringify(shown[k] ?? "") !== JSON.stringify(v))) changed[k] = v;
   }
+  if (priv) {
+    // Compared on what the person sets: the server's consent time is not a difference, and the marketing choice is an action.
+    const was = (old.private_details ?? {}) as Record<string, unknown>;
+    // A number still being typed is not sent (the module would refuse it): what is stored stays.
+    if (priv.phone === undefined && typeof was.phone === "string") priv.phone = was.phone;
+    const same = (was.phone ?? "") === (priv.phone ?? "") && JSON.stringify(was.phone_channels ?? []) === JSON.stringify(priv.phone_channels) && (was.booking_consent === true) === (priv.booking_consent === true);
+    if (!same || priv.marketing_consent !== undefined) changed.private_details = priv;
+  }
   // A cleared number or month isn't in toProfile's output: clear it.
   for (const k of ["years_experience", "availability_month"]) if (!(k in data) && old[k] != null && old[k] !== "") changed[k] = null;
   const ops: BatchOp[] = Object.keys(changed).length ? [{ op: "update", entity: "profile", id, data: changed }] : [];
   // Credits are matched by text; skills, services and areas by key. One stored item per wanted item.
-  const pool = groupBy(existing.items, (r) => keyOf(r.data));
+  // Historical raw labels that equal a catalog label display identically to its key.
+  // Match both by that display identity, preserving the original row/value instead of recreating it.
+  // Video links are work samples, kept by saveSamples (lib/server/work-samples.ts), never by this diff.
+  const pool = groupBy([...existing.items].filter((r) => r.data.kind !== "video_link").sort((a,b)=>Number(a.data.position??0)-Number(b.data.position??0)), (r) => keyOf(
+    r.data.kind === "skill" && onSetSkills.includes(str(r.data.value))
+      ? {...r.data,value:optionKey(str(r.data.value))} : r.data));
   for (const want of items) {
     const have = pool.get(keyOf(want))?.shift();
     const visible = want.visible ?? true;
@@ -357,7 +412,10 @@ export function draftOps(personId: string, fields: ProfileFields, existing: { pr
   return ops;
 }
 
-export async function saveDraft(ctx: Ctx, personId: string, input: ProfileFields): Promise<ProfileDraft> {
+/** One save at a time per person, so two overlapping autosaves can't race each other into the work-sample limit. */
+export const saveDraft = (ctx: Ctx, personId: string, input: ProfileFields): Promise<ProfileDraft> => serialised(personId, () => saveDraftNow(ctx, personId, input));
+
+async function saveDraftNow(ctx: Ctx, personId: string, input: ProfileFields): Promise<ProfileDraft> {
   // Names make the public handle (at most 60 characters, getPublic), so they're capped as the editor caps them.
   const fields = typeof input?.name === "string" && input.name.length > 60 ? { ...input, name: input.name.trim().replace(/\s+/g, " ").slice(0, 60).trim() } : input;
   const own = await ownProfile(ctx, personId);
@@ -366,22 +424,67 @@ export async function saveDraft(ctx: Ctx, personId: string, input: ProfileFields
     const [person] = await ctx.cos.query(ctx.cred, { entity: "person", filter: eq("id", personId), limit: 1 });
     if (!person) throw new CompanyOsError(404, "not found");
   }
-  const ops = draftOps(personId, fields, own);
-  for (let i = 0; i < ops.length; i += 200) {
-    // The first batch creates the profile when there is none; later chunks only touch items (rare: over 200 changes).
-    await ctx.cos.batch(ctx.cred, ops.slice(i, i + 200));
+  // The marketing choice goes only when the person changed the checkbox and the server still holds what the editor loaded.
+  let marketing: boolean | undefined;
+  let marketingNotice = "";
+  if (profileDetailsEnabled() && typeof fields.marketingEmailConsent === "boolean" && fields.marketingEmailConsent !== (fields.marketingConsentBaseline === true)) {
+    const pref = await emailPreference(ctx);
+    // A suppressed address is never sent a marketing choice; an unreadable preference keeps the change pending for the next save.
+    if (pref && !pref.suppressed) marketing = marketingChange(fields, pref.enabled);
+    if (!pref) marketingNotice = EMAIL_PREFERENCE_RETRY;
+  }
+  let suppressed = false;
+  const send = async (m: boolean | undefined) => {
+    const ops = draftOps(personId, fields, own, undefined, { marketing: m });
+    for (let i = 0; i < ops.length; i += 200) {
+      // The first batch creates the profile when there is none; later chunks only touch items (rare: over 200 changes).
+      await ctx.cos.batch(ctx.cred, ops.slice(i, i + 200));
+    }
+  };
+  try { await send(marketing); } catch (e) {
+    // Company OS refused the marketing choice for a suppressed contact: save everything else without it.
+    if (marketing === undefined || !(e instanceof CompanyOsError) || e.code !== "contact_suppressed") throw e;
+    suppressed = true;
+    await send(undefined);
+  }
+  // Work samples (flag on): photos as files and video links as items, after the profile exists.
+  if (videoLinksEnabled() && Array.isArray(fields.workSamples)) {
+    const mid = own.profile ? own : await ownProfile(ctx, personId);
+    if (mid.profile) {
+      try { await saveSamples(ctx, mid.profile.id, fields.workSamples, mid.items, mid.sampleFiles); } catch (e) {
+        // A refusal about the samples has its own words; anything else must still never look like a save.
+        if (e instanceof CompanyOsError && sampleRefusalMessage(e.code)) throw e;
+        throw new CompanyOsError(422, "work_samples_not_saved", "Your work samples weren't saved. Try again.");
+      }
+    }
   }
   // Removing the photo deletes it, on a draft only: a submitted or live profile needs one, so it's replaced by uploading.
   if (!fields.photo && own.photo && own.profile?.data.status === "draft") await ctx.cos.remove(ctx.cred, "file", own.photo.id);
   const after = await ownProfile(ctx, personId);
-  return { personId, fields: after.profile ? fieldsFrom(after) : fields, step: 0, savedAt: after.profile ? iso(after.profile.updatedAt) : nowIso() };
+  let saved = after.profile ? await withMarketing(ctx, fieldsFrom(after)) : fields;
+  if (suppressed) saved = { ...saved, marketingSuppressed: true };
+  if (marketingNotice) saved = { ...saved, marketingEmailConsent: fields.marketingEmailConsent, marketingConsentBaseline: fields.marketingConsentBaseline, marketingNotice };
+  return { personId, profileCreatedAt: after.profile ? profileCreation(after.profile) : null, fields: saved, step: 0, savedAt: after.profile ? iso(after.profile.updatedAt) : nowIso() };
 }
 
 export async function submit(ctx: Ctx, personId: string) {
   const own = await ownProfile(ctx, personId);
   if (!own.profile) throw new CompanyOsError(422, "profile_incomplete", "nothing to submit");
   // Already with the team or live: nothing to send (an edit to a live profile has already sent it back, N-09).
-  if (own.profile.data.status !== "submitted" && own.profile.data.status !== "approved") await ctx.cos.patch(ctx.cred, "profile", own.profile.id, { status: "submitted" });
+  if (own.profile.data.status !== "submitted" && !isReviewedStatus(str(own.profile.data.status))) {
+    const fields = fieldsFrom(own);
+    if (!fields.services.length) {
+      const enabled = process.env.CUSTOM_SERVICE_REVIEW_ENABLED === "1";
+      if (process.env.NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW === "1" && !enabled) throw new CompanyOsError(503, "custom_service_review_unavailable");
+      // Both flags absent preserves the older client's existing submit contract.
+      if (enabled) {
+        if (!fields.other.trim()) throw new CompanyOsError(422, "profile_incomplete", "Choose a service or describe a custom service.");
+        const error = customServiceError(fields.other);
+        if (error) throw new CompanyOsError(422, "invalid_custom_service", error);
+      }
+    }
+    await ctx.cos.patch(ctx.cred, "profile", own.profile.id, { status: "submitted" });
+  }
   const summary = await getPerson(ctx, personId);
   const profile = await getProfile(ctx, personId);
   if (!summary || !profile) throw new CompanyOsError(404, "not found");
@@ -625,6 +728,11 @@ async function decide(ctx: Ctx, personId: string, status: "approved" | "changes_
   const profile = await profileOf(ctx, personId);
   // Only a submitted profile is decided on. Company OS would take a review of an approved profile as a note.
   if (profile.data.status !== "submitted") throw new CompanyOsError(422, "invalid_status_transition", "only a submitted profile can be reviewed");
+  if (status === "approved" && str(profile.data.services_other).trim() && (process.env.CUSTOM_SERVICE_REVIEW_ENABLED === "1" || process.env.NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW === "1")) { // approved-ok: the decision being made, not a visibility check
+    if (process.env.CUSTOM_SERVICE_REVIEW_ENABLED !== "1") throw new CompanyOsError(503, "custom_service_review_unavailable");
+    const items = await ctx.cos.all(ctx.cred, { entity: "profile_item", filter: and(eq("profile", profile.id), eq("kind", "service")) });
+    if (!items.some((item) => item.data.kind === "service" && item.data.visible !== false)) throw new CompanyOsError(422, "profile_incomplete", "Add a listed service before approving a private custom-service request.");
+  }
   const sections = Object.fromEntries(notes.map((n) => [n.section, n.note]));
   const label: Record<ProfileSection, string> = { about: "About you", skills: "Skills & services", where: "Where & when", story: "Your story", photo: "Photo" };
   const note = notes.length ? notes.map((n) => `${label[n.section]}: ${n.note}`).join("\n") : "Approved";
@@ -718,7 +826,8 @@ export async function dashboard(ctx: Ctx): Promise<DashboardSummary> {
     opened: accounts, // no "opened" stage live (N-10)
     accounts,
     submitted: cohort.filter((s) => SENT.has(s.person.status) || !!s.person.submittedAt).length,
-    approved: invitedCounts.approved,
+    approved: invitedCounts.approved + invitedCounts.published,
+    published: invitedCounts.published,
     signedUp: selfSignedUp.length,
   };
   const reviewQueue = summaries.filter((s) => s.person.status === "submitted").sort((a, b) => (a.person.submittedAt ?? "").localeCompare(b.person.submittedAt ?? ""));

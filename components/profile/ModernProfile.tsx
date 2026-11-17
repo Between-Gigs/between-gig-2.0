@@ -1,17 +1,21 @@
 "use client";
 import * as React from "react";
-import { parseSample } from "@/lib/profile/work-fit";
+import { WorkTile } from "@/components/profile/WorkTile";
+import { workMeta } from "@/lib/profile/video-links";
 import Link from "next/link";
 import { Accordion, Button } from "@ds/components";
 import { ArrowRight, BadgeCheck, BriefcaseBusiness, Camera, Clapperboard, ClipboardList,
   Hammer, Heart, House, Info, MapPin, Paintbrush, Scissors, Share, Sparkles, Wrench, type LucideIcon } from "lucide-react";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { data } from "@/lib/data";
+import { extendedTravelLabel } from "@/lib/profile/travel-preference";
 import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/data/taxonomy";
 import { craftIcon } from "@/lib/icons3d";
 import type { ProfileSectionId } from "@/lib/profile/template";
 import { startDateLabel } from "@/lib/profile/stage-two";
-import { asset } from "@/lib/site";
+import { LinkedInLink } from "@/components/profile/LinkedInLink";
+import { RatePricing } from "@/components/profile/RatePricing";
+import { pricingLines, profileDetailsEnabled as detailsOn } from "@/lib/profile/details";
 import type { ProfileLayoutProps } from "./ProfileView";
 import { PublicBookingDetails } from "./PublicBookingDetails";
 
@@ -31,7 +35,7 @@ export function ModernProfile({ person, fields: f, mode, embedded, draft, part, 
   const Name = embedded || mode === "owner" ? "h2" : "h1";
   const offered = helps.length ? helps : services;
   const dates = monthStatusLabel[f.monthStatus];
-  const how = [modeLabel[f.mode], f.travel, f.transport, !unseen && f.insurance === "yes" ? insuranceLabel.yes : ""].filter(Boolean).join(" · ");
+  const how = [modeLabel[f.mode], f.travel, extendedTravelLabel(f.travelBeyondLA), f.transport, !unseen && f.insurance === "yes" ? insuranceLabel.yes : ""].filter(Boolean).join(" · ");
   const start = data.kind === "sample" ? startDateLabel(f.earliestStart) : "";
   const minimum = data.kind === "sample" ? f.bookingMinimum?.trim() : "";
   const availability = <div className="modern-availability">
@@ -46,7 +50,7 @@ export function ModernProfile({ person, fields: f, mode, embedded, draft, part, 
   if (priced) stats.push(["Starting rate", <>${f.rate}<small>/{basisShort[f.basis]}</small></>]);
 
   const facts = [
-    ["Works in", where], ["Where", modeLabel[f.mode]], ["Travel", [f.travel, f.transport].filter(Boolean).join(" · ")],
+    ["Works in", where], ["Where", modeLabel[f.mode]], ["Travel", [f.travel, extendedTravelLabel(f.travelBeyondLA), f.transport].filter(Boolean).join(" · ")],
     ["Speaks", f.languages], ["Brings", f.tools],
   ].filter(([,value]) => value);
 
@@ -63,14 +67,13 @@ export function ModernProfile({ person, fields: f, mode, embedded, draft, part, 
         {editing && f.other && <p className="text-ink-muted">Something else, in private review: {f.other}</p>}
       </div>, "The services you'd offer clients between gigs", "block"),
     work: portfolio.length > 0 && <><ul className="modern-work">{portfolio.slice(0, 4).map((item, i) => (
-      <li key={item.src}><button type="button" onClick={() => onPhoto(i)} aria-label={`Open image: ${item.caption}`}>
-        <img src={asset(parseSample(item.src).src)} alt="" loading="lazy" /><small>{String(i + 1).padStart(2, "0")}</small>
-      </button></li>))}</ul>
-      <div className="mt-3 flex flex-wrap items-center gap-3"><Button size="sm" variant="secondary" onClick={() => onPhoto(0)}>Show all {portfolio.length} photos</Button>
+      <li key={item.src}><WorkTile it={item} onPhoto={onPhoto} buttonClassName="relative block w-full overflow-hidden"><small>{String(i + 1).padStart(2, "0")}</small></WorkTile></li>))}</ul>
+      <div className="mt-3 flex flex-wrap items-center gap-3">{portfolio.some((it) => !it.video) && <Button size="sm" variant="secondary" onClick={() => onPhoto(0)}>Show all {portfolio.filter((it) => !it.video).length} photos</Button>}
         {sample && <p className="text-body-sm text-ink-muted">Concept images showing the kind of work to discuss, not completed client projects.</p>}</div></>,
-    credits: (show || credits.length > 0 || f.skills.length > 0 || (mode === "owner" && !!f.imdb)) && <div className="grid gap-3">
+    credits: (show || credits.length > 0 || f.skills.length > 0 || !!f.linkedin || (mode === "owner" && !!f.imdb)) && <div className="grid gap-3">
       {P("skills", !!f.skills.length, <div className="flex flex-wrap gap-2">{f.skills.map(s => <span className="modern-label" key={s}>{s}</span>)}</div>, "Your on-set skills", "block")}
       {P("credits", !!credits.length, <ol className="modern-credits">{creditRows.map(({title, role}, i) => <li key={credits[i]}><Clapperboard size={17} aria-hidden="true" /><div><b>{title}</b>{role && <p>{role}</p>}</div></li>)}</ol>, "Your notable credits, best first", "block")}
+      <LinkedInLink value={f.linkedin} />
       {(mode === "owner" || editing || draft) && P("imdb", !!f.imdb, <p className="text-body-sm text-ink-muted"><a href={f.imdb} className="text-link underline" target="_blank" rel="noreferrer">IMDb page</a> · only the Between Gigs team sees this</p>, "Your IMDb link. Only the team sees it.", "block")}
     </div>,
     details: <div className="grid gap-3">
@@ -132,13 +135,13 @@ export function ModernProfile({ person, fields: f, mode, embedded, draft, part, 
       {!aside && <div className="modern-mobile-status">{availability}</div>}
       {present.map(key => <section id={`${ids}-${key}`} data-profile-section={key} key={key} className="modern-content">
         <header><h2>{sectionTitles[key]}</h2>{key === "services" && offered.length > 0 && <small>{offered.length} offered</small>}
-          {key === "work" && <small>{portfolio.length} photos</small>}</header>{body[key]}
+          {key === "work" && <small>{workMeta(portfolio)}</small>}</header>{body[key]}
       </section>)}
       {sample && !editing && <p className="mt-6 text-body-sm text-ink-muted">This is a fictional sample profile: the person, biography and credits are made up for the preview.</p>}
     </div>
     <aside className="modern-rail" aria-label={aside ? "Editor" : `${first} at a glance`}>{aside ?? <>
       <section aria-label={`Book ${first}`} className="modern-panel modern-book">
-        <p>{priced ? <><b>${f.rate}</b> / {basisShort[f.basis]} · starting rate</> : <b>Rate on request</b>}</p>
+        <p>{detailsOn() && pricingLines(f) ? <RatePricing f={f} /> : priced ? <><b>${f.rate}</b> / {basisShort[f.basis]} · starting rate</> : <b>Rate on request</b>}</p>
         {availability}
         <Button variant="primary" fullWidth disabled={mode !== "public"} iconEnd={<ArrowRight />} onClick={onRequest}>Request {callName}</Button>
         <p>{mode === "public" ? "You won't be charged. Scope and rate are agreed first." : mode === "own" ? "Clients see this card on your profile." : "Owner view: requests are off here."}</p>

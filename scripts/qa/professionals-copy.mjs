@@ -15,7 +15,7 @@ try{for(const width of [320,390,768,1024,1440])for(const theme of ['light','dark
  assert.equal(await main.locator('summary').filter({hasText:'Explore service ideas'}).count(),10);
  assert.equal(await main.getByRole('link',{name:/^I offer this service —/}).count(),10);
  for(const link of await main.getByRole('link',{name:/^I offer this service —/}).all()) assert.equal(await link.getAttribute('href'),'/join/');
- const final=page.locator('#final-h');assert.equal(await final.innerText(),'Get Discovered, Get hired\nkeep creating.');
+ const final=page.locator('#final-h');assert.equal(await final.innerText(),'Get discovered, get hired\nkeep creating.');
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width}/${theme}: overflow`);
  await page.evaluate(async()=>{for(let y=0;y<document.body.scrollHeight;y+=800){scrollTo(0,y);await new Promise(r=>setTimeout(r,30));}scrollTo(0,0);});await page.waitForLoadState('networkidle');
  const images=await main.locator('img').evaluateAll(imgs=>imgs.filter(i=>i.getClientRects().length).map(i=>({src:i.getAttribute('src'),ok:i.complete&&i.naturalWidth>0})));assert.ok(images.every(i=>i.ok),JSON.stringify(images.filter(i=>!i.ok)));

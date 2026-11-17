@@ -4,6 +4,7 @@ import { Badge, Banner, EmptyState, Progress, SegmentedControl, Skeleton, cx } f
 import { ArrowRight, CalendarCheck, CircleCheck, Eye, Inbox, Link2, PencilLine } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { APPROVED_EDIT_HINT, APPROVED_NOT_PUBLIC, APPROVED_NOT_PUBLIC_LINE, isApprovedPrivate, isPublicStatus } from "@/lib/profile/publish-gate";
 import { data, type MonthStatus, type PersonSummary } from "@/lib/data";
 import { monthStatusLabel } from "@/lib/data/taxonomy";
 import { partsDone } from "@/lib/profile/validate";
@@ -49,7 +50,10 @@ export function GigsterHome({ personId }: { personId: string }) {
     draft: { title: "Finish your profile", body: `${progressLabel}. Submit it when it feels like you.`, href: "/profile/canvas/", cta: "Continue your profile" },
     submitted: { title: "We're reviewing your profile", body: "Nothing to do right now. We'll email you when it's approved or if we suggest a change.", href: "/profile/", cta: "See my profile" },
     changes_requested: { title: "Make the suggested edits", body: `${p.reviewNotes?.length ?? 0} short ${p.reviewNotes?.length === 1 ? "note" : "notes"} from the Between Gigs team.`, href: "/profile/canvas/", cta: "Make the changes" },
-    approved: { title: "Keep your availability fresh", body: `Confirm you're free in ${f?.month ?? "this month"} so clients know when to ask.`, href: "/profile/canvas/", cta: "Update availability" },
+    approved: isApprovedPrivate(p.status)
+      ? { title: APPROVED_NOT_PUBLIC, body: `${APPROVED_NOT_PUBLIC_LINE} ${APPROVED_EDIT_HINT}`, href: "/profile/", cta: "See my profile" }
+      : { title: "Keep your availability fresh", body: `Confirm you're free in ${f?.month ?? "this month"} so clients know when to ask.`, href: "/profile/canvas/", cta: "Update availability" },
+    published: { title: "Keep your availability fresh", body: `Confirm you're free in ${f?.month ?? "this month"} so clients know when to ask.`, href: "/profile/canvas/", cta: "Update availability" },
   }[p.status];
 
   if (brand) return (
@@ -104,9 +108,10 @@ export function GigsterHome({ personId }: { personId: string }) {
           <ul className="grid gap-2 text-body-sm">
             <li><Link href="/profile/" className="inline-flex min-h-11 items-center gap-2 text-ink hover:text-ink-brand sm:min-h-8"><Eye className="size-4 text-ink-brand" aria-hidden="true" />See it as clients will</Link></li>
             <li><Link href="/profile/canvas/" className="inline-flex min-h-11 items-center gap-2 text-ink hover:text-ink-brand sm:min-h-8"><PencilLine className="size-4 text-ink-brand" aria-hidden="true" />Edit your profile</Link></li>
-            {p.status === "approved" && <li><Link href={`/p/${p.slug}/`} className="inline-flex min-h-11 items-center gap-2 text-ink hover:text-ink-brand sm:min-h-8"><Link2 className="size-4 text-ink-brand" aria-hidden="true" />Your public page to share</Link></li>}
+            {isPublicStatus(p.status) && <li><Link href={`/p/${p.slug}/`} className="inline-flex min-h-11 items-center gap-2 text-ink hover:text-ink-brand sm:min-h-8"><Link2 className="size-4 text-ink-brand" aria-hidden="true" />Your public page to share</Link></li>}
           </ul>
-          {p.status === "approved" && <Banner tone="success" title="You're live">Clients across Los Angeles can find you.</Banner>}
+          {isPublicStatus(p.status) && <Banner tone="success" title="You're live">Clients across Los Angeles can find you.</Banner>}
+          {isApprovedPrivate(p.status) && <Banner tone="info" title={APPROVED_NOT_PUBLIC}>{APPROVED_NOT_PUBLIC_LINE}</Banner>}
         </section>
       </div>
       <ProposalNote n={3} />
@@ -176,9 +181,10 @@ export function GigsterHome({ personId }: { personId: string }) {
             <ul className="grid border-t border-line text-body-md">
               <li className="border-b border-line"><Link href="/profile/" className={rowLink}><Eye className="size-5 shrink-0" strokeWidth={1.75} aria-hidden="true" />See it as clients will<ArrowRight className="ml-auto size-4" aria-hidden="true" /></Link></li>
               <li className="border-b border-line"><Link href="/profile/canvas/" className={rowLink}><PencilLine className="size-5 shrink-0" strokeWidth={1.75} aria-hidden="true" />Edit your profile<ArrowRight className="ml-auto size-4" aria-hidden="true" /></Link></li>
-              {p.status === "approved" && <li className="border-b border-line"><Link href={`/p/${p.slug}/`} className={rowLink}><Link2 className="size-5 shrink-0" strokeWidth={1.75} aria-hidden="true" />Your public page to share<ArrowRight className="ml-auto size-4" aria-hidden="true" /></Link></li>}
+              {isPublicStatus(p.status) && <li className="border-b border-line"><Link href={`/p/${p.slug}/`} className={rowLink}><Link2 className="size-5 shrink-0" strokeWidth={1.75} aria-hidden="true" />Your public page to share<ArrowRight className="ml-auto size-4" aria-hidden="true" /></Link></li>}
             </ul>
-            {p.status === "approved" && <Banner tone="success" title="You're live">Clients across Los Angeles can find you.</Banner>}
+            {isPublicStatus(p.status) && <Banner tone="success" title="You're live">Clients across Los Angeles can find you.</Banner>}
+            {isApprovedPrivate(p.status) && <Banner tone="info" title={APPROVED_NOT_PUBLIC}>{APPROVED_NOT_PUBLIC_LINE}</Banner>}
           </section>
         </div>
         <ProposalNote n={3} />

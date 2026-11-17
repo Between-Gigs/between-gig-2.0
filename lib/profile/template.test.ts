@@ -51,10 +51,21 @@ describe("profile template", () => {
     expect(partsDone(f, "", rules)).toEqual({ done: 1, total: 1 });
   });
 
-  it("keeps the existing sample and live defaults until a template is explicitly applied", () => {
-    // Credits became optional (client, 13 Nov 2026): nine required parts, not ten.
-    expect(partsDone(blankFields("Sam"))).toEqual({ done: 1, total: 9 });
-    expect(completeness(blankFields("Sam"))).toBeCloseTo(1 / 10);
+  it("uses the revised sample defaults without Department until a template is explicitly applied", () => {
+    // Credits are optional; the revised sample no longer requires Department.
+    expect(partsDone(blankFields("Sam"))).toEqual({ done: 1, total: 8 });
+    expect(completeness(blankFields("Sam"))).toBeCloseTo(1 / 9);
     expect(validateAll(blankFields())[0]).toHaveProperty("photo");
   });
+});
+
+it("retires only the old Transport requirement while preserving the other saved template settings",()=>{
+  const legacy={version:1,required:["transport","tools","name"],order:[...defaultProfileTemplate.order].reverse(),sections:[...defaultProfileTemplate.sections].reverse()};
+  const parsed=parseProfileTemplate(JSON.stringify(legacy))!;
+  expect(parsed).not.toBeNull();expect(parsed.required).toEqual(["name","tools"]);expect(parsed.order).toEqual(legacy.order);expect(parsed.sections).toEqual(legacy.sections);
+  expect(validateAll({...blankFields("Fictional Crew"),tools:"Fictional lighting kit"},parsed)).toEqual({});
+  expect(parseProfileTemplate(JSON.stringify({...legacy,required:["transport","unknown_private_field"]}))).toBeNull();
+  expect(parseProfileTemplate(JSON.stringify({...legacy,required:["transport","transport"]}))).toBeNull();
+  expect(JSON.parse(encodeProfileTemplate({...defaultProfileTemplate,required:["name","transport","tools"]})).required).toEqual(["name","tools"]);
+  expect(legacy.required).toEqual(["transport","tools","name"]);
 });

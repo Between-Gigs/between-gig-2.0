@@ -5,9 +5,9 @@
  */
 
 /** Where a Gigster is on the way from waitlist to a public profile. Order matters: it is the funnel. */
-export type PersonStatus = "invited" | "registered" | "draft" | "submitted" | "changes_requested" | "approved";
+export type PersonStatus = "invited" | "registered" | "draft" | "submitted" | "changes_requested" | "approved" | "published";
 
-export const personStatuses: PersonStatus[] = ["invited", "registered", "draft", "submitted", "changes_requested", "approved"];
+export const personStatuses: PersonStatus[] = ["invited", "registered", "draft", "submitted", "changes_requested", "approved", "published"];
 
 export type Role = "gigster" | "owner";
 
@@ -91,6 +91,8 @@ export interface ProfileFields {
   zip: string;
   areas: string[];
   travel: string;
+  /** Optional explicit willingness to travel beyond the launch market; missing means not answered. */
+  travelBeyondLA?: boolean;
   month: string;
   monthStatus: MonthStatus;
   dates: string;
@@ -99,6 +101,8 @@ export interface ProfileFields {
   about: string;
   languages: string;
   insurance: InsuranceAnswer;
+  /** Optional private description; existing Company OS insurance_notes field, never public. */
+  insuranceNotes?: string;
   tools: string;
   transport: string;
   mode: WorkMode;
@@ -109,6 +113,22 @@ export interface ProfileFields {
   personality?: string;
   /** Private to the Gigster and booking team. Excluded from public profiles and browse results. */
   bookingMobile?: string;
+  /** Profile details (profiles 1.10.0, flag NEXT_PUBLIC_PROFILE_DETAILS). Public: rates and LinkedIn. */
+  rateOptions?: ("hourly" | "project")[];
+  hourlyRate?: string;
+  minimumHours?: string;
+  projectMinimum?: string;
+  linkedin?: string;
+  /** Private (owner only, never public): which channels the number works on, and the two consents. */
+  contactChannels?: ("sms" | "phone" | "whatsapp")[];
+  bookingContactConsent?: boolean;
+  marketingEmailConsent?: boolean;
+  /** The marketing choice as loaded from Company OS; a save sends the choice only if the checkbox moved from this. */
+  marketingConsentBaseline?: boolean;
+  /** Set by the server, never by the person: Company OS will not send this contact marketing email (contact_suppressed). */
+  marketingSuppressed?: boolean;
+  /** Set by the server: a note to show under the marketing checkbox (the choice is still pending). */
+  marketingNotice?: string;
   /**
    * The Gigster editor (Nov 2026). The Gigster's own one line per service ("what you'll do", in customer words), keyed
    * by the service name in `services`. The standard description beside it is lib/profile/service-descriptions.ts.
@@ -127,6 +147,8 @@ export interface ProfileFields {
 /** The person's working copy: what the builder autosaves. */
 export interface ProfileDraft {
   personId: string;
+  /** Trusted server profile-row creation metadata, outside writable fields. Null means no profile row yet. */
+  readonly profileCreatedAt?: string | null;
   fields: ProfileFields;
   /** Builder step to resume at (0 to 4). */
   step: number;
@@ -336,7 +358,10 @@ export interface FunnelCounts {
   accounts: number;
   /** Submitted a profile at least once (submitted, changes requested or approved). */
   submitted: number;
+  /** Reached approval: approved (private, with the publish gate) or published. */
   approved: number;
+  /** Live: published. Always 0 without the publish gate. */
+  published: number;
   /** People who signed up by themselves (a separate source, not part of the invited cohort above). */
   signedUp: number;
 }

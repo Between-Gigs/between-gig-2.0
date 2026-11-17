@@ -2,13 +2,14 @@
 import { Banner, Button, Field, Input, useToast } from "@ds/components";
 import { startPageTransition } from "@ds/motion";
 import { ArrowLeft, ArrowRight, Clock, Inbox, Mail, RotateCcw } from "lucide-react";
-import { SignIn, useUser } from "@clerk/react";
+import { SignIn, useClerk, useUser } from "@clerk/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { data, type RequestCodeResult, type SignInResult } from "@/lib/data";
 import { SAMPLE_OWNER } from "@/lib/data/fields";
 import { clerkEnabled } from "@/lib/auth/clerk";
+import { runLoginCallback, type CallbackClerk, type CallbackOutcome } from "@/lib/auth/sso-callback";
 import { useAuthActions } from "@/lib/auth/context";
 import { useSession } from "@/lib/session";
 import { basePath } from "@/lib/site";
@@ -58,6 +59,26 @@ function destination(next: string | null, role: "owner" | "gigster") {
 }
 
 /**
+ * Back from Google at /login/#/sso-callback: a Google account with no Between Gigs account goes on to sign-up; anything
+ * that can't finish says so with a way back. Never an endless spinner. Idle while all is well.
+ */
+function useLoginCallback(): CallbackOutcome {
+  const clerk = useClerk();
+  const { isSignedIn } = useUser();
+  const [outcome, setOutcome] = React.useState<CallbackOutcome>({ kind: "idle" });
+  React.useEffect(() => {
+    if (!clerk.loaded || isSignedIn || !window.location.hash.startsWith("#/sso-callback")) return;
+    return runLoginCallback(clerk as unknown as CallbackClerk, {
+      onOutcome: (result) => {
+        if (result.kind === "redirect") window.location.replace(`${basePath}${result.to}`);
+        else setOutcome(result);
+      },
+    });
+  }, [clerk, clerk.loaded, isSignedIn]);
+  return outcome;
+}
+
+/**
  * Clerk's sign-in (password and other methods configured in the Clerk dashboard), themed with our tokens and sitting in
  * the same brand frame. Once Clerk signs someone in, ClerkLayer opens their Between Gigs session and we route.
  */
@@ -71,6 +92,7 @@ function ClerkLogin() {
   const gate = useSignedInGate();
   const otherSession = !isSignedIn && gate && gate.via !== "clerk" ? gate : null;
   const v2 = useAuthV2();
+  const callback = useLoginCallback();
 
   React.useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
@@ -90,7 +112,9 @@ function ClerkLogin() {
         {params.get("__clerk_status") === "client_mismatch" && <Banner tone="warning" title="This sign-in link is out of date">
           Open a fresh sign-in page to continue with your current account. <a className="text-link underline underline-offset-2" href={`${basePath}/login/`}>Reload sign-in</a>.
         </Banner>}
-        {isLoaded && isSignedIn ? <Banner tone="info" title="You're already signed in">
+        {callback.kind === "error" ? <Banner tone="danger" title="We couldn't sign you in">
+          {callback.message} <a className="text-link underline underline-offset-2" href={`${basePath}${callback.retryHref}`}>Try again</a>.
+        </Banner> : isLoaded && isSignedIn ? <Banner tone="info" title="You're already signed in">
           {auth.onboarding ? <>Finish your account setup to continue. <Link className="text-link underline underline-offset-2" href="/join/">Continue setup</Link>.</> : "Opening your profile…"}
         </Banner> : <ClerkSlot label="Loading sign-in">
           {isLoaded && <SignIn routing="hash" appearance={{ elements: { header: "hidden" } }} signUpUrl={`${basePath}/join/`} withSignUp={false} transferable={false}

@@ -12,8 +12,12 @@
 import type { PeopleQuery, ProfileFields, ReviewNoteInput, SketchKind, WaitlistQuery } from "@/lib/data/types";
 import { randomBytes } from "node:crypto";
 import { blankFields } from "@/lib/data/fields";
+import { INSURANCE_NOTES_MAX } from "@/lib/profile/insurance";
+import { cleanDetails } from "@/lib/profile/details";
 import { CompanyOsError, companyOs, configFromEnv, type CompanyOs, type Credential } from "./companyos";
 import * as gigs from "./gigs";
+import { cleanSamples } from "./work-samples";
+import { videoLinksEnabled } from "@/lib/profile/video-links";
 import { diagnosticRequest } from "./diagnostic";
 
 type Access = "optional" | "session" | "owner" | "public" | "funnel";
@@ -40,6 +44,19 @@ export function cleanFields(v: unknown): ProfileFields {
     if (typeof d === "string" && typeof x === "string") out[k] = x.slice(0, 4000);
     else if (Array.isArray(d) && Array.isArray(x)) out[k] = x.filter((e): e is string => typeof e === "string").slice(0, 50).map((e) => e.slice(0, 400));
   }
+  // Work samples reach Company OS only with the video-links flag; otherwise they stay in the browser, as before.
+  if (videoLinksEnabled() && input.workSamples !== undefined) out.workSamples = cleanSamples(input.workSamples);
+  if (input.travelBeyondLA !== undefined) {
+    if (typeof input.travelBeyondLA !== "boolean") throw new CompanyOsError(422,"invalid_travel_preference","Choose whether you are willing to travel beyond Los Angeles.");
+    out.travelBeyondLA = input.travelBeyondLA;
+  }
+  if (input.insuranceNotes !== undefined) {
+    if (typeof input.insuranceNotes !== "string" || input.insuranceNotes.length > INSURANCE_NOTES_MAX) {
+      throw new CompanyOsError(422, "invalid_insurance_notes", `Use text of up to ${INSURANCE_NOTES_MAX} characters for the insurance description.`);
+    }
+    out.insuranceNotes = input.insuranceNotes;
+  }
+  try { Object.assign(out, cleanDetails(input)); } catch (e) { throw new CompanyOsError(422, "invalid_private_details", e instanceof Error ? e.message : undefined); }
   if (Array.isArray(input.creditPins)) out.creditPins = input.creditPins.slice(0, 50).map((e) => e !== false);
   return out as unknown as ProfileFields;
 }
@@ -153,6 +170,8 @@ export interface Deps {
 }
 
 const MAX_BODY = 256 * 1024;
+/** With video links on, a save can carry up to five resized photos (4.5 MB each at most) and a thumbnail. */
+const SAMPLES_BODY = 24 * 1024 * 1024;
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store", "x-content-type-options": "nosniff" } });
@@ -214,8 +233,9 @@ export async function handle(name: RouteName, req: Request, deps: Deps = {}): Pr
   if (!(req.headers.get("content-type") ?? "").toLowerCase().startsWith("application/json")) return json(415, { error: "unsupported media type" });
   // The public forms' limit comes before anything is read.
   if (route.access === "funnel" && rateLimited(clientIp(req))) return json(429, { error: "rate_limited" });
-  const raw = await readCapped(req, MAX_BODY);
-  if (!raw) return json(413, { error: "too large" });
+  const withSamples = name === "profiles.saveDraft" && videoLinksEnabled();
+  const raw = await readCapped(req, withSamples ? SAMPLES_BODY : MAX_BODY);
+  if (!raw) return withSamples ? json(413, { error: "too_large", message: "Your work samples are too large to save together. Remove one or use smaller images." }) : json(413, { error: "too large" });
   const text = new TextDecoder().decode(raw);
   let args: Args;
   try {

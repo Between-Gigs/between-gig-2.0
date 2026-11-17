@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toProfile } from "@/lib/data/companyos/fields";
+import { fromProfile, toProfile } from "@/lib/data/companyos/fields";
 import { completeFields } from "@/lib/data/contract/fixtures";
 import type { Row } from "./companyos";
 import { draftOps } from "./gigs";
@@ -87,4 +87,86 @@ it("multiline equipment stays a tools-only autosave with unchanged legacy transp
   expect(ops[0]).toMatchObject({ op: "update", entity: "profile", id: "prof", data: { tools } });
   expect(ops[0].data).not.toHaveProperty("transport");
   expect(ops[0].data).not.toHaveProperty("photo");
+});
+
+
+it("reorders service item positions without rewriting descriptions, private fields or service identities", () => {
+  const services = ["Interior Styling", "Event Styling", "Photography & Portraits"];
+  const serviceLines = Object.fromEntries(services.map((name, i) => [name, `Fictional service ${i + 1}`]));
+  const start = { ...fields, services, serviceLines };
+  const raw = toProfile(start, { extras: true });
+  const old = { profile: { id: "prof", data: { ...raw.data, person: PERSON, insurance_notes: "Private fictional note" }, createdAt: "", updatedAt: "" },
+    items: raw.items.map((data, i) => ({ id: `item-${i}`, data: { ...data, profile: "prof" }, createdAt: "", updatedAt: "" })) };
+  const ordered = [services[1], services[2], services[0]];
+  const ops = draftOps(PERSON, { ...start, services: ordered }, old, true);
+  expect(ops).toHaveLength(3);
+  for (const op of ops) {
+    expect(op).toMatchObject({ op: "update", entity: "profile_item" });
+    expect(Object.keys(op.data ?? {})).toEqual(["position"]);
+  }
+  const items = old.items.map(row => { const op = ops.find(op => "id" in op && op.id === row.id); return { ...row.data, ...(op && "data" in op ? op.data : {}) }; });
+  expect(fromProfile(old.profile.data, items as Parameters<typeof fromProfile>[1], start.photo)).toMatchObject({ services: ordered, serviceLines });
+  expect(old.profile.data.insurance_notes).toBe("Private fictional note");
+});
+
+it("editing equipment preserves a retired nonempty transport answer without sending a transport mutation",()=>{
+  const legacy={...fields,transport:"Fictional legacy transport answer"};
+  expect(draftOps(PERSON,{...legacy,tools:"Fictional updated lighting kit"},stored(legacy))).toEqual([{op:"update",entity:"profile",id:"prof",data:{tools:"Fictional updated lighting kit"}}]);
+  const mapped=toProfile(legacy);expect(fromProfile(mapped.data,mapped.items,legacy.photo).transport).toBe(legacy.transport);
+});
+
+it("changing both work locations updates only work_mode and preserves private notes and media", () => {
+  const previous = stored(); previous.profile.data.insurance_notes = "Private fictional coverage";
+  const ops = draftOps(PERSON, { ...fields, mode: "both" }, previous);
+  expect(ops).toEqual([{ op: "update", entity: "profile", id: "prof", data: { work_mode: "on_site_or_at_provider" } }]);
+});
+
+it("private insurance notes autosave alone; legacy payloads preserve existing notes", () => {
+  const previous = stored();
+  previous.profile!.data.insurance_notes = "Existing private description";
+  expect(draftOps(PERSON, fields, previous)).toEqual([]);
+  expect(draftOps(PERSON, { ...fields, insuranceNotes: "Updated private description" }, previous)).toEqual([
+    { op: "update", entity: "profile", id: "prof", data: { insurance_notes: "Updated private description" } },
+  ]);
+  expect(draftOps(PERSON, { ...fields, insuranceNotes: "" }, previous)).toEqual([
+    { op: "update", entity: "profile", id: "prof", data: { insurance_notes: "" } },
+  ]);
+});
+
+it("changing a mileage choice only patches existing travel_notes and preserves historical areas/private notes/media",()=>{
+ const legacy={...fields,travel:"Within 20 miles, by arrangement"};const previous=stored(legacy);previous.profile.data.insurance_notes="Fictional private coverage";
+ expect(draftOps(PERSON,{...legacy,travel:"Up to 25 miles"},previous)).toEqual([{op:"update",entity:"profile",id:"prof",data:{travel_notes:"Up to 25 miles"}}]);
+ expect(draftOps(PERSON,{...legacy,about:"Updated fictional experience."},previous)).toEqual([{op:"update",entity:"profile",id:"prof",data:{about:"Updated fictional experience."}}]);
+ expect(previous.items.filter(i=>i.data.kind==="area")).toHaveLength(legacy.areas.length);expect(previous.profile.data.insurance_notes).toBe("Fictional private coverage");
+ expect(toProfile({...legacy,areas:[]}).items.filter(i=>i.kind==="area")).toHaveLength(0);
+});
+
+it("unrelated edits never slugify or recreate a stored custom skill label",()=>{
+ const previous=stored({...fields,skills:["Set decoration"]});previous.items.push({id:"custom-skill",data:{profile:"prof",kind:"skill",value:"Foley & practical effects",position:1,visible:true},createdAt:"",updatedAt:""});
+ const read=fromProfile(previous.profile.data,previous.items.map(i=>i.data) as Parameters<typeof fromProfile>[1],fields.photo);
+ expect(draftOps(PERSON,{...read,about:"Updated fictional experience."},previous)).toEqual([{op:"update",entity:"profile",id:"prof",data:{about:"Updated fictional experience."}}]);
+});
+
+it('preserves raw catalog-label history and prototype-like skills on unrelated edits and reorder',()=>{
+ const previous=stored({...fields,skills:[]});const values=['Set decoration','set_decoration','constructor','__proto__','toString'];
+ for(const [position,value] of values.entries())previous.items.push({id:`legacy-${position}`,data:{profile:'prof',kind:'skill',value,position,visible:true},createdAt:'',updatedAt:''});
+ const read=fromProfile(previous.profile.data,previous.items.map(i=>i.data) as Parameters<typeof fromProfile>[1],fields.photo);
+ expect(draftOps(PERSON,{...read,about:'Updated fictional experience.'},previous)).toEqual([{op:'update',entity:'profile',id:'prof',data:{about:'Updated fictional experience.'}}]);
+ const reordered={...read,skills:[...read.skills].reverse()};const ops=draftOps(PERSON,reordered,previous);expect(ops.every(op=>op.op==='update'&&op.entity==='profile_item'&&Object.keys(op.data??{}).join()==='position')).toBe(true);
+});
+
+it.each([true,false])('omitted legacy travel-preference payload preserves stored %s and explicit change patches only its boolean',value=>{
+ const previous=stored();previous.profile.data.extended_travel_available=value;
+ expect(draftOps(PERSON,{...fields,about:'Fictional unrelated edit.'},previous)).toEqual([{op:'update',entity:'profile',id:'prof',data:{about:'Fictional unrelated edit.'}}]);
+ expect(draftOps(PERSON,{...fields,travelBeyondLA:!value},previous)).toEqual([{op:'update',entity:'profile',id:'prof',data:{extended_travel_available:!value}}]);
+});
+
+describe("draftOps on an approved or published profile", () => {
+  it("a content change is still written (the API sends the profile back to review)", () => {
+    for (const status of ["approved", "published"]) {
+      const st = stored();
+      st.profile.data.status = status;
+      expect(draftOps(PERSON, { ...fields, about: "Edited." }, st)).toEqual([{ op: "update", entity: "profile", id: "prof", data: { about: "Edited." } }]);
+    }
+  });
 });

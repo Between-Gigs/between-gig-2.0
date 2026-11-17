@@ -1,3 +1,79 @@
 {
-  "requires": ">=1.15.0"
+  "requires": ">=1.17.0",
+  "profileFeatures": {
+    "customServiceReview": {
+      "requires": null,
+      "apiCommit": null,
+      "profilesModule": "1.5.0",
+      "settingsEvidence": {
+        "test": null,
+        "production": null
+      }
+    },
+    "departmentRetirement": {
+      "apiCommit": null,
+      "settingsEvidence": {
+        "test": null,
+        "production": null
+      }
+    },
+    "locationControls": {
+      "apiCommit": null,
+      "settingsEvidence": {
+        "test": null,
+        "production": null
+      },
+      "requires": null,
+      "profilesModule": "1.6.0",
+      "travelRequiredAfter": {
+        "test": null,
+        "production": null
+      }
+    },
+    "customSkills": {
+      "requires": null,
+      "profilesModule": "1.7.0",
+      "apiCommit": null,
+      "settingsEvidence": {
+        "test": null,
+        "production": null
+      }
+    },
+    "publishGate": {
+      "requires": ">=1.17.0",
+      "profilesModule": "1.10.0",
+      "apiCommit": null,
+      "settingsEvidence": {
+        "test": null,
+        "production": null
+      }
+    },
+    "profileDetails": {
+      "requires": ">=1.17.0",
+      "profilesModule": "1.10.0",
+      "apiCommit": null,
+      "settingsEvidence": {
+        "test": null,
+        "production": null
+      }
+    },
+    "travelPreference": {
+      "requires": null,
+      "profilesModule": "1.8.0",
+      "apiCommit": null,
+      "settingsEvidence": {
+        "test": null,
+        "production": null
+      }
+    },
+    "videoLinks": {
+      "requires": ">=1.17.0",
+      "profilesModule": "1.10.0",
+      "apiCommit": null,
+      "settingsEvidence": {
+        "test": null,
+        "production": null
+      }
+    }
+  }
 }

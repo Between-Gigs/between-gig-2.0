@@ -4,6 +4,7 @@
  * taxonomy labels by `optionKey`; `fromProfile` reads them back. Mapping table: Company OS docs/customers/between-gigs/gap-analysis.md §13.4.
  */
 import { laServiceAreas, offSetServices, onSetSkills } from "../taxonomy.ts";
+import { publicDetails, readPrivateDetails, readPublicDetails } from "../../profile/details.ts";
 import type { InsuranceAnswer, MonthStatus, ProfileFields, RateBasis, WorkMode } from "../types.ts";
 
 /** A taxonomy label as the recipe's option key: "Wardrobe & costume" → "wardrobe_costume". */
@@ -37,7 +38,7 @@ function extrasOf(f: ProfileFields): Record<string, unknown> {
 }
 
 /** The profile's data (without `person`, `status` or the photo) and its items, in 2.0's order. */
-export function toProfile(f: ProfileFields, opts: { extras?: boolean } = {}): { data: Record<string, unknown>; items: ProfileItem[] } {
+export function toProfile(f: ProfileFields, opts: { extras?: boolean; details?: boolean } = {}): { data: Record<string, unknown>; items: ProfileItem[] } {
   const years = f.years.trim() === "" ? NaN : Number(f.years);
   const data: Record<string, unknown> = {
     display_name: f.name.trim(),
@@ -48,6 +49,7 @@ export function toProfile(f: ProfileFields, opts: { extras?: boolean } = {}): { 
     home_city: f.market === "other" ? f.otherCity.trim() : "",
     postal_code: f.zip.trim(),
     travel_notes: f.travel.trim(),
+    ...(typeof f.travelBeyondLA === "boolean" ? { extended_travel_available: f.travelBeyondLA } : {}),
     ...(/^\d{4}-\d{2}$/.test(f.month) ? { availability_month: f.month } : {}),
     availability_status: availability[f.monthStatus],
     availability_notes: f.dates.trim(),
@@ -56,23 +58,41 @@ export function toProfile(f: ProfileFields, opts: { extras?: boolean } = {}): { 
     about: f.about.trim(),
     languages: f.languages.trim(),
     insurance_disclosure: insurance[f.insurance],
+    // Omitted by legacy clients: never erase a stored note merely because their model lacks it.
+    ...(typeof f.insuranceNotes === "string" ? { insurance_notes: f.insuranceNotes.trim() } : {}),
     tools: f.tools.trim(),
     transport: f.transport.trim(),
     work_mode: mode[f.mode],
     services_other: f.other.trim(),
     ...(opts.extras ? extrasOf(f) : {}),
   };
+  if (opts.details) {
+    // Profile details (1.10.0). Private details are written by the save (lib/server/gigs.ts), never with these.
+    data.public_details = publicDetails(f) ?? {};
+    if (f.rateOptions) {
+      // The older rate fields follow the new answer, so cards and browse keep showing a price.
+      const hourly = data.public_details && (data.public_details as Record<string, unknown>).hourly_amount;
+      const project = (data.public_details as Record<string, unknown>).minimum_project_price;
+      if (hourly !== undefined) { data.rate_text = String(hourly); data.rate_basis = "hourly"; }
+      else if (project !== undefined) { data.rate_text = String(project); data.rate_basis = "project"; }
+      else data.rate_text = "";
+    }
+  }
   const credits = f.credits
     .map((value, i) => ({ value: value.trim(), visible: f.creditPins?.[i] !== false }))
     .filter((c) => c.value)
     .map((c, position) => ({ kind: "credit" as const, value: c.value, position, visible: c.visible }));
-  const list = (kind: ProfileItem["kind"], labels: string[]) => labels.map((label, position) => ({ kind, value: optionKey(label), position }));
+  const list = (kind: ProfileItem["kind"], labels: string[]) => labels.map((label, position) => ({ kind, value: kind === "skill" && !onSetSkills.includes(label) ? label : optionKey(label), position }));
   const items: ProfileItem[] = [...credits, ...list("skill", f.skills), ...list("service", f.services), ...(f.market === "la" ? list("area", f.areas) : [])];
   return { data, items };
 }
 
 const invert = <K extends string>(m: Record<K, string>) => Object.fromEntries(Object.entries(m).map(([k, v]) => [v, k])) as Record<string, K>;
-const labelOf = Object.fromEntries([...onSetSkills, ...offSetServices, ...laServiceAreas].map((l) => [optionKey(l), l]));
+const labelsByKind = {
+  skill: Object.fromEntries(onSetSkills.map(l => [optionKey(l),l])),
+  service: Object.fromEntries(offSetServices.map(l => [optionKey(l),l])),
+  area: Object.fromEntries(laServiceAreas.map(l => [optionKey(l),l])),
+};
 const text = (v: unknown) => (typeof v === "string" ? v : "");
 
 /**
@@ -80,13 +100,15 @@ const text = (v: unknown) => (typeof v === "string" ? v : "");
  * link (2.0's /media route), or "". Fields a reader can't see (a public read has no ZIP or insurance) come back empty
  * or as the builder's default. Company OS values 2.0 has no answer for read as the nearest one (remote → on site).
  */
-export function fromProfile(data: Record<string, unknown>, items: ProfileItem[], photo: string): ProfileFields {
+export function fromProfile(data: Record<string, unknown>, items: ProfileItem[], photo: string, samples?: string[]): ProfileFields {
   const of = (kind: ProfileItem["kind"]) => items.filter((i) => i.kind === kind).sort((a, b) => a.position - b.position);
-  const labels = (kind: ProfileItem["kind"]) => of(kind).map((i) => labelOf[i.value] ?? i.value);
+  const labels = (kind: ProfileItem["kind"]) => of(kind).map((i) => (kind === "credit" ? undefined : (Object.hasOwn(labelsByKind[kind],i.value) ? labelsByKind[kind][i.value] : undefined)) ?? i.value);
   const credits = of("credit");
   const years = data.years_experience;
   return {
     photo,
+    // Work samples read from Company OS (portfolio files and video links); absent unless the server read them.
+    ...(samples ? { workSamples: samples } : {}),
     name: text(data.display_name),
     years: typeof years === "number" ? String(years) : "",
     position: text(data.position),
@@ -101,6 +123,7 @@ export function fromProfile(data: Record<string, unknown>, items: ProfileItem[],
     zip: text(data.postal_code),
     areas: labels("area"),
     travel: text(data.travel_notes),
+    ...(typeof data.extended_travel_available === "boolean" ? { travelBeyondLA: data.extended_travel_available } : {}),
     month: text(data.availability_month),
     monthStatus: invert(availability)[text(data.availability_status)] ?? "available",
     dates: text(data.availability_notes),
@@ -109,10 +132,13 @@ export function fromProfile(data: Record<string, unknown>, items: ProfileItem[],
     about: text(data.about),
     languages: text(data.languages),
     insurance: invert(insurance)[text(data.insurance_disclosure)] ?? "private",
+    ...(typeof data.insurance_notes === "string" ? { insuranceNotes: data.insurance_notes } : {}),
     tools: text(data.tools),
     transport: text(data.transport),
     mode: invert(mode)[text(data.work_mode)] ?? "on-site",
     ...extrasFrom(data),
+    ...readPublicDetails(data.public_details),
+    ...readPrivateDetails(data.private_details),
   };
 }
 

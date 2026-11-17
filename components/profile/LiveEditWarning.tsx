@@ -2,6 +2,7 @@
 import { ConfirmDialog } from "@ds/components";
 import * as React from "react";
 import { data, type PersonStatus, type ProfileFields } from "@/lib/data";
+import { isPublicStatus } from "@/lib/profile/publish-gate";
 import { LIVE_FIELDS } from "@/lib/profile/validate";
 import { markArea } from "@/lib/split-area";
 
@@ -21,7 +22,7 @@ export function useLiveEditWarning(status: PersonStatus | undefined, needed = da
   const [pending, setPending] = React.useState<(() => void)[]>([]);
   const origin = React.useRef<HTMLElement | null>(null);
   const guard = (field: keyof ProfileFields, apply: () => void) => {
-    if (!needed || status !== "approved" || agreed || (LIVE_FIELDS as readonly string[]).includes(field)) { apply(); return; }
+    if (!needed || !isPublicStatus(status) || agreed || (LIVE_FIELDS as readonly string[]).includes(field)) { apply(); return; }
     if (!pending.length) origin.current = document.activeElement as HTMLElement | null;
     setPending((p) => [...p, apply]);
   };

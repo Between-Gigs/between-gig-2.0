@@ -181,3 +181,46 @@ it("round-trips multiline equipment through the existing Company OS text field",
   expect(fromProfile(data, items, filled.photo).tools).toBe(tools);
   expect(fromProfile(data, items, filled.photo).transport).toBe(filled.transport);
 });
+
+describe("work locations use the existing work-mode contract", () => {
+  it.each([
+    ["on-site", "on_site"], ["studio", "at_provider"], ["both", "on_site_or_at_provider"],
+  ] as const)("round-trips %s without new fields or extras", (mode, stored) => {
+    const { data, items } = toProfile({ ...filled, mode });
+    expect(data.work_mode).toBe(stored);
+    expect(fromProfile(data, items, "").mode).toBe(mode);
+    expect(data).not.toHaveProperty("work_locations");
+  });
+});
+
+describe("private insurance descriptions", () => {
+  it("round-trips an explicit private note through the existing core field without extras activation", () => {
+    const { data, items } = toProfile({ ...filled, insurance: "yes", insuranceNotes: " Fictional project coverage " });
+    expect(data.insurance_notes).toBe("Fictional project coverage");
+    expect(fromProfile(data, items, "").insuranceNotes).toBe("Fictional project coverage");
+  });
+  it("omits unknown legacy/public fields while allowing explicit clearing", () => {
+    expect(toProfile(filled).data).not.toHaveProperty("insurance_notes");
+    expect(fromProfile({}, [], "")).not.toHaveProperty("insuranceNotes");
+    expect(toProfile({ ...filled, insuranceNotes: "" }).data).toHaveProperty("insurance_notes", "");
+  });
+  it("does not discard a private note when the disclosure answer changes", () => {
+    const { data, items } = toProfile({ ...filled, insurance: "private", insuranceNotes: "Keep fictional private draft" });
+    expect(fromProfile(data, items, "")).toMatchObject({ insurance: "private", insuranceNotes: "Keep fictional private draft" });
+  });
+});
+
+it("keeps custom skill labels lossless and separate from service/area label dictionaries",()=>{
+ const skills=["Set decoration","Foley & practical effects","interior_styling","eastside","  Historical custom label  "];
+ const encoded=toProfile({...filled,skills});expect(encoded.items.filter(i=>i.kind==="skill").map(i=>i.value)).toEqual(["set_decoration",...skills.slice(1)]);
+ expect(fromProfile(encoded.data,encoded.items,filled.photo).skills).toEqual(skills);
+});
+
+it.each(['constructor','__proto__','toString'])('keeps prototype-like custom skill %s as exact text',value=>{
+ const encoded=toProfile({...filled,skills:[value]});expect(fromProfile(encoded.data,encoded.items,'').skills).toEqual([value]);
+});
+
+it('round-trips explicit travel preference booleans without inventing an answer for legacy profiles',()=>{
+ for(const travelBeyondLA of[true,false]){const encoded=toProfile({...filled,travelBeyondLA});expect(encoded.data.extended_travel_available).toBe(travelBeyondLA);expect(fromProfile(encoded.data,encoded.items,'').travelBeyondLA).toBe(travelBeyondLA);}
+ expect(toProfile(filled).data).not.toHaveProperty('extended_travel_available');for(const v of[undefined,null,'true',1])expect(fromProfile({extended_travel_available:v},[],'')).not.toHaveProperty('travelBeyondLA');
+});

@@ -1,4 +1,5 @@
 "use client";
+import { isPublicStatus } from "@/lib/profile/publish-gate";
 import { Button, Checkbox, Field, Input, Select } from "@ds/components";
 import { ArrowLeft, ArrowRight, ArrowUpRight, Check, Mail, MapPin, UserRound } from "lucide-react";
 import Link from "next/link";
@@ -36,7 +37,7 @@ export function JourneyAccount() {
   React.useEffect(() => {
     let active = true;
     void data.people.get(id).then((summary) => {
-      if (active) setPublicProfile({ id, slug: summary?.person.status === "approved" ? summary.person.slug : null });
+      if (active) setPublicProfile({ id, slug: summary && isPublicStatus(summary.person.status) ? summary.person.slug : null });
     }).catch(() => { if (active) setPublicProfile({ id, slug: null }); });
     return () => { active = false; };
   }, [id]);

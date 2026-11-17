@@ -1,4 +1,5 @@
 "use client";
+import { APPROVED_EDIT_HINT, APPROVED_NOT_PUBLIC, APPROVED_NOT_PUBLIC_LINE, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
 import { Badge, Button, Field, Input, RadioGroup, Skeleton, Slider, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
 import { ArrowDown, ArrowRight, Check, ChevronUp, Copy, Link2, MapPin, MessageSquareWarning, PartyPopper, Pencil, Plus, Share2, WandSparkles, X } from "lucide-react";
@@ -45,7 +46,7 @@ const thisMonth = () => new Date().toLocaleString("en-US", { month: "long", year
 
 const LABEL: Record<SpotId, string> = {
   photo: "Your photo", name: "Your name", position: "Your department", years: "Years in the business", services: "Services you offer",
-  skills: "On-set skills", where: "Where you work", availability: "This month", rate: "Starting rate", about: "About me",
+  skills: "On-set skills", where: "Where you work", availability: "Availability", rate: "Starting rate", about: "About me",
   credits: "Notable credits", imdb: "IMDb link", languages: "Languages", details: "Work and booking details",
 };
 /** The verb on the Next block's button: what the one tap does. */
@@ -443,14 +444,14 @@ function Canvas({ personId }: { personId: string }) {
     }
   };
 
-  const resubmit = person.status === "submitted" || person.status === "approved" || notes.length > 0;
-  const sentAlready = person.status === "submitted" || person.status === "approved";
+  const resubmit = person.status === "submitted" || isReviewedStatus(person.status) || notes.length > 0;
+  const sentAlready = person.status === "submitted" || isReviewedStatus(person.status);
   // Changes (other than availability) not yet sent: the team, or the public, still has the version sent before.
   const unsent = KEEPS_DRAFT && sentAlready && !!sentVersion && contentChanged(d, sentVersion);
   // With the team or live, there's something to send only once something has changed. Live keeps one record, so an
   // edit sends it back itself and there is never anything to send.
   const nothingToSend = sentAlready && (data.kind === "live" || !unsent);
-  const reviewState: ReviewState | null = person.status === "approved" ? "live" : person.status === "submitted" ? "review" : null;
+  const reviewState: ReviewState | null = isApprovedPrivate(person.status) ? "approved" : isPublicStatus(person.status) ? "live" : person.status === "submitted" ? "review" : null;
   const first = d.name.split(" ")[0] || "there";
   const ctx: Ctx = { order: template.order, required, filled, nextOf, d, editing, next, fresh, errors, noted, open, close, advance, portrait, rise, missing: Object.keys(fieldErrors).length };
   // The progress line: one segment per required part, in the order the page leads them; the next one is marked.
@@ -554,7 +555,7 @@ function Canvas({ personId }: { personId: string }) {
       </div>
       {!sent && !editing && view === "edit" && (
         <Dock done={done} total={required.length} next={next} ready={ready} resubmit={resubmit} canSend={!nothingToSend} submitting={submitting} onNext={() => next && open(next)} onSubmit={submit}
-          idle={reviewState === "live" ? "Live" : reviewState === "review" ? `In review since ${dayOf(person.submittedAt)}` : ""}
+          idle={reviewState === "approved" ? APPROVED_NOT_PUBLIC : reviewState === "live" ? "Live" : reviewState === "review" ? `In review since ${dayOf(person.submittedAt)}` : ""}
           left={template.order.filter((id) => invalidParts.has(id))} notes={notes.filter((n, i) => notes.findIndex((m) => SECTION_SPOT[m.section] === SECTION_SPOT[n.section]) === i).map((n) => ({ id: SECTION_SPOT[n.section], label: sectionLabel[n.section] }))} onOpen={open} />
       )}
     </Page>
@@ -664,7 +665,7 @@ function ViewToggle({ value, onChange }: { value: "edit" | "client"; onChange: (
   );
 }
 
-type ReviewState = "review" | "live";
+type ReviewState = "review" | "live" | "approved";
 
 /**
  * With the team, or live: the one mint block says where the page stands and what Send again would do. Live, an
@@ -674,8 +675,9 @@ type ReviewState = "review" | "live";
  */
 function ReviewBlock({ state, unsent, since, slug }: { state: ReviewState; unsent: boolean; since: string; slug: string }) {
   const kept = data.kind !== "live";
-  const title = state === "review" ? `In review since ${since}` : "Your page is live";
-  const line = state === "review"
+  const title = state === "review" ? `In review since ${since}` : state === "approved" ? APPROVED_NOT_PUBLIC : "Your page is live";
+  const line = state === "approved" ? `${APPROVED_NOT_PUBLIC_LINE} ${APPROVED_EDIT_HINT}`
+    : state === "review"
     ? kept
       ? unsent
         ? "You've changed your page since you sent it. The team still sees the version you sent. Send again replaces it with this one."
@@ -717,6 +719,7 @@ function EditorBar({ segs, done, total, ready, missing, save, view, editing, sen
   const line = sent ? "Sent for review"
     : missing ? `${missing} ${missing === 1 ? "thing" : "things"} to finish`
     : unsent ? "Unsent changes"
+    : state === "approved" ? APPROVED_NOT_PUBLIC
     : state === "live" ? "Live · up to date"
     : state === "review" ? "In review"
     : ready ? "Ready to send" : "Your page · edit on page";
@@ -926,7 +929,7 @@ function editorFor(id: SpotId, d: ProfileFields, set: <K extends keyof ProfileFi
       <RadioGroup name="f-basis" label="Rate basis" orientation="horizontal" value={d.basis} onChange={(v) => set("basis")(v as ProfileFields["basis"])} options={Object.entries(basisLabel).map(([value, label]) => ({ value, label }))} />
     </div>;
     case "availability": return <div className="grid gap-4">
-      <RadioGroup name="f-monthStatus" label={`This month · ${d.month}`} value={d.monthStatus} onChange={(v) => set("monthStatus")(v as ProfileFields["monthStatus"])} options={Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))} />
+      <RadioGroup name="f-monthStatus" label="Availability" value={d.monthStatus} onChange={(v) => set("monthStatus")(v as ProfileFields["monthStatus"])} options={Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))} />
       <Field label="Dates or times this month" optional={!required.includes("dates")} hint="Exact project dates are agreed with each client."><Input id="f-dates" maxLength={DATES_MAX} value={d.dates} placeholder="e.g. Weekday mornings" onChange={(e) => set("dates")(e.target.value.slice(0, DATES_MAX))} /></Field>
       <Quick options={["Weekday mornings", "Weekday evenings", "Weekends", "Most days", "Between shoots, ask me"]} onPick={set("dates")} current={d.dates} />
     </div>;
@@ -938,7 +941,7 @@ function editorFor(id: SpotId, d: ProfileFields, set: <K extends keyof ProfileFi
     </>;
     case "skills": return <ChipPicker id="f-skills" label="On-set skills" options={onSetSkills} value={d.skills} onChange={set("skills")} />;
     case "credits": return <Credits credits={d.credits} pins={d.creditPins ?? []} onChange={(c, p) => { set("credits")(c); set("creditPins")(p); }} />;
-    case "imdb": return <Field label="IMDb profile link" optional={!required.includes("imdb")} hint="Your IMDb name page. It helps us confirm credits; clients don't see it."><Input id="f-imdb" type="url" inputMode="url" value={d.imdb} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} /></Field>;
+    case "imdb": return <Field label="IMDb profile link" optional={!required.includes("imdb")}><Input id="f-imdb" type="url" inputMode="url" value={d.imdb} placeholder="https://www.imdb.com/name/nm1234567/" onChange={(e) => set("imdb")(e.target.value)} /></Field>;
     case "details": return <div className="grid gap-4">
       <RadioGroup name="f-mode" label="Work mode" value={d.mode} onChange={(v) => set("mode")(v as ProfileFields["mode"])} options={[{ value: "on-site", label: "On site" }, { value: "studio", label: "At my studio" }, { value: "both", label: "Both" }]} />
       <RadioGroup name="f-insurance" label="Insurance · self-reported" value={d.insurance} onChange={(v) => set("insurance")(v as ProfileFields["insurance"])} options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance" }]} />

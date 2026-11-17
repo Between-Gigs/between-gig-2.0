@@ -9,6 +9,7 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 import { contentSecurityPolicy } from "@/lib/security/headers";
+import { videoLinksEnabled } from "@/lib/profile/video-links";
 import { gateEnv, testGate } from "@/lib/security/test-gate";
 
 export default async function proxy(request: NextRequest) {
@@ -28,6 +29,7 @@ export default async function proxy(request: NextRequest) {
     nonce,
     clerkPublishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
     dev: process.env.NODE_ENV === "development",
+    videoLinks: videoLinksEnabled(),
   });
   const headers = new Headers(request.headers);
   headers.set("x-nonce", nonce);

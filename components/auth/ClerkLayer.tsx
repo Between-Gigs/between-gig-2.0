@@ -15,7 +15,7 @@ export function ClerkLayer({ children }: { children: React.ReactNode }) {
   // Clerk hands us full paths (with the Pages base path); Next's router adds the base path itself.
   const strip = (to: string) => (basePath && to.startsWith(basePath) ? to.slice(basePath.length) || "/" : to);
   return (
-    <ClerkProvider publishableKey={clerkPublishableKey} appearance={clerkAppearance}
+    <ClerkProvider publishableKey={clerkPublishableKey} appearance={clerkAppearance} localization={{ signIn: { start: { actionLink__use_phone: "Use phone number" } } }}
       routerPush={(to) => router.push(strip(to))} routerReplace={(to) => router.replace(strip(to))}
       signInUrl={`${basePath}/login/`} signUpUrl={`${basePath}/join/`} afterSignOutUrl={`${basePath}/login/?signedOut=1`}>
       <Bridge>{children}</Bridge>

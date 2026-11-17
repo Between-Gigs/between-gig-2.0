@@ -1,13 +1,16 @@
 "use client";
+import { APPROVED_NOT_PUBLIC, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
 import { Accordion, Button, Field, Input, Modal, Select, Textarea, cx, useToast } from "@ds/components";
-import { FittedImg } from "@/components/profile/FittedImg";
+import { WorkTile } from "@/components/profile/WorkTile";
+import { portfolioItems, videoLinksEnabled, workMeta, type PortfolioItem } from "@/lib/profile/video-links";
 import { parseSample } from "@/lib/profile/work-fit";
 import { ArrowRight, Check, ChevronLeft, ChevronRight, CircleDashed, Heart, Info, MapPin, MessageSquare, Share } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { data, type Person, type Profile, type ProfileFields } from "@/lib/data";
+import { extendedTravelLabel } from "@/lib/profile/travel-preference";
 import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/data/taxonomy";
-import { locationLabel } from "@/lib/profile/location";
+import { profileLocationLabel } from "@/lib/profile/location";
 import { absoluteUrl, asset } from "@/lib/site";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { hasRate, pinnedCredits } from "@/lib/profile/validate";
@@ -19,6 +22,9 @@ import { ModernProfile } from "./ModernProfile";
 import { WarmProfile } from "./WarmProfile";
 import { ProfileTemplate } from "@/components/ds/templates/ProfileTemplate";
 import { craftHref } from "@/lib/profile/browse";
+import { LinkedInLink } from "@/components/profile/LinkedInLink";
+import { RatePricing } from "@/components/profile/RatePricing";
+import { pricingLines, profileDetailsEnabled as detailsOn } from "@/lib/profile/details";
 
 export type ProfileMode = "public" | "own" | "owner";
 
@@ -70,20 +76,21 @@ function profileContent({ person, fields: f, extras, mode, draft = false, part }
   const services = f.services, credits = pinnedCredits(f);
   const editing = !!part, show = draft || editing;
   const priced = hasRate(f.rate);
+  const ownWork = portfolioItems(f.workSamples ?? [], videoLinksEnabled());
   const P = (id: ProfilePart, filled: boolean, content: React.ReactNode, hint: string, kind: PartKind = "line") =>
     part ? <React.Fragment key={id}>{part(id, { content, hint, kind })}</React.Fragment>
       : filled ? content : draft ? <Placeholder key={id} kind={kind}>{hint}</Placeholder> : null;
   return {
     first, callName: shortName(first), services, credits, editing, show, priced, P,
-    pageLabel: person.status === "approved" ? "Live" : "Your page · private",
-    reviewed: !editing && (mode === "public" || person.status === "approved"),
+    pageLabel: isPublicStatus(person.status) ? "Live" : isApprovedPrivate(person.status) ? APPROVED_NOT_PUBLIC : "Your page · private",
+    reviewed: !editing && (mode === "public" || isReviewedStatus(person.status)),
     unseen: mode === "public" && data.kind === "live",
     sample: !!person.sample, helps: extras?.helps ?? [],
     // The Gigster's own work samples come first; the fictional sample people keep their curated portfolio.
-    portfolio: (f.workSamples ?? []).filter(Boolean).length ? (f.workSamples ?? []).filter(Boolean).map((src, i) => ({ src, caption: `Work sample ${i + 1}` })) : extras?.portfolio ?? [],
+    portfolio: ownWork.length ? ownWork : (extras?.portfolio ?? []).map((it, i): PortfolioItem => ({ ...it, photoIndex: i })),
     resumeUrl: /^https?:\/\//.test(f.resumeUrl ?? "") ? f.resumeUrl! : "",
     rate: priced ? `$${f.rate}/${basisShort[f.basis]}` : null,
-    where: f.market === "la" ? (f.areas.length ? locationLabel(f) : "") : locationLabel(f),
+    where: profileLocationLabel(f),
     creditRows: credits.map(splitCredit),
     questions: faqs(first).map((item, i) => ({ id: `${person.id}-faq-${i}`, title: item.q, content: item.a })),
   };
@@ -123,7 +130,7 @@ export function ProfileView(props: Props) {
 
       <Layout {...props} {...model} sections={sections} ids={ids} saved={saved} onSave={() => setSaved(!saved)}
         onShare={share} onPhoto={setLightbox} onRequest={() => setRequest(true)} />
-      <Lightbox name={fields.name} items={model.portfolio} index={lightbox} onIndex={setLightbox} />
+      <Lightbox name={fields.name} items={model.portfolio.filter((it) => !it.video)} index={lightbox} onIndex={setLightbox} />
       <RequestModal first={model.callName} open={request} onClose={() => setRequest(false)} />
     </div>
   );
@@ -137,6 +144,7 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
   // How they work (mode and travel, transport, insurance when shared) and what they bring, as the facts table reads.
   const works = [
     `${modeLabel[f.mode]}${f.travel ? ` · ${f.travel}` : ""}`,
+    extendedTravelLabel(f.travelBeyondLA),
     f.transport,
     !unseen && f.insurance === "yes" ? insuranceLabel[f.insurance] : "",
   ].filter(Boolean).join(" · ");
@@ -216,7 +224,7 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
           <div>{P("availability", !!f.dates.trim() || !show, (
             <div className="h-full min-w-0 bg-surface-brand p-5 text-ink-on-brand">
               {/* With no dates the heading is the status itself, so the eyebrow doesn't repeat it. */}
-              <p className="text-eyebrow text-mint-300 uppercase">{datesHead ? monthStatusLabel[f.monthStatus] : "This month"}</p>
+              <p className="text-eyebrow text-mint-300 uppercase">{datesHead ? monthStatusLabel[f.monthStatus] : "Availability"}</p>
               <p className="mt-2 font-display text-heading-md break-words text-ink-on-brand">{datesHead || monthStatusLabel[f.monthStatus]}</p>
               {datesNote && <p className="mt-1 text-body-md break-words text-forest-100 first-letter:uppercase">{datesNote}</p>}
             </div>
@@ -248,7 +256,8 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
 
   const booking = (
     <section aria-label={`Book ${first}`} className="@container grid gap-5 rounded-xl bg-tint-mint p-5 text-forest-950">
-      {priced
+      {detailsOn() && pricingLines(f) ? <RatePricing f={f} />
+        : priced
         // The unit wraps under the number when the column is narrow ("/ project" beside "$500" in the 3-column aside).
         // The number sets by the block's own width (a container query) and its length, so it never leaves the block:
         // the owner view's aside is under 150px wide at 1024.
@@ -270,7 +279,7 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
   const checkedList = (
     <ul className="grid text-body-md text-ink">
       {/* Only an approved profile has been reviewed; before that (owner view, the Gigster's preview) it says what will happen. */}
-      {mode === "public" || person.status === "approved"
+      {mode === "public" || isReviewedStatus(person.status)
         ? <li className="flex items-start gap-3 border-t border-line py-3 first:border-t-0 first:pt-0"><Check className="mt-0.5 size-4 shrink-0" strokeWidth={3} aria-hidden="true" /><span><b>Profile reviewed</b> by the Between Gigs team</span></li>
         : <li className="flex items-start gap-3 border-t border-line py-3 first:border-t-0 first:pt-0"><CircleDashed className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span><b>Reviewed by the Between Gigs team</b> before it goes public</span></li>}
       <li className="flex items-start gap-3 border-t border-line py-3"><Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span className="min-w-0 break-words">Credits and details are shared by {first}, not independently verified</span></li>
@@ -313,26 +322,24 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
       ),
     },
     work: portfolio.length > 0 && {
-      title: "Work", meta: `${portfolio.length} photos`,
+      title: "Work", meta: workMeta(portfolio),
       content: (
         <>
           <ul className="grid grid-cols-6 gap-3 sm:gap-6">
             {shownPhotos.map((it, i) => (
               <li key={it.src} className={cx("relative", shownPhotos.length === 1 ? "col-span-6 aspect-video" : tile[i])}>
-                <button type="button" onClick={() => onPhoto(i)} aria-label={`Open image: ${it.caption}`} className="group absolute inset-0 block overflow-hidden">
-                  <FittedImg sample={it.src} loading="lazy" imgClassName="transition duration-base group-hover:scale-105 motion-reduce:transition-none" />
-                </button>
+                <WorkTile it={it} onPhoto={onPhoto} buttonClassName="group absolute inset-0 block overflow-hidden" imgClassName="transition duration-base group-hover:scale-105 motion-reduce:transition-none" />
               </li>
             ))}
           </ul>
           <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
-            <Button variant="secondary" size="md" onClick={() => onPhoto(0)}>Show all {portfolio.length} photos</Button>
+            {portfolio.some((it) => !it.video) && <Button variant="secondary" size="md" onClick={() => onPhoto(0)}>Show all {portfolio.filter((it) => !it.video).length} photos</Button>}
             {sample && <p className="flex items-start gap-2.5 text-body-md text-ink-muted"><b className="font-display text-ink">Note</b>Concept images showing the kind of work to discuss, not completed client projects.</p>}
           </div>
         </>
       ),
     },
-    credits: (show || f.skills.length > 0 || credits.length > 0 || (mode === "owner" && !!f.imdb)) && {
+    credits: (show || f.skills.length > 0 || credits.length > 0 || !!f.linkedin || (mode === "owner" && !!f.imdb)) && {
       title: "On set",
       content: (
         <div className="grid gap-6 sm:grid-cols-2">
@@ -352,6 +359,7 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
               </ol>
             </div>
           ), "Your notable credits, best first", "block")}</div>
+          <div className="sm:col-span-2"><LinkedInLink value={f.linkedin} /></div>
           {(mode === "owner" || editing || draft) && <div className="sm:col-span-2">{P("imdb", !!f.imdb, (
             <p className="text-body-sm text-ink-muted"><a className="inline-flex min-h-11 items-center text-link underline underline-offset-2" href={f.imdb} target="_blank" rel="noreferrer">IMDb page<span className="sr-only"> (opens in a new tab)</span></a> · only the Between Gigs team sees this</p>
           ), "Your IMDb link. Only the team sees it.", "block")}</div>}

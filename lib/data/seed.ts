@@ -293,3 +293,6 @@ export function buildActivity(people: Person[]) {
   }
   return events.sort((a, b) => b.at.localeCompare(a.at));
 }
+
+/** With the publish gate on, these approved sample people stay private ("Approved, not yet public"); the rest are published. */
+export const APPROVED_NOT_PUBLIC_SAMPLE = ["luca-moreno"];

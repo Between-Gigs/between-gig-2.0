@@ -1,4 +1,5 @@
 "use client";
+import { publishGateOn } from "@/lib/profile/publish-gate";
 import { useLook } from "@/components/site/LookSync";
 import { cx } from "@ds/components";
 import Link from "next/link";
@@ -33,7 +34,9 @@ export function Funnel({ d }: { d: DashboardSummary }) {
       label: "Submitted a profile", value: f.submitted, href: "/owners/review/",
       now: [{ label: "waiting for review", value: c.submitted, href: "/owners/review/" }, { label: "making edits", value: c.changes_requested, href: "/owners/people/?status=changes_requested" }],
     },
-    { label: "Approved", value: f.approved, href: "/owners/people/?status=approved", now: [{ label: "live on the site", value: c.approved, href: "/owners/people/?status=approved" }] },
+    { label: "Approved", value: f.approved, href: "/owners/people/?status=approved", now: publishGateOn()
+      ? [{ label: "approved, not public", value: c.approved, href: "/owners/people/?status=approved" }, { label: "live on the site", value: c.published, href: "/owners/people/?status=published" }]
+      : [{ label: "live on the site", value: c.approved, href: "/owners/people/?status=approved" }] },
   ];
   const scale = f.invited || 1;
 

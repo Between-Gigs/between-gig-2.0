@@ -1,6 +1,7 @@
 import { Badge, type BadgeTone } from "@ds/components";
 import { CircleCheck, CircleDashed, FilePen, Mail, MessageSquareWarning, Send, UserCheck } from "lucide-react";
 import type { PersonStatus } from "@/lib/data";
+import { gigstersLabel, isApprovedPrivate, ownerLabel } from "@/lib/profile/publish-gate";
 
 /*
  * The six people statuses. The design system's StatusBadge has Draft, Changes requested and Approved but
@@ -15,13 +16,18 @@ export const personStatusMeta: Record<PersonStatus, { label: string; gigsterLabe
   submitted: { label: "Submitted", gigsterLabel: "Submitted for review", tone: "info", Icon: Send },
   changes_requested: { label: "Changes requested", gigsterLabel: "Changes requested", tone: "neutral", Icon: MessageSquareWarning },
   approved: { label: "Approved", gigsterLabel: "Approved", tone: "success", Icon: CircleCheck },
+  // Only with the publish gate on (API 1.16.0). The words come from lib/profile/publish-gate.ts.
+  published: { label: "Live", gigsterLabel: "Live", tone: "success", Icon: CircleCheck },
 };
 
 export function PersonStatusBadge({ status, audience = "owner", size = "md", className }: { status: PersonStatus; audience?: "owner" | "gigster"; size?: "sm" | "md"; className?: string }) {
   const m = personStatusMeta[status] ?? { label: status, gigsterLabel: status, tone: "neutral" as const, Icon: CircleDashed };
+  // With the publish gate on, an approved profile is private: not the green "live" look, and its own words.
+  const tone = isApprovedPrivate(status) ? "info" : m.tone;
+  const label = status in personStatusMeta ? (audience === "gigster" ? gigstersLabel(status) : ownerLabel(status)) : audience === "gigster" ? m.gigsterLabel : m.label;
   return (
-    <Badge tone={m.tone} size={size} icon={<m.Icon aria-hidden="true" />} className={className}>
-      {audience === "gigster" ? m.gigsterLabel : m.label}
+    <Badge tone={tone} size={size} icon={<m.Icon aria-hidden="true" />} className={className}>
+      {label}
     </Badge>
   );
 }

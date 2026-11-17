@@ -1,9 +1,11 @@
 "use client";
+import { publishGateOn } from "@/lib/profile/publish-gate";
 import { Banner, Button, Checkbox, Field, IconButton, Kbd, Modal, Popover, Tag, Textarea, Tooltip, cx, useToast } from "@ds/components";
 import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, CircleDashed, Keyboard, ListChecks, MessageSquareWarning, PencilLine } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { data, type Person, type ProfileFields, type ProfileSection } from "@/lib/data";
+import { customServiceReviewEnabled } from "@/lib/profile/custom-service";
 import { SECTIONS, fieldLabel, sectionLabel, validateAll } from "@/lib/profile/validate";
 import { typingOrDialog } from "./format";
 import { ordinal, type ReviewHistory } from "./history";
@@ -56,6 +58,7 @@ export function ReviewWorkspace({ person, fields, queue, header, history, scroll
   const [suggest, setSuggest] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const missing = missingFields(fields);
+  const customNeedsService = customServiceReviewEnabled() && !!fields.other.trim() && !fields.services.length;
   const first = person.name.split(" ")[0] || "them";
 
   const index = queue.findIndex((q) => q.id === person.id);
@@ -82,12 +85,12 @@ export function ReviewWorkspace({ person, fields, queue, header, history, scroll
   }, [after, person.id, person.name, router, toast]);
 
   const approve = React.useCallback(async () => {
-    if (busy) return;
+    if (busy || customNeedsService) return;
     setBusy(true);
     try {
-      decided(`${person.name} approved · now live`, await holdDecision(person.id, () => data.owners.approve(person.id), { onError: () => toast({ message: `Couldn't approve ${person.name}. Try again.`, tone: "danger" }) }));
+      decided(`${person.name} approved${publishGateOn() ? " · not public yet" : " · now live"}`, await holdDecision(person.id, () => data.owners.approve(person.id), { onError: () => toast({ message: `Couldn't approve ${person.name}. Try again.`, tone: "danger" }) }));
     } catch { toast({ message: "Couldn't approve. Try again.", tone: "danger" }); setBusy(false); }
-  }, [busy, decided, person.id, person.name, toast]);
+  }, [busy, customNeedsService, decided, person.id, person.name, toast]);
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -153,7 +156,7 @@ export function ReviewWorkspace({ person, fields, queue, header, history, scroll
           <Button variant="secondary" size="sm" iconStart={<MessageSquareWarning />} onClick={() => setSuggest(true)} aria-keyshortcuts="E">
             <span className="max-sm:sr-only">Suggest edits</span>
           </Button>
-          <Button variant="primary" size="sm" iconStart={<CircleCheck />} loading={busy} onClick={() => void approve()} aria-keyshortcuts="A">
+          <Button variant="primary" size="sm" iconStart={<CircleCheck />} loading={busy} disabled={customNeedsService} onClick={() => void approve()} aria-keyshortcuts="A">
             <span>Approve{after && <span className="max-sm:sr-only"> &amp; next</span>}</span>
           </Button>
         </div>

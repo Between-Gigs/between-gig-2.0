@@ -1,4 +1,5 @@
 "use client";
+import { publishGateOn } from "@/lib/profile/publish-gate";
 import { useLook } from "@/components/site/LookSync";
 import { Button, SegmentedControl, Skeleton, cx } from "@ds/components";
 import { ArrowRight, Mail, Plus } from "lucide-react";
@@ -29,23 +30,31 @@ const daysSince = (iso?: string) => (iso ? Math.max(0, Math.floor((Date.now() - 
 const firstName = (s: Session) => { const n = s.name.replace(/\s*\(.*\)$/, "").trim().split(" ")[0]; return n && n !== "Owner" ? n : ""; };
 
 /** What the main list shows. The first four are the headline tabs; the funnel can also pick "invited" and "building". */
-export type DashboardView = "submitted" | "changes_requested" | "approved" | "not_invited" | "invited" | "building" | "signed_up";
+export type DashboardView = "submitted" | "changes_requested" | "approved" | "reached_approval" | "published" | "not_invited" | "invited" | "building" | "signed_up";
 type View = DashboardView;
+/** The funnel's "Approved" stage counts everyone who got through review: with the gate that is approved and published. */
+const reachedApproval = { title: "Approved or live", empty: "Nobody has been approved yet.", more: { href: "/owners/people/", label: "See them in People" }, statuses: ["approved", "published"] as PersonStatus[] };
 const views: Record<View, { title: string; empty: string; more: { href: string; label: string }; statuses?: PersonStatus[] }> = {
   submitted: { title: "Waiting for review", empty: "Nobody is waiting. New submissions appear here, oldest first.", more: { href: "/owners/review/", label: "Open the review queue" }, statuses: ["submitted"] },
   changes_requested: { title: "Making edits", empty: "Nobody is making edits right now.", more: { href: "/owners/people/?status=changes_requested", label: "See them in People" }, statuses: ["changes_requested"] },
   approved: { title: "Live profiles", empty: "No profiles are live yet.", more: { href: "/owners/people/?status=approved", label: "See them in People" }, statuses: ["approved"] },
+  // Publish gate on: "approved" is the private state and "published" is Live. Off: "approved" is Live (below).
+  reached_approval: reachedApproval,
+  published: { title: "Live profiles", empty: "No profiles are live yet.", more: { href: "/owners/people/?status=published", label: "See them in People" }, statuses: ["published"] },
   not_invited: { title: "Ready to invite", empty: "Everyone on the waitlist has been invited.", more: { href: "/owners/waitlist/?status=not_invited", label: "Choose who to invite" } },
   invited: { title: "Invited, not joined yet", empty: "Everyone invited has joined.", more: { href: "/owners/people/?status=invited", label: "See them in People" }, statuses: ["invited"] },
   signed_up: { title: "Signed up on their own", empty: "Nobody has signed up on their own yet.", more: { href: "/owners/people/?source=self", label: "See them in People" } },
   building: { title: "Building their profile", empty: "Nobody is mid-profile right now.", more: { href: "/owners/people/?status=draft", label: "See them in People" }, statuses: ["registered", "draft"] },
 };
+const approvedGated = { title: "Approved, not public", empty: "Nobody is approved and waiting to go public.", more: { href: "/owners/people/?status=approved", label: "See them in People" }, statuses: ["approved"] as PersonStatus[] };
+export const funnelView = (x: string): DashboardView => (x === "approved" && publishGateOn() ? "reached_approval" : (x as DashboardView));
+const viewDef = (view: View) => (view === "approved" && publishGateOn() ? approvedGated : views[view]);
 /** On phones the list shows this many, then "Show all": the page stays short. On desktop the panel scrolls. */
 const PHONE_ROWS = 5;
 
 /** A funnel selection narrows the same current-status list to its invited cohort. */
 function rowsFor(view: View, summary: DashboardSummary, all: PersonSummary[], invitedOnly = false) {
-  const statuses = views[view].statuses;
+  const statuses = viewDef(view).statuses;
   if (view === "signed_up") return all.filter((r) => r.person.source === "self");
   const rows = view === "submitted" ? summary.reviewQueue.filter((r) => !isHeld(r.person.id)) : statuses ? all.filter((r) => statuses.includes(r.person.status)) : [];
   const invited = new Set(summary.invitedPersonIds);
@@ -87,7 +96,8 @@ function Dashboard({ session }: { session: Session }) {
   React.useEffect(() => { void load(); }, [load]); // eslint-disable-line react-hooks/set-state-in-effect
 
   const name = firstName(session);
-  const v = views[view];
+  const v = viewDef(view);
+  const gate = publishGateOn();
   const filteredRows = d ? rowsFor(view, d, people, cohort === "invited") : [];
   const rows = modern && view === "submitted" ? sortReviewers(filteredRows, sort) : filteredRows;
   const count = view === "not_invited" ? waitlist.length : rows.length;
@@ -157,10 +167,11 @@ function Dashboard({ session }: { session: Session }) {
             <ButtonLink href="/owners/waitlist/?status=not_invited" variant="secondary" size={brand ? "md" : "lg"} className={brand ? undefined : "border-2"} iconStart={brand ? <Mail /> : undefined} iconEnd={brand ? undefined : <Plus />}>Invite people</ButtonLink>
           </>
         }>
-        <div role="tablist" aria-label="At a glance" className={brand ? "grid shrink-0 grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4" : "grid shrink-0 grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 xl:grid-cols-10"}>
+        <div role="tablist" aria-label="At a glance" className={brand ? (gate ? "grid shrink-0 grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5" : "grid shrink-0 grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4") : "grid shrink-0 grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 xl:grid-cols-10"}>
           <div className={brand ? "contents" : "col-span-2 sm:col-span-1 xl:col-span-3"}><StatTab tone="peach" icon={<Icon3D name="eyes" className="size-9 sm:size-12" />} controls="dash-list" label="Waiting for review" value={d.counts.submitted} hint={d.counts.submitted ? `Oldest waiting ${oldest} ${oldest === 1 ? "day" : "days"}` : "oldest first"} attention={d.counts.submitted > 0} selected={cohort === "all" && view === "submitted"} onSelect={() => pick("submitted")} /></div>
           <div className={brand ? "contents" : "xl:col-span-2"}><StatTab tone="butter" icon={<Icon3D name="memo" className="size-9 sm:size-12" />} controls="dash-list" label="Making edits" value={d.counts.changes_requested} hint="sent back with notes" selected={cohort === "all" && view === "changes_requested"} onSelect={() => pick("changes_requested")} /></div>
-          <div className={brand ? "contents" : "xl:col-span-2"}><StatTab tone="mint" icon={<Icon3D name="party_popper" className="size-9 sm:size-12" />} controls="dash-list" label="Live profiles" value={d.counts.approved} hint="clients can find them" selected={cohort === "all" && view === "approved"} onSelect={() => pick("approved")} /></div>
+          <div className={brand ? "contents" : "xl:col-span-2"}><StatTab tone="mint" icon={<Icon3D name="party_popper" className="size-9 sm:size-12" />} controls="dash-list" label="Live profiles" value={gate ? d.counts.published : d.counts.approved} hint="clients can find them" selected={cohort === "all" && view === (gate ? "published" : "approved")} onSelect={() => pick(gate ? "published" : "approved")} /></div>
+          {gate && <div className={brand ? "contents" : "xl:col-span-2"}><StatTab tone="sage" icon={<Icon3D name="check_mark_button" className="size-9 sm:size-12" />} controls="dash-list" label="Approved, not public" value={d.counts.approved} hint="private until published" selected={cohort === "all" && view === "approved"} onSelect={() => pick("approved")} /></div>}
           <div className={brand ? "contents" : "col-span-2 sm:col-span-1 xl:col-span-3"}><StatTab tone="sage" icon={<Icon3D name="envelope" className="size-9 sm:size-12" />} controls="dash-list" label="Ready to invite" value={d.waitlist.not_invited} hint={`${d.waitlist.not_invited} of ${d.waitlist.total} on the waitlist`} suffix={brand ? `of ${d.waitlist.total}` : `/${d.waitlist.total}`} meter={d.waitlist.total ? d.waitlist.not_invited / d.waitlist.total : 0} selected={cohort === "all" && view === "not_invited"} onSelect={() => pick("not_invited")} /></div>
         </div>
 
@@ -228,7 +239,7 @@ function Dashboard({ session }: { session: Session }) {
                   </>
                 : <>
                     <p className="px-5 pt-2 pb-1 text-body-sm text-ink-muted tabular-nums">Out of {d.funnel.invited} invited, plus {d.funnel.signedUp} who signed up on their own. Pick a step to list it.</p>
-                    <FunnelCompact bare d={d} selected={cohort === "invited" || view === "signed_up" ? view : undefined} onSelect={(x) => pick(x, x === "signed_up" ? "all" : "invited")} />
+                    <FunnelCompact bare d={d} selected={cohort === "invited" || view === "signed_up" ? (view === "reached_approval" ? "approved" : view) : undefined} onSelect={(x) => pick(funnelView(x), x === "signed_up" ? "all" : "invited")} />
                   </>}
             </div>
           </Panel>

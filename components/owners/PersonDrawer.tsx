@@ -1,4 +1,5 @@
 "use client";
+import { publishGateOn } from "@/lib/profile/publish-gate";
 import { Button, Drawer, useToast, cx } from "@ds/components";
 import { CalendarDays, ChevronLeft, ChevronRight, CircleCheck, CircleDashed, ExternalLink, MapPin, MessageSquareWarning, Sparkles, Wallet } from "lucide-react";
 import * as React from "react";
@@ -65,7 +66,7 @@ export function PersonDrawer({ rows, index, onIndex, onClose, onChanged }: {
   const approve = async () => {
     if (!row) return;
     setBusy(true);
-    try { await decided(`${row.person.name} approved · now live`, row.person.name, await holdDecision(row.person.id, () => data.owners.approve(row.person.id), after)); }
+    try { await decided(`${row.person.name} approved${publishGateOn() ? " · not public yet" : " · now live"}`, row.person.name, await holdDecision(row.person.id, () => data.owners.approve(row.person.id), after)); }
     catch { toast({ message: "Couldn't approve. Try again.", tone: "danger" }); }
     finally { setBusy(false); }
   };

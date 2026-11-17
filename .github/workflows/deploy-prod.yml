@@ -178,7 +178,19 @@ jobs:
           BG_RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT_NAME }}
           COOKIE_SIGNING_SECRET: ${{ secrets.COOKIE_SIGNING_SECRET }}
           TEST_GATE_PASSPHRASE: ${{ secrets.TEST_GATE_PASSPHRASE }}
+          NEXT_PUBLIC_PROFILE_NO_DEPARTMENT: ${{ vars.PROFILE_NO_DEPARTMENT }}
+          NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS: ${{ vars.PROFILE_LOCATION_CONTROLS }}
+          NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS: ${{ vars.PROFILE_CUSTOM_SKILLS }}
+          NEXT_PUBLIC_PROFILE_TRAVEL_PREFERENCE: ${{ vars.PROFILE_TRAVEL_PREFERENCE }}
+          NEXT_PUBLIC_PROFILE_PUBLISH_GATE: ${{ vars.PROFILE_PUBLISH_GATE }}
+          PROFILE_PUBLISH_GATE_ACK_NO_PUBLISH: ${{ vars.PROFILE_PUBLISH_GATE_ACK_NO_PUBLISH }}
+          NEXT_PUBLIC_PROFILE_VIDEO_LINKS: ${{ vars.PROFILE_VIDEO_LINKS }}
+          NEXT_PUBLIC_PROFILE_DETAILS: ${{ vars.PROFILE_DETAILS }}
+          NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER: ${{ vars.PROFILE_TRAVEL_REQUIRED_AFTER }}
+          NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW: ${{ vars.CUSTOM_SERVICE_REVIEW }}
+          CUSTOM_SERVICE_REVIEW_ENABLED: ${{ vars.CUSTOM_SERVICE_REVIEW_ENABLED }}
         run: |
+          node scripts/check-profile-activation.mjs
           case "$CLERK_PUBLISHABLE_KEY" in pk_live_?*) ;; *) echo "::error::production requires a Clerk LIVE publishable key (pk_live_…) in the production environment's variables"; exit 1 ;; esac
           if [ ${#COOKIE_SIGNING_SECRET} -lt 32 ]; then echo "::error::Set the production secret COOKIE_SIGNING_SECRET (openssl rand -hex 32; not test's)"; exit 1; fi
           if [ -n "$TEST_GATE_PASSPHRASE" ]; then echo "::error::The production environment has a TEST_GATE_PASSPHRASE secret: production never runs the test gate. Delete it."; exit 1; fi
@@ -193,6 +205,15 @@ jobs:
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_DATA_SOURCE: api
+          NEXT_PUBLIC_PROFILE_NO_DEPARTMENT: ${{ vars.PROFILE_NO_DEPARTMENT }}
+          NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS: ${{ vars.PROFILE_LOCATION_CONTROLS }}
+          NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS: ${{ vars.PROFILE_CUSTOM_SKILLS }}
+          NEXT_PUBLIC_PROFILE_TRAVEL_PREFERENCE: ${{ vars.PROFILE_TRAVEL_PREFERENCE }}
+          NEXT_PUBLIC_PROFILE_PUBLISH_GATE: ${{ vars.PROFILE_PUBLISH_GATE }}
+          NEXT_PUBLIC_PROFILE_VIDEO_LINKS: ${{ vars.PROFILE_VIDEO_LINKS }}
+          NEXT_PUBLIC_PROFILE_DETAILS: ${{ vars.PROFILE_DETAILS }}
+          NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER: ${{ vars.PROFILE_TRAVEL_REQUIRED_AFTER }}
+          NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW: ${{ vars.CUSTOM_SERVICE_REVIEW }}
           NEXT_PUBLIC_SITE_ORIGIN: ${{ vars.APP_URL }}
         run: pnpm build:server && pnpm build:preview && pnpm check:server
 
@@ -235,11 +256,16 @@ jobs:
           COMPANY_OS_SUBMIT_TOKEN: ${{ secrets.COMPANY_OS_SUBMIT_TOKEN }}
           APP_URL: ${{ vars.APP_URL }}
           COOKIE_SIGNING_SECRET: ${{ secrets.COOKIE_SIGNING_SECRET }}
+          CUSTOM_SERVICE_REVIEW_ENABLED: ${{ vars.CUSTOM_SERVICE_REVIEW_ENABLED }}
         run: |
           for name in COMPANY_OS_READ_TOKEN COMPANY_OS_SUBMIT_TOKEN APP_URL COOKIE_SIGNING_SECRET; do
             printf '%s' "${!name}" | railway variable set "$name" --stdin \
               --service "$SERVICE" --environment "$RAILWAY_ENV" --skip-deploys
           done
+          if [ "$CUSTOM_SERVICE_REVIEW_ENABLED" = "1" ]; then
+            printf '%s' "$CUSTOM_SERVICE_REVIEW_ENABLED" | railway variable set CUSTOM_SERVICE_REVIEW_ENABLED --stdin \
+              --service "$SERVICE" --environment "$RAILWAY_ENV" --skip-deploys
+          fi
 
       # Uploads the checked bundle only (not the checkout).
       - name: Deploy

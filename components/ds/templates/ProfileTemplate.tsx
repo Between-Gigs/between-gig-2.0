@@ -9,12 +9,13 @@
  * same: only the presentation changes.
  */
 import { Accordion, Button, cx } from "@ds/components";
-import { FittedImg } from "@/components/profile/FittedImg";
+import { WorkTile } from "@/components/profile/WorkTile";
 import { BadgeCheck, BriefcaseBusiness, Heart, Info, Languages, Share } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import type { ProfileLayoutProps } from "@/components/profile/ProfileView";
+import { extendedTravelLabel } from "@/lib/profile/travel-preference";
 import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/data/taxonomy";
 import { personalityQuestionText } from "@/lib/profile/personality";
 import { serviceDescription } from "@/lib/profile/service-descriptions";
@@ -24,6 +25,9 @@ import type { ProfileSectionId } from "@/lib/profile/template";
 import { Divider, Heading, Quote, Status, Text } from "../atoms";
 import { RateBlock, SectionHeading } from "../molecules";
 import { ProfileResultCard } from "../organisms";
+import { LinkedInLink } from "@/components/profile/LinkedInLink";
+import { RatePricing } from "@/components/profile/RatePricing";
+import { pricingLines, profileDetailsEnabled as detailsOn } from "@/lib/profile/details";
 
 /** One plain line of the identity meta (Justin's Flow p4: no icons, just the words). */
 function Meta({ children }: { children: React.ReactNode }) {
@@ -80,7 +84,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
 
   const rateBlock = P("rate", priced || !show, (
     <RateBlock
-      price={priced ? <>${f.rate}<span className="text-display-sm"> / {basisShort[f.basis]}</span></> : <span className="text-heading-lg">Rate on request</span>}
+      price={detailsOn() && pricingLines(f) ? <RatePricing f={f} /> : priced ? <>${f.rate}<span className="text-display-sm"> / {basisShort[f.basis]}</span></> : <span className="text-heading-lg">Rate on request</span>}
       minimum={priced ? <>{f.basis === "hourly" ? "Hourly rate" : f.basis === "day" ? "Day rate" : "Starting price per project"}{minimum ? ` · ${minimum} minimum` : ""}</> : minimum ? `${minimum} minimum` : undefined}
       available={available}
       availability={!available ? <Status tone={f.monthStatus === "away" ? "neutral" : "gold"}>{monthStatusLabel[f.monthStatus]}</Status> : undefined}
@@ -168,6 +172,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
   // How they work: mode and travel, transport, tools and (when shared) insurance.
   const how = [
     modeLabel[f.mode],
+    extendedTravelLabel(f.travelBeyondLA),
     f.transport,
     f.tools,
     !unseen && f.insurance === "yes" ? insuranceLabel[f.insurance] : "",
@@ -193,6 +198,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
           </ol>
         ), "Your notable credits, best first", "block")}
         {resumeUrl && <a className="inline-flex min-h-11 w-fit items-center gap-1.5 text-label-md font-semibold text-link underline underline-offset-4" href={resumeUrl} target="_blank" rel="noreferrer">View résumé<span className="sr-only"> (opens in a new tab)</span></a>}
+        <LinkedInLink value={f.linkedin} />
         {(mode === "owner" || editing || draft) && P("imdb", !!f.imdb, (
           <Text size="sm" muted><a className="inline-flex min-h-11 items-center text-link underline underline-offset-2" href={f.imdb} target="_blank" rel="noreferrer">IMDb page<span className="sr-only"> (opens in a new tab)</span></a> · only the Between Gigs team sees this</Text>
         ), "Your IMDb link. Only the team sees it.", "block")}
@@ -209,11 +215,9 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
     work: portfolio.length > 0 && (
       <Block id="work" title="Work samples">
         <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          {portfolio.slice(0, 5).map((it, i) => (
+          {portfolio.slice(0, 5).map((it) => (
             <li key={it.src} className="min-w-0">
-              <button type="button" onClick={() => onPhoto(i)} aria-label={`Open image: ${it.caption}`} className="group relative block aspect-4/3 w-full overflow-hidden rounded-lg bg-surface-sunken">
-                <FittedImg sample={it.src} loading="lazy" imgClassName="transition duration-base group-hover:scale-105" />
-              </button>
+              <WorkTile it={it} onPhoto={onPhoto} buttonClassName="group relative block aspect-4/3 w-full overflow-hidden rounded-lg bg-surface-sunken" imgClassName="transition duration-base group-hover:scale-105" />
             </li>
           ))}
         </ul>
@@ -235,7 +239,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
             <dt className="flex items-center gap-2 text-label-sm text-ink-muted"><BriefcaseBusiness aria-hidden="true" className="size-4" />{editing ? "How you work" : `How ${first} works`}</dt>
             <dd className="text-body-md text-ink">
               {editing
-                ? <span>{[modeLabel[f.mode], f.transport, f.tools, insuranceLabel[f.insurance]].filter(Boolean).join(" · ")}</span>
+                ? <span>{[modeLabel[f.mode], extendedTravelLabel(f.travelBeyondLA), f.transport, f.tools, insuranceLabel[f.insurance]].filter(Boolean).join(" · ")}</span>
                 : how.join(" · ")}
             </dd>
           </div>

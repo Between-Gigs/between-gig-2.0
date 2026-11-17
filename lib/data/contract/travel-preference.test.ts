@@ -1,0 +1,10 @@
+import{beforeEach,expect,it}from'vitest';import{harness}from'./harness';import{drafted}from'./fixtures';
+const h=await harness();beforeEach(()=>h.reset());
+it('keeps the optional travel answer unspecified until chosen, preserves omission, and publishes only the reviewed answer',async()=>{
+ const who=await drafted(h,'fictional-travel15','Fictional Travel Crew');expect((await h.source.profiles.getDraft(who.personId))?.fields).not.toHaveProperty('travelBeyondLA');
+ await expect(h.source.profiles.saveDraft(who.personId,{...who.fields,travelBeyondLA:'true' as unknown as boolean},3)).rejects.toThrow();
+ for(const travelBeyondLA of[true,false,true]){const d=(await h.source.profiles.getDraft(who.personId))!;await h.source.profiles.saveDraft(who.personId,{...d.fields,travelBeyondLA},3);expect((await h.source.profiles.getDraft(who.personId))?.fields.travelBeyondLA).toBe(travelBeyondLA);}
+ const legacy={...(await h.source.profiles.getDraft(who.personId))!.fields};delete legacy.travelBeyondLA;await h.source.profiles.saveDraft(who.personId,{...legacy,about:'Fictional unrelated update.'},3);expect((await h.source.profiles.getDraft(who.personId))?.fields.travelBeyondLA).toBe(true);
+ await h.source.profiles.submit(who.personId);await h.signInOwner();const slug=(await h.source.people.get(who.personId))!.person.slug;expect((await h.source.people.get(who.personId))?.fields?.travelBeyondLA).toBe(true);await h.signOut();expect((await h.source.people.getPublic(slug)).profile).toBeNull();await h.signInOwner();await h.source.owners.approve(who.personId);await h.signOut();expect((await h.source.people.getPublic(slug)).profile?.fields.travelBeyondLA).toBe(true);
+ await h.signIn(who.email);const d=(await h.source.profiles.getDraft(who.personId))!;await h.source.profiles.saveDraft(who.personId,{...d.fields,travelBeyondLA:false},3);await h.source.profiles.submit(who.personId);await h.signOut();expect((await h.source.people.getPublic(slug)).profile).toBeNull();await h.signInOwner();await h.source.owners.approve(who.personId);await h.signOut();expect((await h.source.people.getPublic(slug)).profile?.fields.travelBeyondLA).toBe(false);
+});

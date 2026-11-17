@@ -1,6 +1,7 @@
 "use client";
 import { PublicBookingDetails } from "./PublicBookingDetails";
-import { FittedImg } from "@/components/profile/FittedImg";
+import { WorkTile } from "@/components/profile/WorkTile";
+import { workMeta } from "@/lib/profile/video-links";
 import { data } from "@/lib/data";
 import { Accordion, Button, cx } from "@ds/components";
 import { ArrowRight, Check, Heart, Info, Share } from "lucide-react";
@@ -8,10 +9,14 @@ import Link from "next/link";
 import * as React from "react";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { Icon3D } from "@/components/ui/Icon3D";
+import { extendedTravelLabel } from "@/lib/profile/travel-preference";
 import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/data/taxonomy";
 import { craftIcon, iconTint, type Icon3DName } from "@/lib/icons3d";
 import { hasRate } from "@/lib/profile/validate";
 import type { ProfileLayoutProps } from "./ProfileView";
+import { LinkedInLink } from "@/components/profile/LinkedInLink";
+import { RatePricing } from "@/components/profile/RatePricing";
+import { pricingLines, profileDetailsEnabled as detailsOn } from "@/lib/profile/details";
 
 /** A small pill on the identity panel. */
 function Pill({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -80,7 +85,8 @@ export function WarmProfile({ person, fields: f, mode, embedded, similar = [], d
   const booking = (
     <section aria-label={`Book ${first}`} className="grid gap-5 rounded-xl border border-line bg-surface p-6 shadow-md">
       <p className="grid gap-0.5">
-        {priced
+        {detailsOn() && pricingLines(f) ? <RatePricing f={f} />
+          : priced
           ? <><span><span className="font-display text-display-sm text-ink">${f.rate}</span><span className="text-body-md font-semibold text-ink"> / {basisShort[f.basis]}</span></span><span className="text-body-sm text-ink-muted">starting rate</span></>
           : <span className="font-display text-heading-lg text-ink">Rate on request</span>}
       </p>
@@ -110,6 +116,7 @@ export function WarmProfile({ person, fields: f, mode, embedded, similar = [], d
   // How they work: mode and travel, transport, tools and (when shared) insurance, in one line.
   const how = [
     `${modeLabel[f.mode]}${f.travel ? ` · ${f.travel}` : ""}`,
+    extendedTravelLabel(f.travelBeyondLA),
     f.transport,
     f.tools,
     !unseen && f.insurance === "yes" ? insuranceLabel[f.insurance] : "",
@@ -164,23 +171,21 @@ export function WarmProfile({ person, fields: f, mode, embedded, similar = [], d
       </Section>
     ),
     work: portfolio.length > 0 && (
-      <Section title="Work" icon="framed_picture" meta={`${portfolio.length} photos`}>
+      <Section title="Work" icon="framed_picture" meta={workMeta(portfolio)}>
         <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0">
-          {portfolio.slice(0, 4).map((it, i) => (
+          {portfolio.slice(0, 4).map((it) => (
             <li key={it.src} className="w-4/5 shrink-0 snap-start sm:w-auto">
-              <button type="button" onClick={() => onPhoto(i)} aria-label={`Open image: ${it.caption}`} className="group relative block aspect-video w-full overflow-hidden rounded-lg">
-                <FittedImg sample={it.src} loading="lazy" imgClassName="transition duration-base group-hover:scale-105" />
-              </button>
+              <WorkTile it={it} onPhoto={onPhoto} buttonClassName="group relative block aspect-video w-full overflow-hidden rounded-lg" imgClassName="transition duration-base group-hover:scale-105" />
             </li>
           ))}
         </ul>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Button variant="secondary" size="sm" onClick={() => onPhoto(0)}>Show all {portfolio.length} photos</Button>
+          {portfolio.some((it) => !it.video) && <Button variant="secondary" size="sm" onClick={() => onPhoto(0)}>Show all {portfolio.filter((it) => !it.video).length} photos</Button>}
           {sample && <p className="inline-flex items-start gap-2 rounded-lg bg-tint-sand px-3 py-2 text-body-sm text-tint-ink"><Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />Concept images showing the kind of work to discuss, not completed client projects.</p>}
         </div>
       </Section>
     ),
-    credits: (show || credits.length > 0 || f.skills.length > 0 || (mode === "owner" && !!f.imdb)) && (
+    credits: (show || credits.length > 0 || f.skills.length > 0 || !!f.linkedin || (mode === "owner" && !!f.imdb)) && (
       <Section title="On set" icon="clapper_board">
         <div className="grid gap-3 sm:grid-cols-5">
           <div className="sm:col-span-2">{P("skills", f.skills.length > 0, (
@@ -202,6 +207,7 @@ export function WarmProfile({ person, fields: f, mode, embedded, similar = [], d
               </ol>
             </div>
           ), "Your notable credits, best first", "block")}</div>
+          <div className="sm:col-span-5"><LinkedInLink value={f.linkedin} /></div>
           {(mode === "owner" || editing || draft) && <div className="sm:col-span-5">{P("imdb", !!f.imdb, (
             <p className="text-body-sm text-ink-muted"><a className="inline-flex min-h-11 items-center text-link underline underline-offset-2" href={f.imdb} target="_blank" rel="noreferrer">IMDb page<span className="sr-only"> (opens in a new tab)</span></a> · only the Between Gigs team sees this</p>
           ), "Your IMDb link. Only the team sees it.", "block")}</div>}

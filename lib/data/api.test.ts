@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { blankFields } from "./fields";
 import { createApiSource, sendNow } from "./api";
 
 // The live source's requests: a fresh token per call; only a call made as the page closes uses the last one, with keepalive.
@@ -62,4 +63,70 @@ describe("live authentication session notifications", () => {
       expect(sessionReads).toBe(1);
     });
   }
+});
+
+describe("work samples that live on the server (NEXT_PUBLIC_PROFILE_VIDEO_LINKS=1)", () => {
+  it("are not copied into this browser's extras, and the server's list is never replaced by an old local one", async () => {
+    vi.stubEnv("NEXT_PUBLIC_PROFILE_VIDEO_LINKS", "1");
+    const store = new Map<string, string>();
+    const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), removeItem: (k: string) => void store.delete(k) } as unknown as Storage;
+    const f = { ...blankFields(), name: "Maya", workSamples: ["/media/f0"] };
+    const respond = vi.fn(async () => new Response(JSON.stringify({ result: { personId: "p", fields: { ...f, workSamples: [] }, step: 0, savedAt: "t" } }), { status: 200 }));
+    const src = createApiSource({ fetch: respond as unknown as typeof fetch, storage, baseUrl: "" });
+    const saved = await src.profiles.saveDraft("p", f, 0);
+    expect(store.get("bg2-profile-extras:p") ?? "").not.toContain("/media/f0");
+    expect(saved.fields.workSamples).toEqual([]);
+    vi.unstubAllEnvs();
+  });
+});
+
+describe("this browser's own copy of the answers (localStorage)", () => {
+  const withEnv = async (name: string, value: string, run: () => Promise<void>) => {
+    const before = process.env[name]; process.env[name] = value;
+    try { await run(); } finally { if (before === undefined) delete process.env[name]; else process.env[name] = before; }
+  };
+  const store = () => { const m = new Map<string, string>(); return { m, storage: { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v) } }; };
+  const private_ = { contactChannels: ["sms" as const], bookingContactConsent: true, marketingEmailConsent: true, marketingConsentBaseline: false, bookingMobile: "+1 555 010 0199" };
+
+  it("with profile details on, private contact answers and consents are never kept in the browser", async () => {
+    await withEnv("NEXT_PUBLIC_PROFILE_DETAILS", "1", async () => {
+      const { m, storage } = store();
+      const api = createApiSource({ storage, fetch: (async () => Response.json({ result: { personId: "p", fields: blankFields(), profileCreatedAt: null, savedAt: "", step: 0 } })) as typeof fetch });
+      await api.profiles.saveDraft("p", { ...blankFields(), ...private_, title: "Camera operator" }, 1);
+      const kept = JSON.parse(m.get("bg2-profile-extras:p") ?? "{}");
+      for (const k of Object.keys(private_)) expect(kept, k).not.toHaveProperty(k);
+      expect(kept.title).toBe("Camera operator");
+    });
+  });
+  it("an older copy of the mobile number and video-era work samples is adopted once, then cleared by the first save", async () => {
+    await withEnv("NEXT_PUBLIC_PROFILE_DETAILS", "1", async () => withEnv("NEXT_PUBLIC_PROFILE_VIDEO_LINKS", "1", async () => {
+      const { m, storage } = store();
+      storage.setItem("bg2-profile-extras:p", JSON.stringify({ bookingMobile: "+1 555 010 0199", workSamples: ["/media/a"] }));
+      const rest: Partial<ReturnType<typeof blankFields>> = blankFields();
+      delete rest.workSamples; delete rest.bookingMobile;
+      const api = createApiSource({ storage, fetch: (async () => Response.json({ result: { personId: "p", fields: rest, profileCreatedAt: null, savedAt: "", step: 0 } })) as typeof fetch });
+      const d = await api.profiles.getDraft("p");
+      expect(d!.fields.bookingMobile).toBe("+1 555 010 0199");
+      expect(d!.fields.workSamples).toEqual(["/media/a"]);
+      await api.profiles.saveDraft("p", d!.fields, 1);
+      const kept = JSON.parse(m.get("bg2-profile-extras:p") ?? "{}");
+      expect(kept).not.toHaveProperty("bookingMobile");
+      expect(kept).not.toHaveProperty("workSamples");
+    }));
+  });
+  it("and an older copy already in the browser is not read back into the draft", async () => {
+    await withEnv("NEXT_PUBLIC_PROFILE_DETAILS", "1", async () => {
+      const { storage } = store();
+      storage.setItem("bg2-profile-extras:p", JSON.stringify({ ...private_, title: "Old" }));
+      const api = createApiSource({ storage, fetch: (async () => Response.json({ result: { personId: "p", fields: blankFields(), profileCreatedAt: null, savedAt: "", step: 0 } })) as typeof fetch });
+      const d = await api.profiles.getDraft("p");
+      for (const k of Object.keys(private_).filter((k) => k !== "bookingMobile")) expect(d!.fields, k).not.toHaveProperty(k);
+    });
+  });
+  it("with profile details off the browser keeps them as before", async () => {
+    const { m, storage } = store();
+    const api = createApiSource({ storage, fetch: (async () => Response.json({ result: { personId: "p", fields: blankFields(), profileCreatedAt: null, savedAt: "", step: 0 } })) as typeof fetch });
+    await api.profiles.saveDraft("p", { ...blankFields(), ...private_ }, 1);
+    expect(JSON.parse(m.get("bg2-profile-extras:p") ?? "{}")).toHaveProperty("bookingContactConsent", true);
+  });
 });
