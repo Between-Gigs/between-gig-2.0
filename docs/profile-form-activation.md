@@ -14,7 +14,7 @@ Both deploy workflows validate declarations before infra plan/apply, setting syn
 
 `RAILWAY_ENV` is the existing workflow job's literal `test` or `production`; the operator does not invent a new environment. No `apiCommit` or settings receipt is recorded: the deploy checks the backend itself. Setting the backend options (settings changes) remains a manual, reviewed step.
 
-Custom-service mode additionally requires `profileFeatures.customServiceReview.requires` to hold the actual allocated API minimum (same `>=A.B.C` syntax as global `requires`), global `requires` at least that minimum, and the reviewed profiles module declaration `1.5.0`. Module `1.5.0` is presently a **proposal** also used by unreleased media work: it does not establish which features are deployed. Record exact feature source provenance and inspect the installed settings schema. Neither baseline/diagnostic API `1.14`/`1.15` nor `/health` proves this capability. The recorded version and source must correspond to the release owner’s actual accepted tag; do not reserve or infer a new version here.
+Custom-service mode needs profiles 1.5 or later in the backend, checked at deploy by `/healthz/` (the 1.8 marker field is used, so 1.8 or later), and both the public custom flag and the runtime guard `CUSTOM_SERVICE_REVIEW_ENABLED=1`. Neither baseline/diagnostic API `1.14`/`1.15` nor `/health` proves this capability.
 
 Department-only retirement needs no invented new API minimum; the installed submission settings must really omit `position`, which is a manual backend check. This catches the hidden-input/stale-required-settings mismatch independently of custom mode.
 

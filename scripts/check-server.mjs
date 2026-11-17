@@ -8,6 +8,7 @@ import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { judgeHealth } from "./check-server-health.mjs";
 import { appRoutes } from "./routes.mjs";
 import { INTERNAL, LIVE_METADATA, LIVE_PAGES, LIVE_ROUTES, PUBLIC_LIVE } from "./server-build.mjs";
 
@@ -136,7 +137,9 @@ try {
   // The healthcheck: up, no data.
   const health = await fetch(`${base}/healthz/`);
   const healthBody = await health.text();
-  if (health.status !== 200 || healthBody !== "ok") fail(`/healthz/ did not answer 200 ok: ${health.status} ${healthBody.slice(0, 200)} (503 lists the features whose backend marker is missing)`);
+  // No Company OS here by design: with a profile flag built in, a 503 readiness refusal is expected and accepted (check-server-health.mjs).
+  const verdict = judgeHealth(health.status, healthBody, process.env);
+  if (!verdict.ok) fail(`/healthz/ ${verdict.why}: ${health.status} ${healthBody.slice(0, 200)}`);
 
   // The public sandbox and legacy aliases need neither a Clerk session nor the old cookie.
   for (const url of ["/hub/", "/hub/home/", "/hub/preview/cursors/", "/hub/emails/", "/hub/studio/", "/hub/thumbs/home.jpg", "/preview/", "/preview/preview/"]) {
