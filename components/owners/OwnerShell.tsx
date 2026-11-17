@@ -2,7 +2,7 @@
 import { useLook } from "@/components/site/LookSync";
 import { Button, Drawer, IconButton, Input, Logo, ThemeToggle, cx } from "@ds/components";
 import { initials } from "@ds/components/Avatar";
-import { ChevronDown, ChevronRight, Image as ImageIcon, Palette, Route, Ellipsis, Inbox, LayoutDashboard, ListChecks, LogOut, Mail, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Search, Users, X, type LucideIcon } from "lucide-react";
+import { CalendarDays, CircleDollarSign, ClipboardList, PenLine, Megaphone, MessageSquare, Shapes, Sparkles, Wrench, ChevronDown, ChevronRight, Image as ImageIcon, Palette, Route, Ellipsis, Inbox, LayoutDashboard, ListChecks, LogOut, Mail, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Search, Users, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
@@ -27,7 +27,7 @@ markArea("bg-split:dashboard");
 export const COLLAPSED_KEY = "bg2-owner-nav-collapsed";
 
 type CountKey = "review" | "people" | "waitlist";
-interface Item { href: string; label: string; icon: LucideIcon; art: Icon3DName; fullPage?: boolean; exact?: boolean; count?: CountKey; hint?: string; short?: string; disabled?: boolean }
+interface Item { href: string; label: string; icon: LucideIcon; art: Icon3DName; fullPage?: boolean; exact?: boolean; count?: CountKey; hint?: string; short?: string; disabled?: boolean; wrap?: boolean }
 
 const previewItem = (path: string, label: string, icon: LucideIcon, art: Icon3DName): Item => ({ ...ownerPreviewLink(data.kind, path), label, icon, art });
 
@@ -42,7 +42,13 @@ const sections: { title: string; items: Item[] }[] = [
       { href: "/owners/waitlist/", label: "Waitlist", icon: ListChecks, art: "hourglass_done", count: "waitlist", hint: "not invited yet" },
     ],
   },
-  { title: "Team", items: [{ href: "/owners/staff/", label: "Staff", icon: Users, art: "handshake" }] },
+  { title: "Team", items: [
+    { href: "/owners/staff/", label: "Staff", icon: Users, art: "handshake" },
+    { href: "#team-communications", label: "Team Communications", icon: MessageSquare, art: "envelope", disabled: true },
+    { href: "#meetings", label: "Meetings", icon: CalendarDays, art: "clipboard", disabled: true },
+    { href: "#accounts", label: "Accounts", icon: Users, art: "handshake", disabled: true },
+    { href: "#finance", label: "Finance", icon: CircleDollarSign, art: "clipboard", disabled: true },
+  ] },
   { title: "Previews", items: [
     previewItem("/preview/#journey-h", "Page Previews", LayoutDashboard, "framed_picture"),
     previewItem("/preview/social/", "Social Previews", ImageIcon, "framed_picture"),
@@ -51,9 +57,15 @@ const sections: { title: string; items: Item[] }[] = [
     previewItem("/preview/funnels/", "Funnels", Route, "film_frames"),
   ] },
   { title: "Studio", items: [
+    { href: "/owners/product-development/", label: "Product Development", icon: ClipboardList, art: "clipboard", wrap: true },
     previewItem("/preview/design-system/", "Design System", Palette, "artist_palette"),
     previewItem("/preview/wallpapers/", "Wallpapers", ImageIcon, "framed_picture"),
     { href: "#media-library", label: "Media Library", icon: ImageIcon, art: "package", disabled: true },
+    { href: "#social-ads-pr", label: "Social, Ads, PR", icon: Megaphone, art: "envelope", disabled: true },
+    { href: "#copywriting", label: "Copywriting", icon: PenLine, art: "clipboard", disabled: true },
+    { href: "#skills", label: "Skills", icon: Sparkles, art: "clipboard", disabled: true },
+    { href: "#characters", label: "Characters", icon: Shapes, art: "framed_picture", disabled: true },
+    { href: "#tools", label: "Tools", icon: Wrench, art: "clipboard", disabled: true },
   ] },
 ];
 
@@ -488,7 +500,7 @@ function NavLink({ item: i, count, active, attention, drawer = false, onNavigate
         {attention && <span aria-hidden="true" className={cx("absolute -top-1 -right-1 hidden size-2.5 rounded-full border-2 border-tint-sand bg-ink", !drawer && "nav-collapsed:block")} />}
       </span>
       <span aria-hidden="true" className={cx("grid min-w-0 flex-1", !drawer && "nav-collapsed:hidden")}>
-        <span className="truncate text-body-md font-bold">{i.label}</span>
+        <span className={cx("text-body-md font-bold", !i.wrap && "truncate")}>{i.label}</span>
         {/* Says what the number counts, so 476 on the Waitlist isn't read as everyone on it. */}
         {i.hint && <span className="truncate text-caption text-ink-subtle">{i.hint}</span>}
       </span>
@@ -514,7 +526,7 @@ function NavLink({ item: i, count, active, attention, drawer = false, onNavigate
         {attention && <span aria-hidden="true" className={cx("absolute -top-1 -right-1.5 hidden size-2.5 rounded-full bg-ink-brand", !drawer && "nav-collapsed:block")} />}
       </span>
       <span aria-hidden="true" className={cx("grid min-w-0 flex-1", !drawer && "nav-collapsed:hidden")}>
-        <span className="truncate font-display text-body-md font-bold">{i.label}</span>
+        <span className={cx("font-display text-body-md font-bold", !i.wrap && "truncate")}>{i.label}</span>
         {/* Says what the number counts, so 476 on the Waitlist isn't read as everyone on it. */}
         {i.hint && <span className={cx("truncate text-caption", active ? "text-bg" : "text-ink-muted")}>{i.hint}</span>}
       </span>

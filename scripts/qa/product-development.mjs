@@ -1,0 +1,104 @@
+// Runs against the sample build only. Checks a real user workflow without implying database persistence.
+import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import { chromium } from "playwright-core";
+import { createRequire } from "node:module";
+import { serve } from "./serve.mjs";
+
+const require = createRequire(import.meta.url);
+const local = process.env.QA_URL ? null : await serve(process.env.QA_OUT_DIR ?? "out");
+const base = process.env.QA_URL ?? local.url;
+const output = process.env.QA_OUTPUT ?? "/tmp/bg-product-development-qa";
+await fs.mkdir(output, { recursive: true });
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? "/opt/pw-browsers/chromium" });
+try {
+  for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
+    const context = await browser.newContext({ viewport: { width, height: 1000 }, reducedMotion: "reduce", colorScheme: theme });
+    await context.addInitScript(theme => localStorage.setItem("bg-theme", theme), theme);
+    const page = await context.newPage();
+    const errors = [];
+    page.on("pageerror", error => errors.push(error.message));
+    await page.goto(`${base}/owners/product-development/`);
+    const login = page.getByRole("button", { name: "Continue as owner (sample)" });
+    await login.or(page.getByRole("heading", { name: "Product Development", exact: true })).first().waitFor();
+    if (await login.isVisible()) await login.click();
+    await page.getByRole("heading", { name: "Product Development", exact: true }).waitFor();
+    await page.getByText("Fictional sample · changes last for this page session only.", { exact: true }).waitFor();
+    const init = page.getByRole("button", { name: "Initialize workspace" });
+    if (await init.isVisible()) await init.click();
+    await page.getByRole("button", { name: "New item", exact: true }).click();
+    const editor = page.getByRole("dialog", { name: "New work item" });
+    await editor.getByLabel("Title", { exact: true }).fill(`QA checklist ${width}`);
+    await editor.getByLabel("Type", { exact: true }).selectOption("checklist");
+    await editor.getByLabel("Category", { exact: true }).selectOption("testing");
+    await editor.getByLabel("Acceptance criteria", { exact: true }).fill("A fictional browser check; never a claim about production.");
+    await editor.getByRole("button", { name: "Add source", exact: true }).click();
+    await editor.getByLabel("Source label", { exact: true }).fill("Fictional browser QA");
+    await editor.getByLabel("Source note", { exact: true }).fill("A test of saving evidence, not real completion evidence.");
+    await editor.getByLabel("Checked on", { exact: true }).fill("2026-11-15");
+    await editor.getByRole("button", { name: "Create item", exact: true }).click();
+    await page.getByRole("status").filter({ hasText: "Created in this sample session." }).waitFor();
+    await page.getByLabel("Search work items").fill(`QA checklist ${width}`);
+    await page.getByRole("button", { name: "List", exact: true }).click();
+    await page.getByRole("button", { name: `Open QA checklist ${width}`, exact: true }).click();
+    const edit = page.getByRole("dialog", { name: "Work item details" });
+    await edit.getByLabel("Status", { exact: true }).selectOption("blocked");
+    await edit.getByLabel("Blocker", { exact: true }).fill("Fictional test blocker");
+    await edit.getByRole("button", { name: "Save changes", exact: true }).click();
+    await page.getByRole("status").filter({ hasText: "Saved in this sample session." }).waitFor();
+    await page.getByRole("button", { name: "Board", exact: true }).click();
+    await page.getByRole("button", { name: `Open QA checklist ${width}`, exact: true }).waitFor();
+    await page.getByRole("button", { name: "Timeline", exact: true }).click();
+    await page.getByText("Not scheduled", { exact: true }).waitFor();
+    await page.getByRole("button", { name: `Open QA checklist ${width}`, exact: true }).click();
+    await page.getByRole("button", { name: "Archive item", exact: true }).click();
+    await page.getByRole("status").filter({ hasText: "Archived in this sample session." }).waitFor();
+    await page.getByLabel("Filter status").selectOption("archived");
+    await page.getByRole("button", { name: `Open QA checklist ${width}`, exact: true }).waitFor();
+    await page.getByLabel("Search work items").fill("");
+    await page.getByLabel("Filter status").selectOption("active");
+    await page.getByRole("button", { name: "Overview", exact: true }).click();
+    await page.getByRole("button", { name: "New phase", exact: true }).click();
+    const phase = page.getByRole("dialog", { name: "New phase", exact: true });
+    await phase.getByLabel("Phase title", { exact: true }).fill(`Fictional phase ${width}`);
+    await phase.getByLabel("Phase summary", { exact: true }).fill("A browser-test phase, not actual project status.");
+    await phase.getByLabel("Done looks like", { exact: true }).fill("The fictional phase can be created and edited.");
+    await phase.getByRole("button", { name: "Save phase", exact: true }).click();
+    await page.getByRole("status").filter({ hasText: "Phase saved in this sample session." }).waitFor();
+    await page.getByLabel("Phase", { exact: true }).selectOption({ label: `Fictional phase ${width}` });
+    await page.getByRole("button", { name: "Edit phase", exact: true }).click();
+    const phaseEdit = page.getByRole("dialog", { name: "Edit phase", exact: true });
+    await phaseEdit.getByLabel("Done looks like", { exact: true }).fill("The phase editor persists its changes within the sample session.");
+    await phaseEdit.getByRole("button", { name: "Save phase", exact: true }).click();
+    await page.getByText("The phase editor persists its changes within the sample session.", { exact: true }).waitFor();
+    await page.getByLabel("Phase", { exact: true }).selectOption({ label: "Example phase" });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, "No horizontal page overflow");
+    await page.addScriptTag({ path: require.resolve("axe-core/axe.min.js") });
+    const audit = await page.evaluate(async () => window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } }));
+    await fs.writeFile(`${output}/axe-${width}-${theme}.json`, JSON.stringify(audit.violations, null, 2));
+    assert.deepEqual(audit.violations.map(v => v.id), [], "Accessible Product Development workspace");
+    await page.locator("#main").evaluate(element => element.scrollTo(0, 0));
+    await page.screenshot({ path: `${output}/product-development-${width}-${theme}.png`, fullPage: true });
+    if (width === 1440) {
+      const navigation = page.getByRole("navigation", { name: "Owner workspace", exact: true });
+      await navigation.evaluate(element => { element.dataset.qaPersistent = "yes"; });
+      await navigation.getByRole("link", { name: "Dashboard", exact: true }).click();
+      await page.waitForURL(location => location.pathname === "/owners/");
+      await navigation.getByRole("link", { name: "Product Development", exact: true }).click();
+      await page.getByRole("heading", { name: "Product Development", exact: true }).waitFor();
+      assert.equal(await navigation.getAttribute("data-qa-persistent"), "yes", "Owner sidebar remains mounted across navigation");
+      for (const section of ["Gigsters", "Team", "Previews"]) await navigation.getByRole("button", { name: `Collapse ${section} section`, exact: true }).click();
+      await navigation.getByRole("link", { name: "Product Development", exact: true }).scrollIntoViewIfNeeded();
+      await page.screenshot({ path: `${output}/product-development-sidebar-${theme}.png`, fullPage: true });
+    }
+    await page.reload();
+    await page.getByRole("heading", { name: "Product Development", exact: true }).waitFor();
+    assert.equal(await page.getByLabel("Phase", { exact: true }).locator("option").filter({ hasText: `Fictional phase ${width}` }).count(), 0, "Sample changes are ephemeral, as advertised");
+    assert.deepEqual(errors, [], "No browser exceptions");
+    console.log(`Product Development workflow, accessibility and viewport passed at ${width}px.`);
+    await context.close();
+  }
+} finally {
+  await browser.close();
+  local?.server.close();
+}
