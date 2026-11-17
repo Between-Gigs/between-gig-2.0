@@ -724,17 +724,32 @@ it('accepts only explicit boolean travel preference, preserving legacy omission 
  expect(cleanFields({})).not.toHaveProperty('travelBeyondLA');for(const v of[null,'true','false',0,1,{},[]])expect(()=>cleanFields({travelBeyondLA:v})).toThrow();
 });
 
-it("public page reads only finished (status ready) photo and sample files", async () => {
-  const prev = process.env.NEXT_PUBLIC_PROFILE_VIDEO_LINKS; process.env.NEXT_PUBLIC_PROFILE_VIDEO_LINKS = "1";
-  try {
-    const f = fake(c => {
-      if (c.path === "/query") return { body: { data: (c.body as { entity?: string }).entity === "profile"
-        ? [{ id: "prof", data: { display_name: "Fictional Public Profile", public_handle: "fictional-profile" }, createdAt: "", updatedAt: "" }] : [] } };
-      return undefined;
-    });
-    await call("people.getPublic", ["fictional-profile"], undefined, f);
-    const fileQueries = f.calls.filter(c => c.path === "/query" && (c.body as { entity?: string }).entity === "file").map(c => JSON.stringify(c.body));
-    expect(fileQueries).toHaveLength(2);
-    for (const q of fileQueries) expect(q).toContain('"ready"');
-  } finally { if (prev === undefined) delete process.env.NEXT_PUBLIC_PROFILE_VIDEO_LINKS; else process.env.NEXT_PUBLIC_PROFILE_VIDEO_LINKS = prev; }
-});
+// Company OS's public_reader may filter files only on its allow-listed fields (profiles module FILE_FIELDS);
+// naming any other field (e.g. status) is refused with 400 unknown field. Its row policy already returns only
+// ready, published files of a visible profile, so the public page never needs to ask for that itself.
+const PUBLIC_FILE_FIELDS = new Set(["id", "owner_entity", "owner_id", "kind", "mime", "position", "caption"]);
+const filterFields = (node: unknown): string[] => {
+  if (!node || typeof node !== "object") return [];
+  const n = node as Record<string, unknown>;
+  return [...(typeof n.field === "string" ? [n.field] : []), ...Object.values(n).flatMap((v) => (Array.isArray(v) ? v.flatMap(filterFields) : typeof v === "object" ? filterFields(v) : []))];
+};
+
+for (const [method, args] of [["people.getPublic", ["fictional-profile"]], ["people.similar", ["other", 3]]] as const) {
+  it(`${method}: public file reads name only the public reader's allow-listed fields`, async () => {
+    const prev = process.env.NEXT_PUBLIC_PROFILE_VIDEO_LINKS; process.env.NEXT_PUBLIC_PROFILE_VIDEO_LINKS = "1";
+    try {
+      const f = fake(c => {
+        if (c.path === "/query") return { body: { data: (c.body as { entity?: string }).entity === "profile"
+          ? [{ id: "prof", data: { display_name: "Fictional Public Profile", public_handle: "fictional-profile" }, createdAt: "", updatedAt: "" }] : [] } };
+        return undefined;
+      });
+      await call(method, [...args], { token: null }, f);
+      const fileQueries = f.calls.filter(c => c.path === "/query" && (c.body as { entity?: string }).entity === "file");
+      expect(fileQueries).toHaveLength(2);
+      for (const q of fileQueries) {
+        const named = filterFields((q.body as { filter?: unknown }).filter);
+        expect(named.filter((x) => !PUBLIC_FILE_FIELDS.has(x))).toEqual([]);
+      }
+    } finally { if (prev === undefined) delete process.env.NEXT_PUBLIC_PROFILE_VIDEO_LINKS; else process.env.NEXT_PUBLIC_PROFILE_VIDEO_LINKS = prev; }
+  });
+}
