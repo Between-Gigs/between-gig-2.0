@@ -23,3 +23,5 @@ The owner Emails page has a "Send this invitation to…" box (live only; the sam
 Addresses are trimmed, lower-cased and de-duplicated. More than 10 valid addresses refuses the whole request (400). Each address then gets one result, and one failing never stops the others: `sent`, `already_member` (the person has signed in, or Company OS says the account exists), `suppressed` (privacy request: 422 `contact_suppressed`), `opted_out` (unsubscribed: Company OS cancels the email), `invalid`, `failed`.
 
 These people are marketing contacts who never opted in: the unsubscribe link must work. To test deliverability to our own inbox use a `+test` address (a person with no account yet); an address that already has an account is skipped.
+
+Company OS refuses an opted-out recipient when the email is queued (422 `opted_out`), which is what `opted_out` reports. A cancellation at dispatch, after the email was reported `sent`, cannot be seen here. The waitlist invite and resend count an opted-out or suppressed person as skipped, not failed.

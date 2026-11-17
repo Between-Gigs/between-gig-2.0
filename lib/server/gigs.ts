@@ -673,6 +673,9 @@ async function personForEmail(ctx: Ctx, email: string): Promise<string> {
   return existing?.id ?? (await ctx.cos.create(ctx.cred, "person", { name: email, email })).id;
 }
 
+/** Company OS refuses a marketing email to someone opted out or under a privacy request when it is queued: nothing to retry. */
+const isRefusedContact = (e: unknown) => e instanceof CompanyOsError && (e.code === "opted_out" || e.code === "contact_suppressed");
+
 /** Has this person signed in already (so an invitation would be pointless)? */
 const hasSignedIn = (users: Map<string, AdminUser>, person: Row) => !!users.get(str(person.data.user))?.signedUp;
 
@@ -700,7 +703,7 @@ export async function invite(ctx: Ctx, signupIds: string[]) {
       if (outcome === "invited") invited++; else skipped++;
     } catch (e) {
       if (!(e instanceof CompanyOsError)) throw e;
-      failed++;
+      if (isRefusedContact(e)) skipped++; else failed++;
     }
   }
   return { invited, skipped, ...(failed ? { failed } : {}) };
@@ -721,7 +724,7 @@ export async function resendInvite(ctx: Ctx, personIds: string[]) {
       if ((await sendInvite(ctx, person.id, str(person.data.email))) === "invited") invited++; else skipped++;
     } catch (e) {
       if (!(e instanceof CompanyOsError)) throw e;
-      failed++;
+      if (isRefusedContact(e)) skipped++; else failed++;
     }
   }
   return { invited, skipped, ...(failed ? { failed } : {}) };
@@ -755,11 +758,11 @@ export async function inviteAddresses(ctx: Ctx, input: string[] | string) {
       const [person] = await ctx.cos.query(ctx.cred, { entity: "person", filter: eq("email", email), limit: 1 });
       if (person && hasSignedIn(users, person)) result = "already_member";
       else {
-        const outcome = await sendInvite(ctx, person?.id ?? await personForEmail(ctx, email), email);
+        const outcome = await sendInvite(ctx, person?.id ?? (await ctx.cos.create(ctx.cred, "person", { name: email, email })).id, email);
         result = outcome === "invited" ? "sent" : outcome === "signed_up" ? "already_member" : "opted_out";
       }
     } catch (e) {
-      result = e instanceof CompanyOsError && e.code === "contact_suppressed" ? "suppressed" : "failed";
+      result = e instanceof CompanyOsError && e.code === "contact_suppressed" ? "suppressed" : e instanceof CompanyOsError && e.code === "opted_out" ? "opted_out" : "failed";
     }
     results.push({ email, result });
   }

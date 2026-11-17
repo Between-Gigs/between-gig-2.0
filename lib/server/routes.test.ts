@@ -431,6 +431,26 @@ describe("round 1: invites", () => {
     expect(calls.find((c) => c.path === "/api/comms_log")?.body).toMatchObject({ recipient: PERSON, category: "marketing", message_key: "invite", vars: { invite_url: "http://localhost:3000/join/?__clerk_ticket=new" } });
   });
 
+  it("an invite or resend to someone opted out or suppressed (422 at queue time) is skipped, not failed", async () => {
+    for (const code of ["opted_out", "contact_suppressed"]) {
+      const sub = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+      const base = (c: Call) => {
+        const b = c.body as { entity?: string } | undefined;
+        if (c.path === "/invitations") return { status: 201, body: { url: "http://localhost:3000/join/?__clerk_ticket=t" } };
+        if (c.path === "/api/comms_log") return { status: 422, body: { error: code } };
+        if (c.path === "/api/person") return { status: 201, body: { data: { id: PERSON, data: {}, createdAt: "", updatedAt: "" } } };
+        if (c.path === "/query" && b?.entity === "form_submission") return { body: { data: [{ id: sub, data: { email: "x@example.org", form_key: "call_sheet" }, createdAt: "", updatedAt: "" }] } };
+        if (c.path === "/query" && b?.entity === "person") return { body: { data: [{ id: PERSON, data: { email: "x@example.org", user: "u-x" }, createdAt: "", updatedAt: "" }] } };
+        if (c.path === "/admin/users") return { body: { users: [{ userId: "u-x", email: "x@example.org", signedUp: false }] } };
+        return undefined;
+      };
+      const inv = await call("owners.invite", [[sub]], undefined, fake((c) => c.path === "/query" && (c.body as { entity?: string }).entity === "person" ? { body: { data: [] } } : base(c)));
+      expect(inv.body.result, code).toEqual({ invited: 0, skipped: 1 });
+      const re = await call("owners.resendInvite", [[PERSON]], undefined, fake(base));
+      expect(re.body.result, code).toEqual({ invited: 0, skipped: 1 });
+    }
+  });
+
   it("resending skips someone who has already signed up", async () => {
     const f = fake((c) => {
       const body = c.body as { entity?: string } | undefined;
@@ -757,7 +777,7 @@ for (const [method, args] of [["people.getPublic", ["fictional-profile"]], ["peo
 describe("owners.inviteAddresses: the invitation to typed addresses", () => {
   const row = (id: string, data: Record<string, unknown>) => ({ id, data, createdAt: "", updatedAt: "" });
   // A fake where `known` addresses already have a person (with `user` set when they have an account) and each created person's id is "p-<email>".
-  const typed = (opts: { known?: Record<string, { user?: string; signedUp?: boolean }>; suppressed?: string[]; failInvite?: string[]; existsInvite?: string[]; cancelled?: string[] } = {}) => fake((c) => {
+  const typed = (opts: { known?: Record<string, { user?: string; signedUp?: boolean }>; suppressed?: string[]; failInvite?: string[]; existsInvite?: string[]; optedOut?: string[] } = {}) => fake((c) => {
     const b = c.body as { entity?: string; filter?: { value?: string }; email?: string; recipient?: string } | undefined;
     if (c.path === "/query" && b?.entity === "person") {
       const email = b.filter?.value ?? "";
@@ -774,7 +794,8 @@ describe("owners.inviteAddresses: the invitation to typed addresses", () => {
     if (c.path === "/api/comms_log") {
       const email = (b?.recipient ?? "").slice(2);
       if (opts.suppressed?.includes(email)) return { status: 422, body: { error: "contact_suppressed" } };
-      return { status: 201, body: { data: row("log", { status: opts.cancelled?.includes(email) ? "cancelled" : "queued" }) } };
+      if (opts.optedOut?.includes(email)) return { status: 422, body: { error: "opted_out" } };
+      return { status: 201, body: { data: row("log", { status: "queued" }) } };
     }
     return undefined;
   });
@@ -856,10 +877,16 @@ describe("owners.inviteAddresses: the invitation to typed addresses", () => {
     expect(sent(f.calls)).toHaveLength(0);
   });
 
-  it("a privacy-request address (422 contact_suppressed) is suppressed; an opted-out one is cancelled at dispatch", async () => {
-    const f = typed({ suppressed: ["gone@example.org"], cancelled: ["out@example.org"] });
+  it("a privacy-request address (422 contact_suppressed) is suppressed; an opted-out one is refused at queue time (422 opted_out)", async () => {
+    const f = typed({ suppressed: ["gone@example.org"], optedOut: ["out@example.org"] });
     const { body } = await call("owners.inviteAddresses", [["gone@example.org", "out@example.org", "fine@example.org"]], undefined, f);
     expect(body.result).toEqual([{ email: "gone@example.org", result: "suppressed" }, { email: "out@example.org", result: "opted_out" }, { email: "fine@example.org", result: "sent" }]);
+  });
+
+  it("the person is looked up once per address", async () => {
+    const f = typed();
+    await call("owners.inviteAddresses", [["a@example.org"]], undefined, f);
+    expect(f.calls.filter((c) => c.path === "/query" && (c.body as { entity?: string }).entity === "person")).toHaveLength(1);
   });
 
   it("one address failing never stops the others", async () => {
