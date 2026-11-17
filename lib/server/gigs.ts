@@ -730,6 +730,12 @@ export async function resendInvite(ctx: Ctx, personIds: string[]) {
   return { invited, skipped, ...(failed ? { failed } : {}) };
 }
 
+/** A privacy request (the website's form) for this address, or for this person. */
+async function privacyRequested(ctx: Ctx, email: string, personId?: string) {
+  const asked = (field: string, value: string) => ctx.cos.query(ctx.cred, { entity: "form_submission", filter: and(eq("form_key", "privacy_request"), eq(field, value)), limit: 1 });
+  return (await asked("email", email)).length > 0 || (!!personId && (await asked("person", personId)).length > 0);
+}
+
 export type AddressResult = "sent" | "already_member" | "suppressed" | "opted_out" | "invalid" | "failed";
 
 const INVITE_EMAIL = /^[^\s@,;<>()"]+@[^\s@,;<>()"]+\.[^\s@,;<>()"]{2,}$/;
@@ -745,9 +751,9 @@ export async function inviteAddresses(ctx: Ctx, input: string[] | string) {
   const typed = Array.isArray(input) ? input : input.split(/[\s,;]+/);
   const emails = [...new Set(typed.map((e) => e.trim().toLowerCase()).filter(Boolean))];
   if (!emails.length) throw new CompanyOsError(400, "no_addresses");
-  if (emails.length > INVITE_CHUNK * 5) throw new CompanyOsError(400, "too_many", `at most ${INVITE_CHUNK} addresses a request`);
+  if (emails.length > INVITE_CHUNK * 5) throw new CompanyOsError(422, "too_many", `at most ${INVITE_CHUNK} addresses a request`);
   const valid = emails.filter((e) => e.length <= 254 && INVITE_EMAIL.test(e));
-  if (valid.length > INVITE_CHUNK) throw new CompanyOsError(400, "too_many", `at most ${INVITE_CHUNK} addresses a request`);
+  if (valid.length > INVITE_CHUNK) throw new CompanyOsError(422, "too_many", `at most ${INVITE_CHUNK} addresses a request`);
   if (!/^https?:\/\//.test(ctx.appUrl)) throw new CompanyOsError(503, "app_url_not_configured");
   const users = new Map((await ctx.cos.adminUsers(ctx.cred)).map((u) => [u.userId, u]));
   const results: { email: string; result: AddressResult }[] = [];
@@ -757,6 +763,9 @@ export async function inviteAddresses(ctx: Ctx, input: string[] | string) {
     try {
       const [person] = await ctx.cos.query(ctx.cred, { entity: "person", filter: eq("email", email), limit: 1 });
       if (person && hasSignedIn(users, person)) result = "already_member";
+      // Company OS refuses a privacy-request address only when the email is queued, after the person and a live invitation link
+      // exist. Ask first, so someone who asked not to be contacted leaves nothing behind.
+      else if (await privacyRequested(ctx, email, person?.id)) result = "suppressed";
       else {
         const outcome = await sendInvite(ctx, person?.id ?? (await ctx.cos.create(ctx.cred, "person", { name: email, email })).id, email);
         result = outcome === "invited" ? "sent" : outcome === "signed_up" ? "already_member" : "opted_out";
