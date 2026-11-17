@@ -68,7 +68,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
         </div>
         {/* Signed out, from sm: the Los Angeles Call Sheet in the middle of the bar (Justin, 14 Nov 2026). */}
         {!app && !loading && !session && (
-          <p data-header-title className="hidden shrink-0 text-center font-display text-heading-sm leading-tight font-semibold text-ink sm:block swiss:md:col-span-6">
+          <p data-header-title className="hidden shrink-0 text-center font-display text-heading-sm lg:text-heading-lg leading-tight font-semibold text-ink sm:block swiss:md:col-span-6">
             Los Angeles Call Sheet
           </p>
         )}
