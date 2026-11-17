@@ -777,8 +777,12 @@ for (const [method, args] of [["people.getPublic", ["fictional-profile"]], ["peo
 describe("owners.inviteAddresses: the invitation to typed addresses", () => {
   const row = (id: string, data: Record<string, unknown>) => ({ id, data, createdAt: "", updatedAt: "" });
   // A fake where `known` addresses already have a person (with `user` set when they have an account) and each created person's id is "p-<email>".
-  const typed = (opts: { known?: Record<string, { user?: string; signedUp?: boolean }>; suppressed?: string[]; failInvite?: string[]; existsInvite?: string[]; optedOut?: string[] } = {}) => fake((c) => {
+  const typed = (opts: { known?: Record<string, { user?: string; signedUp?: boolean }>; suppressed?: string[]; failInvite?: string[]; existsInvite?: string[]; optedOut?: string[]; privacy?: string[] } = {}) => fake((c) => {
     const b = c.body as { entity?: string; filter?: { value?: string }; email?: string; recipient?: string } | undefined;
+    if (c.path === "/query" && b?.entity === "form_submission") {
+      const hit = JSON.stringify(b).includes("privacy_request") && (opts.privacy ?? []).some((e) => JSON.stringify(b).includes(`"${e}"`));
+      return { body: { data: hit ? [row("sub", { form_key: "privacy_request" })] : [] } };
+    }
     if (c.path === "/query" && b?.entity === "person") {
       const email = b.filter?.value ?? "";
       const k = opts.known?.[email];
@@ -838,7 +842,7 @@ describe("owners.inviteAddresses: the invitation to typed addresses", () => {
     const f = typed();
     const list = Array.from({ length: 11 }, (_, i) => `u${i}@example.org`);
     const { res, calls } = await call("owners.inviteAddresses", [list], undefined, f);
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(422);
     expect(calls.some((c) => c.path === "/invitations" || c.path === "/api/comms_log")).toBe(false);
     expect((await call("owners.inviteAddresses", [list.slice(0, 10)], undefined, typed())).res.status).toBe(200);
   });
@@ -881,6 +885,21 @@ describe("owners.inviteAddresses: the invitation to typed addresses", () => {
     const f = typed({ suppressed: ["gone@example.org"], optedOut: ["out@example.org"] });
     const { body } = await call("owners.inviteAddresses", [["gone@example.org", "out@example.org", "fine@example.org"]], undefined, f);
     expect(body.result).toEqual([{ email: "gone@example.org", result: "suppressed" }, { email: "out@example.org", result: "opted_out" }, { email: "fine@example.org", result: "sent" }]);
+  });
+
+  it("a privacy-request address is suppressed before anything is created: no person, no invitation, no email", async () => {
+    const f = typed({ privacy: ["gone@example.org"] });
+    const { body } = await call("owners.inviteAddresses", [["gone@example.org", "fine@example.org"]], undefined, f);
+    expect(body.result).toEqual([{ email: "gone@example.org", result: "suppressed" }, { email: "fine@example.org", result: "sent" }]);
+    expect(f.calls.filter((c) => c.path === "/api/person").map((c) => (c.body as { email: string }).email)).toEqual(["fine@example.org"]);
+    expect(f.calls.filter((c) => c.path === "/invitations").map((c) => (c.body as { email: string }).email)).toEqual(["fine@example.org"]);
+  });
+
+  it("an existing person under a privacy request gets no new invitation and is never deleted", async () => {
+    const f = typed({ privacy: ["known@example.org"], known: { "known@example.org": {} } });
+    const { body } = await call("owners.inviteAddresses", [["known@example.org"]], undefined, f);
+    expect(body.result).toEqual([{ email: "known@example.org", result: "suppressed" }]);
+    expect(f.calls.some((c) => c.path === "/invitations" || c.method === "DELETE")).toBe(false);
   });
 
   it("the person is looked up once per address", async () => {

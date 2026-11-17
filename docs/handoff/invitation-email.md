@@ -25,3 +25,5 @@ Addresses are trimmed, lower-cased and de-duplicated. More than 10 valid address
 These people are marketing contacts who never opted in: the unsubscribe link must work. To test deliverability to our own inbox use a `+test` address (a person with no account yet); an address that already has an account is skipped.
 
 Company OS refuses an opted-out recipient when the email is queued (422 `opted_out`), which is what `opted_out` reports. A cancellation at dispatch, after the email was reported `sent`, cannot be seen here. The waitlist invite and resend count an opted-out or suppressed person as skipped, not failed.
+
+A privacy-request address (a `privacy_request` form submission for the address or its person) is checked before anything is created, so it leaves no person and no invitation link; Company OS's own refusal at queue time stays as the backstop.
