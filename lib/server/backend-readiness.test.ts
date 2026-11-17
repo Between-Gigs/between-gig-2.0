@@ -42,7 +42,7 @@ describe("backendReadiness", () => {
     const fetch = vi.fn(async () => new Response(JSON.stringify({ entities: entities(...ALL) }), { status: 200 }));
     expect(await backendReadiness({ flags, env: env(), fetch: fetch as never })).toEqual({ ready: true, missing: [] });
     const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe(`${URL_}/t/between-gigs/meta/entities`);
+    expect(url).toBe(`${URL_}/t/between-gigs/me`);
     expect(new Headers(init.headers).get("authorization")).toBe("Bearer cos_svc_reader_secret");
   });
   it("is not ready, naming the feature, when a marker is missing", async () => {
