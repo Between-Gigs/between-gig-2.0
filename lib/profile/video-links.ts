@@ -5,7 +5,7 @@
  *
  * The rules mirror the API (profiles module 1.10.0): https only, no userinfo or port, the host exactly one of
  * youtube.com, www.youtube.com, youtu.be, vimeo.com, player.vimeo.com, and a path that names one video. The whole feature
- * sits behind NEXT_PUBLIC_PROFILE_VIDEO_LINKS (off by default; the API must be 1.16.0 or later).
+ * sits behind NEXT_PUBLIC_PROFILE_VIDEO_LINKS (off by default; the API must be 1.17.0 or later).
  *
  * A video sample rides in the same list as the photos (a work sample is one string, like the alignment fragment in
  * lib/profile/work-fit.ts): "video:" + the URI-encoded JSON {u: link, t?: thumbnail, c?: caption}. Anything read back is

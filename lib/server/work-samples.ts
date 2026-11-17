@@ -1,5 +1,5 @@
 /**
- * Work samples as Company OS records (behind NEXT_PUBLIC_PROFILE_VIDEO_LINKS, API 1.16.0): a photo is a ready `portfolio`
+ * Work samples as Company OS records (behind NEXT_PUBLIC_PROFILE_VIDEO_LINKS, API 1.17.0): a photo is a ready `portfolio`
  * file, a video link a `profile_item` of kind `video_link` (value = the link, detail = the caption, thumbnail = the id of
  * a `video_thumbnail` file of the same profile). Photos and links share one position order and Company OS counts them
  * together (`work_sample_limit`). The editor's list is one string per sample (lib/profile/video-links.ts); this turns it
