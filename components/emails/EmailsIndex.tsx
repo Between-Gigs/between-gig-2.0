@@ -10,6 +10,7 @@ import { OwnerPage, Panel, Row, RowSkeletons } from "@/components/owners/kit";
 import { emailTemplateHref } from "@/lib/owner-email-preview";
 import { basePath } from "@/lib/site";
 import { DiagnosticEmail } from "./DiagnosticEmail";
+import { InviteAddresses } from "./InviteAddresses";
 import { renderPreview } from "./preview";
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -38,6 +39,7 @@ export function EmailsIndex() {
             options={[{ value: "templates", label: "Active templates", icon: <Mail /> }, { value: "outbox", label: `Sample outbox${outbox?.length ? ` (${outbox.length})` : ""}`, icon: <Send /> }]} />
         }>
           <DiagnosticEmail />
+          <InviteAddresses />
           {tab === "templates" ? (
             <ul className="grid items-start gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {activeEmailNames.map((n) => {

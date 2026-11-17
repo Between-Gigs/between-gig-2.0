@@ -1,13 +1,14 @@
 // Checks the server build (`pnpm build:server`, then `pnpm build:preview`) by starting it: the live routes answer 200,
 // the internal and waiting ones 404 and are not in the build output, and every page carries the security headers with
 // a fresh CSP nonce that each of its scripts uses. /preview/ is the sample export, for a preview cookie only; /healthz/
-// answers 200. A second start with TEST_GATE_PASSPHRASE checks the test gate. Exits 1 on any failure.
+// answers 200 (503 with the missing features when the backend lacks what a flag needs). A second start with TEST_GATE_PASSPHRASE checks the test gate. Exits 1 on any failure.
 //   node scripts/check-server.mjs
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { judgeHealth } from "./check-server-health.mjs";
 import { appRoutes } from "./routes.mjs";
 import { INTERNAL, LIVE_METADATA, LIVE_PAGES, LIVE_ROUTES, PUBLIC_LIVE } from "./server-build.mjs";
 
@@ -135,7 +136,10 @@ try {
   }
   // The healthcheck: up, no data.
   const health = await fetch(`${base}/healthz/`);
-  if (health.status !== 200 || (await health.text()) !== "ok") fail("/healthz/ did not answer 200 ok");
+  const healthBody = await health.text();
+  // No Company OS here by design: with a profile flag built in, a 503 readiness refusal is expected and accepted (check-server-health.mjs).
+  const verdict = judgeHealth(health.status, healthBody, process.env);
+  if (!verdict.ok) fail(`/healthz/ ${verdict.why}: ${health.status} ${healthBody.slice(0, 200)}`);
 
   // The public sandbox and legacy aliases need neither a Clerk session nor the old cookie.
   for (const url of ["/hub/", "/hub/home/", "/hub/preview/cursors/", "/hub/emails/", "/hub/studio/", "/hub/thumbs/home.jpg", "/preview/", "/preview/preview/"]) {
@@ -144,6 +148,14 @@ try {
     if (!/frame-ancestors 'self'/.test(res.headers.get("content-security-policy") ?? "")) fail(url + ": not the Hub CSP");
     if (res.headers.get("x-frame-options") !== "SAMEORIGIN") fail(url + ": incorrect frame policy");
   }
+  server.stop();
+
+  // A feature on at runtime with no reachable Company OS is not ready: 503 naming the feature, nothing else.
+  server = await start({ COOKIE_SIGNING_SECRET: SECRET, CUSTOM_SERVICE_REVIEW_ENABLED: "1", COMPANY_OS_URL: "http://127.0.0.1:9" });
+  const notReady = await fetch(`${server.base}/healthz/`);
+  const notReadyBody = await notReady.text();
+  const notReadyVerdict = judgeHealth(notReady.status, notReadyBody, { ...process.env, CUSTOM_SERVICE_REVIEW_ENABLED: "1" }, ["customServiceReview"]);
+  if (!notReadyVerdict.ok || /127\.0\.0\.1/.test(notReadyBody)) fail(`/healthz/ with an unreachable backend: ${notReadyVerdict.why ?? "leaked an address"}: ${notReady.status} ${notReadyBody.slice(0, 200)}`);
   server.stop();
 
   // The test gate: everything but the exempt paths asks for the passphrase.

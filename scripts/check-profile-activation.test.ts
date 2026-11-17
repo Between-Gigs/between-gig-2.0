@@ -1,109 +1,69 @@
 import { describe, expect, it } from "vitest";
 import { checkProfileActivation } from "./check-profile-activation.mjs";
-const pending=JSON.stringify({requires:">=1.14.0",profileFeatures:{customServiceReview:{requires:null,apiCommit:null,profilesModule:"1.5.0"}}});
-// Fictional release declarations, never a real reservation or deployed capability claim.
-const ready=JSON.stringify({requires:">=2.7.0",profileFeatures:{customServiceReview:{requires:">=2.7.0",apiCommit:"a".repeat(40),profilesModule:"1.5.0",settingsEvidence:{test:"libfile_fictional_test",production:null}}}});
-describe("profile activation preflight",()=>{
- it.each([{}, {NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW:"0"}, {NEXT_PUBLIC_PROFILE_NO_DEPARTMENT:"0"}])("permits a dormant build and preserves an absent runtime flag (%j)",env=>expect(checkProfileActivation(env,pending).ok).toBe(true));
- it("does not treat a diagnostic/baseline API version as the custom feature",()=>expect(checkProfileActivation({NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW:"1",CUSTOM_SERVICE_REVIEW_ENABLED:"1"},pending).ok).toBe(false));
- it.each([undefined,"","0"])("refuses UI activation without the explicit server guard (%s)",runtime=>expect(checkProfileActivation({NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW:"1",CUSTOM_SERVICE_REVIEW_ENABLED:runtime},ready).ok).toBe(false));
- it("accepts paired activation declarations only after version coordination",()=>expect(checkProfileActivation({RAILWAY_ENV:"test",NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW:"1",CUSTOM_SERVICE_REVIEW_ENABLED:"1"},ready).ok).toBe(true));
- it("supports hiding the UI while retaining enforcement",()=>expect(checkProfileActivation({RAILWAY_ENV:"test",NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW:"0",CUSTOM_SERVICE_REVIEW_ENABLED:"1"},ready).ok).toBe(true));
- it("refuses an ordinary workflow reset of the installed runtime guard",()=>expect(checkProfileActivation({NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW:"0",CUSTOM_SERVICE_REVIEW_ENABLED:"0"},ready).ok).toBe(false));
- it.each(["NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW","NEXT_PUBLIC_PROFILE_NO_DEPARTMENT","CUSTOM_SERVICE_REVIEW_ENABLED"])("rejects malformed %s without echoing its value",name=>{const result=checkProfileActivation({[name]:"\n::notice::untrusted"},ready);expect(result.ok).toBe(false);expect(result.error).not.toContain("untrusted");});
-});
 
-describe("Department-only activation readiness",()=>{
- it("refuses hiding Department with only the baseline and unverified settings",()=>expect(checkProfileActivation({RAILWAY_ENV:"test",NEXT_PUBLIC_PROFILE_NO_DEPARTMENT:"1"},pending).ok).toBe(false));
- it("does not reuse test settings evidence for production",()=>{
-  const manifest=JSON.stringify({requires:">=1.14.0",profileFeatures:{departmentRetirement:{apiCommit:"a".repeat(40),settingsEvidence:{test:"libfile_fictional_test",production:null}}}});
-  expect(checkProfileActivation({RAILWAY_ENV:"test",NEXT_PUBLIC_PROFILE_NO_DEPARTMENT:"1"},manifest).ok).toBe(true);
-  expect(checkProfileActivation({RAILWAY_ENV:"production",NEXT_PUBLIC_PROFILE_NO_DEPARTMENT:"1"},manifest).ok).toBe(false);
- });
-});
+// The deploy no longer asks for receipts: the backend is checked automatically (lib/server/backend-readiness.ts).
+// This preflight keeps only what no backend can answer: flag format, the publish-gate acknowledgement, the location cutoff.
+const CUTOFF = "2026-12-01T00:00:00.000Z";
+const manifest = (extra: object = {}) => JSON.stringify({ requires: ">=1.17.0", travelRequiredAfter: { test: CUTOFF, production: null }, ...extra });
+const ALL_ON = {
+  NEXT_PUBLIC_PROFILE_NO_DEPARTMENT: "1", NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW: "1", CUSTOM_SERVICE_REVIEW_ENABLED: "1",
+  NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS: "1", NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER: CUTOFF, NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS: "1",
+  NEXT_PUBLIC_PROFILE_TRAVEL_PREFERENCE: "1", NEXT_PUBLIC_PROFILE_PUBLISH_GATE: "1", PROFILE_PUBLISH_GATE_ACK_NO_PUBLISH: "1",
+  NEXT_PUBLIC_PROFILE_VIDEO_LINKS: "1", NEXT_PUBLIC_PROFILE_DETAILS: "1",
+};
+const FLAGS = ["NEXT_PUBLIC_PROFILE_NO_DEPARTMENT", "NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW", "NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS", "NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS", "NEXT_PUBLIC_PROFILE_TRAVEL_PREFERENCE", "NEXT_PUBLIC_PROFILE_PUBLISH_GATE", "NEXT_PUBLIC_PROFILE_VIDEO_LINKS", "NEXT_PUBLIC_PROFILE_DETAILS"];
 
-describe("custom-service settings evidence stays environment scoped",()=>{
- it.each([undefined,"production"])("does not enable from a test receipt in %s",environment=>expect(checkProfileActivation({RAILWAY_ENV:environment,NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW:"1",CUSTOM_SERVICE_REVIEW_ENABLED:"1"},ready).ok).toBe(false));
- it("rejects raw/signed URL evidence in the source declaration",()=>{
-  const declaration=JSON.parse(ready);declaration.profileFeatures.customServiceReview.settingsEvidence.test="https://fictional.invalid/token=do-not-publish";
-  expect(checkProfileActivation({RAILWAY_ENV:"test",CUSTOM_SERVICE_REVIEW_ENABLED:"1"},JSON.stringify(declaration)).ok).toBe(false);
- });
-});
-
-it("does not combine readiness declarations for different deployed API source commits",()=>{
- const manifest=JSON.parse(ready);manifest.profileFeatures.departmentRetirement={apiCommit:"b".repeat(40),settingsEvidence:{test:"libfile_fictional_test"}};
- expect(checkProfileActivation({RAILWAY_ENV:"test",NEXT_PUBLIC_PROFILE_NO_DEPARTMENT:"1",CUSTOM_SERVICE_REVIEW_ENABLED:"1"},JSON.stringify(manifest)).ok).toBe(false);
-});
-
-describe("location controls activation",()=>{
- it("refuses hiding areas/requiring travel until this environment's settings declaration exists",()=>expect(checkProfileActivation({RAILWAY_ENV:"test",NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS:"1"},pending).ok).toBe(false));
- it("requires a feature API release plus matching cohort cutoff rather than a metadata-only baseline",()=>{
-  const cutoff="2026-12-01T00:00:00.000Z";
-  const manifest=JSON.stringify({requires:">=2.8.0",profileFeatures:{locationControls:{requires:">=2.8.0",profilesModule:"1.6.0",travelRequiredAfter:{test:cutoff,production:null},apiCommit:"a".repeat(40),settingsEvidence:{test:"libfile_fictional_location",production:null}}}});
-  const env={RAILWAY_ENV:"test",NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS:"1",NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER:cutoff};
-  expect(checkProfileActivation(env,manifest).ok).toBe(true);expect(checkProfileActivation({...env,RAILWAY_ENV:"production"},manifest).ok).toBe(false);
-  expect(checkProfileActivation({...env,NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER:"2026-12-02T00:00:00.000Z"},manifest).ok).toBe(false);
-  expect(checkProfileActivation(env,JSON.stringify({requires:">=1.14.0",profileFeatures:{locationControls:{apiCommit:"a".repeat(40),settingsEvidence:{test:"libfile_fictional_location"}}}})).ok).toBe(false);
- });
-});
-
-it("does not reuse or move a test cutoff to activate production",()=>{
- const test="2026-12-01T00:00:00.000Z",prod="2026-12-15T00:00:00.000Z";
- const manifest=JSON.stringify({requires:">=2.8.0",profileFeatures:{locationControls:{requires:">=2.8.0",profilesModule:"1.6.0",travelRequiredAfter:{test,production:prod},apiCommit:"a".repeat(40),settingsEvidence:{test:"libfile_fictional_test",production:"libfile_fictional_prod"}}}});
- expect(checkProfileActivation({RAILWAY_ENV:"production",NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS:"1",NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER:test},manifest).ok).toBe(false);
- expect(checkProfileActivation({RAILWAY_ENV:"production",NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS:"1",NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER:prod},manifest).ok).toBe(true);
-});
-
-describe("custom skill activation",()=>{
- it("refuses baseline/unknown capability and requires the correct environment's declared receipt",()=>{
-  const env={RAILWAY_ENV:"test",NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS:"1"};expect(checkProfileActivation(env,pending).ok).toBe(false);
-  const manifest=JSON.stringify({requires:">=2.9.0",profileFeatures:{customSkills:{requires:">=2.9.0",profilesModule:"1.7.0",apiCommit:"a".repeat(40),settingsEvidence:{test:"libfile_fictional_skills",production:null}}}});
-  expect(checkProfileActivation(env,manifest).ok).toBe(true);expect(checkProfileActivation({...env,RAILWAY_ENV:"production"},manifest).ok).toBe(false);
- });
-});
-
-it('requires actual travel preference field/policy capability and environment receipt before showing the checkbox',()=>{
- const env={RAILWAY_ENV:'test',NEXT_PUBLIC_PROFILE_TRAVEL_PREFERENCE:'1'};expect(checkProfileActivation(env,pending).ok).toBe(false);
- const manifest=JSON.stringify({requires:'>=2.10.0',profileFeatures:{travelPreference:{requires:'>=2.10.0',profilesModule:'1.8.0',apiCommit:'a'.repeat(40),settingsEvidence:{test:'libfile_fictional_travel',production:null}}}});
- expect(checkProfileActivation(env,manifest).ok).toBe(true);expect(checkProfileActivation({...env,RAILWAY_ENV:'production'},manifest).ok).toBe(false);expect(checkProfileActivation({...env,NEXT_PUBLIC_PROFILE_TRAVEL_PREFERENCE:'true'},manifest).ok).toBe(false);
-});
-
-it('requires the publish gate API release, profiles 1.9.0 and an environment receipt before the gate wording shows',()=>{
- const env={RAILWAY_ENV:'test',NEXT_PUBLIC_PROFILE_PUBLISH_GATE:'1',PROFILE_PUBLISH_GATE_ACK_NO_PUBLISH:'1'};expect(checkProfileActivation(env,pending).ok).toBe(false);
- const manifest=JSON.stringify({requires:'>=1.16.0',profileFeatures:{publishGate:{requires:'>=1.16.0',profilesModule:'1.9.0',apiCommit:'a'.repeat(40),settingsEvidence:{test:'libfile_fictional_publish',production:null}}}});
- expect(checkProfileActivation(env,manifest).ok).toBe(true);expect(checkProfileActivation({...env,RAILWAY_ENV:'production'},manifest).ok).toBe(false);expect(checkProfileActivation({...env,NEXT_PUBLIC_PROFILE_PUBLISH_GATE:'true'},manifest).ok).toBe(false);
- expect(checkProfileActivation({...env,NEXT_PUBLIC_PROFILE_PUBLISH_GATE:'1'},JSON.stringify({requires:'>=1.15.0',profileFeatures:{publishGate:{requires:'>=1.16.0',profilesModule:'1.9.0',apiCommit:'a'.repeat(40),settingsEvidence:{test:'libfile_x',production:null}}}})).ok).toBe(false);
-});
-
-it('refuses the publish gate flag unless the deploy acknowledges that no publish action exists yet',()=>{
- const manifest=JSON.stringify({requires:'>=1.16.0',profileFeatures:{publishGate:{requires:'>=1.16.0',profilesModule:'1.9.0',apiCommit:'a'.repeat(40),settingsEvidence:{test:'libfile_fictional_publish',production:null}}}});
- const env={RAILWAY_ENV:'test',NEXT_PUBLIC_PROFILE_PUBLISH_GATE:'1'};
- const refused=checkProfileActivation(env,manifest);expect(refused.ok).toBe(false);expect(refused.error).toMatch(/PROFILE_PUBLISH_GATE_ACK_NO_PUBLISH/);
- expect(checkProfileActivation({...env,PROFILE_PUBLISH_GATE_ACK_NO_PUBLISH:'0'},manifest).ok).toBe(false);
- expect(checkProfileActivation({...env,PROFILE_PUBLISH_GATE_ACK_NO_PUBLISH:'1'},manifest).ok).toBe(true);
- // with the gate off the acknowledgement is irrelevant
- expect(checkProfileActivation({RAILWAY_ENV:'test'},manifest).ok).toBe(true);
-});
-
-it('requires the 1.16.0 API release and the 1.10.0 profiles module before the video-link UI can be built in',()=>{
- const env={RAILWAY_ENV:'test',NEXT_PUBLIC_PROFILE_VIDEO_LINKS:'1'};expect(checkProfileActivation(env,pending).ok).toBe(false);
- const entry=(extra:object)=>({requires:'>=1.16.0',profilesModule:'1.10.0',apiCommit:'a'.repeat(40),settingsEvidence:{test:'libfile_fictional_video',production:null},...extra});
- const manifest=(requires:string,extra:object={})=>JSON.stringify({requires,profileFeatures:{videoLinks:entry(extra)}});
- expect(checkProfileActivation(env,manifest('>=1.16.0')).ok).toBe(true);
- expect(checkProfileActivation(env,manifest('>=1.15.0')).ok).toBe(false);
- expect(checkProfileActivation(env,manifest('>=1.16.0',{requires:'>=1.15.0'})).ok).toBe(true);
- expect(checkProfileActivation(env,manifest('>=1.16.0',{profilesModule:'1.9.0'})).ok).toBe(false);
- expect(checkProfileActivation({...env,RAILWAY_ENV:'production'},manifest('>=1.16.0')).ok).toBe(false);
- expect(checkProfileActivation({...env,NEXT_PUBLIC_PROFILE_VIDEO_LINKS:'true'},manifest('>=1.16.0')).ok).toBe(false);
- expect(checkProfileActivation({RAILWAY_ENV:'test'},pending).ok).toBe(true);
-});
-
-it('requires the profile details API release, module version and environment receipt before showing the new fields',()=>{
- const env={RAILWAY_ENV:'test',NEXT_PUBLIC_PROFILE_DETAILS:'1'};
- expect(checkProfileActivation(env,pending).ok).toBe(false);
- const manifest=JSON.stringify({requires:'>=1.16.0',profileFeatures:{profileDetails:{requires:'>=1.16.0',profilesModule:'1.10.0',apiCommit:'a'.repeat(40),settingsEvidence:{test:'libfile_fictional_details',production:null}}}});
- expect(checkProfileActivation(env,manifest).ok).toBe(true);
- expect(checkProfileActivation({...env,RAILWAY_ENV:'production'},manifest).ok).toBe(false);
- expect(checkProfileActivation({...env,NEXT_PUBLIC_PROFILE_DETAILS:'true'},manifest).ok).toBe(false);
- expect(checkProfileActivation({...env,NEXT_PUBLIC_PROFILE_DETAILS:'0'},pending).ok).toBe(true);
+describe("profile activation preflight without receipts", () => {
+  it("passes with every flag on and no receipt, commit or module version in company-os.json", () => {
+    expect(checkProfileActivation({ RAILWAY_ENV: "test", ...ALL_ON }, manifest()).ok).toBe(true);
+  });
+  it.each([{}, { NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW: "0" }, { NEXT_PUBLIC_PROFILE_NO_DEPARTMENT: "0" }])("permits a dormant build (%j)", env => {
+    expect(checkProfileActivation(env, manifest()).ok).toBe(true);
+  });
+  it.each(FLAGS)("refuses a bad value for %s without echoing it", name => {
+    const result = checkProfileActivation({ [name]: "true" }, manifest());
+    expect(result.ok).toBe(false);
+    expect(checkProfileActivation({ [name]: "\n::notice::untrusted" }, manifest()).error).not.toContain("untrusted");
+  });
+  it.each(["", "0"])("refuses disabling the runtime guard (%j) and a malformed one", runtime => {
+    expect(checkProfileActivation({ CUSTOM_SERVICE_REVIEW_ENABLED: runtime || "0" }, manifest()).ok).toBe(false);
+    expect(checkProfileActivation({ CUSTOM_SERVICE_REVIEW_ENABLED: "\n::notice::untrusted" }, manifest()).error ?? "").not.toContain("untrusted");
+  });
+  it("lets the guard be absent or empty (preserve)", () => {
+    expect(checkProfileActivation({ CUSTOM_SERVICE_REVIEW_ENABLED: "" }, manifest()).ok).toBe(true);
+    expect(checkProfileActivation({}, manifest()).ok).toBe(true);
+  });
+  it("custom-service UI needs its explicit runtime guard; hiding the UI with the guard on is fine", () => {
+    expect(checkProfileActivation({ NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW: "1" }, manifest()).ok).toBe(false);
+    expect(checkProfileActivation({ NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW: "0", CUSTOM_SERVICE_REVIEW_ENABLED: "1" }, manifest()).ok).toBe(true);
+  });
+  it("still refuses the publish gate without the acknowledgement", () => {
+    const env = { RAILWAY_ENV: "test", NEXT_PUBLIC_PROFILE_PUBLISH_GATE: "1" };
+    const refused = checkProfileActivation(env, manifest());
+    expect(refused.ok).toBe(false);
+    expect(refused.error).toMatch(/PROFILE_PUBLISH_GATE_ACK_NO_PUBLISH/);
+    expect(checkProfileActivation({ ...env, PROFILE_PUBLISH_GATE_ACK_NO_PUBLISH: "0" }, manifest()).ok).toBe(false);
+    expect(checkProfileActivation({ ...env, PROFILE_PUBLISH_GATE_ACK_NO_PUBLISH: "1" }, manifest()).ok).toBe(true);
+    expect(checkProfileActivation({ RAILWAY_ENV: "test" }, manifest()).ok).toBe(true);
+  });
+  it("still needs the reviewed location cutoff to equal the build's, per environment", () => {
+    const env = { RAILWAY_ENV: "test", NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS: "1", NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER: CUTOFF };
+    expect(checkProfileActivation(env, manifest()).ok).toBe(true);
+    expect(checkProfileActivation({ ...env, NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER: "2026-12-02T00:00:00.000Z" }, manifest()).ok).toBe(false);
+    expect(checkProfileActivation({ ...env, RAILWAY_ENV: "production" }, manifest()).ok).toBe(false);
+    expect(checkProfileActivation({ ...env, NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER: "2026-12-01" }, manifest({ travelRequiredAfter: { test: "2026-12-01", production: null } })).ok).toBe(false);
+    expect(checkProfileActivation(env, JSON.stringify({ requires: ">=1.17.0" })).ok).toBe(false);
+  });
+  it("does not move a test cutoff to production", () => {
+    const prod = "2026-12-15T00:00:00.000Z";
+    const m = manifest({ travelRequiredAfter: { test: CUTOFF, production: prod } });
+    const env = { RAILWAY_ENV: "production", NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS: "1" };
+    expect(checkProfileActivation({ ...env, NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER: CUTOFF }, m).ok).toBe(false);
+    expect(checkProfileActivation({ ...env, NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER: prod }, m).ok).toBe(true);
+  });
+  it("still checks the top-level requires and that the file is JSON", () => {
+    expect(checkProfileActivation(ALL_ON, "{").ok).toBe(false);
+    expect(checkProfileActivation({ ...ALL_ON, RAILWAY_ENV: "test" }, JSON.stringify({ travelRequiredAfter: { test: CUTOFF } })).ok).toBe(false);
+    expect(checkProfileActivation({ ...ALL_ON, RAILWAY_ENV: "test" }, manifest({ requires: "^1.17" })).ok).toBe(false);
+  });
 });

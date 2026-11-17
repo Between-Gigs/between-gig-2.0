@@ -6,7 +6,7 @@
 - Gigster: approved reads "Approved, not yet public" with the line "The Between Gigs team approved your profile. It goes public when we launch the directory." and "Changes you make here go back to the team for review." No email on approval.
 - Owner: Approve stays "Approve"; approved people read "Approved, not public"; "Live profiles" counts published only; an "Approved" count is added. No publish button yet (the bulk publish screen is the next phase).
 - Public pages and the public list render only public statuses (`lib/profile/publish-gate.ts`).
-- Activation: `company-os.json` `profileFeatures.publishGate` (API release >=1.17.0, profiles 1.10.0, commit and settings receipt) is checked by `scripts/check-profile-activation.mjs`. The top-level `requires` is `>=1.17.0` too: this release's ungated behaviour (insurance notes, free-text postal codes for other markets, service counting) needs API 1.17.0, so deploy API 1.17.0 first (rule E9).
+- Activation: the publish gate needs profiles 1.10, checked at deploy by `/healthz/` (see "How the deploy checks the backend" below). The top-level `requires` stays `>=1.17.0`: this release's ungated behaviour (insurance notes, free-text postal codes for other markets, service counting) needs API 1.17.0, so deploy API 1.17.0 first (rule E9).
 - Deliberate activation: this release has **no publish action**, so with the gate on nobody goes public. The preflight refuses `PROFILE_PUBLISH_GATE=1` unless the deploy variable `PROFILE_PUBLISH_GATE_ACK_NO_PUBLISH=1` is also set (test and production). Set both together, on purpose, when the owner wants approvals private and nothing published at launch; remove the acknowledgement requirement only in the release that ships the publish action.
 - Funnel stage "Approved" counts approved plus published; its list link shows approved only.
 
@@ -20,14 +20,14 @@ Never turn on one half of the gate. The website flag and the backend option are 
 4. **Verify** on the deployed site: a profile that was live before is still on the public page and the public list; the owner dashboard counts it under "Live profiles"; a newly approved test profile reads "Approved, not public" and has no public page.
 5. **Roll back as a pair**: variables off and a website deploy first, then the backend option off. Not the other way round.
 
-### Filling the activation declarations (`company-os.json`)
+### How the deploy checks the backend (no receipts)
 
-`scripts/check-profile-activation.mjs` refuses any profile flag that is on (`PROFILE_PUBLISH_GATE`, `PROFILE_DETAILS`, `PROFILE_VIDEO_LINKS`, and the older ones) unless that feature's entry in `company-os.json` `profileFeatures.<feature>` has, for the deploying environment, an `apiCommit` (the full 40-character SHA of the API source that is deployed) and `settingsEvidence.<test|production>` (a private Library receipt id `libfile_...`). In this release they are all `null`, so every flag fails closed. All enabled features must name the same `apiCommit`. Because the check reads the file in the tag being deployed, filling them needs a follow-up release:
+Nobody records a receipt any more. The deploy checks automatically in two places:
 
-1. Deploy API 1.17.0 to test. Record the deployed SHA (`git rev-parse` of the Company OS tag `v1.17.0`, or the SHA the deploy workflow shows) and, with the owner's authorized access, read the installed profiles settings (schema 1.10.0, `publish_after_approval`, the details settings) and save the sanitized read-only result as a private Library file; note its `libfile_...` id.
-2. Repeat after API 1.17.0 is deployed to production (production sync does not apply recipe settings; do the backend recipe step first). One receipt per environment.
-3. In a branch off `main` (never on `main`), edit `company-os.json`: set `apiCommit` to that SHA and `settingsEvidence.test` / `settingsEvidence.production` to the receipt ids for each feature you will switch on (`publishGate`, `profileDetails`, `videoLinks`). Leave the others `null`. Open a PR; CI runs `check-company-os` and the activation tests.
-4. Merge, bump `package.json` to **1.4.2**, run *Cut release* with version `1.4.2`, then *Deploy web (test)* and *Deploy web (prod)* from the `v1.4.2` tag with the flag variables set. A flag set on the 1.4.0 or 1.4.1 tag fails the preflight by design.
+- `scripts/check-profile-activation.mjs` (before any build) refuses a flag value that is not absent, 0 or 1, the publish gate without `PROFILE_PUBLISH_GATE_ACK_NO_PUBLISH=1`, and a location cutoff that does not match `company-os.json` `travelRequiredAfter`.
+- The server's `/healthz/` asks Company OS what the public reader can see and answers 503 (naming the feature) if a flag is on but the backend lacks the profiles-module version it needs. Railway's deploy healthcheck then keeps the old version serving. Details: `lib/server/backend-readiness.ts`.
+
+What stays manual: the backend `publish_after_approval` step (production deploys do not apply the recipe; do it before turning the website flags on). To switch the flags on, set the variables and run *Deploy web (test)* / *Deploy web (prod)*.
 
 **Test environment.** Test deploys of the API apply the recipe (`deploy.test_tenants_setup`), so `publish_after_approval` is already ON in the test backend while the test website flag is off. On test only the website half remains (the 1.4.2 flags); the backend recipe step is not needed there. Production deploys do not apply the recipe.
 
@@ -38,4 +38,4 @@ If `PROFILE_VIDEO_LINKS` or `PROFILE_DETAILS` has been on, never roll the websit
 
 Note: Company OS `v1.16.0` is a Hoy-only release cut on 16 Nov; the Between Gigs profile work ships in `v1.17.0`.
 
-Note: web 1.4.1 (PR #71 plus version PR #72) is the public-pages fix for the 1.4.0 bug and is already deployed; the activation follow-up (receipts and flags) is therefore 1.4.2.
+Note: web 1.4.1 (PR #71 plus version PR #72) is the public-pages fix for the 1.4.0 bug and is already deployed; the activation follow-up (flags) is therefore 1.4.2.

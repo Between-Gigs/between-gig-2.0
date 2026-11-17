@@ -25,10 +25,10 @@ describe("profile guard sync preserves rollback enforcement",()=>{
    }finally{rmSync(dir,{recursive:true,force:true});}
   });
  }
- it("the actual CLI refuses unallocated activation and permits dormant local declarations",()=>{
-  for(const enabled of [false,true]){
-   const result=spawnSync(process.execPath,["scripts/check-profile-activation.mjs"],{cwd:new URL("../",import.meta.url),env:{PATH:process.env.PATH,NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW:enabled?"1":"0",CUSTOM_SERVICE_REVIEW_ENABLED:enabled?"1":""},encoding:"utf8"});
-   expect(result.status).toBe(enabled?1:0);if(enabled)expect(result.stderr).toContain("reviewed feature API release");
-  }
+ it("the actual CLI needs no receipts to activate, and still refuses a malformed flag",()=>{
+  const run=(extra:Record<string,string>)=>spawnSync(process.execPath,["scripts/check-profile-activation.mjs"],{cwd:new URL("../",import.meta.url),env:{PATH:process.env.PATH,...extra},encoding:"utf8"});
+  expect(run({NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW:"0",CUSTOM_SERVICE_REVIEW_ENABLED:""}).status).toBe(0);
+  expect(run({NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW:"1",CUSTOM_SERVICE_REVIEW_ENABLED:"1"}).status).toBe(0);
+  const bad=run({NEXT_PUBLIC_PROFILE_DETAILS:"yes"});expect(bad.status).toBe(1);expect(bad.stderr).toContain("must be absent, 0 or 1");
  });
 });

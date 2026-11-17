@@ -198,3 +198,9 @@ it('passes the dormant video-links flag to preflight and build in both environme
 it('passes the dormant profile details flag to preflight and build in both environments',()=>{
  for(const name of['deploy-test.yml','deploy-prod.yml']){const s=steps(read(name));for(const step of[s.find(x=>x.includes('Require ')&&x.includes(' configuration')),s.find(x=>x.includes('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY')&&x.includes('pnpm build:server'))])expect(step).toContain('NEXT_PUBLIC_PROFILE_DETAILS: ${{ vars.PROFILE_DETAILS }}');}
 });
+
+it("the deploy preflight asks for no activation receipts, and the server healthcheck decides readiness", () => {
+  expect(readFileSync(new URL("./check-profile-activation.mjs", import.meta.url), "utf8")).not.toMatch(/apiCommit|settingsEvidence|libfile_/);
+  for (const name of ["deploy-test.yml", "deploy-prod.yml"]) expect(read(name)).not.toMatch(/settingsEvidence|apiCommit|libfile_/);
+  expect(readFileSync(new URL("../.railway/railway.ts", import.meta.url), "utf8")).toMatch(/healthcheck: "\/healthz\/"/);
+});
