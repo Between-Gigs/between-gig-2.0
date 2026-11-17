@@ -1,7 +1,7 @@
 import type { PersonStatus } from "@/lib/data/types";
 
 /*
- * The publish gate (API 1.16.0, module option publish_after_approval). With it on, the team's approval makes a profile
+ * The publish gate (API 1.17.0, module option publish_after_approval). With it on, the team's approval makes a profile
  * "approved": private, no email. Only "published" is public, and publishing is a later, owner-only action (no button yet).
  * Off (the default), "approved" is public exactly as before and "published" never appears.
  * NEXT_PUBLIC_PROFILE_PUBLISH_GATE is read at call time so tests (and the sample build) can flip it.

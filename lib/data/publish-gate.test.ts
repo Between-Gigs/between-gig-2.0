@@ -3,7 +3,7 @@ import { sampleSource as s } from "./sample";
 import { statusOf } from "@/lib/server/gigs";
 
 /*
- * The publish gate (API 1.16.0, publish_after_approval): approving makes a profile "approved" (private, no email);
+ * The publish gate (API 1.17.0, publish_after_approval): approving makes a profile "approved" (private, no email);
  * only "published" is public. Flag off: today's behaviour, approved is public.
  */
 afterEach(() => vi.unstubAllEnvs());
