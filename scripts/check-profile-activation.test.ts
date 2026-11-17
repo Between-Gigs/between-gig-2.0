@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { checkProfileActivation } from "./check-profile-activation.mjs";
 
@@ -65,5 +66,13 @@ describe("profile activation preflight without receipts", () => {
     expect(checkProfileActivation(ALL_ON, "{").ok).toBe(false);
     expect(checkProfileActivation({ ...ALL_ON, RAILWAY_ENV: "test" }, JSON.stringify({ travelRequiredAfter: { test: CUTOFF } })).ok).toBe(false);
     expect(checkProfileActivation({ ...ALL_ON, RAILWAY_ENV: "test" }, manifest({ requires: "^1.17" })).ok).toBe(false);
+  });
+});
+
+describe("the shipped company-os.json", () => {
+  const SHIPPED_CUTOFF = "2026-11-18T01:00:00.000Z";
+  const shipped = readFileSync(new URL("../company-os.json", import.meta.url), "utf8");
+  it.each(["test", "production"])("lets every feature switch on in %s with the agreed travel cutoff", env => {
+    expect(checkProfileActivation({ ...ALL_ON, RAILWAY_ENV: env, NEXT_PUBLIC_PROFILE_TRAVEL_REQUIRED_AFTER: SHIPPED_CUTOFF }, shipped).ok).toBe(true);
   });
 });

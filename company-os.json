@@ -1,7 +1,7 @@
 {
   "requires": ">=1.17.0",
   "travelRequiredAfter": {
-    "test": null,
-    "production": null
+    "test": "2026-11-18T01:00:00.000Z",
+    "production": "2026-11-18T01:00:00.000Z"
   }
 }
