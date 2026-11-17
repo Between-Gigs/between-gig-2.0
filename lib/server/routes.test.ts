@@ -81,7 +81,7 @@ describe("credentials", () => {
   it("every route is in the table with an access rule", () => {
     expect(Object.keys(ROUTES).sort()).toEqual([
       "auth.session", "auth.syncExternal", "emails.diagnosticStatus", "emails.sendDiagnostic", "funnel.addDetails", "funnel.joinWaitlist", "funnel.privacyRequest", "funnel.submitSketch",
-      "owners.activity", "owners.approve", "owners.dashboard", "owners.invite", "owners.requestChanges", "owners.resendInvite", "owners.reviewQueue", "owners.waitlist",
+      "owners.activity", "owners.approve", "owners.dashboard", "owners.invite", "owners.inviteAddresses", "owners.requestChanges", "owners.resendInvite", "owners.reviewQueue", "owners.waitlist",
       "people.get", "people.getPublic", "people.list", "people.similar", "profiles.getDraft", "profiles.getProfile", "profiles.saveDraft", "profiles.submit",
     ]);
     const access = Object.fromEntries(Object.entries(ROUTES).map(([k, v]) => [k, v.access]));
@@ -753,3 +753,131 @@ for (const [method, args] of [["people.getPublic", ["fictional-profile"]], ["peo
     } finally { if (prev === undefined) delete process.env.NEXT_PUBLIC_PROFILE_VIDEO_LINKS; else process.env.NEXT_PUBLIC_PROFILE_VIDEO_LINKS = prev; }
   });
 }
+
+describe("owners.inviteAddresses: the invitation to typed addresses", () => {
+  const row = (id: string, data: Record<string, unknown>) => ({ id, data, createdAt: "", updatedAt: "" });
+  // A fake where `known` addresses already have a person (with `user` set when they have an account) and each created person's id is "p-<email>".
+  const typed = (opts: { known?: Record<string, { user?: string; signedUp?: boolean }>; suppressed?: string[]; failInvite?: string[]; existsInvite?: string[]; cancelled?: string[] } = {}) => fake((c) => {
+    const b = c.body as { entity?: string; filter?: { value?: string }; email?: string; recipient?: string } | undefined;
+    if (c.path === "/query" && b?.entity === "person") {
+      const email = b.filter?.value ?? "";
+      const k = opts.known?.[email];
+      return { body: { data: k ? [row(`p-${email}`, { email, user: k.user })] : [] } };
+    }
+    if (c.path === "/admin/users") return { body: { users: Object.entries(opts.known ?? {}).filter(([, k]) => k.user).map(([email, k]) => ({ userId: k.user, email, signedUp: !!k.signedUp })) } };
+    if (c.path === "/api/person") return { status: 201, body: { data: row(`p-${b?.email}`, {}) } };
+    if (c.path === "/invitations") {
+      if (opts.failInvite?.includes(b?.email ?? "")) return { status: 502, body: { error: "invitation_failed" } };
+      if (opts.existsInvite?.includes(b?.email ?? "")) return { status: 409, body: { error: "already_signed_up" } };
+      return { status: 201, body: { url: `http://localhost:3000/join/?__clerk_ticket=${b?.email}` } };
+    }
+    if (c.path === "/api/comms_log") {
+      const email = (b?.recipient ?? "").slice(2);
+      if (opts.suppressed?.includes(email)) return { status: 422, body: { error: "contact_suppressed" } };
+      return { status: 201, body: { data: row("log", { status: opts.cancelled?.includes(email) ? "cancelled" : "queued" }) } };
+    }
+    return undefined;
+  });
+  const sent = (calls: Call[]) => calls.filter((c) => c.path === "/api/comms_log");
+
+  it("sends the invitation once to one address and once to each of several", async () => {
+    const one = typed();
+    const r1 = await call("owners.inviteAddresses", [["a@example.org"]], undefined, one);
+    expect(r1.body.result).toEqual([{ email: "a@example.org", result: "sent" }]);
+    expect(sent(one.calls)).toHaveLength(1);
+    const many = typed();
+    const r2 = await call("owners.inviteAddresses", [["a@example.org", "b@example.org", "c@example.org"]], undefined, many);
+    expect(r2.body.result).toEqual(["a", "b", "c"].map((x) => ({ email: `${x}@example.org`, result: "sent" })));
+    expect(sent(many.calls)).toHaveLength(3);
+    expect(many.calls.filter((c) => c.path === "/invitations")).toHaveLength(3);
+  });
+
+  it("takes one string split on commas, spaces and new lines too", async () => {
+    const f = typed();
+    const { body } = await call("owners.inviteAddresses", ["a@example.org, b@example.org\nc@example.org"], undefined, f);
+    expect((body.result as { email: string }[]).map((r) => r.email)).toEqual(["a@example.org", "b@example.org", "c@example.org"]);
+  });
+
+  it("collapses duplicates, spacing and case: each person gets one email", async () => {
+    const f = typed();
+    const { body } = await call("owners.inviteAddresses", [["  Maya@Example.org ", "maya@example.org", "MAYA@EXAMPLE.ORG"]], undefined, f);
+    expect(body.result).toEqual([{ email: "maya@example.org", result: "sent" }]);
+    expect(sent(f.calls)).toHaveLength(1);
+    expect(f.calls.find((c) => c.path === "/invitations")?.body).toMatchObject({ email: "maya@example.org" });
+  });
+
+  it("an invalid address is reported and the others still go out", async () => {
+    const f = typed();
+    const { body } = await call("owners.inviteAddresses", [["not-an-email", "ok@example.org", "a@b"]], undefined, f);
+    expect(body.result).toEqual([{ email: "not-an-email", result: "invalid" }, { email: "ok@example.org", result: "sent" }, { email: "a@b", result: "invalid" }]);
+    expect(sent(f.calls)).toHaveLength(1);
+  });
+
+  it("more than 10 valid addresses refuses the whole request, sending nothing", async () => {
+    const f = typed();
+    const list = Array.from({ length: 11 }, (_, i) => `u${i}@example.org`);
+    const { res, calls } = await call("owners.inviteAddresses", [list], undefined, f);
+    expect(res.status).toBe(400);
+    expect(calls.some((c) => c.path === "/invitations" || c.path === "/api/comms_log")).toBe(false);
+    expect((await call("owners.inviteAddresses", [list.slice(0, 10)], undefined, typed())).res.status).toBe(200);
+  });
+
+  it("an empty list is refused", async () => {
+    expect((await call("owners.inviteAddresses", [[]], undefined, typed())).res.status).toBe(400);
+  });
+
+  it("a Gigster gets 403 and nothing is read but /me; no session gets 401", async () => {
+    const f = fake(undefined, { superAdmin: false });
+    const { res, calls } = await call("owners.inviteAddresses", [["a@example.org"]], undefined, f);
+    expect(res.status).toBe(403);
+    expect(calls.map((c) => c.path)).toEqual(["/me"]);
+    expect((await call("owners.inviteAddresses", [["a@example.org"]], { token: null })).res.status).toBe(401);
+  });
+
+  it("someone who has already signed in is already_member: no invitation, no email", async () => {
+    const f = typed({ known: { "in@example.org": { user: "u1", signedUp: true } } });
+    const { body } = await call("owners.inviteAddresses", [["in@example.org"]], undefined, f);
+    expect(body.result).toEqual([{ email: "in@example.org", result: "already_member" }]);
+    expect(f.calls.some((c) => c.path === "/invitations" || c.path === "/api/comms_log")).toBe(false);
+  });
+
+  it("a person who was invited but never signed in gets a fresh invitation on the same person", async () => {
+    const f = typed({ known: { "wait@example.org": { user: "u2", signedUp: false } } });
+    const { body } = await call("owners.inviteAddresses", [["wait@example.org"]], undefined, f);
+    expect(body.result).toEqual([{ email: "wait@example.org", result: "sent" }]);
+    expect(f.calls.some((c) => c.path === "/api/person")).toBe(false);
+    expect(f.calls.find((c) => c.path === "/invitations")?.body).toMatchObject({ personId: "p-wait@example.org" });
+  });
+
+  it("an address whose account already exists when Company OS makes the invitation is already_member", async () => {
+    const f = typed({ existsInvite: ["old@example.org"] });
+    const { body } = await call("owners.inviteAddresses", [["old@example.org"]], undefined, f);
+    expect(body.result).toEqual([{ email: "old@example.org", result: "already_member" }]);
+    expect(sent(f.calls)).toHaveLength(0);
+  });
+
+  it("a privacy-request address (422 contact_suppressed) is suppressed; an opted-out one is cancelled at dispatch", async () => {
+    const f = typed({ suppressed: ["gone@example.org"], cancelled: ["out@example.org"] });
+    const { body } = await call("owners.inviteAddresses", [["gone@example.org", "out@example.org", "fine@example.org"]], undefined, f);
+    expect(body.result).toEqual([{ email: "gone@example.org", result: "suppressed" }, { email: "out@example.org", result: "opted_out" }, { email: "fine@example.org", result: "sent" }]);
+  });
+
+  it("one address failing never stops the others", async () => {
+    const f = typed({ failInvite: ["bad@example.org"] });
+    const { res, body } = await call("owners.inviteAddresses", [["bad@example.org", "good@example.org"]], undefined, f);
+    expect(res.status).toBe(200);
+    expect(body.result).toEqual([{ email: "bad@example.org", result: "failed" }, { email: "good@example.org", result: "sent" }]);
+  });
+
+  it("the email is a marketing invitation, queued for delivery, with the invitation link", async () => {
+    const f = typed();
+    await call("owners.inviteAddresses", [["a@example.org"]], undefined, f);
+    expect(sent(f.calls)[0].body).toMatchObject({ deliver: true, channel: "email", category: "marketing", message_key: "invite", recipient: "p-a@example.org", vars: { invite_url: "http://localhost:3000/join/?__clerk_ticket=a@example.org" } });
+  });
+
+  it("no invitations without the site's address to send people back to", async () => {
+    const f = typed();
+    const res = await handle("owners.inviteAddresses", req({ args: [["a@example.org"]] }), { cos: f.cos, appUrl: "" });
+    expect(res.status).toBe(503);
+  });
+});
