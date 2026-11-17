@@ -154,7 +154,8 @@ try {
   server = await start({ COOKIE_SIGNING_SECRET: SECRET, CUSTOM_SERVICE_REVIEW_ENABLED: "1", COMPANY_OS_URL: "http://127.0.0.1:9" });
   const notReady = await fetch(`${server.base}/healthz/`);
   const notReadyBody = await notReady.text();
-  if (notReady.status !== 503 || !/"missing":\["customServiceReview"\]/.test(notReadyBody) || /127\.0\.0\.1/.test(notReadyBody)) fail(`/healthz/ with an unreachable backend answered ${notReady.status} ${notReadyBody.slice(0, 200)}, expected 503 naming customServiceReview`);
+  const notReadyVerdict = judgeHealth(notReady.status, notReadyBody, { ...process.env, CUSTOM_SERVICE_REVIEW_ENABLED: "1" }, ["customServiceReview"]);
+  if (!notReadyVerdict.ok || /127\.0\.0\.1/.test(notReadyBody)) fail(`/healthz/ with an unreachable backend: ${notReadyVerdict.why ?? "leaked an address"}: ${notReady.status} ${notReadyBody.slice(0, 200)}`);
   server.stop();
 
   // The test gate: everything but the exempt paths asks for the passphrase.

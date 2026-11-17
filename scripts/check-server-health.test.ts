@@ -31,3 +31,17 @@ it("the build-time feature list matches the server's own", () => {
   for (const e of [{}, env, { CUSTOM_SERVICE_REVIEW_ENABLED: "1" }, { NEXT_PUBLIC_PROFILE_NO_DEPARTMENT: "1", NEXT_PUBLIC_PROFILE_PUBLISH_GATE: "1", NEXT_PUBLIC_PROFILE_LOCATION_CONTROLS: "1", NEXT_PUBLIC_PROFILE_CUSTOM_SKILLS: "1", NEXT_PUBLIC_PROFILE_TRAVEL_PREFERENCE: "1", NEXT_PUBLIC_CUSTOM_SERVICE_REVIEW: "1" }])
     expect(buildEnabledFeatures(e)).toEqual(enabledFeatures(e));
 });
+
+describe("judgeHealth with a required feature (the runtime-guard start)", () => {
+  const e = { NEXT_PUBLIC_PROFILE_DETAILS: "1", CUSTOM_SERVICE_REVIEW_ENABLED: "1" };
+  it("passes when the required feature is listed alongside built-in ones", () => {
+    expect(judgeHealth(503, refusal(["customServiceReview", "profileDetails"]), e, ["customServiceReview"]).ok).toBe(true);
+    expect(judgeHealth(503, refusal(["customServiceReview"]), e, ["customServiceReview"]).ok).toBe(true);
+  });
+  it("fails when the required feature is missing from the list, or the body is wrong", () => {
+    expect(judgeHealth(503, refusal(["profileDetails"]), e, ["customServiceReview"]).ok).toBe(false);
+    expect(judgeHealth(200, "ok", e, ["customServiceReview"]).ok).toBe(false);
+    expect(judgeHealth(503, "nope", e, ["customServiceReview"]).ok).toBe(false);
+    expect(judgeHealth(503, refusal(["customServiceReview", "publishGate"]), e, ["customServiceReview"]).ok).toBe(false);
+  });
+});

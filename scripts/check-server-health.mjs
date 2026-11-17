@@ -13,8 +13,9 @@ export function buildEnabledFeatures(env) {
   return [...new Set(FLAGS.filter(([name]) => env[name] === "1").map(([, feature]) => feature))].sort();
 }
 
-/** 200 "ok", or a 503 whose body is exactly {ok:false, missing:[...]} naming only features built into this build. */
-export function judgeHealth(status, body, env) {
+/** (`required`: features the 503 must name.) 200 "ok", or a 503 whose body is exactly {ok:false, missing:[...]} naming only features built into this build. */
+export function judgeHealth(status, body, env, required = []) {
+  if (status === 200 && required.length) return { ok: false, why: "answered 200 but a 503 naming " + required.join(", ") + " was expected" };
   if (status === 200) return body === "ok" ? { ok: true } : { ok: false, why: "200 with an unexpected body" };
   if (status !== 503) return { ok: false, why: `answered ${status}` };
   let parsed;
@@ -24,5 +25,7 @@ export function judgeHealth(status, body, env) {
   if (keys !== "missing,ok" || parsed.ok !== false || !Array.isArray(parsed.missing) || !parsed.missing.length || !parsed.missing.every(m => built.includes(m))) {
     return { ok: false, why: "503 that is not the readiness refusal for features built into this build" };
   }
+  const absent = required.filter(r => !parsed.missing.includes(r));
+  if (absent.length) return { ok: false, why: `503 that does not name ${absent.join(", ")}` };
   return { ok: true };
 }
