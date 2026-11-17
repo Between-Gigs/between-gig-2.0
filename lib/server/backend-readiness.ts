@@ -1,7 +1,7 @@
 /*
  * Is the backend ready for the features this build turns on? Each profile feature flag needs a minimum profiles-module
  * version in Company OS. Instead of a person attesting that (the old "library receipt"), the server asks Company OS
- * what the public reader can see (GET /meta/entities) and looks for a field that exists only once that version is
+ * what the public reader can see (GET /me: the read-only token may call only a few routes, and /meta/entities is not one) and looks for a field that exists only once that version is
  * installed. /healthz/ answers 503 while a feature is missing, so Railway's deploy healthcheck keeps the old version
  * serving. Server only. Nothing here returns an address or token.
  */
@@ -100,7 +100,7 @@ export async function backendReadiness(opts: ReadinessOptions = {}): Promise<Rea
     let timer: ReturnType<typeof setTimeout> | undefined;
     const deadline = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new CompanyOsError(504, "timeout")), timeoutMs); });
     try {
-      const meta = await Promise.race([cos.call<{ entities?: Entities }>({ kind: "reader" }, "GET", "/meta/entities"), deadline]);
+      const meta = await Promise.race([cos.call<{ entities?: Entities }>({ kind: "reader" }, "GET", "/me"), deadline]);
       result = Array.isArray(meta?.entities) ? checkReadiness(features, meta.entities.map(e => ({ key: e.key, fields: Array.isArray(e.fields) ? e.fields : [] }))) : notReady;
     } finally { clearTimeout(timer); }
   } catch {
