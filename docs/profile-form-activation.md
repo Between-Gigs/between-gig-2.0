@@ -51,3 +51,5 @@ Playbook impact: IN-279 (Company OS activation audit).
 ## Nonblocking location/travel successor
 
 Location12–14 compatibility now uses the generic creation-cohort rule and per-environment future cutoffs described in [Legacy blank-travel compatibility](handoff/patti-travel-cohort.md). This successor needs an actual feature-bearing API/module release; the earlier metadata-only location baseline is insufficient. Pending cutoff and release declarations refuse activation. No global required travel, backfill, real dates or new credentials are configured.
+
+Current numbers: the activation steps are in [handoff/publish-gate.md](handoff/publish-gate.md): API 1.17.0 (`/health`), profiles module 1.10.0, activation follow-up web release 1.4.2 (1.4.1 was the public-pages fix), `requires` `>=1.17.0`. On test the backend recipe is already applied by test deploys, so only the website flags remain there.
