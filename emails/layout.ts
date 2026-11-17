@@ -72,7 +72,7 @@ export function layout({ title, preheader, body, reason, ctx, header = true, pap
   const logo = (theme: "light" | "dark") => `${ctx.assetBase}/email/between-gigs-wide-on-${theme}.png`;
   // Pads the preheader so clients don't pull body text into the inbox preview.
   const spacer = "&#847;&zwnj;&nbsp;".repeat(60);
-  return `<!doctype html>
+  const html = `<!doctype html>
 <html lang="en" dir="ltr" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
 <meta charset="utf-8">
@@ -162,6 +162,35 @@ ${unsubscribe ? `<p class="e-subtle" style="margin:0;color:${light.inkSubtle}"><
 </table>
 </body>
 </html>`;
+  // Light-only invitation: explicit fallback colours plus same-colour gradients and text fill help clients
+  // that selectively recolour HTML in dark mode. These are hints, not immunity from receiving-app overrides.
+  // Apply only to this opt-in output; preserve every other email byte and keep the wallpaper image intact.
+  if (!lightOnly) return html;
+  const lightHtml = html.replace('</style>', `
+@media (min-width:301px) and (max-width:620px){
+.e-invite-center{padding:16.5vw 19% 34vw!important}
+.e-invite-logo{width:136px!important;height:42px!important}
+.e-invite-rule{margin-bottom:14px!important}
+.e-invite-action{padding-top:16px!important}
+.e-invite-eyebrow{margin-top:32px!important;font-size:14px!important;line-height:20px!important}
+}
+@media (min-width:301px) and (max-width:360px){
+.e-invite-center{padding:16.5vw 18% 26vw!important}
+.e-invite-logo{width:112px!important;height:35px!important}
+.e-invite-action{padding-top:18px!important}
+.e-invite-eyebrow{margin-top:24px!important;font-size:13px!important;line-height:18px!important}
+}
+@media (max-width:300px){.e-invite-eyebrow{font-size:11px!important;line-height:14px!important}}
+</style>`);
+  return lightHtml.replace(/style="([^"]*)"/g, (_, style: string) => {
+    const declarations = style.split(";").map(value => value.trim());
+    const color = declarations.find(value => /^color:#[0-9a-f]{3,8}$/i.test(value))?.slice(6);
+    const background = declarations.find(value => /^background-color:#[0-9a-f]{3,8}$/i.test(value))?.slice(17);
+    const additions = [color ? `-webkit-text-fill-color:${color}` : "",
+      background && !declarations.some(value => /^background-image:/i.test(value))
+        ? `background-image:linear-gradient(${background},${background})` : ""].filter(Boolean);
+    return `style="${style}${style.endsWith(";") ? "" : ";"}${additions.join(";")};"`;
+  });
 }
 
 /** The forest band at the top of the card: eyebrow, headline with a mint accent. Forest in both themes. */
