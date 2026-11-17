@@ -104,6 +104,8 @@ export interface DataSource {
     /** Invites waitlist sign-ups: creates the person and invite, queues the invite email. Skips anyone already invited. */
     /** Live: invites again people invited but not signed up yet; Company OS revokes their older link. At most 10 a call. */
     resendInvite?(personIds: string[]): Promise<{ invited: number; skipped: number; failed?: number }>;
+    /** Live: the Invitation email to typed addresses (at most 10 a call), one result each. */
+    inviteAddresses?(emails: string[]): Promise<{ email: string; result: "sent" | "already_member" | "suppressed" | "opted_out" | "invalid" | "failed" }[]>;
     /** At most 10 sign-ups a call live (the waitlist sends bigger selections in chunks). */
     invite(signupIds: string[]): Promise<{ invited: number; skipped: number; /** Live: invitations that failed (none were sent). */ failed?: number }>;
   };

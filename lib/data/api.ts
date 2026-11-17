@@ -185,6 +185,7 @@ export function createApiSource(opts: ApiOptions = {}): DataSource & { setTokenP
       requestChanges: (id, notes) => call("owners.requestChanges", [id, notes]),
       waitlist: (query) => call("owners.waitlist", [query ?? {}]),
       invite: (ids) => call("owners.invite", [ids]),
+      inviteAddresses: (emails) => call("owners.inviteAddresses", [emails]),
       resendInvite: (personIds) => call("owners.resendInvite", [personIds]),
     },
   };

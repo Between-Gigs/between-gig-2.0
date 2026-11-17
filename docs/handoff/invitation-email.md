@@ -15,3 +15,11 @@ No email has been sent, no broadcast changed or scheduled, and no Company OS tem
 The hero uses the exact text-free Craft Invitation portrait from the existing wallpaper gallery (the live-server copy in public/email is byte-identical). Its pixels were inspected: scissors/fabric, camera, wedding photographs, swatches/pencil, hammer/gloves and lower sketches/paint/cable surround the clear cream center. This gallery asset is the approved background; no separate reference-image transfer is required. The invitation alone now places live logo/headline/introductory copy directly on that background with no white card, shadow or separate artwork strip. The hero button and end-of-body button use the same approved profile destination. Other craft templates retain their existing layout.
 
 Presentation tables, inline colors, responsive padding/type and a solid cream fallback keep the live text readable when background images are blocked or unsupported. Classic Outlook may omit the decorative scene; no fixed-height VML background is added. Clients that force dark colors can still recolor content. No actual-inbox QA or universal dark-mode immunity is claimed.
+
+## Sending to typed addresses
+
+The owner Emails page has a "Send this invitation to…" box (live only; the sample never sends). Type up to 10 addresses, separated by commas, spaces or new lines, and confirm. Route `owners.inviteAddresses` (owner only), implemented by `inviteAddresses` in `lib/server/gigs.ts`; it reuses the waitlist's `sendInvite`, so the email is the same `invite` message (category marketing) with the footer and the person-bound unsubscribe link.
+
+Addresses are trimmed, lower-cased and de-duplicated. More than 10 valid addresses refuses the whole request (400). Each address then gets one result, and one failing never stops the others: `sent`, `already_member` (the person has signed in, or Company OS says the account exists), `suppressed` (privacy request: 422 `contact_suppressed`), `opted_out` (unsubscribed: Company OS cancels the email), `invalid`, `failed`.
+
+These people are marketing contacts who never opted in: the unsubscribe link must work. To test deliverability to our own inbox use a `+test` address (a person with no account yet); an address that already has an account is skipped.
