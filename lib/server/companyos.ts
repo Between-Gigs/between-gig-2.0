@@ -14,6 +14,8 @@ export interface CompanyOsConfig {
   readerToken: string;
   submitterToken: string;
   fetch?: typeof fetch;
+  /** Per-call timeout; defaults to 15 s. */
+  timeoutMs?: number;
 }
 
 export function configFromEnv(env: Record<string, string | undefined> = process.env): CompanyOsConfig {
@@ -66,7 +68,7 @@ export function companyOs(cfg: CompanyOsConfig) {
         // No content-type on a bodyless request (Company OS refuses an empty JSON body).
         headers: { authorization: `Bearer ${token}`, ...(body === undefined ? {} : { "content-type": "application/json" }) },
         body: body === undefined ? undefined : JSON.stringify(body),
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        signal: AbortSignal.timeout(cfg.timeoutMs ?? TIMEOUT_MS),
         cache: "no-store",
       });
     } catch {
