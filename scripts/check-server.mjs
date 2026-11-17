@@ -167,7 +167,12 @@ try {
   if (api.status !== 401) fail(`gate: the API answered ${api.status}`);
   for (const url of ["/healthz/", "/email/between-gigs-wide-on-light.png", "/hub/", "/preview/"]) {
     const res = await fetch(g + url);
-    if (res.status !== 200) fail(`gate: exempt ${url} answered ${res.status}`);
+    // /healthz/ is exempt from the gate; with features built in and no backend here it may answer the readiness 503.
+    if (url === "/healthz/") {
+      const body = await res.text();
+      const verdict = judgeHealth(res.status, body, process.env);
+      if (!verdict.ok) fail(`gate: exempt ${url} ${verdict.why}: ${res.status}`);
+    } else if (res.status !== 200) fail(`gate: exempt ${url} answered ${res.status}`);
   }
   // Reaches its handler, which refuses a request without Resend's signature headers with 400.
   const hook = await fetch(`${g}/webhooks/resend/`, { method: "POST", body: "{}" });
