@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { INVITE_COPY, INVITE_REASON, INVITE_UNSUBSCRIBE, invite } from "@/emails/invite";
-import { k } from "@/emails/craft";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { INVITE_HERO } from "@/emails/invite-hero";
+import { light } from "@/emails/tokens";
 import { renderPreview } from "@/components/emails/preview";
 
 const props = { inviteUrl: "https://example.test/join/?invite=sample&source=email", email: "sample@example.test" };
@@ -9,10 +12,9 @@ describe("canonical Stage 2 invitation", () => {
   it("matches Patti invitation07–10 in HTML and text with a sentence-case signoff", () => {
     const email=invite(props);
     expect(email.text).toContain("Your skills have value beyond the set.\nLet us help you put them to work.");
-    expect(email.html).toContain("Your skills have value beyond the set.<br>Let us help you put them to work.");
+    expect(email.html).toContain("Your skills have value beyond the set. Let us help you put them to work.");
     expect(email.text).toContain("and begin connecting you with new opportunities in the coming weeks.");
-    expect(email.html).toContain("font-size:50px;line-height:52px");
-    expect(email.html).toContain('class="e-invite-eyebrow" style="margin:45.5px 0 10px;font-size:22px;line-height:28px');
+    expect(INVITE_HERO.geometry).toMatchObject({logoWidth:235.2,eyebrowFontSize:22});
     expect(email.text).toContain("The Between Gigs Team");
     expect(email.html).toMatch(/letter-spacing:0\.04em;color:[^>]+>The Between Gigs Team<\/p>/);
     expect(email.html).not.toContain("YOUR BETWEEN GIGS TEAM");
@@ -28,9 +30,10 @@ describe("canonical Stage 2 invitation", () => {
       expect(next, phrase).toBeGreaterThan(position);
       position = next;
     }
-    expect(email.html.match(/>Create your profile/g)).toHaveLength(2);
+    expect(email.html.match(/>Create your profile/g)).toHaveLength(1);
+    expect(email.html).toContain('alt="Create your profile.');
     expect(email.text.split(props.inviteUrl)).toHaveLength(3);
-    expect(email.html.match(/href="https:\/\/example.test\/join\/\?invite=sample&amp;source=email"/g)).toHaveLength(2);
+    expect(email.html.match(/href="https:\/\/example.test\/join\/\?invite=sample&amp;source=email"/g)).toHaveLength(3);
     expect(email.html).toContain("?invite=sample&amp;source=email");
     expect(email.html).toContain(`<strong>${INVITE_COPY.stage}</strong>`);
     expect(email.html).toContain(`<strong>${INVITE_COPY.nextTitle}</strong> ${INVITE_COPY.next}`);
@@ -40,10 +43,12 @@ describe("canonical Stage 2 invitation", () => {
     }
   });
 
-  it("places live hero text directly on the existing clear-center wallpaper", () => {
+  it("links the exact approved hero image without live text over artwork", () => {
     const html = invite(props).html;
-    expect(html).toContain('class="e-invite-scene"');
-    expect(html).toContain('/email/craft-invitation-portrait.jpg');
+    expect(html).toContain('class="e-invite-artwork"');
+    expect(html).toContain('/email/invitation-hero-approved.png');
+    expect(html).toContain('width="598" height="784"');
+    expect(html).not.toContain('class="e-invite-scene"');
     expect(html).not.toContain('class="e-k-card"');
     expect(html).not.toContain('class="e-k-strip"');
     expect(html).not.toContain("DESIGN CONCEPT");
@@ -83,16 +88,51 @@ describe("canonical Stage 2 invitation", () => {
     expect(invite(props).html).toContain(INVITE_UNSUBSCRIBE);
   });
 
-  it("opts the invitation into its intended light palette without promising forced-mode immunity", () => {
+  it("prefers light while pairing readable HTML surface and text fallbacks without selective colour-lock hacks", () => {
     const email = invite(props);
     expect(email.html).toContain('name="color-scheme" content="light"');
-    expect(email.html).not.toContain("@media (prefers-color-scheme:dark)");
+    expect(email.html).toContain("@media (prefers-color-scheme:dark)");
+    expect(email.html).toContain("[data-ogsc]");
     expect(email.html).toContain('<html lang="en" dir="ltr"');
-    expect(email.html).toContain(`background-image:linear-gradient(${k.paper},${k.paper})`);
-    expect(email.html).toContain(`-webkit-text-fill-color:${k.ink}`);
-    expect(email.html).toContain('width="235" height="74"');
-    expect(email.html).toContain('padding:144.5px 96px 212.5px');
-    expect(email.html).toContain('width:235.2px;height:73.5px');
+    expect(email.html).not.toContain("background-image:linear-gradient");
+    expect(email.html).not.toContain("-webkit-text-fill-color");
+    expect(email.html).toContain(`.e-invite-email .e-invite-html-cta a{color:${light.onActionStrong}!important}`);
     expect(email.html.match(/<h1/g)).toHaveLength(1);
+  });
+
+  it("keeps the fixed 600px email within the 621–623px desktop gutter gap",()=>{
+    const html=invite(props).html;
+    expect(html).toContain('@media (max-width:624px){');
+    expect(html).toContain('.e-invite-email .e-edge{padding-left:0!important;padding-right:0!important}');
+  });
+
+  it("binds the baked hero bytes and copy to their approved provenance",()=>{
+    const image=readFileSync(new URL("../public/email/invitation-hero-approved.png",import.meta.url));
+    expect(createHash("sha256").update(image).digest("hex")).toBe(INVITE_HERO.sha256);
+    expect(image.readUInt32BE(16)).toBe(INVITE_HERO.width);
+    expect(image.readUInt32BE(20)).toBe(INVITE_HERO.height);
+    expect(INVITE_HERO.copy).toEqual({eyebrow:INVITE_COPY.eyebrow,title:[...INVITE_COPY.title],lead:INVITE_COPY.lead,cta:INVITE_COPY.cta});
+    const html=invite(props,{assetBase:"https://test.example",siteUrl:"https://test.example"}).html;
+    expect(html).toContain('src="https://test.example/email/invitation-hero-approved.png"');
+  });
+
+  it("uses an approved mobile raster with readable baked text at the narrowest actual 260px frame",()=>{
+    const mobile=INVITE_HERO.mobile;
+    expect(mobile.width).toBe(260);expect(mobile.height).toBe(340);
+    expect(mobile.geometry).toMatchObject({titleFontSize:21,leadFontSize:12,ctaFontSize:12,logoWidth:88});
+    for(const width of [260,298,318,388]){
+      expect(mobile.geometry.leadFontSize*width/mobile.width).toBeGreaterThanOrEqual(12);
+      expect(mobile.geometry.ctaFontSize*width/mobile.width).toBeGreaterThanOrEqual(12);
+    }
+    const image=readFileSync(new URL("../public/email/invitation-hero-approved-mobile.png",import.meta.url));
+    expect(createHash("sha256").update(image).digest("hex")).toBe(mobile.sha256);
+    expect(image.readUInt32BE(16)).toBe(mobile.width);expect(image.readUInt32BE(20)).toBe(mobile.height);
+    expect(mobile.copy).toEqual(INVITE_HERO.copy);
+    const html=invite(props).html;
+    expect(html).toContain('class="e-invite-mobile"');
+    expect(html).toContain('display:none;max-height:0;overflow:hidden;mso-hide:all');
+    expect(html).toContain('@media (max-width:620px)');
+    expect(html).toContain('.e-invite-email .e-invite-desktop{display:none!important;max-height:0!important;overflow:hidden!important}');
+    expect(html).toContain('.e-invite-email .e-invite-mobile{display:block!important;max-height:none!important;overflow:visible!important}');
   });
 });

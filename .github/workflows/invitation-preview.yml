@@ -3,10 +3,14 @@ on:
   pull_request:
     paths:
       - 'emails/**'
+      - 'public/email/invitation-hero-approved*'
+      - 'lib/invite-email.test.ts'
+      - 'lib/email-preview-scheme.test.ts'
       - 'components/emails/**'
       - 'components/journey/**'
       - 'app/preview/gigster-journey/**'
-      - 'scripts/qa/invitation.mjs'
+      - 'scripts/qa/invitation*.mjs'
+      - 'scripts/invitation-pixel-clip.test.ts'
       - 'scripts/qa/stage-two-journey.mjs'
       - 'scripts/qa/owner-email-hub.mjs'
       - 'scripts/qa/email-send-controls.mjs'
@@ -35,7 +39,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec vitest run lib/email-test-retry.test.ts lib/server/email-hub.test.ts lib/email-manual.test.ts lib/server/manual-emails.test.ts lib/email-preview-view.test.ts
+      - run: pnpm exec vitest run scripts/invitation-pixel-clip.test.ts lib/invite-email.test.ts lib/email-preview-scheme.test.ts lib/email-test-retry.test.ts lib/server/email-hub.test.ts lib/email-manual.test.ts lib/server/manual-emails.test.ts lib/email-preview-view.test.ts
       - run: pnpm build
       - run: CHROMIUM_PATH=$(command -v google-chrome) node scripts/qa/email-preview-views.mjs
       - run: CHROMIUM_PATH=$(command -v google-chrome) node scripts/qa/invitation.mjs

@@ -12,8 +12,13 @@ describe("preview theme forcing", () => {
       expect(forced.match(new RegExp(scheme === "dark" ? "@media all" : "@media not all", "g"))?.length).toBeGreaterThan(1);
     }
   });
-  it("does not invent a dark rendition for the deliberately light invitation", () => {
+  it("previews the invitation HTML fallback while keeping its preferred light metadata and same baked artwork", () => {
     const html = renderEmail("invite").html;
-    expect(forceScheme(html, "dark")).toBe(forceScheme(html, "light"));
+    expect(forceScheme(html, "dark")).toContain("@media all{");
+    expect(forceScheme(html, "light")).toContain("@media not all{");
+    for(const scheme of ["light","dark"] as const){
+      expect(forceScheme(html,scheme)).toContain('name="color-scheme" content="light"');
+      expect(forceScheme(html,scheme)).toContain('/email/invitation-hero-approved.png');
+    }
   });
 });
