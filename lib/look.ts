@@ -2,10 +2,10 @@
 const base = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export const SITE_LOOK_PATHS = `^(?!(${base})?/(studio|workspace|_journal)(/|$))`;
 
-// Brand pages keep their own approved designs and skip the theme: Storyboard, Crew Call, the home proposals, and the
-// drafts of the pre-Green Room Coming soon and For professionals pages. Since 13 Nov 2026 the live Coming soon (/) and
-// For professionals pages are Green Room, so they are no longer brand pages.
-export const BRAND_PATHS = `^(?:${base})?/(?:storyboard|crew-call|proposals|preview/drafts/(?:coming-soon|professionals)-v1)(?:/|$)`;
+// Brand pages keep their own approved designs and skip the theme: Crew Call, the home proposals, and the
+// drafts of the pre-Green Room Coming soon and For professionals pages. The live Coming soon (/),
+// For professionals and Storyboard pages use Green Room, including the shared header and footer.
+export const BRAND_PATHS = `^(?:${base})?/(?:crew-call|proposals|preview/drafts/(?:coming-soon|professionals)-v1)(?:/|$)`;
 export const isBrandPage = (pathname: string) => new RegExp(BRAND_PATHS).test(pathname);
 
 const TOOL_PATHS = `^(?:${base})?/(studio|workspace)(/|$)`;

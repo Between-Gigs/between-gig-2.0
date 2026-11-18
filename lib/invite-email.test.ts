@@ -12,7 +12,7 @@ describe("canonical Stage 2 invitation", () => {
     expect(email.html).toContain("Your skills have value beyond the set.<br>Let us help you put them to work.");
     expect(email.text).toContain("and begin connecting you with new opportunities in the coming weeks.");
     expect(email.html).toContain("font-size:50px;line-height:52px");
-    expect(email.html).toContain('class="e-invite-eyebrow" style="margin:60px 0 10px;font-size:22px;line-height:28px');
+    expect(email.html).toContain('class="e-invite-eyebrow" style="margin:45.5px 0 10px;font-size:22px;line-height:28px');
     expect(email.text).toContain("The Between Gigs Team");
     expect(email.html).toMatch(/letter-spacing:0\.04em;color:[^>]+>The Between Gigs Team<\/p>/);
     expect(email.html).not.toContain("YOUR BETWEEN GIGS TEAM");
@@ -90,7 +90,9 @@ describe("canonical Stage 2 invitation", () => {
     expect(email.html).toContain('<html lang="en" dir="ltr"');
     expect(email.html).toContain(`background-image:linear-gradient(${k.paper},${k.paper})`);
     expect(email.html).toContain(`-webkit-text-fill-color:${k.ink}`);
-    expect(email.html).toContain('width="200" height="62"');
+    expect(email.html).toContain('width="235" height="74"');
+    expect(email.html).toContain('padding:144.5px 96px 212.5px');
+    expect(email.html).toContain('width:235.2px;height:73.5px');
     expect(email.html.match(/<h1/g)).toHaveLength(1);
   });
 });
