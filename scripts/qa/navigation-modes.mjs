@@ -49,7 +49,26 @@ try {
     const header = page.locator("header").first();
     const account = header.getByRole("button", { name: /^Account:/ }); await account.waitFor();
     assert.equal(await header.getByRole("switch", { name: "Night mode" }).count(), 0, "authenticated appearance defaults to My Settings");
-    const nav = async () => { if (width < 1024) { await page.getByRole("button", { name: /Open owner menu|More owner pages/ }).filter({ visible: true }).first().click(); return page.getByRole("dialog").filter({ has: page.getByRole("button", { name: "Collapse all", exact: true }) }); } return page.getByRole("navigation", { name: /^(Owner|Preview) workspace$/, exact: true }); };
+    const nav = async () => {
+      // Query appearance is applied before hydration. Wait for the real look-specific shell,
+      // otherwise a click can target the server header just before React replaces it.
+      await page.waitForFunction(() => !!window.bgSample && (document.documentElement.dataset.look !== "modern" || !!document.querySelector("[data-admin-shell][data-modern-owner]")));
+      if (width >= 1024) return page.getByRole("navigation", { name: /^(Owner|Preview) workspace$/, exact: true });
+      const drawer = page.getByRole("dialog", { name: /^(Owner|Preview) workspace$/, exact: true });
+      try {
+        await page.getByRole("button", { name: /Open owner menu|More owner pages/ }).filter({ visible: true }).first().click();
+        await drawer.waitFor();
+        await drawer.getByRole("button", { name: "Collapse all", exact: true }).waitFor();
+      } catch (error) {
+        const diagnostic = await page.evaluate(() => ({ path: location.pathname, look: document.documentElement.dataset.look,
+          sampleReady: !!window.bgSample, shell: document.querySelector("[data-admin-shell]")?.outerHTML.slice(0, 1600),
+          dialogs: [...document.querySelectorAll("dialog")].map(dialog => ({ open: dialog.open, text: dialog.textContent })) }));
+        fs.writeFileSync(`deliverables/navigation-modes/drawer-readiness-failure-${width}-${theme}.json`, JSON.stringify(diagnostic, null, 2));
+        await shot("drawer-readiness-failure");
+        throw error;
+      }
+      return drawer;
+    };
     let sidebar = await nav();
     assert.deepEqual(await sidebar.locator("[data-owner-section] > button").allTextContents(), ["Overview", "Gigsters"]);
     assert.equal(await sidebar.getByRole("link", { name: "Staff", exact: true }).count(), 0);
