@@ -33,7 +33,7 @@ describe("manual email gateway boundaries", () => {
     for(const name of ["__proto__","sign-in-code","invite","welcome","coming-soon"]) {
       const f=setup();await expect(previewReal(f.ctx,[{name,recipient:"a@example.org"}])).rejects.toMatchObject({status:400});
     }
-    for(const recipient of ["a@example.org,b@example.org","Name <a@example.org>","a@example.org\nb@example.org"]) {
+    for(const recipient of ["a@example.org,b@example.org","Name <a@example.org>","a@example.org\nb@example.org","a@example.org\r\n","a\u0000@example.org"]) {
       const f=setup();await expect(previewReal(f.ctx,[{name:"approved",recipient}])).rejects.toMatchObject({status:400});expect(f.calls.some(c=>c.method==="POST")).toBe(false);
     }
   });
