@@ -195,11 +195,18 @@ try {
     await page.waitForFunction(() => !document.documentElement.hasAttribute("data-unstyled"));
     await page.evaluate(() => window.bgSample.signInAs("gigster", "grace-liu")); await page.goto(local.url + "/profile/canvas/");
     await header.getByRole("button", { name: "Account: Grace Liu", exact: true }).waitFor();
-    await page.waitForFunction(() => document.documentElement.dataset.look === "modern");
-    await page.waitForFunction(expected => document.documentElement.dataset.theme === expected, outerAppearance.theme === "dark" ? "light" : "dark");
-    await header.getByRole("switch", { name: "Night mode" }).waitFor({ state: "detached" });
-    assert.equal(await header.getByRole("switch", { name: "Night mode" }).count(), 0, "another account does not inherit navigation preference");
-    assert.equal(await page.locator("html").getAttribute("data-look"), "modern", "another account restores its own iframe-selected preference instead of inheriting the owner theme");
+    // Session and appearance hooks finish independently. Observe identity, appearance and visible
+    // controls in one render snapshot rather than racing two separate protocol reads during hydration.
+    const ownAppearance = await (await page.waitForFunction(expected => {
+      const root = document.documentElement, header = document.querySelector("header");
+      const account = header?.querySelector('button[aria-label="Account: Grace Liu"]');
+      const night = [...(header?.querySelectorAll('[role="switch"][aria-label="Night mode"]') ?? [])]
+        .filter(control => control.getClientRects().length > 0 && getComputedStyle(control).visibility !== "hidden");
+      if (!account || root.dataset.look !== "modern" || root.dataset.theme !== expected || night.length !== 0) return false;
+      return { look: root.dataset.look, theme: root.dataset.theme, nightCount: night.length };
+    }, outerAppearance.theme === "dark" ? "light" : "dark")).jsonValue();
+    assert.equal(ownAppearance.nightCount, 0, "another account does not inherit navigation preference");
+    assert.equal(ownAppearance.look, "modern", "another account restores its own iframe-selected preference instead of inheriting the owner theme");
     await page.goto(local.url + "/hub/"); await account.waitFor();
     const previewNav = await nav();
     await previewNav.getByRole("link", { name: "Staff", exact: true }).waitFor();
