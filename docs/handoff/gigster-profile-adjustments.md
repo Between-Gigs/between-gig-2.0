@@ -1,0 +1,25 @@
+# Gigster profile adjustments — November 18
+
+Justin approved the revised Skills & Experience preview with separate selected and suggested chips. This change keeps the existing profile fields and backend payloads. Selected skills have their own tinted panel; outlined suggestions have explicit add labels and exclude already-selected skills. Comma, Enter and pasted lines commit batches atomically. Existing raw skills remain untouched. The three editor fields can be rearranged as a browser-only preference; the public profile places skills and experience before services.
+
+Availability has its own heading and a prominent high-contrast control. Generic Minimum Booking controls, presentation and requirements are retired under Justin's clarification that current records are testing data; stored fields remain intact. Optional hourly minimum hours and project minimum price remain. International phone formatting occurs only on edits, with a country selector, shared-code selection and punctuation-aware deletion. The private contact and error associations remain private and accessible.
+
+The URL records edit/preview mode and updates the current navigation link without discarding the draft. Public work details use labeled rows and exclude private contact and insurance notes. Selected credits use separated rows.
+
+Valid video links show provider thumbnails immediately, with a fallback. Explicit custom-thumbnail edits crop to supported JPEG bytes. Editing a different video remounts the form and invalidates pending thumbnail work. Any sample-list mutation invalidates the edit form to avoid a stale save target. The original video and portfolio photos are never rewritten by thumbnail cropping.
+
+## Boundaries
+
+Live portfolio-photo alignment with video links enabled is still blocked by the current API contract: there is no durable nondestructive file-presentation field. Adjust is restored in local sample mode; it is deliberately unavailable for that live combination. No backend metadata, schema, tenant settings or permissions change is included. Do not claim sample alignment or sample persistence as hosted verification. An additive file presentation contract and reader allowlist would need separate backend coordination.
+
+The service catalogue is separate draft PR82. Its new video-editing option is absent from both BG tenant configurations, so it remains held. This change does not include that catalogue, invitation artwork, diagnostic email controls or navigation mode changes. No messages or emails are sent.
+
+## Verification and release
+
+`node scripts/qa/gigster-priority.mjs` exercises fictional local state at 320/390/768/1440 in both themes. It checks skills, arrangement/reload, availability contrast, phone/country/caret, preview/history/privacy and exact unrelated saved fields. With profile feature flags enabled, it additionally checks thumbnail crop/cancel, switching video targets during image work, stale-target removal/reorder, and phone error associations. Provider image responses are intercepted fixtures. Default Signup checks run this script and retain screenshots; the feature-on matrix was also run locally. Unit/contract checks cover batching, layout, phone, public work details, minimum retirement and thumbnail input validation.
+
+Two independent source reviewers identified the video edit-target bug and phone error-association regression; both were corrected before final review. Use exact remote commit CI before integration. Reconcile SiteHeader logic with the separate navigation-mode PR100 when it is integrated. Keep Railway test and production as release targets; do not re-enable retired Pages settings.
+
+No production release is established by this document. Follow Cut release and Deploy web (prod) with an annotated main-branch version tag and the required Company OS release. Coordinate the package version and runtime dispatch with the ongoing diagnostic release. Record exact commit, CI, Railway result and HTTP verification in the release receipt. Roll back through the previous approved release tag if needed.
+
+Playbook impact: none.

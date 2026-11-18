@@ -2,7 +2,6 @@
 import { cx } from "@ds/components/cx";
 import * as React from "react";
 import { asset } from "@/lib/site";
-import { videoLinksEnabled } from "@/lib/profile/video-links";
 import { parseSample, rectFor, rectStyle } from "@/lib/profile/work-fit";
 
 /**
@@ -13,8 +12,8 @@ import { parseSample, rectFor, rectStyle } from "@/lib/profile/work-fit";
 export function FittedImg({ sample, alt = "", imgClassName, loading }: { sample: string; alt?: string; imgClassName?: string; loading?: "lazy" | "eager" }) {
   const parsed = parseSample(sample);
   const src = parsed.src;
-  // Company OS can't keep a photo's alignment yet (tech debt), so with work samples saved there every photo is centred.
-  const fit = videoLinksEnabled() ? null : parsed.fit;
+  // Alignment is rendered when supplied; live persistence is gated by the editor capability.
+  const fit = parsed.fit;
   const box = React.useRef<HTMLSpanElement>(null);
   const [frame, setFrame] = React.useState<number | null>(null);
   React.useEffect(() => {

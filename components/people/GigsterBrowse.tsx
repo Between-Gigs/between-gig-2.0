@@ -210,7 +210,7 @@ function resultOf({ person, profile }: Listed): SearchResult {
   return {
     id: person.id, sample: person.sample, href: `/p/${person.slug}/`, name: f.name || person.name, service: department,
     line, area: f.market === "la" ? f.areas.join(" · ") || "Los Angeles" : "Another market", availability: monthStatusLabel[f.monthStatus],
-    rate: f.rate ? `From $${f.rate}/${basisShort[f.basis]}` : "Rate on request", minimum: f.bookingMinimum || undefined, photo: f.photo || undefined,
+    rate: f.rate ? `From $${f.rate}/${basisShort[f.basis]}` : "Rate on request", photo: f.photo || undefined,
   };
 }
 

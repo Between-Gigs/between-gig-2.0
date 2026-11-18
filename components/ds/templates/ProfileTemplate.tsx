@@ -15,8 +15,8 @@ import Link from "next/link";
 import * as React from "react";
 import { PersonPhoto } from "@/components/people/PersonPhoto";
 import type { ProfileLayoutProps } from "@/components/profile/ProfileView";
-import { extendedTravelLabel } from "@/lib/profile/travel-preference";
-import { basisShort, insuranceLabel, modeLabel, monthStatusLabel } from "@/lib/data/taxonomy";
+import { WorkDetails } from "@/components/profile/WorkDetails";
+import { basisShort, monthStatusLabel } from "@/lib/data/taxonomy";
 import { personalityQuestionText } from "@/lib/profile/personality";
 import { serviceDescription } from "@/lib/profile/service-descriptions";
 import { startDateLabel } from "@/lib/profile/stage-two";
@@ -71,7 +71,6 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
   const title = f.title?.trim() || "";
   // Booking answers (earliest start, minimum, personality) show when the profile has them; a public read on live has none yet.
   const start = startDateLabel(f.earliestStart);
-  const minimum = f.bookingMinimum?.trim() ?? "";
   const personality = f.personality?.trim() ?? "";
   const question = personalityQuestionText(f.personalityQuestion);
   const available = f.monthStatus === "available";
@@ -85,7 +84,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
   const rateBlock = P("rate", priced || !show, (
     <RateBlock
       price={detailsOn() && pricingLines(f) ? <RatePricing f={f} /> : priced ? <>${f.rate}<span className="text-display-sm"> / {basisShort[f.basis]}</span></> : <span className="text-heading-lg">Rate on request</span>}
-      minimum={priced ? <>{f.basis === "hourly" ? "Hourly rate" : f.basis === "day" ? "Day rate" : "Starting price per project"}{minimum ? ` · ${minimum} minimum` : ""}</> : minimum ? `${minimum} minimum` : undefined}
+      minimum={priced ? <>{f.basis === "hourly" ? "Hourly rate" : f.basis === "day" ? "Day rate" : "Starting price per project"}</> : undefined}
       available={available}
       availability={!available ? <Status tone={f.monthStatus === "away" ? "neutral" : "gold"}>{monthStatusLabel[f.monthStatus]}</Status> : undefined}
       earliest={undefined} />
@@ -108,7 +107,6 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
         {reviewed && <p className="inline-flex items-center gap-1.5 text-label-md text-ink-brand"><BadgeCheck aria-hidden="true" className="size-4" />Reviewed by Between Gigs</p>}
         <ul className="grid gap-1">
           {(where || show) && <Meta>{P("where", !!where, <span>{where}{f.travel.trim() ? ` · ${f.travel.trim()}` : ""}</span>, "Where you work")}</Meta>}
-          {years && <Meta>{years}</Meta>}
           {editing && <Meta>{P("position", !!f.position, <span>{f.position}</span>, "Department")}</Meta>}
         </ul>
         {publicActions && (
@@ -169,31 +167,31 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
     </div>
   );
 
-  // How they work: mode and travel, transport, tools and (when shared) insurance.
-  const how = [
-    modeLabel[f.mode],
-    extendedTravelLabel(f.travelBeyondLA),
-    f.transport,
-    f.tools,
-    !unseen && f.insurance === "yes" ? insuranceLabel[f.insurance] : "",
-  ].filter(Boolean);
+  const experience = (show || !!f.about.trim() || f.skills.length > 0 || !!f.years) && (
+    <section aria-label="Skills & experience" data-profile-section="about" className="grid gap-5 border-t border-line-strong pt-8">
+      <SectionHeading title="Skills & experience" level="h2" />
+      <div className="grid gap-6 lg:grid-cols-12">
+        <div className="grid min-w-0 content-start gap-3 lg:col-span-5">
+          <h3 className="text-label-md font-semibold text-ink">On-set skills</h3>
+          {P("skills", f.skills.length > 0, <ul aria-label="On-set skills" className="flex flex-wrap gap-2">{f.skills.map((skill,i)=><li key={`${i}:${skill}`} className="max-w-full rounded-full border border-line bg-surface px-3 py-2 text-body-sm text-ink [overflow-wrap:anywhere]">{skill}</li>)}</ul>, "Your on-set skills", "block")}
+        </div>
+        <div className="grid min-w-0 content-start gap-6 lg:col-span-7 lg:border-l lg:border-line lg:pl-6">
+          <div className="grid gap-2"><h3 className="text-label-md font-semibold text-ink">Years in the Entertainment Industry</h3><div className="text-body-md text-ink">{years}</div></div>
+          <div className="grid gap-2"><h3 className="text-label-md font-semibold text-ink">How customers benefit from my experience</h3>{P("about", !!f.about.trim(), <Text className="whitespace-pre-line break-words">{f.about}</Text>, "How your entertainment industry experience helps customers.", "block")}</div>
+        </div>
+      </div>
+    </section>
+  );
 
+  const hasCredits = credits.length > 0 || !!resumeUrl || !!f.linkedin || ((mode === "owner" || editing || draft) && !!f.imdb);
   // Experience, Selected credits and the personality question, side by side on wider screens.
-  const story = (show || !!f.about.trim() || credits.length > 0 || f.skills.length > 0 || !!personality) && (
-    <section aria-label="Experience and credits" data-profile-section="credits" className="grid gap-8 border-t border-line-strong pt-8 md:grid-cols-3 md:gap-6">
-      <Column title="Experience" label="Experience">
-        {P("about", !!f.about.trim(), <Text className="whitespace-pre-line break-words">{f.about}</Text>, "How your film and TV experience helps you deliver this service.", "block")}
-        {P("skills", f.skills.length > 0, (
-          editing
-            ? <ul aria-label={`On-set ${f.skills.length === 1 ? "skill" : "skills"}`} className="flex flex-wrap gap-2">{f.skills.map((s) => <li key={s}><Status tone="neutral" dot={false} className="text-ink">{s}</Status></li>)}</ul>
-            : <Text size="sm" muted>On set: {f.skills.join(" · ")}</Text>
-        ), "Your on-set skills", "block")}
-      </Column>
-      <Column title="Selected credits" label="Selected credits">
+  const story = (editing || hasCredits || !!personality) && (
+    <section aria-label="Selected credits and personality" data-profile-section="credits" className="grid gap-8 border-t border-line-strong pt-8 md:grid-cols-2 md:gap-6">
+      {(editing || hasCredits) && <Column title="Selected credits" label="Selected credits">
         {P("credits", credits.length > 0, (
-          <ol className="grid gap-1.5">
+          <ol className="grid">
             {creditRows.map(({ title: t, role }, i) => (
-              <li key={credits[i]} className="min-w-0 break-words text-body-md text-ink">{t}{role && <span className="text-ink-muted"> · {role}</span>}</li>
+              <li key={credits[i]} className="grid min-w-0 gap-1 break-words border-b border-line py-3 text-body-md text-ink first:pt-0 last:border-b-0">{t}{role && <span className="text-body-sm text-ink-muted">{role}</span>}</li>
             ))}
           </ol>
         ), "Your notable credits, best first", "block")}
@@ -202,8 +200,8 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
         {(mode === "owner" || editing || draft) && P("imdb", !!f.imdb, (
           <Text size="sm" muted><a className="inline-flex min-h-11 items-center text-link underline underline-offset-2" href={f.imdb} target="_blank" rel="noreferrer">IMDb page<span className="sr-only"> (opens in a new tab)</span></a> · only the Between Gigs team sees this</Text>
         ), "Your IMDb link. Only the team sees it.", "block")}
-      </Column>
-      {(personality || show) && (
+      </Column>}
+      {(personality || editing) && (
         <Column title={question || "A little about me"} label="Personality question">
           {P("details", !!personality, <Quote className="text-pretty break-words">&ldquo;{personality}&rdquo;</Quote>, "Pick a question and answer it", "block")}
         </Column>
@@ -238,9 +236,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
           <div className="grid content-start gap-1 sm:col-span-2">
             <dt className="flex items-center gap-2 text-label-sm text-ink-muted"><BriefcaseBusiness aria-hidden="true" className="size-4" />{editing ? "How you work" : `How ${first} works`}</dt>
             <dd className="text-body-md text-ink">
-              {editing
-                ? <span>{[modeLabel[f.mode], extendedTravelLabel(f.travelBeyondLA), f.transport, f.tools, insuranceLabel[f.insurance]].filter(Boolean).join(" · ")}</span>
-                : how.join(" · ")}
+              <WorkDetails fields={f} showInsurance={!unseen} />
             </dd>
           </div>
         </dl>
@@ -259,6 +255,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
 
       <div className={cx("mt-12 grid gap-10", !!aside && "lg:grid-cols-12 lg:gap-x-10 xl:gap-x-14")}>
         <div className={cx("grid min-w-0 content-start gap-12", !!aside && "lg:col-span-8")}>
+          {experience}
           <div className="grid gap-8 border-t border-line-strong pt-8 lg:grid-cols-12 lg:gap-x-10">
             <div className="min-w-0 lg:col-span-8">{help}</div>
             <div className="min-w-0 lg:col-span-4">{rateColumn}</div>

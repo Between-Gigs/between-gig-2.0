@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import { useAuthActions } from "@/lib/auth/context";
+import { profileNavPath } from "@/lib/profile/editor-view";
+import { useEditorView } from "@/components/gigster/editor/useEditorView";
 import { data } from "@/lib/data";
 import { asset } from "@/lib/site";
 import { useSession } from "@/lib/session";
@@ -33,8 +35,8 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
 
   // Only the most specific matching link is current: on /profile/canvas/ that's "Edit profile", not "My profile".
   const raw = pathname.endsWith("/") ? pathname : `${pathname}/`;
-  // The step-by-step questionnaire is the other way to edit it.
-  const path = raw.startsWith("/profile/edit/") ? "/profile/canvas/" : raw;
+  const view = useEditorView();
+  const path = profileNavPath(pathname, view);
   const best = links.map((l) => l.href).filter((h) => path.startsWith(h)).sort((a, b) => b.length - a.length)[0];
   const current = (href: string) => href === best;
 
