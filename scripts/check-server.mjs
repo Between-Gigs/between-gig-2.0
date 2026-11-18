@@ -1,6 +1,6 @@
 // Checks the server build (`pnpm build:server`, then `pnpm build:preview`) by starting it: the live routes answer 200,
 // the internal and waiting ones 404 and are not in the build output, and every page carries the security headers with
-// a fresh CSP nonce that each of its scripts uses. /preview/ is the sample export, for a preview cookie only; /healthz/
+// a fresh CSP nonce that each of its scripts uses. /preview/ is the sample export, for a currently verified super admin only; /healthz/
 // answers 200 (503 with the missing features when the backend lacks what a flag needs). A second start with TEST_GATE_PASSPHRASE checks the test gate. Exits 1 on any failure.
 //   node scripts/check-server.mjs
 import { spawn } from "node:child_process";
@@ -141,13 +141,15 @@ try {
   const verdict = judgeHealth(health.status, healthBody, process.env);
   if (!verdict.ok) fail(`/healthz/ ${verdict.why}: ${health.status} ${healthBody.slice(0, 200)}`);
 
-  // The public sandbox and legacy aliases need neither a Clerk session nor the old cookie.
-  for (const url of ["/hub/", "/hub/home/", "/hub/preview/cursors/", "/hub/emails/", "/hub/studio/", "/hub/thumbs/home.jpg", "/preview/", "/preview/preview/"]) {
-    const res = await fetch(base + url);
-    if (res.status !== 200) fail(url + " answered " + res.status);
-    if (!/frame-ancestors 'self'/.test(res.headers.get("content-security-policy") ?? "")) fail(url + ": not the Hub CSP");
-    if (res.headers.get("x-frame-options") !== "SAMEORIGIN") fail(url + ": incorrect frame policy");
+  // Hub documents and legacy aliases require a real session; assets remain non-sensitive static resources.
+  for (const url of ["/hub/", "/hub/home/", "/hub/preview/cursors/", "/hub/emails/", "/hub/studio/", "/preview/", "/preview/preview/"]) {
+    const res=await fetch(base+url,{redirect:"manual"});
+    if(res.status!==307||res.headers.get("location")!=="/login/?next=%2Fowners%2Fdeveloper%2F")fail(url+" did not require verified Hub login: "+res.status);
+    if(!/no-store/.test(res.headers.get("cache-control")??"")||!/Cookie/.test(res.headers.get("vary")??"")||!/Authorization/.test(res.headers.get("vary")??""))fail(url+": missing private auth response caching policy");
   }
+  const hubAsset=await fetch(base+"/hub/thumbs/home.jpg");
+  if(hubAsset.status!==200)fail("Hub artwork answered "+hubAsset.status);
+  if(!/frame-ancestors 'self'/.test(hubAsset.headers.get("content-security-policy")??""))fail("Hub asset lost its frame policy");
   server.stop();
 
   // A feature on at runtime with no reachable Company OS is not ready: 503 naming the feature, nothing else.
@@ -166,12 +168,14 @@ try {
   const api = await fetch(`${g}/api/auth/session/`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
   if (api.status !== 401) fail(`gate: the API answered ${api.status}`);
   for (const url of ["/healthz/", "/email/between-gigs-wide-on-light.png", "/hub/", "/preview/"]) {
-    const res = await fetch(g + url);
+    const res = await fetch(g + url, { redirect: "manual" });
     // /healthz/ is exempt from the gate; with features built in and no backend here it may answer the readiness 503.
     if (url === "/healthz/") {
       const body = await res.text();
       const verdict = judgeHealth(res.status, body, process.env);
       if (!verdict.ok) fail(`gate: exempt ${url} ${verdict.why}: ${res.status}`);
+    } else if (url.startsWith("/hub")||url.startsWith("/preview")) {
+      if(res.status!==307||res.headers.get("location")!=="/login/?next=%2Fowners%2Fdeveloper%2F")fail(`gate: ${url} bypassed verified Hub login: ${res.status}`);
     } else if (res.status !== 200) fail(`gate: exempt ${url} answered ${res.status}`);
   }
   // Reaches its handler, which refuses a request without Resend's signature headers with 400.
@@ -212,4 +216,4 @@ if (failures.length) {
   console.error(`❌ check-server: ${failures.length} problem(s):\n  - ${failures.join("\n  - ")}`);
   process.exit(1);
 }
-console.log(`✅ check-server: ${LIVE_ROUTES.length} live routes 200 with headers and per-request nonces; ${INTERNAL_URLS.length} internal URLs 404 and absent from the build; ${SERVER_ONLY.length} server-only routes served; /hub/ and /preview/ public sample aliases; the test gate`);
+console.log(`✅ check-server: ${LIVE_ROUTES.length} live routes 200 with headers and per-request nonces; ${INTERNAL_URLS.length} internal URLs 404 and absent from the build; ${SERVER_ONLY.length} server-only routes served; /hub/ and /preview/ require verified Hub login; the test gate`);

@@ -7,7 +7,7 @@ Baseline / rollback: 326c7558550edbdee4ad81f425a621d69fafc10d (Pages); Railway t
 ## Accepted behavior
 
 - /hub is the main Hub address; /preview remains a temporary compatibility alias.
-- Hub and its sample tools remain available signed out during Clerk testing. This does not grant access to real owner data or staff mutations.
+- Hub documents and sample tools now require a current backend-verified super-admin session. Legacy preview cookies and browser-local sample roles grant no access; non-sensitive static assets remain readable. See [Hub access](../hub-access.md).
 - Superadmins keep their owner session and dashboard landing while opening their own Gigster profile. Joining as a Gigster requires explicit name and policy acceptance.
 - Staff supports multiple simultaneous memberships, secure invitation links, and existing role permission rules.
 - Pages keeps browser-local fictional data. Railway app uses Clerk and Company OS; the Hub contains a separate sample sandbox. Never describe sample changes as live database changes.
