@@ -74,7 +74,7 @@ function Preview({ name, owner = false }: { name: EmailTemplate; owner?: boolean
       <OwnerPage title={t.label} description={t.when}
         breadcrumbs={<Breadcrumbs items={[{ label: "Emails", href: owner ? "/owners/emails/" : `${basePath}/emails/` }, { label: t.label }]} />}
         actions={email && <Button size="sm" iconEnd={<Copy />} onClick={() => copy(email.html, owner || name === "invite" ? "Preview HTML" : "HTML")}>{owner || name === "invite" ? "Copy preview HTML" : "Copy HTML"}</Button>}>
-      <p className="text-body-sm text-ink-subtle">{lifecycleWords}. Backend content: {status[name]?.content.replaceAll("_", " ") ?? "not verified"}. {usageWords(status[name])}</p>
+      <p className="text-body-sm text-ink-subtle">{!owner && `${lifecycleWords}. `}Backend content: {status[name]?.content.replaceAll("_", " ") ?? "not verified"}. {usageWords(status[name])}</p>
       {owner && <p className="text-body-sm text-ink-subtle">Source preview with fictional details; links are inactive. Stored sending content may differ.</p>}
       {owner && <EmailActions name={name} status={status[name]} />}
       {!owner && !queued && name === "invite" && <Banner tone="info" title="Sample invitation · nothing sent">Press Create your profile to continue the sample walkthrough. Unsubscribe is inactive here; delivered emails receive a recipient-specific unsubscribe link.</Banner>}
