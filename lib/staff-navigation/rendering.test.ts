@@ -15,10 +15,21 @@ vi.mock("@ds/components", () => ({
   cx: (...v: unknown[]) => v.filter(Boolean).join(" "), Logo: () => null, Avatar: () => null, IconButton: () => null, Modal: () => null,
   Menu: ({ trigger, items }: { trigger: React.ReactNode; items: ({ label?: string } | string)[] }) => React.createElement("div", null, trigger, items.map((item, index) => typeof item === "object" && item.label ? React.createElement("span", { key: index, "data-choice": "" }, item.label) : null)),
 }));
-import { AccountMenu } from "@/components/site/SiteHeader";
+import { AccountMenu, SiteHeader } from "@/components/site/SiteHeader";
 import { ExperienceSwitcher } from "@/components/site/ExperienceSwitcher";
 import { OwnerMobileTabs } from "@/components/owners/OwnerShell";
 describe("real navigation renderers honor menu visibility without removing recovery", () => {
+  it.each(["gigster", "owner", "developer"])("keeps centered profile links in %s mode while honoring item visibility", mode => {
+    state.mode = mode;
+    state.menu = { modes: ["gigster", "owner", "developer"], items: ["my_profile", "edit_profile"] };
+    const full = renderToStaticMarkup(React.createElement(SiteHeader, { app: true }));
+    expect(full).toContain('href="/profile/"');
+    expect(full).toContain('href="/profile/canvas/"');
+    state.menu = { modes: ["gigster", "owner", "developer"], items: ["my_profile"] };
+    const filtered = renderToStaticMarkup(React.createElement(SiteHeader, { app: true }));
+    expect(filtered).toContain('href="/profile/"');
+    expect(filtered).not.toContain('href="/profile/canvas/"');
+  });
   it("filters personal account menu items while keeping settings, logout and admin recovery", () => {
     state.menu = { modes: ["gigster"], items: [] };
     const html = renderToStaticMarkup(React.createElement(AccountMenu));
