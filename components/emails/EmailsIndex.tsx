@@ -10,7 +10,10 @@ import { OwnerPage, Panel, Row, RowSkeletons } from "@/components/owners/kit";
 import { emailTemplateHref } from "@/lib/owner-email-preview";
 import { basePath } from "@/lib/site";
 import { diagnostic } from "@/emails/diagnostic";
-import { previewContext } from "./preview";
+import { forceScheme, previewContext, type PreviewScheme } from "./preview";
+import { EmailViewControls } from "./EmailViewControls";
+import { EmailPreviewFrame } from "./EmailPreviewFrame";
+import type { EmailPreviewDevice, EmailPreviewView } from "@/lib/email-preview-view";
 import { useEmailHubStatus } from "./EmailActions";
 import { lifecycleWords, usageWords } from "@/lib/email-hub";
 
@@ -27,11 +30,16 @@ export function EmailsIndex() {
   const [outbox, setOutbox] = React.useState<OutboxEmail[] | null>(null);
   const [thumbs, setThumbs] = React.useState<Record<string, string>>({});
   const [tab, setTab] = React.useState("templates");
+  const [view, setView] = React.useState<EmailPreviewView>("thumbnails");
+  const [device, setDevice] = React.useState<EmailPreviewDevice>("desktop");
+  const [scheme, setScheme] = React.useState<PreviewScheme>("light");
   React.useEffect(() => {
     void data.emails.outbox().then(setOutbox);
-    // Rendered on the client so the logo URLs resolve against this deployment.
-    setThumbs({ ...Object.fromEntries(activeEmailNames.map((n) => [n, renderPreview(n, undefined, "light").html])), diagnostic: diagnostic(previewContext()).html }); // eslint-disable-line react-hooks/set-state-in-effect
   }, []);
+  React.useEffect(() => {
+    // Rendered on the client so the logo URLs resolve against this deployment.
+    setThumbs({ ...Object.fromEntries(activeEmailNames.map((n) => [n, renderPreview(n, undefined, scheme).html])), diagnostic: forceScheme(diagnostic(previewContext()).html, scheme) }); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [scheme]);
 
   return (
     <AppPage>
@@ -43,13 +51,19 @@ export function EmailsIndex() {
             options={[{ value: "templates", label: "Templates", icon: <Mail /> }, { value: "outbox", label: `Sample outbox${outbox?.length ? ` (${outbox.length})` : ""}`, icon: <Send /> }]} />
         }>
           {tab === "templates" ? (
-            <ul className="grid items-stretch gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <>
+            <section aria-label="Email preview views" className="mb-6 grid gap-4">
+              <EmailViewControls view={view} device={device} onView={setView} onDevice={setDevice} />
+              <SegmentedControl label="Mail client theme" value={scheme} onChange={v => setScheme(v === "dark" ? "dark" : "light")}
+                options={[{ value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} />
+            </section>
+            <ul className={`grid items-stretch gap-5 ${view === "thumbnails" ? "sm:grid-cols-2 xl:grid-cols-3" : ""}`} data-email-gallery={view}>
               {activeEmailNames.map((n) => {
                 const t = emailTemplates[n];
                 const sample = renderPreview(n, undefined, "light");
                 return (
                   <li key={n} data-tilt="" className="lift group relative flex flex-col overflow-hidden rounded-lg border border-line bg-surface">
-                    <EmailThumb html={thumbs[n]} />
+                    {view !== "list" && thumbs[n] && <EmailPreviewFrame html={thumbs[n]} title={`${t.label} source preview`} view={view} device={device} passive />}
                     <div className="flex flex-1 flex-col gap-1 p-5">
                       <h2 className="font-display text-heading-sm text-ink">
                         <a href={emailTemplateHref(data.kind, n, basePath)} className="rounded-xs after:absolute after:inset-0 group-hover:text-ink-brand">{t.label}</a>
@@ -68,7 +82,7 @@ export function EmailsIndex() {
                 );
               })}
               <li className="group relative flex flex-col overflow-hidden rounded-lg border border-line bg-surface">
-                <EmailThumb html={thumbs.diagnostic} />
+                {view !== "list" && thumbs.diagnostic && <EmailPreviewFrame html={thumbs.diagnostic} title="Diagnostic source preview" view={view} device={device} passive />}
                 <div className="flex flex-1 flex-col gap-1 p-5">
                   <h2 className="font-display text-heading-sm text-ink"><a href={data.kind === "live" ? "/owners/emails/?template=diagnostic" : `${basePath}/emails/?template=diagnostic`} className="after:absolute after:inset-0">Diagnostic email</a></h2>
                   <p className="text-body-sm text-ink-muted">Fictional TEST email to one entered address; existing one-time authorization and receipt are separate.</p>
@@ -78,6 +92,7 @@ export function EmailsIndex() {
                 </div>
               </li>
             </ul>
+            </>
           ) : outbox?.length === 0 ? (
                 <EmptyState icon={<Inbox />} title="Nothing sent yet" headingLevel={3}
                   action={<ButtonLink href="/login/" size="sm" iconEnd={<ArrowRight />}>Try a sign-in</ButtonLink>}>
@@ -99,40 +114,5 @@ export function EmailsIndex() {
           )}
       </OwnerPage>
     </AppPage>
-  );
-}
-
-/**
- * A live miniature of the whole email: drawn at its real 600px width, measured once it loads, and scaled so the
- * full height fits the card. The frame never scrolls; the card opens the full preview.
- */
-function EmailThumb({ html }: { html?: string }) {
-  const box = React.useRef<HTMLDivElement>(null);
-  const [scale, setScale] = React.useState(0.5);
-  const [height, setHeight] = React.useState(900);
-  React.useEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([e]) => setScale(e.contentRect.width / 600));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  const measure = (e: React.SyntheticEvent<HTMLIFrameElement>) => {
-    const d = e.currentTarget.contentDocument;
-    if (!d) return;
-    const fit = () => setHeight(Math.max(d.documentElement.scrollHeight, d.body?.scrollHeight ?? 0));
-    fit();
-    // Images inside the email can arrive after load and make it taller.
-    for (const img of Array.from(d.images)) if (!img.complete) img.addEventListener("load", fit, { once: true });
-  };
-  const doc = html?.replace("</head>", "<style>html,body{overflow:hidden!important;scrollbar-width:none}::-webkit-scrollbar{display:none}</style></head>");
-  return (
-    <div ref={box} aria-hidden="true" className="relative h-60 overflow-hidden border-b border-line bg-surface-embed">
-      {doc && (
-        <iframe title="" tabIndex={-1} sandbox="allow-same-origin" srcDoc={doc} scrolling="no" onLoad={measure}
-          className="pointer-events-none absolute top-0 left-0 w-150 origin-top-left"
-          style={{ transform: `scale(${scale})`, height: `${height}px` }} />
-      )}
-    </div>
   );
 }

@@ -12,6 +12,8 @@ on:
       - 'scripts/qa/email-send-controls.mjs'
       - 'scripts/qa/manual-email-resends.mjs'
       - 'scripts/qa/diagnostic-email-tests.mjs'
+      - 'scripts/qa/email-preview-views.mjs'
+      - 'lib/email-preview-view*'
       - 'lib/email-hub*'
       - 'lib/server/email-hub*'
       - 'lib/email-manual*'
@@ -36,8 +38,9 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec vitest run lib/email-test-retry.test.ts lib/server/email-hub.test.ts lib/email-manual.test.ts lib/server/manual-emails.test.ts
+      - run: pnpm exec vitest run lib/email-test-retry.test.ts lib/server/email-hub.test.ts lib/email-manual.test.ts lib/server/manual-emails.test.ts lib/email-preview-view.test.ts
       - run: pnpm build
+      - run: CHROMIUM_PATH=$(command -v google-chrome) node scripts/qa/email-preview-views.mjs
       - run: CHROMIUM_PATH=$(command -v google-chrome) node scripts/qa/invitation.mjs
       - run: CHROMIUM_PATH=$(command -v google-chrome) node scripts/qa/stage-two-journey.mjs
       - run: CHROMIUM_PATH=$(command -v google-chrome) node scripts/qa/owner-email-hub.mjs
@@ -53,3 +56,4 @@ jobs:
             deliverables/owner-email-hub/
             deliverables/manual-email-resends/
             deliverables/diagnostic-template-tests/
+            deliverables/email-preview-views/
