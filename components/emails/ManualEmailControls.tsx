@@ -4,7 +4,7 @@ import * as React from "react";
 import { Button, ConfirmDialog, Textarea } from "@ds/components";
 import {
   canStartAnotherManualRequest, manualBindingMatchesName, manualReceiptStatus, manualRecipient,
-  manualRetryMatches, savedManualEmailRequest, type ManualEmailName, type ManualEmailRequest,
+  manualRetryMatches, savedManualEmailRequests, type ManualEmailName, type ManualEmailRequest,
   type ManualPreview, type Receipt, type ReleaseStatus,
 } from "@/lib/email-manual";
 import { StoredEmailCopy } from "./StoredEmailCopy";
@@ -23,8 +23,13 @@ const unavailable: Record<string, string> = {
   original_history_unavailable: "Company OS could not verify the original notification in send history.",
   original_pending: "The original notification is still pending. Check it before resending.",
   template_missing: "Company OS could not find the applicable stored template.",
+  template_ambiguous: "Company OS found more than one applicable stored template.",
   published_release_required: "The applicable stored template needs a published release.",
   delivery_preferences: "The account’s delivery preferences do not allow this resend.",
+  manual_send_pending: "Another delivery of this notification is pending.",
+  manual_history_unavailable: "The outcome of a previous delivery of this notification is unavailable.",
+  unsafe_link: "A link in the stored email could not be verified.",
+  unsafe_html: "The stored email HTML could not be verified.",
 };
 
 function unavailableReason(reason: string) {
@@ -33,12 +38,34 @@ function unavailableReason(reason: string) {
     : "Company OS could not verify that this notification can be resent for the entered account.";
 }
 
-function readRequest(key: string, name: ManualEmailName) {
+/** These Company OS codes are issued after same-ID lookup but before reserving a new resend. */
+function freshRefusalReason(error: unknown) {
+  if (!(error instanceof ManualEmailApiError) || error.status !== 409) return null;
+  if (error.code === "binding_changed") return "The reviewed email changed. Review it again before sending.";
+  return Object.hasOwn(unavailable, error.code) ? unavailable[error.code] : null;
+}
+
+function readRequests(key: string, name: ManualEmailName) {
   const raw = sessionStorage.getItem(key);
   if (raw === null) return null;
-  const request = savedManualEmailRequest(JSON.parse(raw), name);
-  if (!request) throw new Error("Invalid saved resend intent");
-  return request;
+  const saved = savedManualEmailRequests(JSON.parse(raw), name);
+  if (!saved) throw new Error("Invalid saved resend intent");
+  return saved;
+}
+
+function clearRequest(key: string, name: ManualEmailName, request: ManualEmailRequest) {
+  const stored = readRequests(key, name);
+  const confirmed = stored?.requests.find(item => item.binding.recipient === request.binding.recipient);
+  if (!stored || confirmed?.requestId !== request.requestId || !manualRetryMatches(confirmed.binding, request.binding)) {
+    throw new Error("Saved intent changed");
+  }
+  const requests = stored.requests.filter(item => item.requestId !== request.requestId);
+  if (requests.length === 0) sessionStorage.removeItem(key);
+  else {
+    const lastRecipient = stored.lastRecipient === request.binding.recipient ? requests[requests.length - 1].binding.recipient : stored.lastRecipient;
+    sessionStorage.setItem(key, JSON.stringify({ lastRecipient, requests }));
+  }
+  return requests;
 }
 
 function validateReceipt(result: Receipt, request: ManualEmailRequest) {
@@ -51,7 +78,7 @@ function validateReceipt(result: Receipt, request: ManualEmailRequest) {
 export function ManualEmailControls({ name, identity, release }: { name: ManualEmailName; identity: string; release?: ReleaseStatus }) {
   const [storageReady, setStorageReady] = React.useState(false);
   const [recipient, setRecipient] = React.useState("");
-  const [pending, setPending] = React.useState<ManualEmailRequest | null>(null);
+  const [requests, setRequests] = React.useState<ManualEmailRequest[]>([]);
   const [preview, setPreview] = React.useState<AvailablePreview | null>(null);
   const [confirming, setConfirming] = React.useState(false);
   const [resetConfirming, setResetConfirming] = React.useState(false);
@@ -66,10 +93,10 @@ export function ManualEmailControls({ name, identity, release }: { name: ManualE
     queueMicrotask(() => {
       if (!current) return;
       try {
-        const saved = readRequest(key, name);
+        const saved = readRequests(key, name);
         if (saved) {
-          setPending(saved);
-          setRecipient(saved.binding.recipient);
+          setRequests(saved.requests);
+          setRecipient(saved.lastRecipient);
         }
         sessionStorage.setItem(`${key}:check`, "1");
         sessionStorage.removeItem(`${key}:check`);
@@ -82,6 +109,16 @@ export function ManualEmailControls({ name, identity, release }: { name: ManualE
   }, [identity, key, name]);
 
   const address = manualRecipient(recipient);
+  const pending = requests.find(request => request.binding.recipient === address);
+  const otherRequests = requests.filter(request => request !== pending);
+  const changeRecipient = (value: string) => {
+    setRecipient(value);
+    setPreview(null);
+    setConfirming(false);
+    setResetConfirming(false);
+    setMessage("");
+    if (manualRecipient(value) !== address) setReceipt(null);
+  };
   const publishedRelease = release?.supported && release.current?.status === "published"
     && release.current.sourceHash === release.sourceHash && release.current.templateId === release.templateId
     ? release.current
@@ -127,22 +164,36 @@ export function ManualEmailControls({ name, identity, release }: { name: ManualE
     setMessage("");
     try {
       // Recheck storage synchronously before allocating an intent, including when this view was remounted.
-      const saved = readRequest(key, name);
+      const stored = readRequests(key, name);
+      const saved = stored?.requests.find(request => request.binding.recipient === preview.binding.recipient);
       if (saved?.requestId !== pending?.requestId || (saved && !manualRetryMatches(saved.binding, preview.binding))) {
         setPreview(null);
         setMessage("The saved request changed. Reopen this email and check the request receipt.");
         return;
       }
       const request = saved ?? { requestId: crypto.randomUUID(), binding: preview.binding };
-      sessionStorage.setItem(key, JSON.stringify(request));
-      setPending(request);
+      const nextRequests = saved && stored ? stored.requests : [...(stored?.requests ?? []), request];
+      sessionStorage.setItem(key, JSON.stringify({ lastRecipient: request.binding.recipient, requests: nextRequests }));
+      setRequests(nextRequests);
       setPreview(null);
       try {
         const result = await requestManualEmail("sendReal", { name, ...request }, signal);
         signal.throwIfAborted();
         setReceipt(validateReceipt(result, request));
-      } catch {
-        if (!signal.aborted) setMessage("Company OS did not confirm the outcome. Check the receipt or review and retry the same request.");
+      } catch (error) {
+        if (signal.aborted) return;
+        // A refusal to retry doesn't settle an earlier request that timed out in transit.
+        const refusal = !saved && freshRefusalReason(error);
+        if (!refusal) {
+          setMessage("Company OS did not confirm the outcome. Check the receipt or review and retry the same request.");
+          return;
+        }
+        try {
+          setRequests(clearRequest(key, name, request));
+          setMessage(`Company OS declined this resend before queuing it. ${refusal}`);
+        } catch {
+          setMessage("Company OS declined this resend before queuing it. The browser could not clear this saved request safely.");
+        }
       }
     } catch {
       setPreview(null);
@@ -169,10 +220,8 @@ export function ManualEmailControls({ name, identity, release }: { name: ManualE
     if (!resetConfirming || busy || !pending || !canStartAnotherManualRequest(receipt?.status)) return;
     setResetConfirming(false);
     try {
-      if (readRequest(key, name)?.requestId !== pending.requestId) throw new Error("Saved intent changed");
-      sessionStorage.removeItem(key);
+      setRequests(clearRequest(key, name, pending));
       setReceipt(null);
-      setPending(null);
       setPreview(null);
       setRecipient("");
       setMessage("");
@@ -185,8 +234,16 @@ export function ManualEmailControls({ name, identity, release }: { name: ManualE
     <p className="text-body-sm text-ink-muted">Resend a prior profile notification to the person’s account email. Company OS checks the recipient, current profile state and published template before allowing a resend.</p>
     <label htmlFor={`real-recipient-${name}`} className="text-label-sm text-ink">Account email address</label>
     <Textarea id={`real-recipient-${name}`} rows={1} inputMode="email" autoComplete="off" value={recipient}
-      disabled={busy || !!pending} placeholder="person@example.com"
-      onChange={event => { setRecipient(event.target.value); setPreview(null); setConfirming(false); setMessage(""); }} />
+      disabled={busy} placeholder="person@example.com" onChange={event => changeRecipient(event.target.value)} />
+    {otherRequests.length > 0 && <details className="text-body-sm text-ink-muted">
+      <summary className="min-h-8 cursor-pointer">Saved requests for other accounts</summary>
+      <ul className="grid gap-1">
+        {otherRequests.map(request => <li key={request.requestId}>
+          <Button size="sm" variant="ghost" className="max-w-full whitespace-normal break-all" disabled={busy}
+            onClick={() => changeRecipient(request.binding.recipient)}>{request.binding.recipient}</Button>
+        </li>)}
+      </ul>
+    </details>}
     {!publishedRelease && <p className="text-body-sm text-ink-muted">
       {release?.supported ? "Real resend requires a published release of the current stored template."
         : "Real resend availability is unverified. Check the stored template version below."}

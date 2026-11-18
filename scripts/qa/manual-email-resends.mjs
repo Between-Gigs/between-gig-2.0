@@ -73,6 +73,7 @@ const output = "deliverables/manual-email-resends";
 fs.mkdirSync(output, { recursive: true });
 
 const recipient = "riley@example.org";
+const otherRecipient = "casey@example.org";
 const date = "2026-11-18T00:00:00.000Z";
 const initialHash = "a".repeat(64);
 const binding = {
@@ -88,8 +89,8 @@ const releaseTemplate = {
 const storedVersion = (current, sourceHash = initialHash, history = current ? [current] : []) => ({
   supported: true, templateId: releaseTemplate.templateId, sourceHash, current, releases: history,
 });
-const receipt = (requestId, status) => ({
-  requestId, status, recipient, requestedAt: date, providerId: null, sentAt: null, deliveredAt: null, error: null,
+const receipt = (requestId, status, address = recipient) => ({
+  requestId, status, recipient: address, requestedAt: date, providerId: null, sentAt: null, deliveredAt: null, error: null,
 });
 
 async function fixture(width, theme) {
@@ -100,7 +101,7 @@ async function fixture(width, theme) {
   const published = { ...releaseTemplate, status: "published", approvedAt: date, publishedAt: date };
   const controls = {
     status: { "profile-submitted": storedVersion(published), "changes-requested": storedVersion(null) },
-    previewReason: null, receiptStatus: null, uncertainSend: true, staleRelease: false, unavailableStatus: false,
+    previewReason: null, receiptStatus: null, uncertainSend: true, sendRefusal: null, staleRelease: false, unavailableStatus: false,
   };
   await context.route("**/*", async route => {
     const req = route.request();
@@ -118,20 +119,22 @@ async function fixture(width, theme) {
         return result(controls.status[payload] ?? { supported: false, current: null, templateId: null, sourceHash: null, releases: [], reason: "template_missing" });
       case "previewReal":
         assert.equal(payload.name, "profile-submitted");
-        assert.equal(payload.recipient, recipient);
+        assert.ok([recipient, otherRecipient].includes(payload.recipient));
         if (controls.previewReason) return result({ available: false, reason: controls.previewReason });
         return result({
-          available: true, binding, subject: "Actual rendered subject", body: "Actual rendered notification for Riley",
+          available: true, binding: { ...binding, recipient: payload.recipient }, subject: "Actual rendered subject", body: "Actual rendered notification for Riley",
           bodyHtml: '<h1>Actual rendered HTML</h1><img src="https://remote.invalid/preview.png" alt="">',
-          person: { id: "fictional-account", name: "Riley Preview", email: recipient }, contextState: "submitted",
+          person: { id: "fictional-account", name: "Fictional Account", email: payload.recipient }, contextState: "submitted",
           originalReceipt: receipt("original-fixture", "sent"),
         });
       case "sendReal":
+        if (controls.sendRefusal) return error(409, controls.sendRefusal);
         if (controls.uncertainSend) return error(503, "unavailable");
-        return result(receipt(payload.requestId, "queued"));
+        return result(receipt(payload.requestId, "queued", payload.binding.recipient));
       case "realReceipt":
         if (!controls.receiptStatus) return error(404, "receipt_missing");
-        return result(receipt(payload.requestId, controls.receiptStatus));
+        const target = calls.find(call => call.method === "sendReal" && call.payload.requestId === payload.requestId);
+        return result(receipt(payload.requestId, controls.receiptStatus, target?.payload.binding.recipient));
       case "releaseVersion": {
         assert.equal(payload.name, "changes-requested");
         assert.equal(payload.templateId, releaseTemplate.templateId);
@@ -286,7 +289,75 @@ try {
     assert.deepEqual(unexpected, []);
     await context.close();
   }
-  console.log("PASS: intercepted real previews, confirmation/cancel, duplicate guard, uncertain retry across mode/navigation/reload/owner change, receipt distinctions, release progression/stale lock, Clerk handoff and responsive dark/light axe checks.");
+  {
+    const { context, page, mode, button, calls, count, controls, unexpected } = await fixture(390, "light");
+    await page.goto(origin);
+    await button("Revoke published version").waitFor();
+    await mode("Real email").click();
+    const address = page.getByLabel("Account email address");
+    await address.fill(recipient);
+    await button("Review real email").click();
+    await button("Continue to REAL resend").click();
+    controls.sendRefusal = "binding_changed"; // Source changed after the account-bound preview was reviewed.
+    await page.getByRole("dialog").getByRole("button", { name: "Send REAL email" }).click();
+    await page.getByText(/declined this resend before queuing it/).waitFor({ timeout: 3000 });
+    assert.equal(count("sendReal"), 1);
+    assert.equal(await address.isEnabled(), true);
+    assert.equal(await page.evaluate(() => sessionStorage.getItem("bg-email-real:first-owner:profile-submitted")), null);
+    const rejected = calls.find(call => call.method === "sendReal").payload;
+
+    await page.reload();
+    await mode("Real email").click();
+    await address.fill(otherRecipient);
+    await button("Review real email").click();
+    await button("Continue to REAL resend").click();
+    await page.getByRole("dialog", { name: `Send a REAL email to ${otherRecipient}?` }).waitFor();
+    assert.equal(count("sendReal"), 1);
+    controls.sendRefusal = null;
+    controls.uncertainSend = false;
+    await page.getByRole("dialog").getByRole("button", { name: "Send REAL email" }).click();
+    await page.getByText("Queued for sending", { exact: true }).waitFor();
+    const sent = calls.filter(call => call.method === "sendReal").at(-1).payload;
+    assert.notEqual(sent.requestId, rejected.requestId);
+    assert.equal(sent.binding.recipient, otherRecipient);
+    assert.equal(count("sendReal"), 2);
+
+    // Casey remains queued while Riley gets a distinct intent. An uncertain Riley request cannot replace Casey's.
+    await address.fill(recipient);
+    await button("Review real email").click();
+    await button("Continue to REAL resend").click();
+    controls.uncertainSend = true;
+    await page.getByRole("dialog").getByRole("button", { name: "Send REAL email" }).click();
+    await page.getByText(/did not confirm the outcome/).waitFor();
+    const uncertain = calls.filter(call => call.method === "sendReal").at(-1).payload;
+    assert.notEqual(uncertain.requestId, rejected.requestId);
+    assert.notEqual(uncertain.requestId, sent.requestId);
+    await button("Review same request").click();
+    await button("Continue same REAL resend").click();
+    controls.sendRefusal = "binding_changed";
+    await button("Retry same REAL resend").click();
+    await page.getByText(/did not confirm the outcome/).waitFor();
+    assert.equal(await page.getByText(uncertain.requestId, { exact: true }).count(), 1);
+    assert.deepEqual(calls.filter(call => call.method === "sendReal").at(-1).payload, uncertain);
+    assert.equal(await button("Start a separate resend").count(), 0);
+
+    await page.reload();
+    await mode("Real email").click();
+    await page.getByText(uncertain.requestId, { exact: true }).waitFor();
+    await page.getByText("Saved requests for other accounts", { exact: true }).click();
+    await button(otherRecipient).click();
+    await page.getByText(sent.requestId, { exact: true }).waitFor();
+    controls.receiptStatus = "history_unavailable";
+    await button("Check resend receipt").click();
+    await page.getByText("Delivery history unavailable", { exact: true }).waitFor();
+    assert.equal(await button("Start a separate resend").count(), 0);
+    await address.fill(recipient);
+    await page.getByText(uncertain.requestId, { exact: true }).waitFor();
+    assert.equal(count("sendReal"), 4);
+    assert.deepEqual(unexpected, []);
+    await context.close();
+  }
+  console.log("PASS: definitive stale-send recovery, intercepted real previews, confirmation/cancel, duplicate guard, uncertain retry across mode/navigation/reload/owner change, receipt distinctions, release progression/stale lock, Clerk handoff and responsive dark/light axe checks.");
 } finally {
   await browser.close();
   await new Promise(resolve => server.close(resolve));

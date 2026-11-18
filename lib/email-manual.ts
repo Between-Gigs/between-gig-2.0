@@ -59,6 +59,7 @@ export type ManualPreview =
     };
 
 export type ManualEmailRequest = { requestId: string; binding: ManualBinding };
+export type SavedManualEmailRequests = { lastRecipient: string; requests: ManualEmailRequest[] };
 
 export function isManualEmailName(value: unknown): value is ManualEmailName {
   return value === "approved" || value === "changes-requested" || value === "profile-submitted";
@@ -92,6 +93,25 @@ export function savedManualEmailRequest(value: unknown, name: ManualEmailName): 
   return { requestId: request.requestId, binding: request.binding };
 }
 
+export function savedManualEmailRequests(value: unknown, name: ManualEmailName): SavedManualEmailRequests | null {
+  const single = savedManualEmailRequest(value, name);
+  if (single) return { lastRecipient: single.binding.recipient, requests: [single] };
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const state = value as Record<string, unknown>;
+  if (Object.keys(state).length !== 2 || !Array.isArray(state.requests) || typeof state.lastRecipient !== "string") return null;
+  const requests: ManualEmailRequest[] = [];
+  const ids = new Set<string>();
+  const addresses = new Set<string>();
+  for (const raw of state.requests) {
+    const request = savedManualEmailRequest(raw, name);
+    if (!request || ids.has(request.requestId) || addresses.has(request.binding.recipient)) return null;
+    requests.push(request);
+    ids.add(request.requestId);
+    addresses.add(request.binding.recipient);
+  }
+  return addresses.has(state.lastRecipient) ? { lastRecipient: state.lastRecipient, requests } : null;
+}
+
 export function manualRetryMatches(saved: ManualBinding, current: ManualBinding) {
   return bindingKeys.every(key => saved[key] === current[key]);
 }
@@ -103,7 +123,7 @@ export function nextReleaseAction(templateId: string | null, sourceHash: string 
   if (current.sourceHash !== sourceHash) return "draft";
   switch (current.status) {
     case "draft": return "approve";
-    case "approved": return "publish";
+    case "approved": return "publish"; // approved-ok: This status is a stored content release decision, separate from profile visibility.
     case "published": return "revoke";
     default: return null;
   }

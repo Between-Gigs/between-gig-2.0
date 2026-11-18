@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   canStartAnotherManualRequest, isManualEmailName, manualReceiptStatus, manualRecipient,
-  manualRetryMatches, nextReleaseAction, savedManualEmailRequest, type ManualBinding, type Release,
+  manualRetryMatches, nextReleaseAction, savedManualEmailRequest, savedManualEmailRequests, type ManualBinding, type Release,
 } from "./email-manual";
 
 const binding: ManualBinding = {
@@ -33,6 +33,21 @@ describe("manual owner email", () => {
     expect(savedManualEmailRequest({ ...saved, binding: { ...binding, fingerprint: "not-a-sha256" } }, "profile-submitted")).toBeNull();
     expect(savedManualEmailRequest({ ...saved, binding: { ...binding, eventId: "not-a-uuid" } }, "profile-submitted")).toBeNull();
     expect(savedManualEmailRequest({ ...saved, binding: { ...binding, draftHtml: "private body" } }, "profile-submitted")).toBeNull();
+  });
+
+  it("restores independent account attempts and carries forward single-account storage", () => {
+    const first = { requestId, binding };
+    const second = {
+      requestId: "a46370a9-f14d-43ba-8390-c3dbd039a9ee",
+      binding: { ...binding, recipient: "casey@example.org" },
+    };
+    const state = { lastRecipient: second.binding.recipient, requests: [first, second] };
+    expect(savedManualEmailRequests(first, "profile-submitted")).toEqual({ lastRecipient: binding.recipient, requests: [first] });
+    expect(savedManualEmailRequests(state, "profile-submitted")).toEqual(state);
+    expect(savedManualEmailRequests(state, "changes-requested")).toBeNull();
+    expect(savedManualEmailRequests({ ...state, lastRecipient: "untracked@example.org" }, "profile-submitted")).toBeNull();
+    expect(savedManualEmailRequests({ ...state, requests: [first, { ...second, requestId }] }, "profile-submitted")).toBeNull();
+    expect(savedManualEmailRequests({ ...state, requests: [first, { ...second, binding }] }, "profile-submitted")).toBeNull();
   });
 
   it("allows a reviewed retry only for the exact saved binding", () => {
