@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { classify, normalizeScript, validateConfig } from "./affected-areas.mjs";
+import { importProblems } from "./area-imports.mjs";
 
 // scripts/ci/areas.json decides which checks a change runs (playbook rule E14). No check may be lost: every script
 // the Signup checks workflow ran before CI by area (origin/main at e7f73aa) must sit in some area.
@@ -65,6 +66,14 @@ describe("scripts/ci/areas.json", () => {
     expect(validateConfig(config, { workflowScripts, repoFiles })).toEqual([]);
   });
 
+  it("no file in an area is imported from shared, fast, unknown or another area's code (areas.json cannot fail open)", () => {
+    const problems = importProblems({
+      config, files: repoFiles, read: (p: string) => readFileSync(new URL(p, root), "utf8"),
+      aliases: { "@/": "", "@ds/": "packages/design-system/src/" },
+    });
+    expect(problems).toEqual([]);
+  });
+
   it("runs every script with node, and every listed script exists", () => {
     expect(config.runner).toEqual(["node"]);
     for (const name of listed) expect(existsSync(new URL(name, root)), name).toBe(true);
@@ -104,8 +113,10 @@ describe("scripts/ci/areas.json", () => {
       expect(mode(shared).mode, shared).toBe("all");
     }
     expect(mode("app/totally-new/page.tsx").mode).toBe("all");
-    expect(mode("lib/profile/skills.ts")).toMatchObject({ mode: "areas", areas: ["profile"] });
-    expect(mode("lib/staff/access-plan.ts", "components/home/Overview.tsx")).toMatchObject({ mode: "areas", areas: ["public", "staff"] });
+    expect(mode("app/profile/page.tsx")).toMatchObject({ mode: "areas", areas: ["profile"] });
+    expect(mode("app/page.tsx", "app/owners/staff/page.tsx")).toMatchObject({ mode: "areas", areas: ["owners", "public", "staff"] });
+    // A helper imported across areas is shared: a change to it runs everything.
+    expect(mode("lib/profile/skills.ts").mode).toBe("all");
     // A QA script's own file runs its area.
     expect(mode("scripts/qa/home-hero.mjs")).toMatchObject({ mode: "areas", areas: ["public"] });
   });

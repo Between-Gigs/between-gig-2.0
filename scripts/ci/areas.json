@@ -1,6 +1,8 @@
 {
   "version": 1,
-  "runner": ["node"],
+  "runner": [
+    "node"
+  ],
   "shared": [
     "package.json",
     "pnpm-lock.yaml",
@@ -45,7 +47,72 @@
     "components/site/**",
     "packages/**",
     "public/**",
-    "tests/**"
+    "tests/**",
+    "lib/look.ts",
+    "lib/guide-thumbnail.ts",
+    "lib/preview-note.ts",
+    "lib/hub-target.ts",
+    "lib/navigation-preferences.ts",
+    "lib/admin-preview.ts",
+    "lib/preview-access.ts",
+    "lib/staff-navigation/**",
+    "lib/staff/**",
+    "emails/**",
+    "lib/email-*.ts",
+    "lib/owner-email-preview.ts",
+    "lib/profile/**",
+    "lib/og.ts",
+    "lib/og-pages.json",
+    "lib/social-preview.ts",
+    "lib/storyboard.ts",
+    "lib/professional-examples.ts",
+    "lib/owners/**",
+    "styles/modern-owners.css",
+    "styles/{modern-editor,profile-editor,simple-profile}.css",
+    "app/api/video-thumb/route.server.ts",
+    "components/builder/ProfileBuilder.tsx",
+    "components/emails/DiagnosticReceipts.tsx",
+    "components/emails/preview.ts",
+    "components/funnel/Carousel.tsx",
+    "components/funnel/Marquee.tsx",
+    "components/funnel/Storyboard.tsx",
+    "components/funnel/parts.tsx",
+    "components/gigster/editor/useEditorView.ts",
+    "components/home/CallSheetHome.tsx",
+    "components/landing/professionals-approved-copy.ts",
+    "components/owners/OwnerPerson.tsx",
+    "components/owners/OwnerShell.tsx",
+    "components/owners/activity.tsx",
+    "components/people/PersonPhoto.tsx",
+    "components/people/PersonStatusBadge.tsx",
+    "components/profile/LinkedInLink.tsx",
+    "components/profile/ProfileView.tsx",
+    "components/profile/PublicProfile.tsx",
+    "components/profile/RatePricing.tsx",
+    "components/profile/WorkDetails.tsx",
+    "components/profile/WorkTile.tsx",
+    "components/funnel/CallSheetDialog.tsx",
+    "components/funnel/Honeypot.tsx",
+    "components/funnel/funnel.css",
+    "components/owners/OwnerGate.tsx",
+    "components/owners/ReviewPanel.tsx",
+    "components/owners/format.ts",
+    "components/owners/history.ts",
+    "components/owners/hold.ts",
+    "components/owners/kit.tsx",
+    "components/people/PersonSourceBadge.tsx",
+    "components/profile/BookingFields.tsx",
+    "components/profile/ChipPicker.tsx",
+    "components/profile/FittedImg.tsx",
+    "components/profile/LiveEditWarning.tsx",
+    "components/profile/ModernProfile.tsx",
+    "components/profile/PhotoPicker.tsx",
+    "components/profile/ProfilePreviewCard.tsx",
+    "components/profile/PublicBookingDetails.tsx",
+    "components/profile/WarmProfile.tsx",
+    "components/storyboard/StoryBook.tsx",
+    "components/storyboard/book.css",
+    "components/storyboard/engine.ts"
   ],
   "fast": [
     "docs/**",
@@ -106,7 +173,13 @@
         "scripts/ci/qa-flow.mjs",
         "scripts/qa/funnel-cohort.mjs",
         "scripts/qa/clerk-contract.mjs",
-        { "name": "scripts/ci/clerk-entry.mjs", "env": { "NEXT_PUBLIC_BASE_PATH": "/between-gig-2.0", "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_Z2xhZC1tb25rZXktNjkwOC5jbGVyay5hY2NvdW50cy5kZXYk" } }
+        {
+          "name": "scripts/ci/clerk-entry.mjs",
+          "env": {
+            "NEXT_PUBLIC_BASE_PATH": "/between-gig-2.0",
+            "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_Z2xhZC1tb25rZXktNjkwOC5jbGVyay5hY2NvdW50cy5kZXYk"
+          }
+        }
       ]
     },
     "profile": {
@@ -123,7 +196,11 @@
         "lib/profile/**",
         "lib/look.ts",
         "styles/{modern-editor,profile-editor,simple-profile}.css",
-        "scripts/qa/{profile-entry,sample-order,portfolio-edit-guards,patti-editor-presentation,profile-guidance,service-labels,service-guidance,service-conversion-guard,gigster-priority}.mjs"
+        "scripts/qa/{profile-entry,sample-order,portfolio-edit-guards,patti-editor-presentation,profile-guidance,service-labels,service-guidance,service-conversion-guard,gigster-priority}.mjs",
+        "components/journey/ExampleReference.tsx",
+        "components/people/GigsterBrowse.tsx",
+        "components/people/PersonPhoto.tsx",
+        "components/people/PersonStatusBadge.tsx"
       ],
       "scripts": [
         "scripts/qa/profile-entry.mjs",
@@ -149,7 +226,21 @@
         "components/people/**",
         "lib/owners/**",
         "styles/modern-owners.css",
-        "scripts/qa/{owner-sidebar,admin-shell,admin-navigation,navigation-modes,funnel-cohort}.mjs"
+        "scripts/qa/{owner-sidebar,admin-shell,admin-navigation,navigation-modes,funnel-cohort}.mjs",
+        "components/emails/OwnerEmails.tsx",
+        "components/profile/ProfilePreviewCard.tsx",
+        "components/profile/ProfileView.tsx",
+        "components/emails/DiagnosticEmail.tsx",
+        "components/emails/EmailPreview.tsx",
+        "components/emails/EmailsIndex.tsx",
+        "components/emails/EmailActions.tsx",
+        "components/emails/EmailPreviewFrame.tsx",
+        "components/emails/EmailViewControls.tsx",
+        "components/emails/InviteAddresses.tsx",
+        "components/emails/ManualEmailControls.tsx",
+        "components/emails/TemplateReleaseControls.tsx",
+        "components/emails/StoredEmailCopy.tsx",
+        "components/emails/manual-request.ts"
       ],
       "scripts": [
         "scripts/qa/owner-sidebar.mjs",
@@ -162,7 +253,12 @@
         "scripts/qa/staff-navigation.mjs",
         "scripts/qa/staff-access-planner.mjs",
         "scripts/ci/qa-flow.mjs",
-        { "name": "scripts/qa/server-hub.mjs", "env": { "QA_SCREENSHOT_DIR": "deliverables/server-hub" } }
+        {
+          "name": "scripts/qa/server-hub.mjs",
+          "env": {
+            "QA_SCREENSHOT_DIR": "deliverables/server-hub"
+          }
+        }
       ]
     },
     "staff": {
@@ -172,14 +268,24 @@
         "app/api/staff-navigation/**",
         "lib/staff/**",
         "lib/staff-navigation/**",
-        "scripts/qa/{staff-navigation,staff-access-planner}.mjs"
+        "scripts/qa/{staff-navigation,staff-access-planner}.mjs",
+        "components/owners/OwnerStaff.tsx",
+        "components/owners/OwnerGate.tsx",
+        "components/owners/StaffAccessPlanner.tsx",
+        "components/owners/StaffNavigation.tsx",
+        "components/owners/kit.tsx"
       ],
       "scripts": [
         "scripts/qa/staff-navigation.mjs",
         "scripts/qa/staff-access-planner.mjs",
         "scripts/qa/hub-staff.mjs",
         "scripts/qa/navigation-modes.mjs",
-        { "name": "scripts/qa/server-hub.mjs", "env": { "QA_SCREENSHOT_DIR": "deliverables/server-hub" } }
+        {
+          "name": "scripts/qa/server-hub.mjs",
+          "env": {
+            "QA_SCREENSHOT_DIR": "deliverables/server-hub"
+          }
+        }
       ]
     },
     "hub": {
@@ -192,14 +298,23 @@
         "lib/navigation-preferences.ts",
         "lib/admin-preview.ts",
         "lib/preview-access.ts",
-        "scripts/qa/{hub-staff,server-hub}.mjs"
+        "scripts/qa/{hub-staff,server-hub}.mjs",
+        "app/preview/page.tsx",
+        "components/home/Overview.tsx",
+        "components/home/DesignSystemBlock.tsx",
+        "components/home/LivePagePreview.tsx"
       ],
       "scripts": [
         "scripts/qa/hub-staff.mjs",
         "scripts/qa/admin-navigation.mjs",
         "scripts/qa/navigation-modes.mjs",
         "scripts/qa/staff-navigation.mjs",
-        { "name": "scripts/qa/server-hub.mjs", "env": { "QA_SCREENSHOT_DIR": "deliverables/server-hub" } }
+        {
+          "name": "scripts/qa/server-hub.mjs",
+          "env": {
+            "QA_SCREENSHOT_DIR": "deliverables/server-hub"
+          }
+        }
       ]
     },
     "emails": {
@@ -210,10 +325,17 @@
         "components/emails/**",
         "emails/**",
         "lib/email-*.ts",
-        "lib/owner-email-preview.ts"
+        "lib/owner-email-preview.ts",
+        "components/owners/OwnerGate.tsx",
+        "components/owners/kit.tsx"
       ],
       "scripts": [
-        { "name": "scripts/qa/server-hub.mjs", "env": { "QA_SCREENSHOT_DIR": "deliverables/server-hub" } }
+        {
+          "name": "scripts/qa/server-hub.mjs",
+          "env": {
+            "QA_SCREENSHOT_DIR": "deliverables/server-hub"
+          }
+        }
       ]
     },
     "preview": {
@@ -222,11 +344,45 @@
         "components/preview/**",
         "lib/guide-thumbnail.ts",
         "lib/preview-note.ts",
-        "scripts/qa/guide-appearance.mjs"
+        "scripts/qa/guide-appearance.mjs",
+        "components/canvas/ProfileCanvas.tsx",
+        "components/funnel/ProfessionalsLanding.tsx",
+        "components/home/CallSheetHome.tsx",
+        "components/home/Overview.tsx",
+        "components/journey/JourneyAccount.tsx",
+        "components/journey/JourneyInvitation.tsx",
+        "components/landing/ComingSoon.tsx",
+        "components/landing/ComingSoonV2.tsx",
+        "components/profile/ExampleProfiles.tsx",
+        "components/profile/GigsterAccess.tsx",
+        "components/profile/ProfileTemplateEditor.tsx",
+        "components/canvas/ModernCanvas.tsx",
+        "components/funnel/BrandProfessionals.tsx",
+        "components/funnel/CallSheetDialog.tsx",
+        "components/funnel/SwissProfessionals.tsx",
+        "components/home/DesignSystemBlock.tsx",
+        "components/home/LivePagePreview.tsx",
+        "components/journey/ExampleReference.tsx",
+        "components/journey/JourneyFrame.tsx",
+        "components/landing/JoinCta.tsx",
+        "components/profile/BookingFields.tsx",
+        "components/profile/ChipPicker.tsx",
+        "components/profile/ExampleProfileLink.tsx",
+        "components/profile/LiveEditWarning.tsx",
+        "components/profile/PhotoPicker.tsx",
+        "components/profile/ProfilePreviewCard.tsx",
+        "components/funnel/professionals-content.ts"
       ],
       "scripts": [
         "scripts/ci/qa-flow.mjs",
-        "scripts/qa/social-preview.mjs"
+        "scripts/qa/social-preview.mjs",
+        "scripts/qa/hub-staff.mjs",
+        {
+          "name": "scripts/qa/server-hub.mjs",
+          "env": {
+            "QA_SCREENSHOT_DIR": "deliverables/server-hub"
+          }
+        }
       ]
     }
   }
