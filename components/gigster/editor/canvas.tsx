@@ -15,7 +15,8 @@ import { data } from "@/lib/data";
 import { laServiceAreas, onSetSkills, serviceChoices } from "@/lib/data/taxonomy";
 import { personalityQuestions } from "@/lib/profile/personality";
 import { departmentFieldRetired } from "@/lib/profile/department-retirement";
-import { serviceDescription } from "@/lib/profile/service-descriptions";
+import { serviceLabel, serviceOptions, serviceMatches, serviceCategory } from "@/lib/profile/service-catalogue";
+import { ServiceGuidance } from "./ServiceGuidance";
 import { locationControlsEnabled, travelRadiusOptions } from "@/lib/profile/location-controls";
 import { travelPreferenceEnabled } from "@/lib/profile/travel-preference";
 import { customSkillsEnabled } from "@/lib/profile/skills";
@@ -153,12 +154,20 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
   const setLine = (service: string, text: string) => set("serviceLines")({ ...lines, [service]: text.slice(0, SERVICE_LINE_MAX) });
   const replace = (i: number, next: string) => {
     const prev = rows[i];
+    if (next === "__other") {
+      if (otherVisible) return;
+      set("other")(`${serviceLabel(prev)}${lines[prev] ? `\n${lines[prev]}` : ""}`);
+      remove(i); setOtherOpen(true); setAdding(false);
+      requestAnimationFrame(() => document.getElementById("f-other")?.focus());
+      return;
+    }
+    if (rows.some((s, j) => j !== i && serviceMatches(s, next))) return;
     const nextLines = { ...lines };
     if (prev && nextLines[prev] !== undefined && nextLines[next] === undefined) { nextLines[next] = nextLines[prev]; delete nextLines[prev]; }
     set("services")(rows.map((s, j) => (j === i ? next : s)));
     set("serviceLines")(nextLines);
   };
-  const add = (next: string) => { if (count >= MAX_SERVICES) return; set("services")([...rows, next]); setAdding(false); };
+  const add = (next: string) => { if (count >= MAX_SERVICES || rows.some(s => serviceMatches(s, next))) return; set("services")([...rows, next]); setAdding(false); };
   const remove = (i: number) => {
     const nextLines = { ...lines };
     delete nextLines[rows[i]];
@@ -171,11 +180,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
   const count = rows.length + Number(otherVisible);
   const showBlank = count < MAX_SERVICES && (rows.length === 0 || adding);
   const OTHER = "__other";
-  const optionsFor = (current?: string) => [
-    ...choices.filter((c) => c === current || !rows.includes(c)).map((c) => ({ value: c, label: c })),
-    // Not on the list: the team reviews a new service before it shows (it is stored as "Something else").
-    ...(current === undefined && !otherVisible ? [{ value: OTHER, label: "Other — name your service" }] : []),
-  ];
+  const optionsFor = (current?: string) => serviceOptions(rows, current, otherVisible, choices.filter(c => !serviceCategory(c)));
   // "Something else" holds the service's name on its first line and what they'd do after it.
   const [otherName = "", ...otherRest] = d.other.split("\n");
   const otherLine = otherRest.join(" ");
@@ -238,7 +243,6 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
       <ol ref={list} className="grid gap-5" onPointerMove={drag}
         onPointerUp={(e) => finish(e.pointerId)} onPointerCancel={(e) => finish(e.pointerId, true)} onLostPointerCapture={(e) => finish(e.pointerId, true)}>
         {rows.map((s, i) => {
-          const standard = serviceDescription(s);
           const line = lines[s] ?? "";
           const lineError = missingLine && !line.trim() ? "Add one line about what you'll do." : undefined;
           return (
@@ -256,22 +260,23 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
                     </button>
                   )}
                   <div className="min-w-0 flex-1">
-                    <label htmlFor={`f-service-${i}`} className="sr-only">Service {i + 1}</label>
+                    <label htmlFor={`f-service-${i}`} className="mb-1 block text-body-sm text-ink-muted">Service category {i + 1}</label>
                     <Select id={`f-service-${i}`} options={optionsFor(s)} value={s} onValueChange={(v) => replace(i, v)} />
                   </div>
-                  <button type="button" aria-label={`Remove ${s}`} onClick={() => remove(i)}
+                  <button type="button" aria-label={`Remove ${serviceLabel(s)}`} onClick={() => remove(i)}
                     className="grid size-10 shrink-0 place-items-center rounded-md text-ink-muted hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-focus"><Trash2 aria-hidden="true" className="size-4" /></button>
                 </div>
                 <div className="grid min-w-0 gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
                   <label htmlFor={`f-line-${i}`} className="text-body-md text-ink">What can a customer hire you to do?</label>
-                  {!lineError && <p className="text-body-sm text-ink-muted italic">Example: Hang artwork and style a room for a party.</p>}
+                  <p className="text-body-sm text-ink-muted">Describe your own service in one short line.</p>
                   <Textarea id={`f-line-${i}`} rows={2} showCount maxLength={SERVICE_LINE_MAX} value={line} invalid={!!lineError}
                     placeholder="Describe what a customer can hire you to do."
                     onChange={(e) => setLine(s, e.target.value)} />
                   {lineError && <p className="text-body-sm text-danger">{lineError}</p>}
                 </div>
               </div>
-              {standard && <p className="text-body-sm text-ink-muted"><span className="font-semibold text-ink">Standard description</span> · the same for everyone who offers it: {standard}</p>}
+              {serviceLabel(s) !== s && ["Hair Styling", "Makeup Services"].includes(s) && <p className="text-body-sm text-ink-muted">Saved service: {s}</p>}
+              <ServiceGuidance service={s} />
             </li>
           );
         })}
@@ -282,7 +287,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
             <div className="grid gap-4 sm:grid-cols-12 sm:gap-0">
               <div className="flex items-start gap-1 sm:col-span-5 sm:pr-5">
                 <div className="grid min-w-0 flex-1 gap-1.5">
-                  <label htmlFor="f-other" className="text-body-md text-ink">Name of the Service</label>
+                  <label htmlFor="f-other" className="text-body-md text-ink">Your service name</label>
                   <Input id="f-other" value={otherName} maxLength={60} placeholder="e.g. Web design"
                     onChange={(e) => setOther(e.target.value.replace(/\n/g, " "), otherLine)} />
                 </div>
@@ -291,7 +296,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
               </div>
               <div className="grid min-w-0 gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
                 <label htmlFor="f-other-line" className="text-body-md text-ink">What can a customer hire you to do?</label>
-                <p className="text-body-sm text-ink-muted italic">Example: Hang artwork and style a room for a party.</p>
+                <p className="text-body-sm text-ink-muted">Describe the service you offer in your own words.</p>
                 <Textarea id="f-other-line" rows={2} showCount maxLength={SERVICE_LINE_MAX} value={otherLine}
                   placeholder="Describe what a customer can hire you to do."
                   onChange={(e) => setOther(otherName, e.target.value)} />

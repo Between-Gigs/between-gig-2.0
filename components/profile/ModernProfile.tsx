@@ -1,4 +1,5 @@
 "use client";
+import { serviceLabel } from "@/lib/profile/service-catalogue";
 import * as React from "react";
 import { WorkTile } from "@/components/profile/WorkTile";
 import { workMeta } from "@/lib/profile/video-links";
@@ -62,7 +63,7 @@ export function ModernProfile({ person, fields: f, mode, embedded, draft, part, 
         {data.kind === "sample" && f.hireableJobs?.trim() && <p>{f.hireableJobs}</p>}
         {offered.length > 0 && <ol className="modern-services">{offered.map((s, i) => {
           const Icon = serviceIcons[craftIcon(s, f.position)] ?? Sparkles;
-          return <li key={s}><span><Icon aria-hidden="true" size={17} /></span><b>{s}</b><small>{String(i + 1).padStart(2, "0")}</small></li>;
+          return <li key={s}><span><Icon aria-hidden="true" size={17} /></span><b>{helps.length ? s : serviceLabel(s)}</b><small>{String(i + 1).padStart(2, "0")}</small></li>;
         })}</ol>}
         {editing && f.other && <p className="text-ink-muted">Something else, in private review: {f.other}</p>}
       </div>, "The services you'd offer clients between gigs", "block"),
@@ -152,7 +153,7 @@ export function ModernProfile({ person, fields: f, mode, embedded, draft, part, 
     </div>
     {similar.length > 0 && <section className="modern-content"><header><h2>More Gigsters like {first}</h2><Link className="text-link underline" href="/p/">Browse all Gigsters</Link></header>
       <ul className="modern-similar">{similar.slice(0,3).map(({person:p,profile}) => <li key={p.id}><Link href={`/p/${p.slug}/`}>
-        <PersonPhoto id={p.id} name={p.name} src={profile.fields.photo || undefined} alt="" className="size-12 shrink-0 rounded-md object-cover" /><span><b>{p.name}</b><small>{profile.fields.position || profile.fields.services[0]}</small></span><ArrowRight size={15} aria-hidden="true" /></Link></li>)}</ul></section>}
+        <PersonPhoto id={p.id} name={p.name} src={profile.fields.photo || undefined} alt="" className="size-12 shrink-0 rounded-md object-cover" /><span><b>{p.name}</b><small>{profile.fields.position || serviceLabel(profile.fields.services[0] ?? "")}</small></span><ArrowRight size={15} aria-hidden="true" /></Link></li>)}</ul></section>}
     {mode === "public" && !aside && <div className="modern-mobile-request"><span>{rate || "Rate on request"}</span><Button variant="primary" size="sm" iconEnd={<ArrowRight />} onClick={onRequest}>Request {callName}</Button></div>}
   </div>;
 }

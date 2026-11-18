@@ -1,4 +1,5 @@
 "use client";
+import { serviceLabel } from "@/lib/profile/service-catalogue";
 /*
  * /profile/submitted/: where the Gigster lands after Submit for review (Flow p5). The still-life photo behind a check,
  * "IN REVIEW", the serif "Profile submitted.", the thanks line, their name and title, "View my profile" and "Edit
@@ -53,7 +54,7 @@ export function SubmittedPage() {
   const { person, fields } = state;
   const name = fields?.name.trim() || person.name;
   const first = name.split(/\s+/)[0] || "there";
-  const title = fields?.title?.trim() || fields?.position || fields?.services[0] || "";
+  const title = fields?.title?.trim() || fields?.position || serviceLabel(fields?.services[0] ?? "");
   const inReview = person.status === "submitted";
   const live = isPublicStatus(person.status);
   const approvedPrivate = isApprovedPrivate(person.status);

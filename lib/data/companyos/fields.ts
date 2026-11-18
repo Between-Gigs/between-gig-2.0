@@ -1,3 +1,4 @@
+import { legacyServiceValues } from "../../profile/service-catalogue";
 /*
  * 2.0's questionnaire (ProfileFields) as Company OS records: the `profile` fields (with the tenant fields
  * `home_city` and `services_other`) and its `profile_item` lists. Option values are the recipe's keys, made from the
@@ -90,7 +91,7 @@ export function toProfile(f: ProfileFields, opts: { extras?: boolean; details?: 
 const invert = <K extends string>(m: Record<K, string>) => Object.fromEntries(Object.entries(m).map(([k, v]) => [v, k])) as Record<string, K>;
 const labelsByKind = {
   skill: Object.fromEntries(onSetSkills.map(l => [optionKey(l),l])),
-  service: Object.fromEntries(offSetServices.map(l => [optionKey(l),l])),
+  service: Object.fromEntries([...offSetServices, ...legacyServiceValues].map(l => [optionKey(l),l])),
   area: Object.fromEntries(laServiceAreas.map(l => [optionKey(l),l])),
 };
 const text = (v: unknown) => (typeof v === "string" ? v : "");

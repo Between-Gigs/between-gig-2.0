@@ -12,7 +12,8 @@ import * as React from "react";
 import { data } from "@/lib/data";
 import { laServiceAreas, monthStatusLabel, onSetSkills, serviceChoices } from "@/lib/data/taxonomy";
 import { personalityQuestions } from "@/lib/profile/personality";
-import { serviceDescription } from "@/lib/profile/service-descriptions";
+import { serviceLabel, servicePickerValues } from "@/lib/profile/service-catalogue";
+import { ServiceGuidance } from "./ServiceGuidance";
 import { stageTwoLimits } from "@/lib/profile/stage-two";
 import { ABOUT_MAX, DATES_MAX, DEPARTMENT_MAX, MAX_SERVICES, NAME_MAX, SERVICE_LINE_MAX, TITLE_MAX, hasRate } from "@/lib/profile/validate";
 import { Credits } from "@/components/builder/ProfileBuilder";
@@ -121,7 +122,7 @@ export function HelpSection({ d, set, errors }: SectionProps) {
     set("services")(rows.filter((_, j) => j !== i));
     set("serviceLines")(nextLines);
   };
-  const optionsFor = (current?: string) => choices.filter((c) => c === current || !rows.includes(c)).map((c) => ({ value: c, label: c }));
+  const optionsFor = (current?: string) => servicePickerValues(rows, choices).filter((c) => c === current || !rows.includes(c)).map((c) => ({ value: c, label: serviceLabel(c) }));
   const missingLine = !!errors.serviceLines;
 
   return (
@@ -131,7 +132,7 @@ export function HelpSection({ d, set, errors }: SectionProps) {
         <div className="order-2 grid min-w-0 gap-4 lg:order-1 lg:col-span-8">
           <ol className="grid gap-4">
             {rows.map((s, i) => {
-              const standard = serviceDescription(s);
+
               const line = lines[s] ?? "";
               const lineError = missingLine && !line.trim() ? "Add one line about what you'll do." : undefined;
               return (
@@ -144,12 +145,7 @@ export function HelpSection({ d, set, errors }: SectionProps) {
                       <span className="max-sm:sr-only">Remove</span>
                     </Button>
                   </div>
-                  {standard && (
-                    <div className="grid gap-1 border-l-2 border-line-strong pl-4">
-                      <p className="text-body-sm text-ink-muted">Standard description · the same for everyone who offers this</p>
-                      <p className="text-body-md text-ink">{standard}</p>
-                    </div>
-                  )}
+                  <ServiceGuidance service={s} />
                   <Field label="What you'll do" error={lineError} hint="One line, in a customer's words.">
                     <Textarea id={`f-line-${i}`} rows={2} showCount maxLength={SERVICE_LINE_MAX} value={line}
                       placeholder="e.g. I'll sort your wardrobe and set up a closet you can keep organized."

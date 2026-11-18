@@ -1,4 +1,5 @@
 "use client";
+import { serviceLabel, servicePickerLabel, servicePickerValues } from "@/lib/profile/service-catalogue";
 import { APPROVED_EDIT_HINT, APPROVED_NOT_PUBLIC, APPROVED_NOT_PUBLIC_LINE, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
 import { Badge, Button, Field, Input, RadioGroup, Skeleton, Slider, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
@@ -77,7 +78,7 @@ const pick = (f: ProfileFields, keys: Iterable<keyof ProfileFields>) => Object.f
 function starterAbout(d: ProfileFields): string {
   const role = (d.position || d.skills[0] || "film and TV").toLowerCase();
   const credit = pinnedCredits(d)[0]?.split("·")[0]?.trim();
-  const services = d.services.slice(0, 2).map((s) => s.toLowerCase()).join(" and ");
+  const services = d.services.slice(0, 2).map((s) => serviceLabel(s).toLowerCase()).join(" and ");
   const where = d.market === "la" && d.areas.length ? ` around ${d.areas.slice(0, 2).join(" and ")}` : "";
   return [
     `I've spent ${d.years ? `${d.years} years` : "years"} in ${role}${credit ? `, on productions like ${credit}` : ""}.`,
@@ -936,7 +937,7 @@ function editorFor(id: SpotId, d: ProfileFields, set: <K extends keyof ProfileFi
     case "about": return <AboutEditor d={d} onChange={set("about")} />;
     case "languages": return <Field label="Languages" optional={!required.includes("languages")}><Input id="f-languages" value={d.languages} placeholder="e.g. English, Spanish" onChange={(e) => set("languages")(e.target.value)} /></Field>;
     case "services": return <>
-      <ChipPicker id="f-services" label="Off-set services" options={serviceChoices(data.kind)} value={d.services} onChange={set("services")} />
+      <ChipPicker id="f-services" label="Off-set services" optionLabel={servicePickerLabel} options={servicePickerValues(d.services, serviceChoices(data.kind))} value={d.services} onChange={set("services")} />
       <Field label="Something else?" optional hint="Other services go to a private review. They don't appear on your profile automatically."><Textarea id="f-other" rows={2} value={d.other} onChange={(e) => set("other")(e.target.value)} /></Field>
     </>;
     case "skills": return <ChipPicker id="f-skills" label="On-set skills" options={onSetSkills} value={d.skills} onChange={set("skills")} />;

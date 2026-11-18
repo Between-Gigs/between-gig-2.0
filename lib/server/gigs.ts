@@ -1,3 +1,4 @@
+import { serviceLabel, serviceMatches, legacyServiceValues } from "@/lib/profile/service-catalogue";
 /*
  * The DataSource methods on Company OS, server side: what each one reads and writes, and how Company OS's records
  * become 2.0's types. Method-by-method mapping and the agreed differences: Company OS
@@ -16,7 +17,7 @@ import type {
   WaitlistResult, WaitlistRow, WaitlistSignup,
 } from "@/lib/data/types";
 import { blankFields } from "@/lib/data/fields";
-import { onSetSkills, waitlistCategories } from "@/lib/data/taxonomy";
+import { offSetServices, onSetSkills, waitlistCategories } from "@/lib/data/taxonomy";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { isReviewedStatus, publishGateOn } from "@/lib/profile/publish-gate";
 import { videoLinksEnabled } from "@/lib/profile/video-links";
@@ -157,7 +158,7 @@ function matches(s: PersonSummary, q: PeopleQuery) {
   const f = s.fields;
   if (q.status && q.status !== "all" && s.person.status !== q.status) return false;
   if (q.source && q.source !== "all" && (s.person.source ?? "invited") !== q.source) return false;
-  if (q.service && q.service !== "all" && !f?.services.includes(q.service)) return false;
+  if (q.service && q.service !== "all" && !f?.services.some(s => serviceMatches(s, q.service!))) return false;
   if (q.area && q.area !== "all" && !f?.areas.includes(q.area)) return false;
   if (q.availability && q.availability !== "all" && f?.monthStatus !== q.availability) return false;
   if (q.craft && q.craft !== "all" && craftOf(f?.position, f?.skills) !== q.craft) return false;
@@ -166,7 +167,7 @@ function matches(s: PersonSummary, q: PeopleQuery) {
   if (q.profile === "no-photo" && f?.photo) return false;
   const text = q.text?.trim().toLowerCase();
   if (text) {
-    const hay = [s.person.name, s.person.email, s.person.waitlistZip, f?.position, f?.about, ...(f?.services ?? []), ...(f?.skills ?? []), ...(f?.areas ?? [])]
+    const hay = [s.person.name, s.person.email, s.person.waitlistZip, f?.position, f?.about, ...(f?.services ?? []).flatMap(s => [s, serviceLabel(s)]), ...(f?.skills ?? []), ...(f?.areas ?? [])]
       .filter(Boolean).join(" ").toLowerCase();
     if (!text.split(/\s+/).every((word) => hay.includes(word))) return false;
   }
@@ -399,7 +400,7 @@ export function draftOps(personId: string, fields: ProfileFields, existing: { pr
   // Match both by that display identity, preserving the original row/value instead of recreating it.
   // Video links are work samples, kept by saveSamples (lib/server/work-samples.ts), never by this diff.
   const pool = groupBy([...existing.items].filter((r) => r.data.kind !== "video_link").sort((a,b)=>Number(a.data.position??0)-Number(b.data.position??0)), (r) => keyOf(
-    r.data.kind === "skill" && onSetSkills.includes(str(r.data.value))
+    (r.data.kind === "skill" && onSetSkills.includes(str(r.data.value))) || (r.data.kind === "service" && [...offSetServices, ...legacyServiceValues].includes(str(r.data.value)))
       ? {...r.data,value:optionKey(str(r.data.value))} : r.data));
   for (const want of items) {
     const have = pool.get(keyOf(want))?.shift();
