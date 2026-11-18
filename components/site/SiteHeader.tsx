@@ -115,7 +115,7 @@ export function AccountMenu() {
 
   if (!session) return null;
   return (
-    <Menu align="end" items={menu}
+    <Menu align="end" items={menu} className="max-sm:max-w-72"
       header={
         <div className="flex items-center gap-3 px-3 pt-2 pb-3">
           <Avatar name={displayName} src={photo} size="lg" className="swiss:rounded-none" />

@@ -20,7 +20,13 @@ async function openMenu(page, trigger) {
   await menu.waitFor();
   await page.waitForFunction(id => document.activeElement === document.getElementById(id)?.querySelector('[role^="menuitem"]:not(:disabled)'), id);
   const popup = await menu.locator("..").boundingBox(), viewport = page.viewportSize();
-  assert.ok(popup && viewport && popup.x >= -1 && popup.y >= -1 && popup.x + popup.width <= viewport.width + 1 && popup.y + popup.height <= viewport.height + 1, "open menu fits the viewport");
+  const fits = popup && viewport && popup.x >= -1 && popup.y >= -1 && popup.x + popup.width <= viewport.width + 1 && popup.y + popup.height <= viewport.height + 1;
+  const diagnostic = { url: page.url(), trigger: await trigger.getAttribute("aria-label"), popup, viewport, look: await page.locator("html").getAttribute("data-look"), theme: await page.locator("html").getAttribute("data-theme") };
+  if (!fits) {
+    fs.writeFileSync("deliverables/admin-navigation/menu-bounds-failure.json", JSON.stringify(diagnostic, null, 2));
+    await page.screenshot({ path: "deliverables/admin-navigation/menu-bounds-failure.png" });
+  }
+  assert.ok(fits, "open menu fits the viewport: " + JSON.stringify(diagnostic));
   return menu;
 }
 async function closeMenu(page, trigger, menu) {
