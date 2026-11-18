@@ -50,7 +50,7 @@ try {
     await artwork.evaluate(async image => { await image.decode().catch(() => {}); });
     const geometry = await artwork.evaluate(image => {
       const box=image.getBoundingClientRect();
-      return {width:box.width,height:box.height,naturalWidth:image.naturalWidth,naturalHeight:image.naturalHeight,mobile:image.src.includes("-mobile.png")};
+      return {width:box.width,height:box.height,naturalWidth:image.naturalWidth,naturalHeight:image.naturalHeight,mobile:Boolean(image.closest(".e-invite-mobile"))};
     });
     const source=geometry.mobile?{width:260,height:340,lead:12,cta:12}:{width:598,height:784,lead:17,cta:14};
     if(!blocked)assert.ok(Math.abs(geometry.height/geometry.width-source.height/source.width)<.01,"selected approved image preserves its proportions");
@@ -118,7 +118,7 @@ try {
       console.log(`START actual email boundary ${width}px`);
       const page=await boundaryContext.newPage();await page.setViewportSize({width,height:1000});
       await page.setContent(canonicalHtml);await page.locator(".e-invite-artwork img:visible").evaluate(async image=>{await image.decode();});
-      const metrics=await page.locator(".e-invite-artwork img:visible").evaluate(image=>({width:image.getBoundingClientRect().width,height:image.getBoundingClientRect().height,mobile:image.src.includes("-mobile.png")}));
+      const metrics=await page.locator(".e-invite-artwork img:visible").evaluate(image=>({width:image.getBoundingClientRect().width,height:image.getBoundingClientRect().height,mobile:Boolean(image.closest(".e-invite-mobile"))}));
       const source=metrics.mobile?{width:260,height:340,lead:12,cta:12}:{width:598,height:784,lead:17,cta:14};
       assert.ok(metrics.width<=width);assert.ok(Math.abs(metrics.height/metrics.width-source.height/source.width)<.01);
       assert.equal(metrics.mobile,width<=620);
