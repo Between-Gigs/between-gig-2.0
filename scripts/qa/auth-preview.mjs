@@ -31,7 +31,25 @@ try {
       await page.addScriptTag({ content: fs.readFileSync("node_modules/axe-core/axe.min.js", "utf8") });
       const violations = await page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } })).violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) })));
       assert.deepEqual(violations, []);
-      if (look === "editorial") await page.screenshot({ path: `deliverables/auth-preview/${route}-${width}-${theme}.png`, fullPage: true });
+      if (look === "editorial") {
+        const welcome = page.getByRole("complementary", { name: "Welcome to Between Gigs" });
+        const hierarchy = await welcome.evaluate(el => {
+          const label = el.querySelector("div > p");
+          const [heading, lead] = el.querySelectorAll(":scope > p");
+          return { label: parseFloat(getComputedStyle(label).fontSize), lead: parseFloat(getComputedStyle(lead).fontSize), heading: parseFloat(getComputedStyle(heading).fontSize), fits: label.scrollWidth <= label.clientWidth };
+        });
+        assert.ok(hierarchy.label > hierarchy.lead, "auth eyebrow is larger than paragraph text");
+        assert.ok(hierarchy.label < hierarchy.heading, "auth eyebrow remains smaller than the headline");
+        assert.ok(hierarchy.fits, "auth eyebrow fits its column");
+        fs.writeFileSync(`deliverables/auth-preview/${route}-${width}-${theme}.json`, JSON.stringify(hierarchy, null, 2));
+        // Keyboard checks can scroll the sticky header into the middle of a full-page capture.
+        // Restore the initial viewport after those checks, then let sticky positioning settle.
+        await page.evaluate(async () => {
+          scrollTo({ top: 0, left: 0, behavior: "instant" });
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        });
+        await page.screenshot({ path: `deliverables/auth-preview/${route}-${width}-${theme}.png`, fullPage: true });
+      }
     }
     assert.ok(!requests.some(request => /clerk\.(?:accounts|com|dev)/.test(request)), "sample preview never loads Clerk");
     await context.close();

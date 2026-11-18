@@ -31,10 +31,18 @@ jobs:
           test -x "$bg_chrome_path"
           "$bg_chrome_path" --version
           echo "CHROMIUM_PATH=$bg_chrome_path" >> "$GITHUB_ENV"
+      - name: Capture auth approval previews
+        run: node scripts/qa/auth-preview.mjs
+      - name: Save auth approval captures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: auth-eyebrow-approval-evidence
+          path: deliverables/auth-preview
+          if-no-files-found: warn
       - name: Test signup and existing product flow (sample mode, no real accounts)
         run: |
           node scripts/qa/auth-flow.mjs
-          node scripts/qa/auth-preview.mjs
           node scripts/qa/profile-entry.mjs
           node scripts/qa/hub-staff.mjs
           node scripts/qa/owner-sidebar.mjs
