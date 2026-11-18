@@ -194,10 +194,10 @@ try {
     assert.equal(new URL(page.url()).searchParams.has("unstyled"), false, "manual Styled choice consumes the explicit unstyled entry");
     await page.waitForFunction(() => !document.documentElement.hasAttribute("data-unstyled"));
     await page.evaluate(() => window.bgSample.signInAs("gigster", "grace-liu")); await page.goto(local.url + "/profile/canvas/");
-    await account.waitFor();
+    await header.getByRole("button", { name: "Account: Grace Liu", exact: true }).waitFor();
     await page.waitForFunction(() => document.documentElement.dataset.look === "modern");
     await page.waitForFunction(expected => document.documentElement.dataset.theme === expected, outerAppearance.theme === "dark" ? "light" : "dark");
-    await header.getByRole("switch", { name: "Night mode" }).waitFor({ state: "hidden" });
+    await header.getByRole("switch", { name: "Night mode" }).waitFor({ state: "detached" });
     assert.equal(await header.getByRole("switch", { name: "Night mode" }).count(), 0, "another account does not inherit navigation preference");
     assert.equal(await page.locator("html").getAttribute("data-look"), "modern", "another account restores its own iframe-selected preference instead of inheriting the owner theme");
     await page.goto(local.url + "/hub/"); await account.waitFor();
