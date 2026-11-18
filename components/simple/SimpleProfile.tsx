@@ -26,7 +26,7 @@ const statusText: Record<PersonStatus, string> = {
 const order: (keyof ProfileFields)[] = [
   "photo", "name", "position", "years", "imdb", "credits", "skills", "services", "market", "areas", "otherCity", "zip", "travel",
   "monthStatus", "dates", "earliestStart", "rate", "about", "languages", "mode", "tools", "transport", "insurance",
-  "hireableJobs", "bookingMinimum", "personality", "bookingMobile",
+  "hireableJobs", "personality", "bookingMobile",
 ];
 
 export function SimpleProfile() {
@@ -228,8 +228,7 @@ export function SimpleProfile() {
               <label key={b}><input type="radio" name="basis" checked={form.basis === b} onChange={() => set("basis", b)} /> {basisLabel[b]}</label>
             ))}
           </fieldset>
-          <Text k="bookingMinimum" label="Minimum booking (optional)" form={form} set={set} err={err} described={described} />
-        </> : <p>{hasRate(f.rate) ? `From $${f.rate} / ${basisShort[f.basis]}` : "Rate on request"}{f.bookingMinimum && ` · Minimum: ${f.bookingMinimum}`}</p>}
+        </> : <p>{hasRate(f.rate) ? `From $${f.rate} / ${basisShort[f.basis]}` : "Rate on request"}</p>}
       </section>
 
       {/* 5. About */}

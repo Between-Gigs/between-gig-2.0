@@ -8,14 +8,14 @@ import { thumbnailFor, type PortfolioItem } from "@/lib/profile/video-links";
 
 /** Vimeo's thumbnail comes from our server (never from the browser): null while it loads and when it isn't available. */
 export function useVimeoThumb(id: string | null) {
-  const [url, setUrl] = React.useState<string | null>(null);
+  const [thumbnail, setThumbnail] = React.useState<{id:string;url:string} | null>(null);
   React.useEffect(() => {
     if (!id) return;
     let live = true;
-    fetch(asset(`/api/video-thumb/?id=${encodeURIComponent(id)}`)).then((r) => (r.ok ? r.json() : null)).then((b: { url?: unknown } | null) => { if (live && b && typeof b.url === "string") setUrl(b.url); }).catch(() => undefined);
+    fetch(asset(`/api/video-thumb/?id=${encodeURIComponent(id)}`)).then((r) => (r.ok ? r.json() : null)).then((b: { url?: unknown } | null) => { if (live && b && typeof b.url === "string") setThumbnail({ id, url: b.url }); }).catch(() => undefined);
     return () => { live = false; };
   }, [id]);
-  return url;
+  return thumbnail?.id === id ? thumbnail.url : null;
 }
 
 /**
