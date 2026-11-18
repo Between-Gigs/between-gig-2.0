@@ -1,6 +1,6 @@
 # Owner transactional resends
 
-This additive change depends on the separately reviewed Company OS manual notification API. It does not activate a tenant, approve stored copy, publish a template, or verify email delivery. The sample email preview, stored content release, automatic trigger wiring and actual delivery receipt are separate facts.
+This additive change depends on the separately reviewed Company OS manual notification API. `company-os.json` requires planned Company OS 1.20.0; the release coordinator must verify the actual release includes backend PR 99 before release. No tag is reserved or created here. It does not activate a tenant, approve stored copy, publish a template, or verify email delivery. The sample email preview, stored content release, automatic trigger wiring and actual delivery receipt are separate facts.
 
 The hub defaults to **Test email**. Profile submission, requested changes and profile publication notifications have an additional account-bound resend path. The owner enters one actual account address; Company OS resolves the person, current profile/review cycle and original notification, renders the stored published copy, and returns an immutable confirmation binding. The UI shows that copy before a separate REAL resend confirmation. Arbitrary private-message recipients and browser-provided content are refused. Invitations retain their existing deliberate recipient workflow. Sign-in codes use the genuine Clerk sign-in flow at `/login/`; retired templates have no real-send adapter.
 
