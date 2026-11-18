@@ -33,7 +33,7 @@ import { ABOUT_MAX, DATES_MAX, DEPARTMENT_MAX, MAX_SERVICES, NAME_MAX, SERVICE_L
 import { Credits } from "@/components/builder/ProfileBuilder";
 import { PhotoPicker } from "@/components/profile/PhotoPicker";
 import { FittedImg } from "@/components/profile/FittedImg";
-import { withFit, type Fit } from "@/lib/profile/work-fit";
+import { canAdjustPhoto, withFit, type Fit } from "@/lib/profile/work-fit";
 import { FitCropper } from "./FitCropper";
 import { VideoLinkForm, VideoSampleThumb } from "./VideoLinkForm";
 import { decodeSample, videoLinksEnabled, visibleSamples } from "@/lib/profile/video-links";
@@ -468,7 +468,7 @@ export function CanvasSamples({ d, set }: SectionProps) {
   // the alignment on the photo's link (lib/profile/work-fit.ts), so the lightbox still opens the whole image.
   const [fitting, setFitting] = React.useState<{ at: number; collection: typeof collection } | null>(null);
   const saveFit = (fit: Fit) => {
-    if (!fitting || fitting.collection !== collection) return;
+    if (!fitting || fitting.collection !== collection || !canAdjustPhoto(samples[fitting.at] ?? "", videos && data.kind !== "sample")) return;
     changeSamples(samples.map((x, j) => (j === fitting.at ? withFit(x, fit) : x)));
     setFitting(null);
   };
@@ -502,7 +502,7 @@ export function CanvasSamples({ d, set }: SectionProps) {
           ? "Show customers what you can do! Upload photos, videos, or examples of past projects that demonstrate your skills and experience. These can be from your work in film and television or projects you’ve completed outside the industry."
           : "Show customers what you can do! Upload photos or images of past projects that demonstrate your skills and experience. These can be from your work in film and television or projects you’ve completed outside the industry."}</p>
         <p className="text-body-sm text-ink-muted">Only share work you have permission to display.</p>
-        {samples.length > 0 && <p id="samples-hint" className="text-body-md text-ink-muted">{samples.length > 1 ? `Drag a ${videos ? "sample" : "photo"} by its handle to change the order. The first one shows first on your profile. ` : ""}Use Adjust to choose how each photo fits its frame.{videos ? " A video link opens on YouTube or Vimeo." : ""}</p>}
+        {samples.length > 0 && <p id="samples-hint" className="text-body-md text-ink-muted">{samples.length > 1 ? `Drag a ${videos ? "sample" : "photo"} by its handle to change the order. The first one shows first on your profile. ` : ""}Use Adjust to choose how each photo fits its frame.{videos && data.kind !== "sample" ? " Save new or replacement photos first; Adjust appears once they are saved." : ""}{videos ? " A video link opens on YouTube or Vimeo." : ""}</p>}
       </div>
       <p aria-live="polite" className="sr-only">{said}</p>
       <input ref={input} type="file" accept="image/*" multiple className="sr-only" tabIndex={-1} aria-label="Add work samples"
@@ -530,7 +530,7 @@ export function CanvasSamples({ d, set }: SectionProps) {
                     </button>
                   )}
                   <span className="absolute inset-x-2 bottom-2 flex justify-end gap-2">
-                    {!clip && <button type="button" aria-label={`Adjust the fit of work sample ${i + 1}`} title="Adjust the fit" onClick={() => setFitting({ at: i, collection })}
+                    {!clip && canAdjustPhoto(src, videos && data.kind !== "sample") && <button type="button" aria-label={`Adjust the fit of work sample ${i + 1}`} title="Adjust the fit" onClick={() => setFitting({ at: i, collection })}
                       className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><CropIcon aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">Adjust</span></button>}
                     <button type="button" aria-label={clip ? `Edit video link ${i + 1}` : `Replace work sample ${i + 1}`} title={clip ? "Edit the link" : "Replace"} onClick={() => (clip ? (setLinkBase(JSON.stringify(samples)), setLinkAt(i), setAdding("link")) : choose(i))}
                       className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><RefreshCw aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">{clip ? "Edit" : "Replace"}</span></button>
