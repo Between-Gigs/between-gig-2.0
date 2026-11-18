@@ -6,7 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import { useAuthActions } from "@/lib/auth/context";
 import { data } from "@/lib/data";
-import { asset } from "@/lib/site";
+import { useStaffMenuVisibility } from "./StaffNavigationVisibility";
+import { asset, basePath } from "@/lib/site";
 import { useSession } from "@/lib/session";
 
 import { MySettings } from "./MySettings";
@@ -14,7 +15,7 @@ import { PersonalThemeToggle, useNavigationMode, usePersonalPreferences } from "
 import { LookSwitcher } from "./LookSwitcher";
 import { ExperienceSwitcher } from "./ExperienceSwitcher";
 
-interface NavLink { href: string; label: string }
+interface NavLink { id: "my_profile" | "edit_profile"; href: string; label: string }
 
 /**
  * The public site's top bar: logo, the links for whoever is signed in, theme, account. In the owners'
@@ -25,10 +26,11 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
   const pathname = usePathname();
   const { session, loading } = useSession();
   const mode = useNavigationMode();
+  const { menu: visibility } = useStaffMenuVisibility();
   const { preferences } = usePersonalPreferences();
 
   const links: NavLink[] = session && mode === "gigster"
-    ? [{ href: "/profile/", label: "My profile" }, { href: "/profile/canvas/", label: "Edit profile" }]
+    ? ([{ id: "my_profile", href: "/profile/", label: "My profile" }, { id: "edit_profile", href: "/profile/canvas/", label: "Edit profile" }] as NavLink[]).filter(link => visibility.items.includes(link.id))
     : [];
 
   // Only the most specific matching link is current: on /profile/canvas/ that's "Edit profile", not "My profile".
@@ -97,6 +99,7 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
 
 /** One account control for public and owner navigation; workspace changes stay in ExperienceSwitcher. */
 export function AccountMenu() {
+  const { menu: accountVisibility } = useStaffMenuVisibility();
   const { session } = useSession();
   const auth = useAuthActions();
   const router = useRouter();
@@ -112,9 +115,10 @@ export function AccountMenu() {
   const photo = useOwnPhoto(session?.personId ?? undefined, pathname);
   const menu: MenuEntry[] = session ? [
     { heading: session.role === "owner" ? "Signed in as owner" : "Signed in" },
-    { label: "My profile", icon: <UserRound />, onSelect: () => router.push("/profile/") },
-    { label: "Edit profile", icon: <PencilLine />, onSelect: () => router.push("/profile/canvas/") },
+    ...(accountVisibility.items.includes("my_profile") ? [{ label: "My profile", icon: <UserRound />, onSelect: () => router.push("/profile/") }] : []),
+    ...(accountVisibility.items.includes("edit_profile") ? [{ label: "Edit profile", icon: <PencilLine />, onSelect: () => router.push("/profile/canvas/") }] : []),
     { label: "My Settings", icon: <Settings />, onSelect: () => setSettings(true) },
+    ...(session.role === "owner" ? [{ label: "Manage team menus", icon: <Settings />, onSelect: () => window.location.assign((basePath === "/hub" ? "" : basePath) + "/owners/staff/?view=navigation") }] : []),
     "separator",
     { label: "Log out", icon: <LogOut />, onSelect: () => void signOut() },
   ] : [];
