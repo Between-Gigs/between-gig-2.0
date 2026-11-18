@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { companyOs } from "./companyos";
+import { companyOs, type Row } from "./companyos";
 import { emailHubStatus, testHubEmail } from "./email-hub";
 const id = "11111111-1111-4111-8111-111111111111";
-function setup(admin = true, templates = [{ id, data: { key: "approved", channel: "email", active: true, subject: "Published", body: "Sample", body_html: "<p>Sample</p>" } }], automations = [{ id: "automation", data: { template: "approved", active: true, event: "profile.reviewed", filter: { to: "published" } } }]) {
+function setup(admin = true, templates = [{ id, data: { key: "approved", channel: "email", active: true, subject: "Published", body: "Sample", body_html: "<p>Sample</p>" } }], automations: Pick<Row, "id" | "data">[] = [{ id: "automation", data: { channels: ["email"], template: "approved", active: true, event: "profile.reviewed", filter: { to: "published" } } }]) {
   const calls: { path: string; method: string; body: Record<string, unknown>; headers: Headers }[] = [];
   const cos = companyOs({ url: "https://cos.test", tenant: "between-gigs", readerToken: "", submitterToken: "", fetch: (async (url, init) => {
     const path = new URL(String(url)).pathname;
@@ -26,8 +26,16 @@ describe("owner email hub safety", () => {
     expect(s["sign-in-code"]).toMatchObject({ lifecycle: "unknown", usage: "external", content: "not_installed" });
   });
   it("does not hide tenant invitation automations behind a manual-send label", async () => {
-    const f = setup(true, [], [{ id: "auto", data: { template: "invite", active: true, event: "owner.configured", filter: { to: "invited" } } }]);
+    const f = setup(true, [], [{ id: "auto", data: { channels: ["email"], template: "invite", active: true, event: "owner.configured", filter: { to: "invited" } } }]);
     expect((await emailHubStatus(f.ctx, [])).invite?.usage).toBe("configured");
+  });
+  it("matches backend default-active semantics and excludes non-email channels", async () => {
+    const f = setup(true, [], [
+      { id: "email", data: { channels: ["email"], template: "approved", event: "profile.reviewed", filter: { to: "published" } } },
+      { id: "sms", data: { channels: ["sms"], template: "approved", event: "sms.only", active: true } },
+      { id: "disabled", data: { channels: ["email"], template: "approved", event: "disabled", active: false } },
+    ]);
+    expect((await emailHubStatus(f.ctx, [])).approved?.triggers).toEqual(["profile.reviewed → published"]);
   });
   it("refuses lists, display names, injection, extra send/content fields and unsupported templates", async () => {
     for (const recipient of ["a@example.org,b@example.org", "a@example.org\nb@example.org", "Name <a@example.org>", "bad", "a@b", "a@example.org;cc@x.org"]) {

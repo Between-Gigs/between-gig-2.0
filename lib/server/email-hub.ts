@@ -22,7 +22,7 @@ export async function emailHubStatus(ctx: Ctx, args: unknown[]): Promise<EmailHu
   const result: EmailHubStatus = {};
   for (const [name, key] of Object.entries(hubEmailKeys)) {
     const row = choose(rows, key);
-    const enabled = automations?.filter(r => r.data.template === key && r.data.active === true);
+    const enabled = automations?.filter(r => r.data.template === key && r.data.active !== false && Array.isArray(r.data.channels) && r.data.channels.includes("email"));
     let testEnabled = false;
     if (row && row.data.active !== false) {
       try {
