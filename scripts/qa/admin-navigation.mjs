@@ -8,6 +8,27 @@ const local = process.env.QA_BASE_URL ? null : await serve("out", { base });
 const url = process.env.QA_BASE_URL ?? local.url;
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? "/usr/bin/chromium" });
 fs.mkdirSync("deliverables/admin-navigation", { recursive: true });
+
+// Menu focuses its first item on the next animation frame. Wait for that real keyboard state before
+// sending Escape; an immediate Escape on the still-focused trigger would leave the popup open.
+async function openMenu(page, trigger) {
+  await trigger.press("ArrowDown");
+  await page.waitForFunction(label => Array.from(document.querySelectorAll("button")).find(button => button.getAttribute("aria-label") === label)?.getAttribute("aria-expanded") === "true", await trigger.getAttribute("aria-label"));
+  const id = await trigger.getAttribute("aria-controls");
+  assert.ok(id, "open trigger identifies its menu");
+  const menu = page.locator(`[id="${id}"]`);
+  await menu.waitFor();
+  await page.waitForFunction(id => document.activeElement === document.getElementById(id)?.querySelector('[role^="menuitem"]:not(:disabled)'), id);
+  const popup = await menu.locator("..").boundingBox(), viewport = page.viewportSize();
+  assert.ok(popup && viewport && popup.x >= -1 && popup.y >= -1 && popup.x + popup.width <= viewport.width + 1 && popup.y + popup.height <= viewport.height + 1, "open menu fits the viewport");
+  return menu;
+}
+async function closeMenu(page, trigger, menu) {
+  await page.keyboard.press("Escape");
+  await menu.waitFor({ state: "hidden" });
+  assert.equal(await trigger.getAttribute("aria-expanded"), "false", "Escape closes the menu");
+  assert.equal(await trigger.evaluate(button => document.activeElement === button), true, "Escape restores focus to its trigger");
+}
 try {
   for (const look of ["editorial", "swiss", "modern"]) for (const width of [320, 390, 768, 1440]) for (const theme of ["light", "dark"]) {
     const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: theme, reducedMotion: "reduce" });
@@ -29,17 +50,20 @@ try {
         assert.ok(navBox.x + navBox.width <= switchBox.x + 1, "center links do not overlap workspace controls");
       }
       const box = await account.boundingBox(); assert.ok(box.x + box.width <= width, "account fits top right"); assert.ok(box.y < 90, "account in top bar");
-      await account.click(); await page.getByRole("menuitem", { name: "My profile", exact: true }).waitFor();
-      await page.getByRole("menuitem", { name: "Edit profile", exact: true }).waitFor(); await page.getByRole("menuitem", { name: "Log out", exact: true }).waitFor();
-      await page.keyboard.press("Escape");
-      await switcher.click();
-      for (const name of [/Gigster Experience/, /Owner Experience/, /Hub ·/]) assert.equal(await page.locator('[role^="menuitem"]').filter({ hasText: name }).isVisible(), true);
-      await page.keyboard.press("Escape");
+      const accountMenu = await openMenu(page, account);
+      await accountMenu.getByRole("menuitem", { name: "My profile", exact: true }).waitFor();
+      await accountMenu.getByRole("menuitem", { name: "Edit profile", exact: true }).waitFor();
+      await accountMenu.getByRole("menuitem", { name: "Log out", exact: true }).waitFor();
+      await closeMenu(page, account, accountMenu);
+      const experienceMenu = await openMenu(page, switcher);
+      for (const name of [/Gigster Experience/, /Owner Experience/, /Hub ·/]) assert.equal(await experienceMenu.locator('[role^="menuitem"]').filter({ hasText: name }).isVisible(), true);
+      await closeMenu(page, switcher, experienceMenu);
       if (route === "/profile/canvas/" && width >= 1024) assert.deepEqual(await header.getByRole("navigation", { name: "Main", exact: true }).getByRole("link").allTextContents(), ["My profile", "Edit profile"]);
       assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).session.role), "owner", "navigation keeps authority");
       if (route === "/owners/") {
         if ([320, 1440].includes(width)) await page.screenshot({ path: `deliverables/admin-navigation/owner-${look}-${width}-${theme}.png` });
-        await switcher.click(); await page.getByRole("menuitem", { name: /Gigster Experience/ }).click();
+        const navigationMenu = await openMenu(page, switcher);
+        await navigationMenu.getByRole("menuitem", { name: "Gigster Experience · edit my profile", exact: true }).click();
         await page.waitForURL("**/profile/canvas/");
         assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).session.role), "owner", "switching experience preserves owner authority");
       }
