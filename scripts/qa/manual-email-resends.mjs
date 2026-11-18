@@ -17,7 +17,12 @@ const entry = `
   import {createRoot} from 'react-dom/client';
   import {EmailActions} from './components/emails/EmailActions';
   const root = createRoot(document.getElementById('root'));
-  const render = (name = 'profile-submitted') => root.render(<EmailActions name={name} status={{testEnabled:true}}/>);
+  const render = (name = 'profile-submitted') => root.render(
+    <>
+      <span hidden data-fixture-template={name} />
+      <EmailActions name={name} status={{testEnabled:true}}/>
+    </>,
+  );
   window.fixtureTemplate = render;
   render();
 `;
@@ -158,7 +163,11 @@ async function fixture(width, theme) {
   const button = name => page.getByRole("button", { name, exact: true });
   const mode = name => page.getByRole("radio", { name, exact: true });
   const count = method => calls.filter(call => call.method === method).length;
-  const select = name => page.evaluate(name => window.fixtureTemplate(name), name);
+  const select = async name => {
+    await page.evaluate(name => window.fixtureTemplate(name), name);
+    // root.render schedules work. The fixture marker and the corresponding controls commit together.
+    await page.locator(`[data-fixture-template="${name}"]`).waitFor({ state: "attached" });
+  };
   return { context, page, mode, button, calls, count, controls, select, unexpected };
 }
 
