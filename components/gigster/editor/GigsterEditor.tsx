@@ -7,6 +7,8 @@
  * editor is kept as a Hub draft (/preview/drafts/profile-editor-v1/).
  */
 import { APPROVED_EDIT_HINT, APPROVED_NOT_PUBLIC, APPROVED_NOT_PUBLIC_LINE, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
+import { useEditorView, setEditorView } from "./useEditorView";
+import type { EditorView as View } from "@/lib/profile/editor-view";
 import { departmentFieldRetired } from "@/lib/profile/department-retirement";
 import { adoptStored, videoLinksEnabled } from "@/lib/profile/video-links";
 import { profileDetailsEnabled } from "@/lib/profile/details";
@@ -81,7 +83,7 @@ function EditorSkeleton() {
   );
 }
 
-type View = "edit" | "preview";
+
 
 function Editor({ personId }: { personId: string }) {
   const toast = useToast();
@@ -95,7 +97,7 @@ function Editor({ personId }: { personId: string }) {
   const [save, setSave] = React.useState<SaveState>({ status: "idle" });
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [summary, setSummary] = React.useState(false);
-  const [view, setView] = React.useState<View>("edit");
+  const view = useEditorView();
   const [submitting, setSubmitting] = React.useState(false);
   const live = useLiveEditWarning(person?.status);
   const dirty = React.useRef(false);
@@ -236,14 +238,14 @@ function Editor({ personId }: { personId: string }) {
   const rank = (k: keyof ProfileFields) => { const i = gigsterItems.findIndex((x) => x.id === gigsterItemOf(k)); return i < 0 ? 99 : i; };
   const errorList = (Object.entries(errors).filter(([, m]) => m) as [keyof ProfileFields, string][]).sort((a, b) => rank(a[0]) - rank(b[0]));
 
-  const switchView = (v: View) => { setView(v); window.scrollTo({ top: 0 }); };
+  const switchView = (v: View) => { setEditorView(v); window.scrollTo({ top: 0 }); };
 
   const submit = async () => {
     const found = validateGigster(d, template);
     if (Object.keys(found).length) {
       setErrors(found);
       setSummary(true);
-      setView("edit");
+      setEditorView("edit");
       requestAnimationFrame(() => { summaryRef.current?.scrollIntoView({ block: "start" }); summaryRef.current?.focus({ preventScroll: true }); });
       return;
     }

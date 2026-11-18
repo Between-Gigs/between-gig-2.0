@@ -129,7 +129,7 @@ export function validateStep(step: number, d: ProfileFields, template = readProf
   if (step === 3 && d.about.length > ABOUT_MAX) e.about = `Keep About me to ${ABOUT_MAX} characters. It's ${d.about.length} now.`;
   if (step === 3) {
     for (const key of Object.keys(stageTwoLimits) as (keyof typeof stageTwoLimits)[]) {
-      if ((d[key]?.length ?? 0) > stageTwoLimits[key]) e[key] = `Keep this answer to ${stageTwoLimits[key]} characters.`;
+      if (key !== "bookingMinimum" && (d[key]?.length ?? 0) > stageTwoLimits[key]) e[key] = `Keep this answer to ${stageTwoLimits[key]} characters.`;
     }
     if (d.earliestStart && !startDateLabel(d.earliestStart)) e.earliestStart = "Choose a valid calendar date.";
   }
@@ -178,7 +178,7 @@ export const gigsterItems = [
   { id: "experience", label: "How customers benefit from your experience", fields: ["about"] },
   { id: "credits", label: "A credit", fields: ["credits", "imdb", "linkedin"] },
   { id: "title", label: "A professional title", fields: ["title"] },
-  { id: "rate", label: "Your rate and minimum", fields: ["rate", "basis", "bookingMinimum", "rateOptions", "hourlyRate", "minimumHours", "projectMinimum"] },
+  { id: "rate", label: "Your rate and minimum", fields: ["rate", "basis", "rateOptions", "hourlyRate", "minimumHours", "projectMinimum"] },
   { id: "personality", label: "A personality question", fields: ["personality", "personalityQuestion"] },
   { id: "contact", label: "Private booking contact", fields: ["bookingMobile"] },
 ] as const satisfies readonly { id: string; label: string; fields: readonly (keyof ProfileFields)[] }[];

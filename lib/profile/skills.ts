@@ -16,3 +16,11 @@ export function skillAddError(query:string,selected:readonly string[]):string|un
  if(selected.some(v=>skillIdentity(v)===skillIdentity(label)))return "That skill is already selected.";
  if(selected.length>=SKILL_LIMIT)return `Choose up to ${SKILL_LIMIT} skills. Remove one before adding another.`;
 }
+
+/** An explicit comma/Enter/paste batch is atomic. Existing saved strings are never normalized. */
+export function addSkillEntries(raw:string,selected:readonly string[]):{values?:string[];error?:string}{
+ const parts=raw.split(/[,\r\n]+/).map(v=>v.trim()).filter(Boolean),next=[...selected];
+ if(!parts.length)return {error:"Enter a skill name."};
+ for(const part of parts){const label=skillLabel(part);if(next.some(v=>skillIdentity(v)===skillIdentity(label)))continue;const error=skillAddError(part,next);if(error)return {error};next.push(label);}
+ return {values:next};
+}

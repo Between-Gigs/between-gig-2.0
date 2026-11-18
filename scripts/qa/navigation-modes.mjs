@@ -148,7 +148,25 @@ try {
     assert.equal(await page.locator("html").getAttribute("data-unstyled"), "");
     assert.equal(new URL(page.url()).searchParams.get("look"), "modern", "personal sync preserves explicit shared-look entry");
     const entryNav = await nav();
-    await entryNav.getByRole("link", { name: "People", exact: true }).click();
+    // NavLink names include the asynchronously loaded count, e.g. "People, 31 invited so far".
+    // Match both legitimate states while still proving the exact destination and accessible label.
+    const entryDiagnostic = await page.evaluate(() => ({
+      url: location.href, look: document.documentElement.dataset.look,
+      unstyled: document.documentElement.hasAttribute("data-unstyled"),
+      mode: document.querySelector("[data-navigation-mode]")?.getAttribute("data-navigation-mode"),
+      session: JSON.parse(localStorage.getItem("bg2-sample-v2") || "null")?.session,
+      preferences: Object.fromEntries(Object.keys(localStorage).filter(key => key.startsWith("bg2-navigation-preferences-v1:sample:")).map(key => [key, localStorage.getItem(key)])),
+    }));
+    entryDiagnostic.navigation = await entryNav.ariaSnapshot();
+    fs.writeFileSync(`deliverables/navigation-modes/before-people-${width}-${theme}.json`, JSON.stringify(entryDiagnostic, null, 2));
+    await shot("before-people");
+    console.log(`STEP ${width}/${theme}: before People ${JSON.stringify(entryDiagnostic)}`);
+    assert.equal(entryDiagnostic.mode, "developer", "ordinary owner entry preserves saved Developer mode");
+    assert.equal(entryDiagnostic.session?.role, "owner", "drawer navigation does not change the sample owner identity");
+    const people = entryNav.getByRole("link", { name: /^People(?:, \d+ invited so far)?$/ });
+    assert.equal(await people.count(), 1, "one accessible People destination with its optional loaded count");
+    assert.equal(await people.getAttribute("href"), "/owners/people/", "People retains the intended owner route");
+    await people.click();
     await page.waitForURL("**/owners/people/");
     assert.equal(await page.locator("html").getAttribute("data-look"), "modern", "shared look remains in this document after ordinary navigation removes its query");
     assert.equal(await page.locator("html").getAttribute("data-unstyled"), "", "explicit wireframe entry also survives ordinary navigation");
@@ -159,7 +177,16 @@ try {
     assert.equal(new URL(page.url()).searchParams.has("look"), false, "manual personal choice consumes the shared entry");
     await page.keyboard.press("Escape");
     await header.getByRole("button", { name: /^Theme:/ }).filter({ visible: true }).click();
-    await page.getByRole("menuitemradio", { name: "Styled", exact: true }).click();
+    const themeMenu = page.getByRole("menu"); await themeMenu.waitFor();
+    const themeDiagnostic = { url: page.url(), menu: await themeMenu.ariaSnapshot() };
+    fs.writeFileSync(`deliverables/navigation-modes/before-styled-${width}-${theme}.json`, JSON.stringify(themeDiagnostic, null, 2));
+    await shot("before-styled");
+    console.log(`STEP ${width}/${theme}: before Styled ${JSON.stringify(themeDiagnostic)}`);
+    // DS Menu exposes both its label and description as the radio item's accessible name.
+    const styled = themeMenu.getByRole("menuitemradio", { name: "Styled The chosen theme", exact: true });
+    assert.equal(await styled.count(), 1, "one Styled radio choice with its complete accessible name");
+    assert.equal(await styled.getAttribute("aria-checked"), "false", "explicit wireframe entry is still active before the manual choice");
+    await styled.click();
     assert.equal(new URL(page.url()).searchParams.has("unstyled"), false, "manual Styled choice consumes the explicit unstyled entry");
     await page.waitForFunction(() => !document.documentElement.hasAttribute("data-unstyled"));
     await page.evaluate(() => window.bgSample.signInAs("gigster", "grace-liu")); await page.goto(local.url + "/profile/canvas/");
@@ -170,7 +197,7 @@ try {
     await page.goto(local.url + "/hub/"); await account.waitFor();
     const previewNav = await nav();
     await previewNav.getByRole("link", { name: "Staff", exact: true }).waitFor();
-    await previewNav.getByRole("link", { name: "People", exact: true }).waitFor();
+    await previewNav.getByRole("link", { name: /^People(?:, \d+ invited so far)?$/ }).waitFor();
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).session.role), "gigster", "complete Developer directory does not promote a fictional Gigster");
     if (width < 1024) await page.keyboard.press("Escape");
     await page.goto(local.url + "/owners/developer/"); await page.getByText("Owners only", { exact: true }).waitFor();

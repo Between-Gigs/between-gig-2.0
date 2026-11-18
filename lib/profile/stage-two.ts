@@ -15,7 +15,6 @@ export function startDateLabel(value: string | undefined) {
 export function publicBookingRows(fields: Pick<ProfileFields, "earliestStart" | "bookingMinimum" | "personality">): [string, string][] {
   const rows: [string, string][] = [
     ["Earliest start date", startDateLabel(fields.earliestStart)],
-    ["Minimum booking", fields.bookingMinimum?.trim() ?? ""],
     ["A little about me", fields.personality?.trim() ?? ""],
   ];
   return rows.filter(([, value]) => value !== "");

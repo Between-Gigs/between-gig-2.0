@@ -26,10 +26,6 @@ export function BookingFields({ fields: f, email, set, required, errors = {} }: 
         hint="The first calendar day you could start a project.">
         <DateField id="f-earliestStart" value={f.earliestStart ?? ""} invalid={!!errors.earliestStart} onChange={set("earliestStart")} />
       </Field>
-      <Field label="Minimum booking" optional={optional("bookingMinimum")} error={errors.bookingMinimum}>
-        <Input id="f-bookingMinimum" maxLength={stageTwoLimits.bookingMinimum} value={f.bookingMinimum ?? ""}
-          placeholder="e.g. Two hours, half a day, or one project" onChange={(e) => set("bookingMinimum")(e.target.value)} />
-      </Field>
       <Field label="What’s one thing about you that would make a client smile?" optional={optional("personality")} error={errors.personality}>
         <Textarea id="f-personality" rows={2} maxLength={stageTwoLimits.personality} value={f.personality ?? ""}
           placeholder="My emergency kit always includes cake candles." onChange={(e) => set("personality")(e.target.value)} />
