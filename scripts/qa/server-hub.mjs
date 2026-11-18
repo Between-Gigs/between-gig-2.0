@@ -39,9 +39,15 @@ try {
   assert.equal((await page.goto(base + "/hub/emails/")).status(), 200);
   await page.getByText("Nothing here sends email.", { exact: false }).waitFor();
   await page.getByRole("link", { name: "Diagnostic email", exact: true }).click();
+  assert.equal(await page.getByRole("button", { name: "Send test email", exact: true }).isDisabled(), true, "sample template test cannot send");
+  await page.getByRole("radiogroup", { name: "Send type" }).getByRole("radio", { name: "Real email", exact: true }).click();
+  assert.equal(await page.getByRole("button", { name: "Real send unavailable", exact: true }).isDisabled(), true);
+  await page.getByText("Existing one-time diagnostic authorization and receipt", { exact: true }).click();
   assert.equal(await page.getByRole("button", { name: "Send one diagnostic", exact: true }).isDisabled(), true, "sample diagnostic cannot send");
   assert.equal((await page.goto(base + "/owners/emails/")).status(), 401);
   assert.equal((await fetch(base + "/api/emails/sendDiagnostic/", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ args: [] }) })).status, 401);
+  const templateTest = { args: [{ name: "diagnostic", recipient: "fictional@example.invalid", requestId: "11111111-1111-4111-8111-111111111111", startedAt: Date.now() }] };
+  assert.equal((await fetch(base + "/api/emails/testTemplate/", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(templateTest) })).status, 401);
   await page.goto(base + "/hub/emails/");
   assert.equal((await page.reload()).status(), 200);
   assert.equal((await page.goto(base + "/owners/staff/")).status(), 401);
@@ -55,6 +61,9 @@ try {
   const anonymousDiagnostic = await fetch(base + "/api/emails/sendDiagnostic/", { method: "POST", headers: { "content-type": "application/json", cookie: gateCookie }, body: JSON.stringify({ args: [] }) });
   assert.equal(anonymousDiagnostic.status, 401);
   assert.deepEqual(await anonymousDiagnostic.json(), { error: "unauthorized" });
+  const anonymousTemplateTest = await fetch(base + "/api/emails/testTemplate/", { method: "POST", headers: { "content-type": "application/json", cookie: gateCookie }, body: JSON.stringify(templateTest) });
+  assert.equal(anonymousTemplateTest.status, 401);
+  assert.deepEqual(await anonymousTemplateTest.json(), { error: "unauthorized" });
   assert.deepEqual(errors, []);
   console.log("PASS: server Hub public without cookies; canonical aliases, client navigation, refresh and 390/420px; real staff routes remain protected.");
 } finally { await browser?.close(); server.kill(); }

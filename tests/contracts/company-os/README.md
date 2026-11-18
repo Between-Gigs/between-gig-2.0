@@ -8,7 +8,7 @@ Run against its authenticated local checkout:
 COMPANY_OS_CONTRACT_ROOT=/path/to/Company-OS pnpm exec vitest run lib/server/company-os-idempotency-contract.test.ts
 ```
 
-The test reads the actual `apps/api/src/services/idempotency.ts` and `apps/api/src/errors.ts` at reviewed commit `dfca42e7e4fdb61b66c057c654ff12cf81488b66`, verifies their SHA256 fingerprints, and uses the TypeScript AST to execute the actual parser, error class and replay-window constant. It does not rewrite the parser or require a database/provider. Source drift fails the test for review.
+The test reads the actual `apps/api/src/services/idempotency.ts` and `apps/api/src/errors.ts` at reviewed deployed API 1.20.0 commit `de87665c845342b7340bc9e14a4ec4d2666ce523`, verifies their SHA256 fingerprints, and uses the TypeScript AST to execute the actual parser, error class and replay-window constant. The parser is unchanged from the prior pin; the reviewed error-class file adds safe audit-reason handling. It does not rewrite the parser or require a database/provider. Source drift fails the test for review.
 
 Without `COMPANY_OS_CONTRACT_ROOT`, the private-source contract tests are explicitly skipped. They must be run separately with the private checkout at release; public CI does not have its credentials. Ordinary gateway and expiry tests still run in public CI. This limitation must not be described as live backend/provider integration verification.
 

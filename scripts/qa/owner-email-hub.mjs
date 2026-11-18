@@ -41,8 +41,10 @@ try {
     assert.notEqual(colors[0], colors[1]); assert.equal(colors[0], colors[2]); assert.equal(colors[1], colors[3]);
     await page.getByRole("button", { name: "Phone preview", exact: true }).click();
     await page.getByRole("button", { name: "Desktop preview", exact: true }).click();
-    assert.equal(await page.getByRole("button", { name: "Send one diagnostic", exact: true }).isDisabled(), true);
+    assert.equal(await page.getByRole("button", { name: "Send test email", exact: true }).isDisabled(), true);
     await page.getByRole("radiogroup", { name: "Send type" }).getByRole("radio", { name: "Real email", exact: true }).click();
+    assert.equal(await page.getByRole("button", { name: "Real send unavailable", exact: true }).isDisabled(), true);
+    await page.getByText("Existing one-time diagnostic authorization and receipt", { exact: true }).click();
     assert.equal(await page.getByRole("button", { name: "Send one diagnostic", exact: true }).isDisabled(), true);
     await page.screenshot({ path: `deliverables/owner-email-hub/diagnostic-${width}-${os}.png`, fullPage: true });
     await page.getByRole("link", { name: "Emails", exact: true }).last().click();

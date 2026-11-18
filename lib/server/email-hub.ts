@@ -1,6 +1,5 @@
 import { reusableEmailTest } from "../email-test-retry";
-import { hubEmailKeys, plainRecipient, type EmailHubStatus } from "../email-hub";
-import type { EmailTemplate } from "../data/types";
+import { testEmailKeys, plainRecipient, type EmailHubStatus, type EmailSendName } from "../email-hub";
 import type { Ctx } from "./gigs";
 import { CompanyOsError, type Row } from "./companyos";
 async function owner(ctx: Ctx) {
@@ -21,7 +20,7 @@ export async function emailHubStatus(ctx: Ctx, args: unknown[]): Promise<EmailHu
   let automations: Row[] | null = null;
   try { automations = await ctx.cos.all(ctx.cred, { entity: "automation" }); } catch { /* explicitly unknown below */ }
   const result: EmailHubStatus = {};
-  for (const [name, key] of Object.entries(hubEmailKeys)) {
+  for (const [name, key] of Object.entries(testEmailKeys)) {
     const row = choose(rows, key);
     const enabled = automations?.filter(r => r.data.template === key && r.data.active !== false && Array.isArray(r.data.channels) && r.data.channels.includes("email"));
     let testEnabled = false;
@@ -31,7 +30,7 @@ export async function emailHubStatus(ctx: Ctx, args: unknown[]): Promise<EmailHu
         testEnabled = status.data.enabled === true;
       } catch { /* unsupported or disabled backend; fail closed */ }
     }
-    result[name as EmailTemplate] = {
+    result[name as EmailSendName] = {
       lifecycle: "unknown", // message_template.active is availability, not a recorded approval.
       content: row ? row.data.active === false ? "disabled" : "enabled" : rows.some(r => r.data.key === key) ? "unknown" : "not_installed",
       usage: enabled?.length ? "configured" : name === "sign-in-code" ? "external" : name === "invite" ? "manual" : automations === null ? "unknown" : "inactive",
@@ -48,11 +47,11 @@ export async function testHubEmail(ctx: Ctx, args: unknown[]) {
   const input = args[0];
   if (args.length !== 1 || !input || typeof input !== "object" || Array.isArray(input)) throw new CompanyOsError(400, "invalid_test_request");
   const p = input as Record<string, unknown>;
-  if (Object.keys(p).sort().join(",") !== "name,recipient,requestId,startedAt" || typeof p.name !== "string" || !Object.hasOwn(hubEmailKeys, p.name) || typeof p.requestId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(p.requestId)) throw new CompanyOsError(400, "invalid_test_request");
+  if (Object.keys(p).sort().join(",") !== "name,recipient,requestId,startedAt" || typeof p.name !== "string" || !Object.hasOwn(testEmailKeys, p.name) || typeof p.requestId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(p.requestId)) throw new CompanyOsError(400, "invalid_test_request");
   if (!reusableEmailTest({ startedAt: typeof p.startedAt === "number" ? p.startedAt : undefined })) throw new CompanyOsError(409, "test_retry_window_expired");
   const recipient = plainRecipient(p.recipient);
   if (!recipient) throw new CompanyOsError(400, "invalid_recipient");
-  const row = choose(await templates(ctx), hubEmailKeys[p.name as EmailTemplate]);
+  const row = choose(await templates(ctx), testEmailKeys[p.name as EmailSendName]);
   if (!row || row.data.active === false) throw new CompanyOsError(409, "template_unavailable");
   // Existing Company OS test API adds TEST markings, safe fictional data, inert links,
   // rate limits and durable replay. No contact creation, invitation or publication.

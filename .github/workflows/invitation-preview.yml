@@ -11,6 +11,9 @@ on:
       - 'scripts/qa/owner-email-hub.mjs'
       - 'scripts/qa/email-send-controls.mjs'
       - 'scripts/qa/manual-email-resends.mjs'
+      - 'scripts/qa/diagnostic-email-tests.mjs'
+      - 'lib/email-hub*'
+      - 'lib/server/email-hub*'
       - 'lib/email-manual*'
       - 'lib/server/manual-emails*'
       - 'app/api/emails/**'
@@ -40,6 +43,7 @@ jobs:
       - run: CHROMIUM_PATH=$(command -v google-chrome) node scripts/qa/owner-email-hub.mjs
       - run: CHROMIUM_PATH=$(command -v google-chrome) node scripts/qa/email-send-controls.mjs
       - run: CHROMIUM_PATH=$(command -v google-chrome) node scripts/qa/manual-email-resends.mjs
+      - run: CHROMIUM_PATH=$(command -v google-chrome) node scripts/qa/diagnostic-email-tests.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -48,3 +52,4 @@ jobs:
             deliverables/invitation/
             deliverables/owner-email-hub/
             deliverables/manual-email-resends/
+            deliverables/diagnostic-template-tests/
