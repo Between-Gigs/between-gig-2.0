@@ -134,7 +134,7 @@ export function AccountMenu() {
           className="grid size-11 place-items-center rounded-full ring-2 ring-line transition-shadow duration-fast hover:ring-ink-brand aria-expanded:ring-ink-brand swiss:rounded-none swiss:ring-0 swiss:hover:ring-2 swiss:hover:ring-line-strong swiss:aria-expanded:ring-4 swiss:aria-expanded:ring-line-strong">
           <Avatar name={displayName} src={photo} size="md" className="swiss:size-11 swiss:rounded-none swiss:text-label-md" />
         </button>
-      } />{settings && <MySettings open={settings} onClose={() => setSettings(false)} />}</>
+      } /><MySettings open={settings} onClose={() => setSettings(false)} /></>
   );
 }
 

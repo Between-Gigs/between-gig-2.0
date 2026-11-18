@@ -12,6 +12,7 @@ vi.mock("@ds/components", () => ({
   Avatar: () => React.createElement("span", null, "Avatar"),
   IconButton: () => null,
   Logo: () => React.createElement("span", null, "Logo"),
+  Modal: () => null,
   Menu: ({ trigger }: { trigger: React.ReactNode }) => trigger,
   ThemeToggle: () => React.createElement("button", { "aria-label": "Change theme" }),
   cx: (...items: unknown[]) => items.filter(Boolean).join(" "),

@@ -186,7 +186,7 @@ export function OwnerFrame({ children, section: fixed, fit: fixedFit = false, mo
             {data.kind === "sample" && <p className={cx("mx-auto w-full max-w-7xl shrink-0 3xl:max-w-(--breakpoint-2xl) px-4 text-caption text-ink-muted sm:px-6 lg:px-10", fit ? "pb-6 lg:pb-3" : "pb-6")}>Sample data: everyone shown here is fictional.</p>}
           </main>
         </div>
-        {!brand && mode === "owner" && <TabBar counts={counts} section={section} onOpenNav={() => setDrawer(true)} />}
+        {!brand && mode === "owner" && <OwnerMobileTabs counts={counts} section={section} onOpenNav={() => setDrawer(true)} />}
       </div>
     </FrameContext.Provider></SectionContext.Provider></ModeContext.Provider>
   );
@@ -340,9 +340,10 @@ function SidebarSections({ counts, section, onNavigate, drawer = false }: { coun
  * (with its count), People, Waitlist, and More (grouped navigation). It sits under the page's own scroller, so it
  * never covers the page or a sticky bar.
  */
-function TabBar({ counts, section, onOpenNav }: { counts: Record<CountKey, number> | null; section?: string; onOpenNav: () => void }) {
+export function OwnerMobileTabs({ counts, section, onOpenNav }: { counts: Record<CountKey, number> | null; section?: string; onOpenNav: () => void }) {
   const active = useActive(section);
-  const all = sections.flatMap((s) => s.items);
+  const visibleSections = useSections();
+  const all = visibleSections.flatMap((s) => s.items);
   const tabs = all.filter((i) => i.href.startsWith("/owners/")).slice(0, 4);
   const rest = all.filter((i) => !tabs.includes(i));
   const moreActive = rest.some(active);

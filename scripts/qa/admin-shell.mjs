@@ -75,7 +75,7 @@ try {
       await frame.getByText("who need your expertise.", { exact: true }).waitFor();
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "owner preview toolbar fits narrow screens");
       await page.waitForFunction(() => document.querySelector('iframe[data-admin-page-preview]')?.contentDocument?.querySelector('[data-admin-shell]') === null);
-      assert.equal(await frame.locator("header").count(), 1); assert.equal(await frame.locator("footer").count(), 1);
+      assert.equal(await frame.locator("header").filter({ visible: true }).count(), 1); assert.equal(await frame.locator("footer").count(), 1);
       assert.equal(await frame.locator("main").count(), 1); assert.equal(await page.locator("main").count(), 1);
       assert.equal(await frame.locator('iframe[data-admin-page-preview]').count(), 0, "no recursive admin frame");
       await frame.getByRole("button", { name: /^Account:/ }).click();
@@ -97,7 +97,7 @@ try {
       await page.goto(`${url}/owners/`); await page.getByText("Owners only", { exact: true }).waitFor();
       assert.equal(await page.locator("[data-admin-shell]").count(), 0);
       await page.goto(`${url}/professionals/`);
-      assert.equal(await page.locator("[data-admin-shell]").count(), 0); assert.equal(await page.locator("header").count(), 1); assert.equal(await page.locator("footer").count(), 1);
+      assert.equal(await page.locator("[data-admin-shell]").count(), 0); assert.equal(await page.locator("header").filter({ visible: true }).count(), 1); assert.equal(await page.locator("footer").count(), 1);
     }
     assert.deepEqual(errors, []); await context.close();
     console.log(`PASS: persistent admin shell ${look}/${width}/${theme}: navigation, no role elevation, faithful public chrome, fit/axe`);
