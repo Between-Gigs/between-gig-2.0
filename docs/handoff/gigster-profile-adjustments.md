@@ -25,3 +25,13 @@ Two independent source reviewers identified the video edit-target bug and phone 
 No production release is established by this document. Follow Cut release and Deploy web (prod) with an annotated main-branch version tag and the required Company OS release. Coordinate the package version and runtime dispatch with the ongoing diagnostic release. Record exact commit, CI, Railway result and HTTP verification in the release receipt. Roll back through the previous approved release tag if needed.
 
 Playbook impact: none.
+
+## Showcase photo-fit follow-up (isolated, not released)
+
+The frontend now bridges photo `#fit=cx,cy,z,a` presentation to optional Company OS `file.data.image_fit`, without changing photo bytes, media IDs or lightbox source. The editor enables Adjust alongside video links. Existing PR107 collection-revision, latest-selection and profile-identity guards are unchanged. Only photo files receive alignment; video thumbnails retain their separate behavior.
+
+Wire contract: four finite decimals (at most four decimal places), centers 0–1, zoom 1–4, aspect greater than zero. Invalid incoming fit fails explicitly, rather than silently dropping a sample. Invalid/missing stored metadata renders the original. An absent fragment preserves existing metadata for older clients; saving a default centered fit explicitly resets the visual alignment. Backend null means cleared. New photos upload original bytes and confirm first, then PATCH the confirmed file. Metadata failures are surfaced, never swallowed as a best-effort ordering change; a failed new-photo fit removes that newly uploaded file best-effort to avoid duplicate retries. Multi-step sample saves are not transactional; existing successful earlier mutations may remain on failure.
+
+Fit is reviewed content. Existing publication transitions and reader row policy remain backend-owned: a public owner edit must return to review, and unsupported staff/review-disabled changes must fail with `photo_fit_requires_review`. UI messages also cover `invalid_image_fit` and `image_fit_not_available`. No reviewer permissions, tenant settings, upload contract or live data are changed here.
+
+Release prerequisite: coordinated Company OS files 1.2.0 / profiles 1.11.0 (final API release tag pending), schema synchronized, safe published-reader metadata projection and test-environment readback verified. Do not deploy this frontend before backend readiness is proven. Authenticated production save/reload and published-profile acceptance remain open. Local tests are not production evidence.
