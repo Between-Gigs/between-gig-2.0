@@ -23,12 +23,26 @@ try {
  await page.goto(origin); await page.getByLabel("Test recipient · one email address").fill("a@example.org,b@example.org"); assert.equal(await page.getByRole("button",{name:"Send test email",exact:true}).isDisabled(),true);
  await page.getByLabel("Test recipient · one email address").fill("a@example.org");
  page.once("dialog",d=>d.dismiss()); await page.getByRole("button",{name:"Send test email",exact:true}).click(); assert.equal(tests.length,0);
- page.once("dialog",d=>d.accept()); await page.getByRole("button",{name:"Send test email",exact:true}).dblclick(); await page.getByText(/Test request accepted/).waitFor(); assert.equal(tests.length,1);
- await page.reload(); await page.getByRole("button",{name:"Check / retry same test",exact:true}).waitFor(); page.once("dialog",d=>d.accept()); await page.getByRole("button",{name:"Check / retry same test",exact:true}).click(); await page.getByText(/Test request accepted/).waitFor(); assert.equal(tests.length,2); assert.equal(tests[0].args[0].requestId,tests[1].args[0].requestId);
+ page.once("dialog",d=>d.accept()); await page.getByRole("button",{name:"Send test email",exact:true}).dblclick(); await page.getByText(/Test request accepted/).waitFor(); assert.equal(tests.length,1); assert.equal(await page.getByRole("button",{name:"Check / retry same test",exact:true}).isDisabled(),false); assert.equal(await page.getByText(/saved test's retry window has expired/).count(),0);
+ await page.reload(); await page.getByRole("button",{name:"Check / retry same test",exact:true}).waitFor(); page.once("dialog",d=>d.accept()); await page.getByRole("button",{name:"Check / retry same test",exact:true}).click(); await page.getByText(/Test request accepted/).waitFor(); assert.equal(tests.length,2); assert.deepEqual(tests[0].args[0],tests[1].args[0],"retry preserves recipient, UUID and original startedAt");
  await page.evaluate(()=>{window.fixtureOwner="second-owner@example.org";window.dispatchEvent(new Event("fixture-owner"));});
  await page.getByRole("button",{name:"Send test email",exact:true}).waitFor(); assert.equal(await page.getByLabel("Test recipient · one email address").inputValue(),"");
  await page.evaluate(()=>{window.fixtureOwner="owner@example.org";window.dispatchEvent(new Event("fixture-owner"));});
  await page.getByRole("button",{name:"Check / retry same test",exact:true}).waitFor(); assert.equal(await page.getByLabel("Test recipient · one email address").inputValue(),"a@example.org");
+ // A restored expired, future or legacy attempt must never gain a fresh replay window.
+ const storedKey="bg-email-test:owner%40example.org:invite";
+ for(const startedAt of [Date.now()-23*3600000,Date.now()-24*3600000,Date.now()+3600000,null]) {
+   await page.evaluate(({storedKey,startedAt})=>{sessionStorage.setItem(storedKey,JSON.stringify({recipient:"a@example.org",requestId:"11111111-1111-4111-8111-111111111111",...(startedAt===null?{}:{startedAt})}));},{storedKey,startedAt});
+   await page.reload(); await page.getByText(/saved test's retry window has expired/).waitFor();
+   assert.equal(await page.getByRole("button",{name:"Check / retry same test",exact:true}).isDisabled(),true); assert.equal(tests.length,2);
+   page.once("dialog",d=>d.dismiss());await page.getByRole("button",{name:"Start a new test",exact:true}).click();assert.equal(await page.getByRole("button",{name:"Check / retry same test",exact:true}).isDisabled(),true);
+ }
+ // The timer also closes a window on a page kept open, without a reload.
+ await page.clock.install();
+ await page.evaluate(({storedKey})=>sessionStorage.setItem(storedKey,JSON.stringify({recipient:"a@example.org",requestId:"11111111-1111-4111-8111-111111111111",startedAt:Date.now()-23*3600000+2000})),{storedKey});
+ await page.reload(); await page.getByRole("button",{name:"Check / retry same test",exact:true}).waitFor();assert.equal(await page.getByRole("button",{name:"Check / retry same test",exact:true}).isDisabled(),false);
+ await page.clock.fastForward(3000);assert.equal(await page.getByRole("button",{name:"Check / retry same test",exact:true}).isDisabled(),true);assert.equal(tests.length,2);
+ page.once("dialog",d=>d.accept());await page.getByRole("button",{name:"Start a new test",exact:true}).click();await page.getByRole("button",{name:"Send test email",exact:true}).waitFor();
  await page.getByRole("radio",{name:"Real email",exact:true}).click(); await page.getByLabel("Email addresses",{exact:true}).fill("a@example.org"); page.once("dialog",d=>d.dismiss()); await page.getByRole("button",{name:"Send to 1 address",exact:true}).click(); assert.equal(real,0);
  page.once("dialog",d=>d.accept()); await page.getByRole("button",{name:"Send to 1 address",exact:true}).dblclick(); await page.getByText(/Outcome uncertain\. Do not resend/).waitFor(); assert.equal(real,1);
  await page.getByRole("radio",{name:"Test email",exact:true}).click(); await page.getByRole("radio",{name:"Real email",exact:true}).click(); await page.getByText(/An invitation attempt is recorded/).waitFor(); assert.equal(await page.getByRole("button",{name:"Send invitation",exact:true}).isDisabled(),true);
