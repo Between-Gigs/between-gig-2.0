@@ -21,7 +21,7 @@ import { offSetServices, onSetSkills, waitlistCategories } from "@/lib/data/taxo
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { isReviewedStatus, publishGateOn } from "@/lib/profile/publish-gate";
 import { videoLinksEnabled } from "@/lib/profile/video-links";
-import { SAMPLE_KINDS, sampleRefusalMessage, samplesFrom, saveSamples, serialised } from "./work-samples";
+import { assertSavedPhotoFits, SAMPLE_KINDS, sampleRefusalMessage, samplesFrom, saveSamples, serialised } from "./work-samples";
 import { CompanyOsError, and, eq, isIn, type AdminUser, type BatchOp, type CompanyOs, type Credential, type Row } from "./companyos";
 
 export interface Ctx {
@@ -419,6 +419,7 @@ export function draftOps(personId: string, fields: ProfileFields, existing: { pr
 export const saveDraft = (ctx: Ctx, personId: string, input: ProfileFields): Promise<ProfileDraft> => serialised(personId, () => saveDraftNow(ctx, personId, input));
 
 async function saveDraftNow(ctx: Ctx, personId: string, input: ProfileFields): Promise<ProfileDraft> {
+  if (videoLinksEnabled() && Array.isArray(input?.workSamples)) assertSavedPhotoFits(input.workSamples);
   // Names make the public handle (at most 60 characters, getPublic), so they're capped as the editor caps them.
   const fields = typeof input?.name === "string" && input.name.length > 60 ? { ...input, name: input.name.trim().replace(/\s+/g, " ").slice(0, 60).trim() } : input;
   const own = await ownProfile(ctx, personId);
