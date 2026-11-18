@@ -80,7 +80,7 @@ describe("credentials", () => {
 
   it("every route is in the table with an access rule", () => {
     expect(Object.keys(ROUTES).sort()).toEqual([
-      "auth.session", "auth.syncExternal", "emails.diagnosticStatus", "emails.hubStatus", "emails.sendDiagnostic", "emails.testTemplate", "funnel.addDetails", "funnel.joinWaitlist", "funnel.privacyRequest", "funnel.submitSketch",
+      "auth.session", "auth.syncExternal", "emails.diagnosticStatus", "emails.hubStatus", "emails.manualStatus", "emails.previewReal", "emails.realReceipt", "emails.releaseVersion", "emails.sendDiagnostic", "emails.sendReal", "emails.testTemplate", "funnel.addDetails", "funnel.joinWaitlist", "funnel.privacyRequest", "funnel.submitSketch",
       "owners.activity", "owners.approve", "owners.dashboard", "owners.invite", "owners.inviteAddresses", "owners.requestChanges", "owners.resendInvite", "owners.reviewQueue", "owners.waitlist",
       "people.get", "people.getPublic", "people.list", "people.similar", "profiles.getDraft", "profiles.getProfile", "profiles.saveDraft", "profiles.submit",
     ]);

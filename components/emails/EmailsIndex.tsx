@@ -55,7 +55,7 @@ export function EmailsIndex() {
                         <a href={emailTemplateHref(data.kind, n, basePath)} className="rounded-xs after:absolute after:inset-0 group-hover:text-ink-brand">{t.label}</a>
                       </h2>
                       <p className="text-body-sm text-ink-muted">Intended use: {t.when}</p>
-                      <p className="text-body-sm text-ink-subtle">{lifecycleWords}</p>
+                      <p className="text-body-sm text-ink-subtle">{data.kind === "live" ? "Stored approval and publication status in details." : lifecycleWords}</p>
                       <p className="text-body-sm text-ink-subtle">Backend content: {status[n]?.content.replaceAll("_", " ") ?? "not verified"}</p>
                       <p className="text-body-sm text-ink-subtle">{usageWords(status[n])}</p>
                       <dl className="mt-auto grid gap-0.5 border-t border-line pt-3 text-body-sm">

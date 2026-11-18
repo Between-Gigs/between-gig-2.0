@@ -20,6 +20,7 @@ import { cleanSamples } from "./work-samples";
 import { videoLinksEnabled } from "@/lib/profile/video-links";
 import { diagnosticRequest } from "./diagnostic";
 import { emailHubStatus, testHubEmail } from "./email-hub";
+import * as manualEmails from "./manual-emails";
 
 type Access = "optional" | "session" | "owner" | "public" | "funnel";
 type Args = unknown[];
@@ -63,6 +64,11 @@ export function cleanFields(v: unknown): ProfileFields {
 }
 
 export const ROUTES = {
+  "emails.manualStatus": { access: "owner", run: manualEmails.manualStatus },
+  "emails.releaseVersion": { access: "owner", run: manualEmails.releaseVersion },
+  "emails.previewReal": { access: "owner", run: manualEmails.previewReal },
+  "emails.sendReal": { access: "owner", run: manualEmails.sendReal },
+  "emails.realReceipt": { access: "owner", run: manualEmails.realReceipt },
   "emails.hubStatus": { access: "owner", run: emailHubStatus },
   "emails.testTemplate": { access: "owner", run: testHubEmail },
   "emails.diagnosticStatus": { access: "owner", run: (ctx, args) => diagnosticRequest(ctx, args, false) },
