@@ -10,6 +10,8 @@ Valid video links show provider thumbnails immediately, with a fallback. Explici
 
 ## Boundaries
 
+Portfolio follow-up: photo reads are tied to their collection revision. Reorder, remove, replace, video edits and cross-tab updates invalidate delayed photo decoding instead of restoring an old list. A newer photo selection supersedes an older one. An open alignment dialog closes when its collection changes and cannot silently move to another photo; changing away and back does not resurrect the old dialog. Media state remounts for a different profile identity. The focused `scripts/qa/portfolio-edit-guards.mjs` regression uses delayed fictional image responses and cross-tab updates at phone/desktop widths in both themes. This does not add the missing live presentation contract described below.
+
 Live portfolio-photo alignment with video links enabled is still blocked by the current API contract: there is no durable nondestructive file-presentation field. Adjust is restored in local sample mode; it is deliberately unavailable for that live combination. No backend metadata, schema, tenant settings or permissions change is included. Do not claim sample alignment or sample persistence as hosted verification. An additive file presentation contract and reader allowlist would need separate backend coordination.
 
 The service catalogue is separate draft PR82. Its new video-editing option is absent from both BG tenant configurations, so it remains held. This change does not include that catalogue, invitation artwork, diagnostic email controls or navigation mode changes. No messages or emails are sent.
