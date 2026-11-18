@@ -11,6 +11,7 @@ markArea("bg-split:dashboard");
 const same = (a: MenuConfiguration, b: MenuConfiguration) => JSON.stringify(a) === JSON.stringify(b);
 const control = "min-h-11 w-full min-w-0 max-w-full rounded-md border border-line-strong bg-bg px-3 py-2 text-body-md text-ink";
 export function StaffNavigation({ staff }: { staff: StaffSnapshot }) {
+  const accountId = React.useId();
   const [userId, setUserId] = React.useState(staff.currentUserId), [loaded, setLoaded] = React.useState<NavigationSnapshot>(), [draft, setDraft] = React.useState<MenuConfiguration>(DEFAULT_MENU);
   const [busy, setBusy] = React.useState(false), [error, setError] = React.useState(""), [notice, setNotice] = React.useState(""), [keepId, setKeepId] = React.useState("");
   const epoch = React.useRef(0);
@@ -27,7 +28,7 @@ export function StaffNavigation({ staff }: { staff: StaffSnapshot }) {
   const setItems = (ids: readonly NavigationItemId[], on: boolean) => setDraft(previous => ({ ...previous, items: [...new Set(on ? [...previous.items, ...ids] : previous.items.filter(id => !ids.includes(id)))] }));
   return <section className="grid min-w-0 gap-5 rounded-xl border border-line bg-bg p-4 sm:p-6" aria-label="Staff navigation menus">
     <div><h2 className="font-display text-heading-lg text-ink">Navigation menus</h2><p className="mt-2 max-w-3xl text-body-md text-ink-muted">Choose which menus a current superadmin sees. These settings do not grant or revoke permissions, approval rights, publication rights, or access to data. Direct destinations keep their existing authorization.</p></div>
-    <label className="grid min-w-0 w-full max-w-xl gap-2 text-label-md"><span>Staff account</span><select className={control} value={userId} disabled={busy || dirty} onChange={event => { epoch.current++; setUserId(event.target.value); setNotice(""); setError(""); }}>{staff.users.map(user => <option key={user.userId} value={user.userId}>{user.name || user.email}{user.memberships.some(m => m.roleKey === "super_admin") ? "" : " — Gigster menus (not configurable yet)"}</option>)}</select></label>
+    <div className="grid min-w-0 w-full max-w-xl gap-2 text-label-md"><label htmlFor={accountId}>Staff account</label><select id={accountId} className={control} value={userId} disabled={busy || dirty} onChange={event => { epoch.current++; setUserId(event.target.value); setNotice(""); setError(""); }}>{staff.users.map(user => <option key={user.userId} value={user.userId}>{user.name || user.email}{user.memberships.some(m => m.roleKey === "super_admin") ? "" : " — Gigster menus (not configurable yet)"}</option>)}</select></div>
     {error && <p role="alert" className="text-body-md text-ink">{error}</p>}{notice && <p role="status" className="text-body-md text-ink">{notice}</p>}
     {!current ? <p role="status">{error ? "Settings are unavailable. Refresh to try again." : "Loading navigation settings…"}</p> : <>
       <p className="text-body-sm text-ink-muted">{current.source === "sample" ? "Fictional sample. Changes stay in this browser; no Company OS data or access rules change." : "Private database settings for the verified Between Gigs tenant."}</p>
