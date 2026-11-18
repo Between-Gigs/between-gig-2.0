@@ -3,6 +3,7 @@ import { INVITE_COPY, INVITE_REASON, INVITE_UNSUBSCRIBE, invite } from "@/emails
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { INVITE_HERO } from "@/emails/invite-hero";
+import { k } from "@/emails/craft";
 import { light } from "@/emails/tokens";
 import { renderPreview } from "@/components/emails/preview";
 
@@ -97,6 +98,9 @@ describe("canonical Stage 2 invitation", () => {
     expect(email.html).not.toContain("background-image:linear-gradient");
     expect(email.html).not.toContain("-webkit-text-fill-color");
     expect(email.html).toContain(`.e-invite-email .e-invite-html-cta a{color:${light.onActionStrong}!important}`);
+    expect(email.html).toContain(`.e-invite-email .e-invite-html-cta td{background-color:${k.paper}!important}`);
+    expect(email.html).toContain(`.e-invite-email .e-invite-html-cta a{color:${k.ink}!important}`);
+    expect(email.html).toContain(`[data-ogsc] .e-invite-email .e-invite-html-cta td{background-color:${k.paper}!important}`);
     expect(email.html.match(/<h1/g)).toHaveLength(1);
   });
 

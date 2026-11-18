@@ -5,8 +5,8 @@ const dark = `
 .e-invite-email .e-invite-paper p{color:#fbf8f2!important}
 .e-invite-email .e-pad,.e-invite-email .e-subtle{color:#c5d6cc!important}
 .e-invite-email .e-link{color:#bce4cf!important}
-.e-invite-email .e-invite-html-cta td{background-color:#0f3d29!important}
-.e-invite-email .e-invite-html-cta a{color:#ffffff!important}
+.e-invite-email .e-invite-html-cta td{background-color:#f7f3ec!important}
+.e-invite-email .e-invite-html-cta a{color:#0f3d29!important}
 .e-invite-email .e-invite-artwork a,.e-invite-email .e-invite-artwork img{color:#fbf8f2!important}
 `;
 const outlook = dark.trim().split("\n").map(rule => {
