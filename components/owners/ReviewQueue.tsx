@@ -1,4 +1,5 @@
 "use client";
+import { serviceLabel } from "@/lib/profile/service-labels";
 import { publishGateOn } from "@/lib/profile/publish-gate";
 import { Badge, cx } from "@ds/components";
 import { Icon3D } from "@/components/ui/Icon3D";
@@ -70,7 +71,7 @@ function Queue() {
                   leading={<OwnerAvatar id={p.id} name={p.name} src={fields?.photo || undefined} className="size-12 swiss:@md:size-16" textClass="text-heading-sm" />}
                   action="Review" strong={i === 0}
                   badge={i === 0 && (brand ? <Badge tone="warning" size="sm">Oldest</Badge> : <span className="inline-flex h-6 shrink-0 items-center border-2 border-ink px-1.5 text-label-sm font-bold tracking-widest text-ink uppercase">Oldest</span>)}
-                  subtitle={[fields?.position, fields?.services.join(", ")].filter(Boolean).join(" · ")}
+                  subtitle={[fields?.position, fields?.services.map(serviceLabel).join(", ")].filter(Boolean).join(" · ")}
                   meta={<><Meter value={completeness * 100} label="Profile complete" /><AgoPill className="min-w-32">Sent {p.submittedAt ? ago(p.submittedAt).toLowerCase() : ""}</AgoPill></>} />
               ))}
             </ol>

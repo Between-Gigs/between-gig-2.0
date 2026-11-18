@@ -1,4 +1,5 @@
 "use client";
+import { serviceFilterLabel } from "@/lib/profile/service-labels";
 import { Button, Field, Input, Select, Skeleton } from "@ds/components";
 import { ArrowRight, ListChecks, PencilLine, Search } from "lucide-react";
 import Link from "next/link";
@@ -60,7 +61,7 @@ export function ExampleProfiles() {
         <details>
           <summary className="w-fit cursor-pointer py-2 text-label-md text-ink">Filter profiles</summary>
           <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Field label="Service"><Select aria-label="Service" value={filters.service || "all"} options={options("All services", rows?.flatMap((r) => r.profile.fields.services) ?? [])} onValueChange={(v) => setFilter("service", v)} /></Field>
+            <Field label="Service"><Select aria-label="Service" value={filters.service || "all"} options={options("All services", [...(rows?.flatMap((r) => r.profile.fields.services) ?? []), ...(filters.service ? [filters.service] : [])]).map(option => ({ ...option, label: option.value === "all" ? option.label : serviceFilterLabel(option.value) }))} onValueChange={(v) => setFilter("service", v)} /></Field>
             <Field label="Service area"><Select aria-label="Service area" value={filters.area || "all"} options={options("All areas", rows?.flatMap((r) => r.profile.fields.areas) ?? [])} onValueChange={(v) => setFilter("area", v)} /></Field>
             <Field label="Availability"><Select aria-label="Availability" value={filters.availability || "all"} options={[{ value: "all", label: "Any availability" }, ...Object.entries(monthStatusLabel).map(([value, label]) => ({ value, label }))]} onValueChange={(v) => setFilter("availability", v)} /></Field>
             <Field label="Rate basis"><Select aria-label="Rate basis" value={filters.basis || "all"} options={[{ value: "all", label: "Any rate basis" }, ...Object.entries(basisLabel).map(([value, label]) => ({ value, label }))]} onValueChange={(v) => setFilters((f) => ({ ...f, basis: v === "all" ? "" : v as RateBasis, max: "" }))} /></Field>

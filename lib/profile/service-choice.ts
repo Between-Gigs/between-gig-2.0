@@ -1,9 +1,9 @@
 import type { ProfileFields } from "@/lib/data/types";
 export const OTHER_SERVICE = "__other";
 /** Keep unknown current answers visible and offer Other on both new and existing rows. */
-export function serviceSelectOptions(choices: string[], selected: string[], current: string | undefined, otherVisible: boolean) {
+export function serviceSelectOptions(choices: string[], selected: string[], current: string | undefined, otherVisible: boolean, label: (value: string) => string = value => value, matches: (left: string, right: string) => boolean = (left, right) => left === right) {
   return [
-    ...[...new Set([...choices, ...(current ? [current] : [])])].filter(value => value === current || !selected.includes(value)).map(value => ({ value, label: value })),
+    ...[...new Set([...choices, ...(current ? [current] : [])])].filter(value => value === current || !selected.some(saved => matches(saved, value))).map(value => ({ value, label: label(value) })),
     ...(!otherVisible ? [{ value: OTHER_SERVICE, label: "Other — name your service" }] : []),
   ];
 }
