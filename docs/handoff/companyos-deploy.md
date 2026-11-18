@@ -277,3 +277,20 @@ The export holds real people's data: never commit it, attach it to an issue or k
   different code with the Pages deploy token. Every other workflow is pinned to SHAs, and `workflows.test.ts` refuses a
   tag in them; pinning `pages.yml` too is the authors' call (then drop its exception in that test).
 
+
+## Reusing release checks (E9)
+
+Tagged test and production deployments can reuse generic checks from the latest
+successful `Cut release` run on `main` at the **exact deployment commit**. The
+lookup verifies the repository, workflow path, event, commit, completed run, and
+successful `guard`, `checks` and `tag` jobs from the same pinned run attempt. It
+rechecks the run after reading jobs. The deployment summary links that evidence.
+
+Missing, failed, incomplete, mismatched or unreadable API evidence runs the full
+generic checks instead. Branch deployments always run them. An unexpected script
+execution failure stops the job rather than bypassing checks.
+
+This does not skip environment-specific configuration checks, build, secret
+scans, deployment safeguards or the production tag/commit guard. Rollback stays
+the existing previous-tag deployment. Tags predating this workflow correction
+retain their original workflows. No stored email publication or send is involved.
