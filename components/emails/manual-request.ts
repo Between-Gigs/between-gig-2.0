@@ -23,14 +23,21 @@ export class ManualEmailApiError extends Error {
   }
 }
 
+export async function manualEmailToken(signal: AbortSignal) {
+  const token = await apiSource.token();
+  signal.throwIfAborted();
+  if (!token) throw new ManualEmailApiError(401, "owner_sign_in_required");
+  return token;
+}
+
 export async function requestManualEmail<M extends keyof RequestMethods>(
   method: M,
   input: RequestMethods[M]["input"],
   signal: AbortSignal,
+  checkedToken?: string,
 ): Promise<RequestMethods[M]["output"]> {
-  const token = await apiSource.token();
+  const token = checkedToken ?? await manualEmailToken(signal);
   signal.throwIfAborted();
-  if (!token) throw new ManualEmailApiError(401, "owner_sign_in_required");
   const response = await fetch(`${basePath}/api/emails/${method}/`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${token}` },

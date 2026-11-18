@@ -71,10 +71,12 @@ describe("manual owner email", () => {
     expect(manualReceiptStatus("queued")).toBe("Queued for sending");
     expect(manualReceiptStatus("sent")).toBe("Accepted by the email provider");
     expect(manualReceiptStatus("delivered")).toBe("Delivery reported by the email provider");
-    for (const state of [undefined, "scheduled", "queued", "sending", "history_unavailable", "unrecognized"]) {
+    expect(manualReceiptStatus("delivery_unconfirmed")).toBe("Sending stopped; delivery unconfirmed");
+    expect(manualReceiptStatus("failed")).toBe("Sending stopped; delivery unconfirmed");
+    for (const state of [undefined, "scheduled", "queued", "sending", "failed", "delivery_unconfirmed", "history_unavailable", "unrecognized"]) {
       expect(canStartAnotherManualRequest(state)).toBe(false);
     }
-    for (const state of ["sent", "delivered", "failed", "bounced", "cancelled"]) {
+    for (const state of ["sent", "delivered", "bounced", "cancelled"]) {
       expect(canStartAnotherManualRequest(state)).toBe(true);
     }
   });

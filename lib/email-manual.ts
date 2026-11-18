@@ -130,7 +130,7 @@ export function nextReleaseAction(templateId: string | null, sourceHash: string 
 }
 
 export function canStartAnotherManualRequest(status?: string) {
-  return status === "sent" || status === "delivered" || status === "failed" || status === "bounced" || status === "cancelled";
+  return status === "sent" || status === "delivered" || status === "bounced" || status === "cancelled";
 }
 
 const receiptStatuses: Record<string, string> = {
@@ -139,7 +139,8 @@ const receiptStatuses: Record<string, string> = {
   sending: "Sending in progress",
   sent: "Accepted by the email provider",
   delivered: "Delivery reported by the email provider",
-  failed: "Sending failed",
+  failed: "Sending stopped; delivery unconfirmed",
+  delivery_unconfirmed: "Sending stopped; delivery unconfirmed",
   bounced: "Bounced",
   cancelled: "Cancelled",
   history_unavailable: "Delivery history unavailable",

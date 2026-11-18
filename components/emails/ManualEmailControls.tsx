@@ -8,7 +8,7 @@ import {
   type ManualPreview, type Receipt, type ReleaseStatus,
 } from "@/lib/email-manual";
 import { StoredEmailCopy } from "./StoredEmailCopy";
-import { ManualEmailApiError, requestManualEmail, useOwnerEmailOperation } from "./manual-request";
+import { ManualEmailApiError, manualEmailToken, requestManualEmail, useOwnerEmailOperation } from "./manual-request";
 
 type AvailablePreview = Extract<ManualPreview, { available: true }>;
 
@@ -22,12 +22,14 @@ const unavailable: Record<string, string> = {
   review_unavailable: "Company OS could not verify the current review and its notes.",
   original_history_unavailable: "Company OS could not verify the original notification in send history.",
   original_pending: "The original notification is still pending. Check it before resending.",
+  original_delivery_unconfirmed: "Sending stopped on the original notification, but the email provider may already have accepted it.",
   template_missing: "Company OS could not find the applicable stored template.",
   template_ambiguous: "Company OS found more than one applicable stored template.",
   published_release_required: "The applicable stored template needs a published release.",
   delivery_preferences: "The account’s delivery preferences do not allow this resend.",
   manual_send_pending: "Another delivery of this notification is pending.",
   manual_history_unavailable: "The outcome of a previous delivery of this notification is unavailable.",
+  manual_delivery_unconfirmed: "Sending stopped on a previous resend, but the email provider may already have accepted it.",
   unsafe_link: "A link in the stored email could not be verified.",
   unsafe_html: "The stored email HTML could not be verified.",
 };
@@ -38,9 +40,20 @@ function unavailableReason(reason: string) {
     : "Company OS could not verify that this notification can be resent for the entered account.";
 }
 
-/** These Company OS codes are issued after same-ID lookup but before reserving a new resend. */
+const ownerAccessRefusals = new Set([
+  "super-admin only", "no access to this tenant", "read_only_identity", "submit_only_identity", "account_not_invited",
+]);
+
 function freshRefusalReason(error: unknown) {
-  if (!(error instanceof ManualEmailApiError) || error.status !== 409) return null;
+  if (!(error instanceof ManualEmailApiError)) return null;
+  // These authorization codes originate in the site gateway or Company OS prehandlers.
+  if (error.status === 401 && error.code === "unauthorized") return "Sign in with your owner account, then review the email again.";
+  if (error.status === 403) {
+    if (error.code === "email_not_verified") return "Verify the owner account’s email, then sign in and review the email again.";
+    if (ownerAccessRefusals.has(error.code)) return "Company OS requires owner permission for this resend. Sign in with an authorized owner account.";
+  }
+  // These business refusals occur after same-ID lookup and before queue reservation.
+  if (error.status !== 409) return null;
   if (error.code === "binding_changed") return "The reviewed email changed. Review it again before sending.";
   return Object.hasOwn(unavailable, error.code) ? unavailable[error.code] : null;
 }
@@ -161,13 +174,22 @@ export function ManualEmailControls({ name, identity, release }: { name: ManualE
   const submit = () => run(async signal => {
     if (!confirming || !readyToSend || !preview) return;
     setConfirming(false);
+    setPreview(null);
     setMessage("");
+    // A missing or failed token lookup cannot dispatch this send, so leave existing intents untouched.
+    let token: string;
+    try {
+      token = await manualEmailToken(signal);
+    } catch {
+      if (!signal.aborted) setMessage("Could not verify your owner sign-in. Sign in, then review the email again.");
+      return;
+    }
+    if (signal.aborted) return;
     try {
       // Recheck storage synchronously before allocating an intent, including when this view was remounted.
       const stored = readRequests(key, name);
       const saved = stored?.requests.find(request => request.binding.recipient === preview.binding.recipient);
       if (saved?.requestId !== pending?.requestId || (saved && !manualRetryMatches(saved.binding, preview.binding))) {
-        setPreview(null);
         setMessage("The saved request changed. Reopen this email and check the request receipt.");
         return;
       }
@@ -175,9 +197,8 @@ export function ManualEmailControls({ name, identity, release }: { name: ManualE
       const nextRequests = saved && stored ? stored.requests : [...(stored?.requests ?? []), request];
       sessionStorage.setItem(key, JSON.stringify({ lastRecipient: request.binding.recipient, requests: nextRequests }));
       setRequests(nextRequests);
-      setPreview(null);
       try {
-        const result = await requestManualEmail("sendReal", { name, ...request }, signal);
+        const result = await requestManualEmail("sendReal", { name, ...request }, signal, token);
         signal.throwIfAborted();
         setReceipt(validateReceipt(result, request));
       } catch (error) {
@@ -190,13 +211,12 @@ export function ManualEmailControls({ name, identity, release }: { name: ManualE
         }
         try {
           setRequests(clearRequest(key, name, request));
-          setMessage(`Company OS declined this resend before queuing it. ${refusal}`);
+          setMessage(`The server declined this resend before queuing it. ${refusal}`);
         } catch {
-          setMessage("Company OS declined this resend before queuing it. The browser could not clear this saved request safely.");
+          setMessage("The server declined this resend before queuing it. The browser could not clear this saved request safely.");
         }
       }
     } catch {
-      setPreview(null);
       setMessage("Real resend unavailable because this browser could not save the request before sending.");
     }
   });
@@ -254,6 +274,9 @@ export function ManualEmailControls({ name, identity, release }: { name: ManualE
       <p role="status" className="text-body-sm text-ink-muted">
         {receipt ? manualReceiptStatus(receipt.status) : "Outcome unconfirmed. Any retry here uses this same request."}
       </p>
+      {(receipt?.status === "delivery_unconfirmed" || receipt?.status === "failed") && <p className="text-body-sm text-ink-muted">
+        The email provider may already have accepted this resend.
+      </p>}
       <Button size="sm" disabled={busy} onClick={() => void refresh()}>Check resend receipt</Button>
       {canStartAnotherManualRequest(receipt?.status) && <Button size="sm" variant="ghost" disabled={busy} onClick={() => setResetConfirming(true)}>Start a separate resend</Button>}
     </div>}

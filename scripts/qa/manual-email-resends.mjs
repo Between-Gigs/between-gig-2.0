@@ -29,7 +29,7 @@ const bundle = await build({
     builder.onLoad({ filter: /.*/, namespace: "fake" }, args => {
       const sources = {
         "@/lib/data": 'export const data={kind:"live"}',
-        "@/lib/data/api": 'export const apiSource={token:async()=>window.fixtureOwner??"first-owner"}',
+        "@/lib/data/api": 'export const apiSource={token:async()=>window.fixtureTokenUnavailable ? null : window.fixtureOwner??"first-owner"}',
         "@/lib/site": 'export const basePath=""',
         "@/lib/auth/clerk": "export const clerkEnabled=true",
         "@/lib/session": `
@@ -128,7 +128,7 @@ async function fixture(width, theme) {
           originalReceipt: receipt("original-fixture", "sent"),
         });
       case "sendReal":
-        if (controls.sendRefusal) return error(409, controls.sendRefusal);
+        if (controls.sendRefusal) return error(controls.sendRefusal.status, controls.sendRefusal.code);
         if (controls.uncertainSend) return error(503, "unavailable");
         return result(receipt(payload.requestId, "queued", payload.binding.recipient));
       case "realReceipt":
@@ -298,7 +298,7 @@ try {
     await address.fill(recipient);
     await button("Review real email").click();
     await button("Continue to REAL resend").click();
-    controls.sendRefusal = "binding_changed"; // Source changed after the account-bound preview was reviewed.
+    controls.sendRefusal = { status: 409, code: "binding_changed" }; // Source changed after the account-bound preview was reviewed.
     await page.getByRole("dialog").getByRole("button", { name: "Send REAL email" }).click();
     await page.getByText(/declined this resend before queuing it/).waitFor({ timeout: 3000 });
     assert.equal(count("sendReal"), 1);
@@ -334,7 +334,7 @@ try {
     assert.notEqual(uncertain.requestId, sent.requestId);
     await button("Review same request").click();
     await button("Continue same REAL resend").click();
-    controls.sendRefusal = "binding_changed";
+    controls.sendRefusal = { status: 401, code: "unauthorized" };
     await button("Retry same REAL resend").click();
     await page.getByText(/did not confirm the outcome/).waitFor();
     assert.equal(await page.getByText(uncertain.requestId, { exact: true }).count(), 1);
@@ -351,13 +351,65 @@ try {
     await button("Check resend receipt").click();
     await page.getByText("Delivery history unavailable", { exact: true }).waitFor();
     assert.equal(await button("Start a separate resend").count(), 0);
+    controls.receiptStatus = "delivery_unconfirmed";
+    await button("Check resend receipt").click();
+    await page.getByText("Sending stopped; delivery unconfirmed", { exact: true }).waitFor();
+    await page.getByText(/email provider may already have accepted/).waitFor();
+    assert.equal(await button("Start a separate resend").count(), 0);
     await address.fill(recipient);
     await page.getByText(uncertain.requestId, { exact: true }).waitFor();
     assert.equal(count("sendReal"), 4);
     assert.deepEqual(unexpected, []);
     await context.close();
   }
-  console.log("PASS: definitive stale-send recovery, intercepted real previews, confirmation/cancel, duplicate guard, uncertain retry across mode/navigation/reload/owner change, receipt distinctions, release progression/stale lock, Clerk handoff and responsive dark/light axe checks.");
+  {
+    const { context, page, mode, button, count, controls, unexpected } = await fixture(390, "light");
+    await page.goto(origin);
+    await button("Revoke published version").waitFor();
+    await mode("Real email").click();
+    const address = page.getByLabel("Account email address");
+    await address.fill(recipient);
+    const preview = async () => {
+      await button("Review real email").click();
+      await button("Continue to REAL resend").click();
+      await page.getByRole("dialog").waitFor();
+    };
+    const submit = () => page.getByRole("dialog").getByRole("button", { name: "Send REAL email" }).click();
+    const stored = () => page.evaluate(() => sessionStorage.getItem("bg-email-real:first-owner:profile-submitted"));
+
+    await preview();
+    await page.evaluate(() => { window.fixtureTokenUnavailable = true; });
+    await submit();
+    await page.getByText(/Could not verify your owner sign-in/).waitFor();
+    assert.equal(count("sendReal"), 0);
+    assert.equal(await stored(), null);
+    await page.evaluate(() => { window.fixtureTokenUnavailable = false; });
+
+    const authRefusals = [
+      [401, "unauthorized"],
+      [403, "super-admin only"],
+      [403, "account_not_invited"],
+      [403, "email_not_verified"],
+    ];
+    for (const [index, [status, code]] of authRefusals.entries()) {
+      await preview();
+      controls.sendRefusal = { status, code };
+      await submit();
+      await page.getByText(/declined this resend before queuing it/).waitFor();
+      assert.equal(count("sendReal"), index + 1);
+      assert.equal(await stored(), null);
+    }
+
+    await preview();
+    controls.sendRefusal = null;
+    controls.uncertainSend = false;
+    await submit();
+    await page.getByText("Queued for sending", { exact: true }).waitFor();
+    assert.equal(count("sendReal"), authRefusals.length + 1);
+    assert.deepEqual(unexpected, []);
+    await context.close();
+  }
+  console.log("PASS: owner authorization recovery, definitive stale-send recovery, intercepted real previews, confirmation/cancel, duplicate guard, uncertain retry across mode/navigation/reload/owner change, receipt distinctions, release progression/stale lock, Clerk handoff and responsive dark/light axe checks.");
 } finally {
   await browser.close();
   await new Promise(resolve => server.close(resolve));
