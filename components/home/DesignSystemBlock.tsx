@@ -1,7 +1,8 @@
 "use client";
 import { Button, cx } from "@ds/components";
 import { ArrowRight } from "lucide-react";
-import { selectLook, setUnstyled, useLook, useUnstyled } from "@/components/site/LookSync";
+import { usePersonalLook, usePersonalUnstyled } from "@/components/site/PersonalPreferences";
+import { useLook, useUnstyled } from "@/components/site/LookSync";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { lookIds, looks } from "@/lib/look";
 import { useContext } from "react";
@@ -13,6 +14,8 @@ import { GuidePreviewModeContext, LivePagePreview } from "./LivePagePreview";
  */
 export function DesignSystemBlock() {
   const current = useLook();
+  const selectLook = usePersonalLook();
+  const setUnstyled = usePersonalUnstyled();
   const mode = useContext(GuidePreviewModeContext);
   const plain = useUnstyled();
   return (

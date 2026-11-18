@@ -112,7 +112,7 @@ export async function flow({ browser, base, outDir }) {
       await page.getByLabel("Home ZIP code").fill("90029");
       await page.getByRole("button", { name: "Eastside" }).click();
       await page.getByLabel("Dates or times this month").fill("Weekday afternoons");
-      await expectText("Saved");
+      await page.getByRole("status").filter({ hasText: /^Saved(?:\s|$)/ }).waitFor();
       await page.waitForTimeout(1200);
       await page.reload();
       await page.locator("[data-step='2']").waitFor();

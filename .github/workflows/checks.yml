@@ -48,6 +48,7 @@ jobs:
           node scripts/qa/owner-sidebar.mjs
           node scripts/qa/admin-shell.mjs
           node scripts/qa/admin-navigation.mjs
+          node scripts/qa/navigation-modes.mjs
           node scripts/qa/social-preview.mjs
           node scripts/qa/signed-out-navigation.mjs
           node scripts/qa/home-hero.mjs
@@ -65,6 +66,13 @@ jobs:
         with:
           name: gigster-priority-evidence
           path: deliverables/gigster-priority
+          if-no-files-found: warn
+      - name: Save navigation modes and settings captures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: navigation-modes-evidence
+          path: deliverables/navigation-modes
           if-no-files-found: warn
       - name: Save admin navigation captures
         if: always()
@@ -99,7 +107,14 @@ jobs:
         run: |
           node scripts/qa/clerk-contract.mjs
       - name: Server build (no internal routes) and its checks
-        run: pnpm build:server && pnpm build:preview && pnpm check:server && node scripts/qa/server-hub.mjs
+        run: pnpm build:server && pnpm build:preview && pnpm check:server && QA_SCREENSHOT_DIR=deliverables/server-hub node scripts/qa/server-hub.mjs
+      - name: Save verified Hub access captures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: verified-hub-access-evidence
+          path: deliverables/server-hub
+          if-no-files-found: warn
       # The deployed builds are live (api): there, no page may ship the sample data. Caught here, not at deploy.
       - name: Live server build, code-split check
         env:

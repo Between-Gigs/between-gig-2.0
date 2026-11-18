@@ -16,7 +16,7 @@ export const SITE_ROUTES = [
 ];
 /** The dashboards: signed-in Gigsters (profile) and owners. */
 export const DASHBOARD_ROUTES = [
-  "/owners/emails",
+  "/owners/emails", "/owners/developer",
   "/owners", "/owners/people", "/owners/people/[id]", "/owners/review", "/owners/waitlist", "/owners/staff", "/profile", "/profile/canvas", "/profile/edit", "/profile/submitted",
 ];
 /** Client modules only the dashboards may load. The public profile's own views (PublicProfile, ProfileView) are the site's. */

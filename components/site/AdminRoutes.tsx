@@ -9,6 +9,7 @@ import { basePath } from "@/lib/site";
 
 const subscribe = () => () => {};
 function isEmbeddedPreview() {
+  try { if (window.frameElement?.hasAttribute("data-developer-hub") && window.parent.location.origin === window.location.origin && window.parent.location.pathname.startsWith("/owners/developer/")) return true; } catch { /* standalone sample keeps its own chrome */ }
   try { return !!window.frameElement?.hasAttribute("data-admin-page-preview") || document.documentElement.hasAttribute("data-embedded") || document.documentElement.hasAttribute("data-workspace"); }
   catch { return false; }
 }
