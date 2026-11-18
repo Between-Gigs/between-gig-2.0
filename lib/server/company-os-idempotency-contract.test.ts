@@ -6,6 +6,7 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { companyOs } from "./companyos";
 import { testHubEmail } from "./email-hub";
+import { sendReal } from "./manual-emails";
 
 // Execute the actual private upstream declarations, never vendor them into this public repo.
 const root = process.env.COMPANY_OS_CONTRACT_ROOT;
@@ -52,6 +53,11 @@ describe.skipIf(!root)("actual Company OS idempotency contract", () => {
   it("accepts the actual gateway key through the upstream parser", async () => {
     const f = setup();
     await expect(testHubEmail(f.ctx, [{ name: "approved", recipient: "a@example.org", requestId: id, startedAt: now }])).resolves.toEqual({ status: "queued" });
+    expect(f.count()).toBe(1);
+  });
+  it("accepts the actual manual-resend gateway key through the upstream parser", async () => {
+    const f = setup();
+    await expect(sendReal(f.ctx, [{ name: "approved", requestId: id, binding: { templateKey: "approved", recipient: "a@example.org", contextId: id, eventId: id, releaseId: id, fingerprint: "a".repeat(64) } }])).resolves.toEqual({ status: "queued" });
     expect(f.count()).toBe(1);
   });
   it("never retries at or beyond the shorter site window, including after upstream expiry", async () => {
