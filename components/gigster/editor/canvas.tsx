@@ -188,7 +188,7 @@ export function CanvasHelp({ d, set, errors, onConvertToCustom }: SectionProps &
   // Keep incoming saved text visible; also reserve a slot for an open, empty custom input.
   const otherVisible = otherOpen || !!d.other.trim();
   const count = rows.length + Number(otherVisible);
-  const showBlank = count < MAX_SERVICES && (rows.length === 0 || adding);
+  const showBlank = count < MAX_SERVICES && (count === 0 || adding);
   const OTHER = OTHER_SERVICE;
   const optionsFor = (current?: string) => serviceSelectOptions(choices, rows, current, otherVisible, servicePickerLabel, serviceMatches);
   // "Something else" holds the service's name on its first line and what they'd do after it.
@@ -247,9 +247,8 @@ export function CanvasHelp({ d, set, errors, onConvertToCustom }: SectionProps &
     <section id="sec-help" aria-labelledby="sec-help-h" className="grid min-w-0 scroll-mt-40 content-start gap-5">
       <div className="grid gap-2">
         <H id="sec-help-h">How I can help</H>
-        <p id="services-hint" className="max-w-xl text-body-md text-ink-muted">The most important part of your profile. Choose a service, then say in one line what a customer can hire you to do. One clear service is enough to start. Five is the maximum.{rows.length > 1 && " Drag the grip to put your main service first."}</p>
+        <p id="services-hint" className="max-w-xl text-body-md text-ink-muted">Start with one service. Add up to five.{rows.length > 1 && " Drag the grip to put your main service first."}</p>
       </div>
-      {!otherVisible && count < MAX_SERVICES && <div><Button variant="secondary" iconStart={<Plus />} onClick={() => pickNew(OTHER)}>Other — name your service</Button></div>}
       <ol ref={list} className="grid gap-5" onPointerMove={drag}
         onPointerUp={(e) => finish(e.pointerId)} onPointerCancel={(e) => finish(e.pointerId, true)} onLostPointerCapture={(e) => finish(e.pointerId, true)}>
         {rows.map((s, i) => {
@@ -270,25 +269,23 @@ export function CanvasHelp({ d, set, errors, onConvertToCustom }: SectionProps &
                       <GripVertical aria-hidden="true" className="size-5" />
                     </button>
                   )}
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1" data-service-picker>
                     <label htmlFor={`f-service-${i}`} className="mb-1 block text-body-sm text-ink-muted">Service {i + 1}</label>
                     <Select id={`f-service-${i}`} options={optionsFor(s)} value={s} onValueChange={(v) => replace(i, v)} />
+                    <ServiceGuidance service={s} className="mt-3" />
                   </div>
                   <button type="button" aria-label={`Remove ${servicePickerLabel(s)}`} onClick={() => remove(i)}
                     className="grid size-10 shrink-0 place-items-center rounded-md text-ink-muted hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-focus"><Trash2 aria-hidden="true" className="size-4" /></button>
                 </div>
-                <div className="grid min-w-0 gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
+                <div className="grid min-w-0 content-start gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
                   <label htmlFor={`f-line-${i}`} className="text-body-md text-ink">What can a customer hire you to do?</label>
-                  <p className="text-body-sm text-ink-muted">Describe your own service in one short line.</p>
                   <Textarea id={`f-line-${i}`} rows={2} showCount maxLength={SERVICE_LINE_MAX} value={line} invalid={!!lineError}
-                    placeholder="Describe what a customer can hire you to do."
                     onChange={(e) => setLine(s, e.target.value)} />
                   {lineError && <p className="text-body-sm text-danger">{lineError}</p>}
                 </div>
               </div>
               {standard && <p className="text-body-sm text-ink-muted"><span className="font-semibold text-ink">Standard description</span> · the same for everyone who offers it: {standard}</p>}
               {serviceLabel(s) !== s && ["Hair Styling", "Makeup Services"].includes(s) && <p className="text-body-sm text-ink-muted">Saved service: {s}</p>}
-              <ServiceGuidance service={s} />
             </li>
           );
         })}
@@ -308,9 +305,7 @@ export function CanvasHelp({ d, set, errors, onConvertToCustom }: SectionProps &
               </div>
               <div className="grid min-w-0 gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
                 <label htmlFor="f-other-line" className="text-body-md text-ink">What can a customer hire you to do?</label>
-                <p className="text-body-sm text-ink-muted">Describe the service you offer in your own words.</p>
                 <Textarea id="f-other-line" rows={2} showCount maxLength={SERVICE_LINE_MAX} value={otherLine}
-                  placeholder="Describe what a customer can hire you to do."
                   onChange={(e) => setOther(otherName, e.target.value.slice(0, SERVICE_LINE_MAX))} />
               </div>
             </div>
@@ -320,15 +315,11 @@ export function CanvasHelp({ d, set, errors, onConvertToCustom }: SectionProps &
         {showBlank && (
           <li key="blank" className="grid gap-2 sm:grid-cols-12 sm:items-start sm:gap-0">
             <div className="grid gap-1 sm:col-span-5 sm:pr-5">
-              <label htmlFor={`f-service-${rows.length}`} className="sr-only">{rows.length ? `Service ${rows.length + 1}` : "Your first service"}</label>
+              <label htmlFor={`f-service-${rows.length}`} className="sr-only">{count ? `Service ${count + 1}` : "Your first service"}</label>
               <Select id={`f-service-${rows.length}`} options={optionsFor()} placeholder="Choose a service" invalid={!rows.length && !otherVisible && !!errors.services} onValueChange={pickNew} />
               {!rows.length && !otherVisible && errors.services && <p className="text-body-sm text-danger">{errors.services}</p>}
             </div>
-            <div className="grid gap-1 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
-              <p className="text-body-md text-ink-muted">What can a customer hire you to do?</p>
-              <p className="text-body-sm text-ink-muted italic">Example: I&apos;ll sort your wardrobe and set up a closet you can keep organized.</p>
-              {rows.length > 0 && <div><Button variant="ghost" size="sm" onClick={() => setAdding(false)}>Cancel</Button></div>}
-            </div>
+            {count > 0 && <div className="sm:col-span-7"><Button variant="ghost" size="sm" onClick={() => setAdding(false)}>Cancel</Button></div>}
           </li>
         )}
       </ol>
