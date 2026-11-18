@@ -7,7 +7,7 @@ const fit = "0.25,0.75,2,1.5";
 const photo = (extra: Record<string, unknown> = {}): Row => ({ id: "f1", data: { kind: "portfolio", status: "ready", position: 0, ...extra }, createdAt: "", updatedAt: "" });
 const jpeg = "data:image/jpeg;base64,YWJj";
 const cred = { kind: "session", token: "test" } as const;
-const mock = () => ({ batch: vi.fn(async () => ({ ids: [] })), remove: vi.fn(async () => undefined), patch: vi.fn(async (_cred: unknown, _entity: string, _id: string, _patch: Record<string, unknown>) => { void _cred; void _entity; void _id; void _patch; }), startUpload: vi.fn(async () => ({ file: { id: "new" }, uploadUrl: "upload" })), putBytes: vi.fn(), confirmUpload: vi.fn() });
+const mock = () => ({ batch: vi.fn(async () => ({ ids: [] })), remove: vi.fn(async () => undefined), patch: vi.fn(async (_cred: unknown, _entity: string, _id: string, _patch: Record<string, unknown>) => { void _cred; void _entity; return { ...photo(_patch), id: _id }; }), startUpload: vi.fn(async () => ({ file: { id: "new" }, uploadUrl: "upload" })), putBytes: vi.fn(), confirmUpload: vi.fn() });
 describe("durable nondestructive portfolio fit", () => {
   it("round trips file metadata without changing the original media URL", () => {
     const sample = samplesFrom([], [photo({ image_fit: fit })])[0];
@@ -22,7 +22,7 @@ describe("durable nondestructive portfolio fit", () => {
   });
   it("saves existing-photo fit as metadata only and reads the same alignment back", async () => {
     const stored = photo(); const c = mock();
-    c.patch.mockImplementation(async (_cred, _entity, _id, patch) => { Object.assign(stored.data, patch); });
+    c.patch.mockImplementation(async (_cred, _entity, _id, patch) => { Object.assign(stored.data, patch); return stored; });
     await saveSamples({ cos: c as never, cred }, "prof", [`/media/f1#fit=${fit}`], [], [stored]);
     expect(samplesFrom([], [stored])).toEqual([`/media/f1#fit=${fit}`]);
     expect(c.startUpload).not.toHaveBeenCalled();
@@ -70,4 +70,21 @@ describe("durable nondestructive portfolio fit", () => {
     expect(SAMPLE_ERROR_CODES.has(code)).toBe(true);
     expect(c.remove).not.toHaveBeenCalled();
   });
+  it.each([undefined, "0.5,0.5,1,1.5"])("refuses missing/wrong PATCH readback before later sample mutations: %s", async image_fit => {
+    const c = mock(); c.patch.mockResolvedValue(photo({ image_fit }));
+    await expect(saveSamples({ cos: c as never, cred }, "prof", [`/media/f1#fit=${fit}`, jpeg], [], [photo(), { ...photo(), id: "removed" }]))
+      .rejects.toMatchObject({ code: "image_fit_not_available" });
+    expect(c.remove).not.toHaveBeenCalled(); expect(c.batch).not.toHaveBeenCalled(); expect(c.startUpload).not.toHaveBeenCalled();
+  });
+  it.each([undefined, "0.5,0.5,1,1.5"])("cleans up new upload when successful PATCH omits or changes fit: %s", async image_fit => {
+    const c = mock(); c.patch.mockResolvedValue({ ...photo({ image_fit }), id: "new" });
+    await expect(saveSamples({ cos: c as never, cred }, "prof", [`${jpeg}#fit=${fit}`], [], []))
+      .rejects.toMatchObject({ code: "image_fit_not_available" });
+    expect(c.remove).toHaveBeenCalledWith(cred, "file", "new");
+  });
+  it("accepts equivalent decimal readback", async () => {
+    const c = mock(); c.patch.mockResolvedValue(photo({ image_fit: "0.2500,0.7500,2.0000,1.5000" }));
+    await expect(saveSamples({ cos: c as never, cred }, "prof", [`/media/f1#fit=${fit}`], [], [photo()])).resolves.toBeUndefined();
+  });
+
 });
