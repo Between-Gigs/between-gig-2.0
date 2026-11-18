@@ -13,7 +13,7 @@ import { asset, basePath } from "@/lib/site";
 import { useSession } from "@/lib/session";
 
 import { MySettings } from "./MySettings";
-import { PersonalThemeToggle, useNavigationMode, usePersonalPreferences } from "./PersonalPreferences";
+import { PersonalThemeToggle, usePersonalPreferences } from "./PersonalPreferences";
 import { LookSwitcher } from "./LookSwitcher";
 import { ExperienceSwitcher } from "./ExperienceSwitcher";
 
@@ -27,11 +27,10 @@ interface NavLink { id: "my_profile" | "edit_profile"; href: string; label: stri
 export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNav?: () => void } = {}) {
   const pathname = usePathname();
   const { session, loading } = useSession();
-  const mode = useNavigationMode();
   const { menu: visibility } = useStaffMenuVisibility();
   const { preferences } = usePersonalPreferences();
 
-  const links: NavLink[] = session && mode === "gigster"
+  const links: NavLink[] = session
     ? ([{ id: "my_profile", href: "/profile/", label: "My profile" }, { id: "edit_profile", href: "/profile/canvas/", label: "Edit profile" }] as NavLink[]).filter(link => visibility.items.includes(link.id))
     : [];
 
