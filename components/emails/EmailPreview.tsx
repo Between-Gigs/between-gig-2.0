@@ -1,7 +1,7 @@
 "use client";
 import { useLook } from "@/components/site/LookSync";
 import { Badge, Banner, Breadcrumbs, Button, SegmentedControl, Tab, TabList, TabPanel, Tabs, useToast } from "@ds/components";
-import { Copy, Monitor, Moon, Smartphone, Sun } from "lucide-react";
+import { Copy, Moon, Sun } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { emailTemplates } from "@/emails";
@@ -14,7 +14,9 @@ import { basePath } from "@/lib/site";
 import { EmailActions, useEmailHubStatus } from "./EmailActions";
 import { lifecycleWords, usageWords } from "@/lib/email-hub";
 
-const widths = { desktop: "w-full max-w-160", mobile: "w-full max-w-sm" } as const;
+import { EmailViewControls } from "./EmailViewControls";
+import { EmailPreviewFrame } from "./EmailPreviewFrame";
+import type { EmailPreviewDevice, EmailPreviewView } from "@/lib/email-preview-view";
 
 /** /emails/[name]: one template in light or dark, desktop or phone width, with its subject, preheader and text twin. */
 export function EmailPreview({ name, owner = false }: { name: EmailTemplate; owner?: boolean }) {
@@ -32,11 +34,11 @@ function Preview({ name, owner = false }: { name: EmailTemplate; owner?: boolean
   const outboxId = useSearchParams().get("outbox");
   const toast = useToast();
   const [scheme, setScheme] = React.useState<PreviewScheme>("light");
-  const [width, setWidth] = React.useState<keyof typeof widths>("desktop");
+  const [device, setDevice] = React.useState<EmailPreviewDevice>("desktop");
+  const [view, setView] = React.useState<EmailPreviewView>("full");
   const [tab, setTab] = React.useState("html");
   const [queued, setQueued] = React.useState<OutboxEmail | null>(null);
   const [email, setEmail] = React.useState<ReturnType<typeof renderPreview> | null>(null);
-  const frame = React.useRef<HTMLIFrameElement>(null);
 
   React.useEffect(() => {
     if (!outboxId) return;
@@ -49,19 +51,6 @@ function Preview({ name, owner = false }: { name: EmailTemplate; owner?: boolean
     if (owner) rendered.html = rendered.html.replace(/<a\b([^>]*?)href="[^"]*"([^>]*)>/g, '<a$1aria-disabled="true"$2>');
     setEmail(rendered); // eslint-disable-line react-hooks/set-state-in-effect
   }, [name, queued, scheme, owner]);
-
-  // Grow the frame to the email's height, so the page scrolls, not the frame.
-  const fit = () => {
-    const doc = frame.current?.contentDocument;
-    if (frame.current && doc?.body) frame.current.style.height = `${doc.body.scrollHeight}px`;
-  };
-  React.useEffect(() => {
-    const el = frame.current;
-    if (!el) return;
-    const resize = new ResizeObserver(fit);
-    resize.observe(el);
-    return () => resize.disconnect();
-  }, [width, email, tab]);
 
   const copy = async (text: string, what: string) => {
     try { await navigator.clipboard.writeText(text); toast({ message: `${what} copied`, tone: "success" }); }
@@ -104,8 +93,7 @@ function Preview({ name, owner = false }: { name: EmailTemplate; owner?: boolean
             <h2 id="view-h" className="font-display text-heading-md text-ink">View</h2>
             <SegmentedControl label="Mail client theme" value={scheme} onChange={(v) => setScheme(v as PreviewScheme)}
               options={[{ value: "light", label: "Light", icon: <Sun /> }, { value: "dark", label: "Dark", icon: <Moon /> }]} />
-            <SegmentedControl label="Screen width" value={width} onChange={(v) => setWidth(v as keyof typeof widths)}
-              options={[{ value: "desktop", label: "Desktop", icon: <Monitor /> }, { value: "mobile", label: "Phone", icon: <Smartphone /> }]} />
+            <EmailViewControls view={view} device={device} onView={setView} onDevice={setDevice} allowList={false} />
             <p className="text-body-sm text-ink-subtle">{name === "invite" && "The invitation is intentionally light-only in both modes. "}This browser preview simulates the template’s theme rules. Email apps may recolor messages differently, including Gmail and Outlook; actual inbox rendering can vary.</p>
           </section>
           <section aria-labelledby="notes-h" className={brand ? "rounded-lg border border-line bg-surface p-5" : "border-t-4 border-line-strong pt-4"}>
@@ -129,8 +117,8 @@ function Preview({ name, owner = false }: { name: EmailTemplate; owner?: boolean
             </TabList>
             <TabPanel value="html" className="pt-4">
               <div className={brand ? "grid justify-items-center rounded-lg border border-line bg-surface-sunken p-3 sm:p-6" : "grid justify-items-center bg-surface-sunken p-3 sm:p-6"}>
-                <div className={`${widths[width]} overflow-hidden border border-line bg-surface-embed transition-all duration-slow ${brand ? "rounded-lg shadow-md" : ""}`}>
-                  {email && <iframe ref={frame} title={`${t.label} email, ${scheme} theme`} sandbox="allow-same-origin" srcDoc={email.html} onLoad={fit} className="block h-240 w-full" />}
+                <div className={`w-full overflow-hidden border border-line bg-surface-embed ${brand ? "rounded-lg shadow-md" : ""}`}>
+                  {email && <EmailPreviewFrame html={email.html} title={`${t.label} email, ${scheme} theme`} device={device} view={view === "thumbnails" ? "thumbnails" : "full"} />}
                 </div>
               </div>
             </TabPanel>
