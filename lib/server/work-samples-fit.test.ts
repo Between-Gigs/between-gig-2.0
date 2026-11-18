@@ -1,7 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { encodeVideoSample, SAMPLE_ERROR_CODES } from "@/lib/profile/video-links";
 import { parseSample } from "@/lib/profile/work-fit";
 import { CompanyOsError, type Row } from "./companyos";
+import { saveDraft } from "./gigs";
+import { completeFields } from "@/lib/data/contract/fixtures";
+afterEach(() => vi.unstubAllEnvs());
 import { cleanSamples, planSamples, samplesFrom, saveSamples } from "./work-samples";
 const fit = "0.25,0.75,2,1.5";
 const photo = (extra: Record<string, unknown> = {}): Row => ({ id: "f1", data: { kind: "portfolio", status: "ready", position: 0, ...extra }, createdAt: "", updatedAt: "" });
@@ -32,14 +35,32 @@ describe("durable nondestructive portfolio fit", () => {
   it("absence preserves a prior fit for old clients", () => {
     expect(planSamples(["/media/f1"], [], [photo({ image_fit: fit })]).fitPatches).toEqual([]);
   });
-  it("accepts a new image with fit but uploads only the unchanged source bytes", async () => {
+  it("refuses a fitted replacement before removing the original, changing videos/order or uploading", async () => {
     const s = `${jpeg}#fit=${fit}`;
-    expect(cleanSamples([s])).toEqual([s]);
+    expect(() => cleanSamples([s])).toThrow(/Save this photo first/);
     const c = mock();
-    await saveSamples({ cos: c as never, cred }, "prof", [s], [], []);
+    const clip = { id: "v1", data: { kind: "video_link", value: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", position: 1 }, createdAt: "", updatedAt: "" };
+    await expect(saveSamples({ cos: c as never, cred }, "prof", [s], [clip], [photo()]))
+      .rejects.toMatchObject({ code: "invalid_image_fit" });
+    for (const fn of Object.values(c)) expect(fn).not.toHaveBeenCalled();
+  });
+  it("refuses forged fitted upload even before profile mutations in direct saveDraft", async () => {
+    vi.stubEnv("NEXT_PUBLIC_PROFILE_VIDEO_LINKS", "1");
+    const c = { ...mock(), query: vi.fn(async () => []), all: vi.fn(async () => []) };
+    await expect(saveDraft({ cos: c, cred, appUrl: "" } as never, "person", { ...completeFields("Maya", "/media/f1"), workSamples: [`${jpeg}#fit=${fit}`] }))
+      .rejects.toMatchObject({ code: "invalid_image_fit" });
+    for (const fn of Object.values(c)) expect(fn).not.toHaveBeenCalled();
+  });
+  it("uploads unaligned bytes first; a later saved-photo fit never reuploads or removes the original", async () => {
+    const c = mock();
+    await saveSamples({ cos: c as never, cred }, "prof", [jpeg], [], []);
     expect(c.putBytes).toHaveBeenCalledWith("upload", new Uint8Array([97,98,99]), "image/jpeg");
+    expect(c.patch).not.toHaveBeenCalled();
+    c.startUpload.mockClear(); c.putBytes.mockClear();
+    const saved = { ...photo(), id: "new" };
+    await saveSamples({ cos: c as never, cred }, "prof", [`/media/new#fit=${fit}`], [], [saved]);
     expect(c.patch).toHaveBeenCalledWith(cred, "file", "new", { image_fit: fit });
-    expect(c.confirmUpload.mock.invocationCallOrder[0]).toBeLessThan(c.patch.mock.invocationCallOrder[0]);
+    expect(c.startUpload).not.toHaveBeenCalled(); expect(c.putBytes).not.toHaveBeenCalled(); expect(c.remove).not.toHaveBeenCalled();
   });
   it.each(["2,0.5,1,1", "0.5,0.5,5,1", "0.5,0.5,1,0", "0.12345,0.5,1,1", "NaN,0.5,1,1", "0.5,0.5,1,100000"])("rejects invalid incoming fit rather than silently removing the photo: %s", bad => {
     expect(() => cleanSamples([`/media/f1#fit=${bad}`])).toThrow();
@@ -51,11 +72,6 @@ describe("durable nondestructive portfolio fit", () => {
     expect(planSamples(["/media/f1#fit=0.5,0.5,1,1.5"], [], [photo({ image_fit: fit })]).fitPatches)
       .toEqual([{ id: "f1", image_fit: "0.5,0.5,1,1.5" }]);
     expect(planSamples([`/media/f1#fit=${fit}`], [], [photo({ kind: "video_thumbnail" })]).fitPatches).toEqual([]);
-  });
-  it("removes only a newly uploaded photo if its metadata patch fails, so retry cannot duplicate it", async () => {
-    const c = mock(); c.patch.mockRejectedValue(new CompanyOsError(422, "invalid_image_fit"));
-    await expect(saveSamples({ cos: c as never, cred }, "prof", [`${jpeg}#fit=${fit}`], [], [])).rejects.toMatchObject({ code: "invalid_image_fit" });
-    expect(c.remove).toHaveBeenCalledWith(cred, "file", "new");
   });
   it("keeps video links and ordering alongside aligned photos", () => {
     const clip = encodeVideoSample({ url: "https://youtu.be/dQw4w9WgXcQ", caption: "Reel" });
@@ -75,12 +91,6 @@ describe("durable nondestructive portfolio fit", () => {
     await expect(saveSamples({ cos: c as never, cred }, "prof", [`/media/f1#fit=${fit}`, jpeg], [], [photo(), { ...photo(), id: "removed" }]))
       .rejects.toMatchObject({ code: "image_fit_not_available" });
     expect(c.remove).not.toHaveBeenCalled(); expect(c.batch).not.toHaveBeenCalled(); expect(c.startUpload).not.toHaveBeenCalled();
-  });
-  it.each([undefined, "0.5,0.5,1,1.5"])("cleans up new upload when successful PATCH omits or changes fit: %s", async image_fit => {
-    const c = mock(); c.patch.mockResolvedValue({ ...photo({ image_fit }), id: "new" });
-    await expect(saveSamples({ cos: c as never, cred }, "prof", [`${jpeg}#fit=${fit}`], [], []))
-      .rejects.toMatchObject({ code: "image_fit_not_available" });
-    expect(c.remove).toHaveBeenCalledWith(cred, "file", "new");
   });
   it("accepts equivalent decimal readback", async () => {
     const c = mock(); c.patch.mockResolvedValue(photo({ image_fit: "0.2500,0.7500,2.0000,1.5000" }));
