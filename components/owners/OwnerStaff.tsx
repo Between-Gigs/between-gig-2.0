@@ -6,6 +6,7 @@ import { data } from "@/lib/data";
 import { staff } from "@/lib/staff/selected";
 import type { StaffAction, StaffGateway, StaffPermission, StaffScope, StaffSnapshot, StaffUser } from "@/lib/staff/sample";
 import { StaffNavigation } from "./StaffNavigation";
+import { StaffAccessPlanner } from "./StaffAccessPlanner";
 import { OwnerGate } from "./OwnerGate";
 import { OwnerShell } from "./OwnerShell";
 import { OwnerPage, Panel } from "./kit";
@@ -29,7 +30,7 @@ export function OwnerStaff() {
 function Staff() {
   const [snapshot, setSnapshot] = React.useState<StaffSnapshot | null>(null);
   const navigationEntry = React.useSyncExternalStore(() => () => {}, () => new URLSearchParams(window.location.search).get("view") === "navigation", () => false);
-  const [selectedTab, setTab] = React.useState<"people" | "rules" | "navigation" | null>(null);
+  const [selectedTab, setTab] = React.useState<"people" | "rules" | "navigation" | "planner" | null>(null);
   const tab = selectedTab ?? (navigationEntry ? "navigation" : "people");
   const [query, setQuery] = React.useState("");
   const [includeGigsters, setIncludeGigsters] = React.useState(false);
@@ -91,6 +92,7 @@ function Staff() {
       <div className="flex min-w-0 flex-wrap gap-1" aria-label="Staff views">
         <Button variant={tab === "people" ? "strong" : "ghost"} aria-pressed={tab === "people"} onClick={() => setTab("people")} iconStart={<Users />}>Team members</Button>
         <Button variant={tab === "navigation" ? "strong" : "ghost"} aria-pressed={tab === "navigation"} onClick={() => setTab("navigation")}>Navigation</Button>
+        <Button variant={tab === "planner" ? "strong" : "ghost"} aria-pressed={tab === "planner"} onClick={() => setTab("planner")}>Access planner</Button>
         <Button variant={tab === "rules" ? "strong" : "ghost"} aria-pressed={tab === "rules"} onClick={() => setTab("rules")} iconStart={<ShieldCheck />}>Role access</Button>
       </div>
       <Button variant="ghost" size="sm" iconStart={<RefreshCw />} disabled={busy} onClick={() => void mutate(refresh, "Staff list refreshed.")}>Refresh</Button>
@@ -113,6 +115,7 @@ function Staff() {
       </form>
     </Panel>}
 
+    <div hidden={tab !== "planner"}><StaffAccessPlanner /></div>
     {tab === "navigation" ? snapshot ? <StaffNavigation staff={snapshot} /> : <p role="status">Loading staff accounts…</p> : tab === "people" ? <Panel title="Team members" count={visible.length}>
       <div className="mb-5 grid gap-2"><label htmlFor="staff-search" className={small}>Find a team member</label><div className="relative"><Search className="pointer-events-none absolute top-3.5 left-3 size-4 text-ink-muted" aria-hidden="true" /><input id="staff-search" className={cx(control, "pl-10")} type="search" placeholder="Search name, email, or role" value={query} onChange={(e) => setQuery(e.target.value)} /></div></div>
       <label className="mb-5 flex min-h-11 items-center gap-3 text-body-sm text-ink-muted"><input type="checkbox" className="size-4" checked={includeGigsters} onChange={(event) => setIncludeGigsters(event.target.checked)} />Include Gigster-only accounts to give someone team access</label>
@@ -127,7 +130,7 @@ function Staff() {
           void mutate(() => checked ? gateway.addRole({ email: user.email, roleKey }) : gateway.removeRole({ membershipId: membership!.membershipId }), "Role assignments saved.");
         }} />}
       </li>)}</ul>}
-    </Panel> : snapshot && <RoleAccess key={snapshot.roles.map((r) => r.key).join(",")} snapshot={snapshot} busy={busy} save={(roleKey, permissions) => mutate(() => gateway.savePermissions({ roleKey, permissions }), "Role access saved.")} />}
+    </Panel> : tab === "rules" && snapshot && <RoleAccess key={snapshot.roles.map((r) => r.key).join(",")} snapshot={snapshot} busy={busy} save={(roleKey, permissions) => mutate(() => gateway.savePermissions({ roleKey, permissions }), "Role access saved.")} />}
   </OwnerPage></OwnerShell>;
 }
 
