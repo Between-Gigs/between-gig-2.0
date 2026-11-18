@@ -83,7 +83,8 @@ try {
       assert.equal(await action.evaluate(el => el === document.activeElement), true, "both CTAs are keyboard focusable");
     }
     const htmlCta=frame.locator(".e-invite-html-cta a");
-    assert.ok((await htmlCta.boundingBox()).height>=44,"HTML CTA remains usable with images blocked");
+    // Measure the email viewport, not the owner frame's deliberate thumbnail scale.
+    assert.ok(await htmlCta.evaluate(a=>a.getBoundingClientRect().height>=44),"HTML CTA remains at least 44px in the actual email viewport with images blocked");
     const colors=await frame.locator(".e-invite-paper p").first().evaluate(p=>({ink:getComputedStyle(p).color,surface:getComputedStyle(p.closest(".e-invite-paper")).backgroundColor}));
     assert.deepEqual(colors,theme==="dark"?{ink:"rgb(251, 248, 242)",surface:"rgb(19, 58, 40)"}:{ink:"rgb(15, 61, 41)",surface:"rgb(247, 243, 236)"},"HTML foreground and surface change together");
     assert.equal(await htmlCta.evaluate(a=>getComputedStyle(a).color),"rgb(255, 255, 255)");
@@ -203,7 +204,7 @@ try {
     assert.deepEqual(await forced.evaluate(async()=>(await window.axe.run(document,{runOnly:{type:"tag",values:["wcag2a","wcag2aa","wcag21aa"]}})).violations.map(v=>v.id)),[]);
     await forced.screenshot({path:"deliverables/invitation/SIMULATION-forced-html-recolour-390.png",fullPage:true});
     fs.writeFileSync("deliverables/invitation/email-viewport-metrics.json",JSON.stringify(phoneMetrics,null,2));
-    fs.writeFileSync("deliverables/invitation/README.txt","Browser CI renders only; no real inbox send or Gmail validation. email-viewport-* uses actual email widths 320/390px. Other numeric filenames use outer owner-preview widths; their iframe/hero is narrower. SIMULATION-forced-html-recolour is an explicit adverse HTML recolour model, not Gmail emulation. Assets are 1x approved screenshots, so scaling beyond native dimensions can soften raster text.\n");
+    fs.writeFileSync("deliverables/invitation/README.txt","Browser CI renders only; no real inbox send or Gmail validation. email-viewport-* uses actual email widths 320/390px. Other numeric filenames use outer owner-preview widths; their fixed Phone/Desktop email viewport is visually scaled to fit the host. SIMULATION-forced-html-recolour is an explicit adverse HTML recolour model, not Gmail emulation. Assets are 1x approved screenshots, so scaling beyond native dimensions can soften raster text.\n");
   } finally {await standalone.close();}
   console.log("PASS: approved image invitation, copy/asset provenance, paired HTML light/dark fallback, keyboard/axe with images blocked, responsive fit, legacy/account stages. Browser/Outlook-marker simulations only; no inbox send or Gmail validation.");
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
