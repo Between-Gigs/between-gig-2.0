@@ -20,7 +20,7 @@ describe("M1: Company OS keeps nondestructive photo alignment", () => {
   const editor = fs.readFileSync("components/gigster/editor/canvas.tsx", "utf8");
   const img = fs.readFileSync("components/profile/FittedImg.tsx", "utf8");
   it("allows photo Adjust with video links while excluding video tiles", () => {
-    expect(editor).toContain('!clip && <button type="button" aria-label={`Adjust the fit');
+    expect(editor).toContain('!clip && canAdjustPhoto(src, videos && data.kind !== "sample")');
     expect(editor).not.toContain('!clip && (!videos || data.kind === "sample")');
   });
   it("renders supplied local alignment without adding unsupported thumbnail fragments", () => {
