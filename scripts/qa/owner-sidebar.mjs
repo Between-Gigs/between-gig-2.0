@@ -8,7 +8,7 @@ const { server, url } = await serve("out", { base });
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? "/usr/bin/chromium" });
 fs.mkdirSync("deliverables/owner-sidebar", { recursive: true });
 try {
-  for (const look of ["editorial", "swiss", "modern"]) for (const width of [390, 1440]) for (const theme of ["light", "dark"]) {
+  for (const look of ["editorial", "swiss", "modern"]) for (const width of [320, 390, 1440]) for (const theme of ["light", "dark"]) {
     const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce", colorScheme: theme });
     await context.addInitScript(({ look, theme }) => { localStorage.setItem("bg2-site-look-v2", look); localStorage.setItem("bg-theme", theme); if (look === "swiss" && localStorage.getItem("bg2-owner-nav-collapsed") === null) localStorage.setItem("bg2-owner-nav-collapsed", "1"); }, { look, theme });
     const origin = new URL(url).origin;
@@ -31,8 +31,14 @@ try {
       assert.equal(await nav.getByRole("link", { name, exact: true }).getAttribute("href"), `${base}${href}`);
     }
     assert.equal(await nav.getByRole("link", { name: "Wallpapers", exact: true }).getByText("Wallpapers", { exact: true }).isVisible(), true, "drawer labels remain visible with a collapsed-rail preference");
-    const media = nav.getByRole("link", { name: "Media Library · Coming soon", exact: true });
-    assert.equal(await media.getAttribute("aria-disabled"), "true"); assert.equal(await media.getAttribute("href"), null);
+    for (const label of ["Media Library", "Copywriting", "Skills", "Characters"]) {
+      const placeholder = nav.getByRole("link", { name: `${label} · Coming soon`, exact: true });
+      assert.equal(await placeholder.getAttribute("aria-disabled"), "true");
+      assert.equal(await placeholder.getAttribute("href"), null);
+      const before = page.url();
+      await placeholder.click({ force: true });
+      assert.equal(page.url(), before, "coming-soon rows cannot navigate");
+    }
     const previews = nav.getByRole("button", { name: "Collapse Previews section", exact: true });
     const bounds = await previews.boundingBox(); assert.ok(bounds.height >= 44);
     await previews.focus(); await page.keyboard.press("Enter");
