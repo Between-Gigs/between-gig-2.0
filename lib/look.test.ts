@@ -47,7 +47,7 @@ describe("initial site appearance", () => {
   });
 
   it("keeps the original public brand typography apart from the product theme", () => {
-    for (const path of ["/storyboard/", "/crew-call/", "/proposals/home/", "/preview/drafts/coming-soon-v1/", "/preview/drafts/professionals-v1"]) {
+    for (const path of ["/crew-call/", "/proposals/home/", "/preview/drafts/coming-soon-v1/", "/preview/drafts/professionals-v1"]) {
       expect(isBrandPage(path)).toBe(true);
     }
     for (const path of ["/profile/", "/preview/", "/join/", "/storyboard-notes/", "/preview/drafts/", "/preview/drafts/coming-soon-v2/"]) {
@@ -59,6 +59,19 @@ describe("initial site appearance", () => {
     for (const path of ["/", "", "/professionals", "/professionals/"]) expect(isBrandPage(path)).toBe(false);
     expect(beforePaint("/", () => null)).toBe("editorial");
     expect(beforePaint("/professionals/", () => null)).toBe("editorial");
+  });
+
+  it("uses Green Room on Storyboard without the legacy brand-page exemption", () => {
+    for (const pathname of ["/storyboard", "/storyboard/"]) {
+      expect(isBrandPage(pathname)).toBe(false);
+      const dataset: { look?: string; brandPage?: string } = {};
+      runInNewContext(firstPaintLook, {
+        document: { documentElement: { dataset } }, location: { pathname, search: "" }, URLSearchParams,
+        localStorage: { getItem: () => null, setItem: () => {} },
+      });
+      expect(dataset.look).toBe("editorial");
+      expect(dataset).not.toHaveProperty("brandPage");
+    }
   });
 
   it("keeps the internal tools outside the site design on load and navigation", () => {
