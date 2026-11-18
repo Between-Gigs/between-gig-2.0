@@ -1,4 +1,5 @@
 "use client";
+import { serviceLabel } from "@/lib/profile/service-labels";
 import { Camera, Check, ChevronDown, Circle, CircleCheck, CircleDot, CloudCheck, Pencil, Plus } from "lucide-react";
 import * as React from "react";
 import type { Person, ProfileFields } from "@/lib/data";
@@ -50,7 +51,7 @@ export function ModernCanvas({ fields: d, person, order, required, editing, next
     photo: "", name: d.name, position: d.position, years: d.years ? `${d.years} years in the business` : "",
     where: d.market === "la" ? d.areas.join(" · ") : d.otherCity, availability: d.dates,
     rate: d.rate ? `$${d.rate} / ${basisShort[d.basis]}` : "", languages: d.languages,
-    about: d.about, services: d.services.join(" · "), skills: d.skills.join(" · "), credits: credits.join(" · "),
+    about: d.about, services: d.services.map(serviceLabel).join(" · "), skills: d.skills.join(" · "), credits: credits.join(" · "),
     imdb: d.imdb, details: [d.hireableJobs, d.tools, d.transport, d.personality].filter(Boolean).join(" · "),
   };
   const status = isApprovedPrivate(person.status) ? APPROVED_NOT_PUBLIC : isPublicStatus(person.status) ? "Live profile" : person.status === "submitted" ? "In review" : "Private draft";

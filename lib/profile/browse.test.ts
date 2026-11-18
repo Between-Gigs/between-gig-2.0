@@ -50,3 +50,9 @@ describe("filterGigsters", () => {
     expect(names({ ...noFilters, q: "maya props" })).toEqual([]);
   });
 });
+
+it("finds existing profiles using both approved category names and legacy names",()=>{
+ const legacy=[row("fictional", "approved",{name:"Fictional Crew",services:["Photography & Portraits","Hair Styling"]})];
+ for(const q of ["photography videography","portraits","beauty makeup","hair styling"])expect(filterGigsters(legacy,{...noFilters,q})).toHaveLength(1);
+ expect(legacy[0].profile.fields.services).toEqual(["Photography & Portraits","Hair Styling"]);
+});

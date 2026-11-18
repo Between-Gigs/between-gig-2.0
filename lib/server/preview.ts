@@ -1,6 +1,6 @@
-/* The public /hub sample export, with /preview compatibility redirects.
- * Built without Clerk or Company OS credentials; all actual app data stays behind its existing auth.
- * The old grant endpoint remains protected for compatibility, but Hub files no longer require its cookie.
+/* The /hub sample export, served only to a currently verified platform super admin.
+ * Sample rendering remains credential-free; the server checks the real session before any document/alias.
+ * The old preview grant cookie is compatibility data, never Hub authorization.
  */
 import { createHash, createHmac } from "node:crypto";
 import fs from "node:fs/promises";
@@ -11,7 +11,7 @@ import { sessionToken } from "./media";
 
 export const PREVIEW_COOKIE = "bg_preview";
 export const PREVIEW_ROOT = "preview-site";
-// One hour: it doesn't follow sign-out, and /preview-access/ renews it without a click while the person is signed in.
+// Legacy grant cookie only. Its expiry is unrelated to Hub access, which rechecks the real session.
 const MAX_AGE_S = 3600;
 
 // Bound to the site (APP_URL), so a cookie minted on test never opens production's preview, even with one secret.
@@ -23,7 +23,7 @@ export const previewCookieValue = (secret: string, userId: string, exp: number, 
   `${exp}.${Buffer.from(userId, "utf8").toString("base64url")}.${sign(secret, userId, exp, site)}`;
 
 
-const NO_STORE = { "cache-control": "no-store" };
+const NO_STORE = { "cache-control": "private, no-store", vary: "Cookie, Authorization" };
 const plain = (status: number, body = "") => new Response(body || null, { status, headers: { ...NO_STORE, "content-type": "text/plain; charset=utf-8", "x-content-type-options": "nosniff" } });
 
 /**
@@ -57,7 +57,7 @@ const TYPES: Record<string, string> = {
   ".webmanifest": "application/manifest+json", ".xml": "application/xml", ".pdf": "application/pdf",
 };
 
-/** The file a /preview/… path names inside root, or null when it would leave it or isn't a plain path. */
+/** The file a /hub/… path names inside root, or null when it would leave it or isn't a plain path. */
 export function resolveInside(root: string, rawPath: string): string | null {
   if (!rawPath.startsWith("/hub/")) return null;
   const rest = rawPath.slice("/hub/".length);
@@ -81,27 +81,31 @@ async function fileOf(root: string, full: string): Promise<string | null> {
   const realRoot = await fs.realpath(root).catch(() => null);
   const inside = async (p: string) => {
     const real = await fs.realpath(p).catch(() => null);
-    if (!real || !realRoot) return false;
+    if (!real || !realRoot) return null;
     const rel = path.relative(realRoot, real);
-    return !rel.startsWith("..") && !path.isAbsolute(rel);
+    return !rel.startsWith("..") && !path.isAbsolute(rel) ? real : null;
   };
   const stat = await fs.stat(full).catch(() => null);
-  if (stat?.isFile()) return (await inside(full)) ? full : null;
+  if (stat?.isFile()) return inside(full);
   if (stat?.isDirectory()) {
     const index = path.join(full, "index.html");
-    if ((await fs.stat(index).catch(() => null))?.isFile() && (await inside(index))) return index;
+    if ((await fs.stat(index).catch(() => null))?.isFile()) return inside(index);
   }
   return null;
 }
 
-// Every answer is private: a shared cache must never hand a gated file to someone without the cookie.
+const PUBLIC_ASSETS = new Set([".js", ".mjs", ".css", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico", ".woff2", ".woff", ".mp4", ".webm"]);
+const publicAsset = (file: string) => PUBLIC_ASSETS.has(path.extname(file).toLowerCase());
+
+// Documents (including RSC payloads) are never cached as public authorization decisions.
 function fileHeaders(file: string, root: string, body: Uint8Array) {
   const ext = path.extname(file).toLowerCase();
   const rel = path.relative(root, file).split(path.sep).join("/");
-  const cache = ext === ".html" ? "no-store" : rel.startsWith("_next/static/") ? "private, max-age=31536000, immutable" : "private, max-age=3600";
+  const cache = !publicAsset(file) ? NO_STORE["cache-control"] : rel.startsWith("_next/static/") ? "private, max-age=31536000, immutable" : "private, max-age=3600";
   return {
     "content-type": TYPES[ext] ?? "application/octet-stream",
     "cache-control": cache,
+    ...(!publicAsset(file) ? { vary: NO_STORE.vary } : {}),
     "content-security-policy": previewCsp(ext === ".html" ? inlineScriptHashes(Buffer.from(body).toString("utf8")) : []),
     "x-frame-options": "SAMEORIGIN",
     "x-robots-tag": "noindex, nofollow",
@@ -109,8 +113,29 @@ function fileHeaders(file: string, root: string, body: Uint8Array) {
   };
 }
 
-/** Public sample sandbox during Clerk testing. Real app routes and APIs remain session protected. */
-export async function servePreview(req: Request, deps: { root?: string; secret?: string; now?: number } = {}): Promise<Response> {
+type PreviewDeps = { root?: string; secret?: string; now?: number; cos?: Pick<CompanyOs, "me"> };
+let cachedCos: Pick<CompanyOs, "me"> | null = null;
+const login = () => new Response(null, { status: 307, headers: { ...NO_STORE, location: "/login/?next=%2Fowners%2Fdeveloper%2F" } });
+
+/** Never infer authorization from sample roles or a previously minted preview cookie. */
+async function requireHubAdmin(req: Request, deps: PreviewDeps): Promise<Response | null> {
+  let token: string | null;
+  try { token = sessionToken(req); } catch { return login(); }
+  if (!token) return login();
+  try {
+    const cos = deps.cos ?? (cachedCos ??= companyOs(configFromEnv()));
+    const me = await cos.me({ kind: "session", token });
+    if (!me || typeof me.isSuperAdmin !== "boolean" || !me.user || typeof me.user.id !== "string" || !me.user.id.trim() ||
+      typeof me.user.email !== "string" || !me.user.email.trim() || !Array.isArray(me.roleKeys) || me.roleKeys.some(role => typeof role !== "string")) return plain(503);
+    return me.isSuperAdmin === true ? null : plain(403, "Forbidden");
+  } catch (error) {
+    if (error instanceof CompanyOsError && error.status === 401) return login();
+    if (error instanceof CompanyOsError && error.status === 403) return plain(403, "Forbidden");
+    return plain(503);
+  }
+}
+
+async function previewResponse(req: Request, deps: PreviewDeps): Promise<Response> {
   const root = deps.root ? path.resolve(/* turbopackIgnore: true */ deps.root) : path.join(process.cwd(), PREVIEW_ROOT);
   if (req.method !== "GET" && req.method !== "HEAD") return plain(405);
   const url = new URL(req.url);
@@ -120,12 +145,19 @@ export async function servePreview(req: Request, deps: { root?: string; secret?:
     const invalid = resolveInside(root, "/hub/" + rest.replace(/^\//, "")) === null;
     if (invalid) return plain(404, "Not found");
     const target = hubTarget(url.pathname + url.search);
+    const destination = resolveInside(root, new URL(target, url).pathname);
+    const file = destination ? await fileOf(root, destination) : null;
+    if (!file || !publicAsset(file)) { const denied = await requireHubAdmin(req, deps); if (denied) return denied; }
     return new Response(null, { status: 307, headers: { ...NO_STORE, location: target } });
   }
   if (url.pathname !== "/hub" && !url.pathname.startsWith("/hub/")) return plain(404, "Not found");
-  if (url.pathname === "/hub" || url.pathname === "/hub/hub/" || url.pathname === "/hub/preview/") return new Response(null, { status: 307, headers: { ...NO_STORE, location: "/hub/" + url.search } });
+  if (url.pathname === "/hub" || url.pathname === "/hub/hub/" || url.pathname === "/hub/preview/") {
+    const denied = await requireHubAdmin(req, deps); if (denied) return denied;
+    return new Response(null, { status: 307, headers: { ...NO_STORE, location: "/hub/" + url.search } });
+  }
   const full = resolveInside(root, url.pathname);
   const file = full ? await fileOf(root, full) : null;
+  if (!file || !publicAsset(file)) { const denied = await requireHubAdmin(req, deps); if (denied) return denied; }
   if (!file) {
     const notFound = await fs.readFile(path.join(root, "404.html")).catch(() => null);
     if (!notFound) return plain(404, "Not found");
@@ -136,7 +168,11 @@ export async function servePreview(req: Request, deps: { root?: string; secret?:
   return new Response(req.method === "HEAD" ? null : bytes, { status: 200, headers: fileHeaders(file, root, bytes) });
 }
 
-let cachedCos: Pick<CompanyOs, "me"> | null = null;
+/** HTML, aliases, fallback documents and RSC reads share the same current-session policy, including HEAD. */
+export async function servePreview(req: Request, deps: PreviewDeps = {}): Promise<Response> {
+  const response = await previewResponse(req, deps);
+  return req.method === "HEAD" ? new Response(null, { status: response.status, headers: response.headers }) : response;
+}
 
 export async function grantPreview(req: Request, deps: { secret?: string; cos?: Pick<CompanyOs, "me">; now?: number } = {}): Promise<Response> {
   const secret = "secret" in deps ? deps.secret : process.env.COOKIE_SIGNING_SECRET || undefined;

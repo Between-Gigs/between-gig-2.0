@@ -1,4 +1,5 @@
 "use client";
+import { serviceLabel } from "@/lib/profile/service-labels";
 import { useLook } from "@/components/site/LookSync";
 import { Badge, Button, Input, cx } from "@ds/components";
 import { ArrowRight, Brush, CalendarCheck, Camera, Film, Hammer, MapPin, Search, Shirt, Sofa } from "lucide-react";
@@ -136,7 +137,7 @@ export function VisitorHome() {
               <PersonPhoto id={p.id} name={p.name} src={f.photo || undefined} alt="" className="size-20 shrink-0 rounded-xl sm:aspect-4/3 sm:size-auto sm:w-full sm:rounded-none" />
               <div className="grid min-w-0 gap-1 sm:p-4">
                 <h3 className="font-display text-heading-md text-ink"><Link href={`/p/${p.slug}/`} className="after:absolute after:inset-0 group-hover:text-ink-brand">{p.name}</Link></h3>
-                <p className="truncate text-label-sm text-ink-brand">{f.services[0]}</p>
+                <p className="truncate text-label-sm text-ink-brand">{serviceLabel(f.services[0] ?? "")}</p>
                 <p className="text-body-sm text-ink-muted">{f.areas[0]} · {monthStatusLabel[f.monthStatus]}</p>
                 {f.rate && <p className="text-label-sm whitespace-nowrap text-ink tabular-nums">{rate(f)}</p>}
               </div>
@@ -260,7 +261,7 @@ export function VisitorHome() {
                 <PersonPhoto id={p.id} name={p.name} src={f.photo || undefined} alt="" className="size-20 shrink-0 sm:aspect-square sm:size-auto sm:w-full" textClass="text-display-sm" />
                 <div className="grid min-w-0 flex-1 gap-0.5 sm:mt-3">
                   <h3 className="min-w-0 font-display text-heading-md text-ink"><Link href={`/p/${p.slug}/`} className="after:absolute after:inset-0 group-hover:underline group-hover:decoration-2 group-hover:underline-offset-4">{p.name}</Link></h3>
-                  <p className="truncate text-body-sm text-ink">{f.services[0]}</p>
+                  <p className="truncate text-body-sm text-ink">{serviceLabel(f.services[0] ?? "")}</p>
                   <p className="text-body-sm text-ink-muted">{f.areas[0]} · {monthStatusLabel[f.monthStatus]}</p>
                   {f.rate && <p className="text-label-md font-bold whitespace-nowrap text-ink tabular-nums sm:mt-1">{rate(f)}</p>}
                 </div>

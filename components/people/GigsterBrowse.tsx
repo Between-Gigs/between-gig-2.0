@@ -1,4 +1,5 @@
 "use client";
+import { serviceLabel } from "@/lib/profile/service-labels";
 import { Button, Input, Select, Skeleton, cx } from "@ds/components";
 import { Search, X } from "lucide-react";
 import Link from "next/link";
@@ -205,19 +206,19 @@ const cell = "col-span-6 min-w-0 md:col-span-4 lg:col-span-3";
 /** One row for the Cream & forest results list (ProfileResultCard), from the same fields the grid card reads. */
 function resultOf({ person, profile }: Listed): SearchResult {
   const f = profile.fields;
-  const department = craftOf(f.position, f.skills) ?? (f.position || f.services[0] || "");
+  const department = craftOf(f.position, f.skills) ?? (f.position || serviceLabel(f.services[0] ?? ""));
   const line = profile.extras?.tagline || f.about.split(/(?<=[.!?])\s/)[0] || undefined;
   return {
     id: person.id, sample: person.sample, href: `/p/${person.slug}/`, name: f.name || person.name, service: department,
     line, area: f.market === "la" ? f.areas.join(" · ") || "Los Angeles" : "Another market", availability: monthStatusLabel[f.monthStatus],
-    rate: f.rate ? `From $${f.rate}/${basisShort[f.basis]}` : "Rate on request", minimum: f.bookingMinimum || undefined, photo: f.photo || undefined,
+    rate: f.rate ? `From $${f.rate}/${basisShort[f.basis]}` : "Rate on request", photo: f.photo || undefined,
   };
 }
 
 function GigsterCard({ row: { person, profile } }: { row: Listed }) {
   const f = profile.fields;
   const name = f.name || person.name;
-  const department = craftOf(f.position, f.skills) ?? (f.position || f.services[0] || "");
+  const department = craftOf(f.position, f.skills) ?? (f.position || serviceLabel(f.services[0] ?? ""));
   const area = f.market === "la" ? f.areas.join(" · ") || "Los Angeles" : "Another market";
   return (
     <Link href={`/p/${person.slug}/`} className="group grid gap-3 border-t-4 border-line-strong pt-3 sm:gap-4 sm:pt-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus">

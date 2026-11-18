@@ -48,15 +48,25 @@ export interface ThemeToggleProps {
 }
 
 /** Day/Night switch: a sliding sun and moon. Uncontrolled, it switches the whole page with a circular reveal. */
-export function ThemeToggle({ theme: controlled, onChange, showLabel = true, size = "md", className }: ThemeToggleProps) {
+export function ThemeToggle(props: ThemeToggleProps) {
+  return props.theme === undefined
+    ? <UncontrolledThemeToggle {...props} />
+    : <ThemeTogglePresentation {...props} theme={props.theme} />;
+}
+
+/** Only the uncontrolled path owns the legacy document/storage hook. */
+function UncontrolledThemeToggle({ onChange, ...props }: ThemeToggleProps) {
   const own = useTheme();
-  const theme = controlled ?? own.theme;
+  return <ThemeTogglePresentation {...props} theme={own.theme} onChange={onChange ?? own.setTheme} />;
+}
+
+/** Shared visual control; controlled consumers never read or write legacy appearance as a mount effect. */
+function ThemeTogglePresentation({ theme, onChange, showLabel = true, size = "md", className }: ThemeToggleProps & { theme: Theme }) {
   const night = theme === "dark";
   const sm = size === "sm";
   const flip = (e: React.MouseEvent<HTMLButtonElement>) => {
     const next: Theme = night ? "light" : "dark";
-    if (onChange) onChange(next, e.currentTarget);
-    else own.setTheme(next, e.currentTarget);
+    onChange?.(next, e.currentTarget);
   };
   return (
     <button type="button" role="switch" aria-checked={night} aria-label="Night mode" onClick={flip}

@@ -12,6 +12,8 @@ import * as React from "react";
 import { data } from "@/lib/data";
 import { laServiceAreas, monthStatusLabel, onSetSkills, serviceChoices } from "@/lib/data/taxonomy";
 import { personalityQuestions } from "@/lib/profile/personality";
+import { servicePickerLabel, serviceMatches } from "@/lib/profile/service-labels";
+import { serviceSelectOptions } from "@/lib/profile/service-choice";
 import { serviceDescription } from "@/lib/profile/service-descriptions";
 import { stageTwoLimits } from "@/lib/profile/stage-two";
 import { ABOUT_MAX, DATES_MAX, DEPARTMENT_MAX, MAX_SERVICES, NAME_MAX, SERVICE_LINE_MAX, TITLE_MAX, hasRate } from "@/lib/profile/validate";
@@ -121,7 +123,7 @@ export function HelpSection({ d, set, errors }: SectionProps) {
     set("services")(rows.filter((_, j) => j !== i));
     set("serviceLines")(nextLines);
   };
-  const optionsFor = (current?: string) => choices.filter((c) => c === current || !rows.includes(c)).map((c) => ({ value: c, label: c }));
+  const optionsFor = (current?: string) => serviceSelectOptions(choices, rows, current, true, servicePickerLabel, serviceMatches);
   const missingLine = !!errors.serviceLines;
 
   return (
@@ -140,7 +142,7 @@ export function HelpSection({ d, set, errors }: SectionProps) {
                     <Field label={`Service ${i + 1}`} className="min-w-0 flex-1">
                       <Select id={`f-service-${i}`} options={optionsFor(s)} value={s} onValueChange={(v) => replace(i, v)} />
                     </Field>
-                    <Button variant="ghost" className="min-h-11" iconStart={<Trash2 />} aria-label={`Remove ${s}`} onClick={() => remove(i)}>
+                    <Button variant="ghost" className="min-h-11" iconStart={<Trash2 />} aria-label={`Remove ${servicePickerLabel(s)}`} onClick={() => remove(i)}>
                       <span className="max-sm:sr-only">Remove</span>
                     </Button>
                   </div>

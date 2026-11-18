@@ -1,4 +1,5 @@
 "use client";
+import { serviceLabel, servicePickerLabel, servicePickerValues } from "@/lib/profile/service-labels";
 /*
  * A standalone, unstyled profile page with plain editing (A/B against /profile/canvas/).
  *
@@ -11,7 +12,7 @@
 import Link from "next/link";
 import * as React from "react";
 import { data, type PersonStatus, type ProfileFields } from "@/lib/data";
-import { basisLabel, basisShort, insuranceLabel, laServiceAreas, modeLabel, monthStatusLabel, offSetServices, onSetSkills } from "@/lib/data/taxonomy";
+import { basisLabel, basisShort, insuranceLabel, laServiceAreas, modeLabel, monthStatusLabel, serviceChoices, onSetSkills } from "@/lib/data/taxonomy";
 import { useRequireRole } from "@/lib/guard";
 import { ABOUT_MAX, DATES_MAX, DEPARTMENT_MAX, NAME_MAX, hasRate, validateAll, type FieldErrors } from "@/lib/profile/validate";
 import { APPROVED_EDIT_HINT, APPROVED_NOT_PUBLIC, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
@@ -26,7 +27,7 @@ const statusText: Record<PersonStatus, string> = {
 const order: (keyof ProfileFields)[] = [
   "photo", "name", "position", "years", "imdb", "credits", "skills", "services", "market", "areas", "otherCity", "zip", "travel",
   "monthStatus", "dates", "earliestStart", "rate", "about", "languages", "mode", "tools", "transport", "insurance",
-  "hireableJobs", "bookingMinimum", "personality", "bookingMobile",
+  "hireableJobs", "personality", "bookingMobile",
 ];
 
 export function SimpleProfile() {
@@ -177,13 +178,13 @@ export function SimpleProfile() {
         <h2 id="h-what">What you do</h2>
         {editing ? <>
           <Checks k="skills" legend="On-set skills" options={onSetSkills} form={form} toggle={toggle} err={err} />
-          <Checks k="services" legend="Services you offer" options={offSetServices} form={form} toggle={toggle} err={err} />
-          <Text k="other" label="Anything else you offer (optional)" form={form} set={set} err={err} described={described} />
+          <Checks k="services" legend="Services you offer" options={servicePickerValues(form.services, serviceChoices(data.kind))} form={form} toggle={toggle} err={err} />
+          <Text k="other" label="Other — name your service (optional)" form={form} set={set} err={err} described={described} />
         </> : <>
           <h3>On-set skills</h3>
           {f.skills.length ? <ul>{f.skills.map((s) => <li key={s}>{s}</li>)}</ul> : <p className="empty">None picked yet.</p>}
           <h3>Services</h3>
-          {f.services.length || f.other ? <ul>{[...f.services, f.other].filter(Boolean).map((s) => <li key={s}>{s}</li>)}</ul> : <p className="empty">None picked yet.</p>}
+          {f.services.length || f.other ? <ul>{[...f.services.map(serviceLabel), f.other].filter(Boolean).map((s, i) => <li key={i}>{s}</li>)}</ul> : <p className="empty">None picked yet.</p>}
         </>}
       </section>
 
@@ -228,8 +229,7 @@ export function SimpleProfile() {
               <label key={b}><input type="radio" name="basis" checked={form.basis === b} onChange={() => set("basis", b)} /> {basisLabel[b]}</label>
             ))}
           </fieldset>
-          <Text k="bookingMinimum" label="Minimum booking (optional)" form={form} set={set} err={err} described={described} />
-        </> : <p>{hasRate(f.rate) ? `From $${f.rate} / ${basisShort[f.basis]}` : "Rate on request"}{f.bookingMinimum && ` · Minimum: ${f.bookingMinimum}`}</p>}
+        </> : <p>{hasRate(f.rate) ? `From $${f.rate} / ${basisShort[f.basis]}` : "Rate on request"}</p>}
       </section>
 
       {/* 5. About */}
@@ -314,7 +314,7 @@ function Checks({ k, legend, options, form, toggle, err }: {
   return (
     <fieldset id={`f-${k}`}>
       <legend>{legend}</legend>
-      {options.map((o) => <label key={o}><input type="checkbox" checked={form[k].includes(o)} onChange={() => toggle(k, o)} /> {o}</label>)}
+      {options.map((o) => <label key={o}><input type="checkbox" checked={form[k].includes(o)} onChange={() => toggle(k, o)} /> {k === "services" ? servicePickerLabel(o) : o}</label>)}
       {err(k)}
     </fieldset>
   );

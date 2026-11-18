@@ -8,13 +8,15 @@ const { server, url } = await serve("out", { base });
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? "/usr/bin/chromium" });
 fs.mkdirSync("deliverables/owner-sidebar", { recursive: true });
 try {
-  for (const look of ["editorial", "swiss", "modern"]) for (const width of [390, 1440]) for (const theme of ["light", "dark"]) {
+  for (const look of ["editorial", "swiss", "modern"]) for (const width of [320, 390, 1440]) for (const theme of ["light", "dark"]) {
     const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce", colorScheme: theme });
     await context.addInitScript(({ look, theme }) => { localStorage.setItem("bg2-site-look-v2", look); localStorage.setItem("bg-theme", theme); if (look === "swiss" && localStorage.getItem("bg2-owner-nav-collapsed") === null) localStorage.setItem("bg2-owner-nav-collapsed", "1"); }, { look, theme });
     const origin = new URL(url).origin;
     await context.route("**/*", route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
     const page = await context.newPage(); await page.goto(`${url}/hub/`); await page.waitForFunction(() => !!window.bgSample);
     await page.evaluate(() => window.bgSample.signInAs("owner")); await page.goto(`${url}/owners/`);
+    await page.getByRole("button", { name: "Switch experience" }).click();
+    await page.getByRole("menuitemradio", { name: "Developer Mode", exact: true }).click();
     await page.getByRole("heading").first().waitFor();
     if (width >= 1024 && look === "swiss") await page.getByRole("button", { name: "Expand sidebar ([)", exact: true }).click();
     if (width < 1024) {
@@ -24,13 +26,19 @@ try {
     let nav = width < 1024 ? page.getByRole("dialog") : page.getByRole("navigation", { name: "Owner workspace", exact: true });
     await nav.getByRole("button", { name: "Collapse Previews section", exact: true }).waitFor();
     const overview = nav.locator('[data-owner-section="Overview"]');
-    assert.deepEqual(await overview.getByRole("link").allTextContents(), ["Dashboard", "Hub"]);
+    assert.deepEqual(await overview.getByRole("link").allTextContents(), ["Dashboard"]);
     for (const [name, href] of [["Page Previews", "/preview/#journey-h"], ["Social Previews", "/preview/social/"], ["Email Previews", "/emails/"], ["Forms", "/preview/forms/"], ["Funnels", "/preview/funnels/"], ["Design System", "/preview/design-system/"], ["Wallpapers", "/preview/wallpapers/"]]) {
       assert.equal(await nav.getByRole("link", { name, exact: true }).getAttribute("href"), `${base}${href}`);
     }
     assert.equal(await nav.getByRole("link", { name: "Wallpapers", exact: true }).getByText("Wallpapers", { exact: true }).isVisible(), true, "drawer labels remain visible with a collapsed-rail preference");
-    const media = nav.getByRole("link", { name: "Media Library · Coming soon", exact: true });
-    assert.equal(await media.getAttribute("aria-disabled"), "true"); assert.equal(await media.getAttribute("href"), null);
+    for (const label of ["Media Library", "Copywriting", "Skills", "Characters"]) {
+      const placeholder = nav.getByRole("link", { name: `${label} · Coming soon`, exact: true });
+      assert.equal(await placeholder.getAttribute("aria-disabled"), "true");
+      assert.equal(await placeholder.getAttribute("href"), null);
+      const before = page.url();
+      await placeholder.click({ force: true });
+      assert.equal(page.url(), before, "coming-soon rows cannot navigate");
+    }
     const previews = nav.getByRole("button", { name: "Collapse Previews section", exact: true });
     const bounds = await previews.boundingBox(); assert.ok(bounds.height >= 44);
     await previews.focus(); await page.keyboard.press("Enter");
@@ -45,7 +53,7 @@ try {
       await page.getByRole("button", { name: "Expand sidebar ([)", exact: true }).click();
     }
     await nav.getByRole("button", { name: "Expand all", exact: true }).click();
-    assert.equal(await nav.locator('[data-owner-section] > button[aria-expanded="true"]').count(), 5);
+    assert.equal(await nav.locator('[data-owner-section] > button[aria-expanded="true"]').count(), 6);
     await nav.getByRole("button", { name: "Collapse Studio section", exact: true }).click();
     await page.reload();
     if (width < 1024) {

@@ -1,4 +1,5 @@
 "use client";
+import { serviceDraftReducer, type ServiceDraftAction, type ServiceFields } from "@/lib/profile/service-choice";
 /*
  * /profile/canvas/: the Gigster profile editor (rebuilt 13 Nov 2026, Flow p3). One clean page in the Green Room look:
  * what's needed to submit and what can come later, then the profile's parts in the order clients read them, with
@@ -7,6 +8,8 @@
  * editor is kept as a Hub draft (/preview/drafts/profile-editor-v1/).
  */
 import { APPROVED_EDIT_HINT, APPROVED_NOT_PUBLIC, APPROVED_NOT_PUBLIC_LINE, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
+import { useEditorView, setEditorView } from "./useEditorView";
+import type { EditorView as View } from "@/lib/profile/editor-view";
 import { departmentFieldRetired } from "@/lib/profile/department-retirement";
 import { adoptStored, videoLinksEnabled } from "@/lib/profile/video-links";
 import { profileDetailsEnabled } from "@/lib/profile/details";
@@ -81,7 +84,7 @@ function EditorSkeleton() {
   );
 }
 
-type View = "edit" | "preview";
+
 
 function Editor({ personId }: { personId: string }) {
   const toast = useToast();
@@ -90,12 +93,16 @@ function Editor({ personId }: { personId: string }) {
   const [profileCreatedAt, setProfileCreatedAt] = React.useState<string | null | undefined>(undefined);
   const template = React.useMemo(() => withTravelRequirement(baseTemplate, profileCreatedAt), [baseTemplate, profileCreatedAt]);
   const [person, setPerson] = React.useState<Person | null>(null);
-  const [d, setD] = React.useState<ProfileFields | null>(null);
+  const [draftState, dispatchDraft] = React.useReducer(serviceDraftReducer, { fields: null, conversion: null });
+  const d = draftState.fields;
+  const setD = React.useCallback((value: Extract<ServiceDraftAction, { type: "set" }>["value"]) => dispatchDraft({ type: "set", value }), []);
+  const conversionId = React.useRef(0);
+  const conversionCallbacks = React.useRef(new Map<number, () => void>());
   const [sentVersion, setSentVersion] = React.useState<ProfileFields | null>(null);
   const [save, setSave] = React.useState<SaveState>({ status: "idle" });
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [summary, setSummary] = React.useState(false);
-  const [view, setView] = React.useState<View>("edit");
+  const view = useEditorView();
   const [submitting, setSubmitting] = React.useState(false);
   const live = useLiveEditWarning(person?.status);
   const dirty = React.useRef(false);
@@ -122,7 +129,7 @@ function Editor({ personId }: { personId: string }) {
       if (draft.savedAt) setSave({ status: "saved", at: draft.savedAt });
     });
     return () => { current = false; };
-  }, [personId]);
+  }, [personId, setD]);
 
   const refresh = React.useCallback(async () => {
     const [s, sent] = await Promise.all([data.people.get(personId), data.profiles.getProfile(personId)]);
@@ -162,7 +169,24 @@ function Editor({ personId }: { personId: string }) {
       setSave(message ? { status: "error", message } : { status: "error" });
       return false;
     }
-  }, [personId, refresh]);
+  }, [personId, refresh, setD]);
+
+  // Consume each committed transaction once. Dirty tracking and focus cannot run inside the pure reducer.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  React.useEffect(() => {
+    const result = draftState.conversion;
+    const applied = result && conversionCallbacks.current.get(result.id);
+    if (!result || !applied) return;
+    conversionCallbacks.current.delete(result.id);
+    if (!result.succeeded) { setErrors(e => ({ ...e, services: "Your services changed while this confirmation was open. Choose Other again to use the latest answer." })); return; }
+    dirty.current = true;
+    for (const field of ["services", "serviceLines", "other"] as const) touched.current.add(field);
+    setSave(x => x.status === "saving" ? x : { status: "saving" });
+    setErrors(e => { const next = { ...e }; delete next.services; delete next.serviceLines; return next; });
+    applied();
+  }, [draftState.conversion]);
+
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   React.useEffect(() => {
     if (!dirty.current) return;
@@ -196,7 +220,7 @@ function Editor({ personId }: { personId: string }) {
       });
       void refresh();
     });
-  }, [personId, refresh]);
+  }, [personId, refresh, setD]);
 
   const checklist = React.useMemo(() => (d ? gigsterChecklist(d, template) : null), [d, template]);
   if (!person || !d || !checklist) return <EditorSkeleton />;
@@ -213,6 +237,12 @@ function Editor({ personId }: { personId: string }) {
       if (k === "market") { delete n.zip; delete n.otherCity; delete n.areas; }
       return n;
     });
+  });
+  const convertToCustom = (expected: ServiceFields, index: number, applied: () => void) => live.guard("services", () => {
+    if (conversionCallbacks.current.size) return; // One result must be consumed before another conversion.
+    const id = ++conversionId.current;
+    conversionCallbacks.current.set(id, applied);
+    dispatchDraft({ type: "convert", id, expected, index });
   });
   const required = (field: string) => (requiredProfileRules(template) as readonly string[]).includes(field);
 
@@ -236,14 +266,14 @@ function Editor({ personId }: { personId: string }) {
   const rank = (k: keyof ProfileFields) => { const i = gigsterItems.findIndex((x) => x.id === gigsterItemOf(k)); return i < 0 ? 99 : i; };
   const errorList = (Object.entries(errors).filter(([, m]) => m) as [keyof ProfileFields, string][]).sort((a, b) => rank(a[0]) - rank(b[0]));
 
-  const switchView = (v: View) => { setView(v); window.scrollTo({ top: 0 }); };
+  const switchView = (v: View) => { setEditorView(v); window.scrollTo({ top: 0 }); };
 
   const submit = async () => {
     const found = validateGigster(d, template);
     if (Object.keys(found).length) {
       setErrors(found);
       setSummary(true);
-      setView("edit");
+      setEditorView("edit");
       requestAnimationFrame(() => { summaryRef.current?.scrollIntoView({ block: "start" }); summaryRef.current?.focus({ preventScroll: true }); });
       return;
     }
@@ -366,10 +396,10 @@ function Editor({ personId }: { personId: string }) {
           <CanvasIdentity d={d} set={set} errors={errors} personId={personId} required={required} confirmPhoto={(go) => live.guard("photo", go)} />
           <div className="border-t border-line-strong pt-10"><CanvasExperience d={d} set={set} errors={errors} required={required} /></div>
           <div className="grid gap-12 border-t border-line-strong pt-10 lg:grid-cols-12 lg:gap-0">
-            <div className="min-w-0 lg:col-span-8 lg:pr-10"><CanvasHelp d={d} set={set} errors={errors} /></div>
+            <div className="min-w-0 lg:col-span-8 lg:pr-10"><CanvasHelp d={d} set={set} errors={errors} onConvertToCustom={convertToCustom} /></div>
             <div className="min-w-0 lg:col-span-4 lg:border-l lg:border-line-strong lg:pl-10"><CanvasRates d={d} set={set} errors={errors} required={required} /></div>
           </div>
-          <div className="border-t border-line-strong pt-10"><CanvasSamples d={d} set={set} errors={errors} /></div>
+          <div className="border-t border-line-strong pt-10"><CanvasSamples key={personId} d={d} set={set} errors={errors} /></div>
           <div className="border-t border-line-strong pt-10"><CanvasColumns d={d} set={set} errors={errors} required={required} /></div>
           <div className="border-t border-line-strong pt-10"><CanvasDetails d={d} set={set} errors={errors} /></div>
           <div className="border-t border-line-strong pt-6"><CanvasContact d={d} set={set} errors={errors} email={person.email} /></div>

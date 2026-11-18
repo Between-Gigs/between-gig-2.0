@@ -26,7 +26,7 @@ const config: NextConfig = {
   images: { unoptimized: true },
   reactStrictMode: true,
   ...((live || server) && { turbopack: { resolveAlias: {
-    ...(live && { "@/lib/data/selected": "./lib/data/selected.live.ts", "@/lib/staff/selected": "./lib/staff/selected.live.ts" }),
+    ...(live && { "@/lib/data/selected": "./lib/data/selected.live.ts", "@/lib/staff/selected": "./lib/staff/selected.live.ts", "@/lib/staff-navigation/selected": "./lib/staff-navigation/selected.live.ts" }),
     // The persistent preview frame belongs to the isolated sample export, not the public site's bundle.
     ...(server && { "@/components/site/AdminRoutes": "./components/site/AdminRoutes.server.tsx" }),
   } } }),

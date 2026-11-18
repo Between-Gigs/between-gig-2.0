@@ -1,4 +1,5 @@
 "use client";
+import { serviceLabel } from "@/lib/profile/service-labels";
 import { APPROVED_NOT_PUBLIC, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
 import { Accordion, Button, Field, Input, Modal, Select, Textarea, cx, useToast } from "@ds/components";
 import { WorkTile } from "@/components/profile/WorkTile";
@@ -114,7 +115,7 @@ export function ProfileView(props: Props) {
     } catch { /* closed the share sheet */ }
   };
   const Layout = look === "modern" ? ModernProfile : look === "swiss" ? SwissProfile : look === "editorial" ? ProfileTemplate : WarmProfile;
-  const craft = fields.position || model.services[0];
+  const craft = fields.position || serviceLabel(model.services[0] ?? "");
   return (
     <div className="relative">
       {mode === "public" && !part && (
@@ -140,7 +141,7 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
   services, helps, portfolio, sample, editing, show, priced, rate, where, credits, unseen, reviewed, P, creditRows,
   questions, sections, saved, onSave, onShare, onPhoto, onRequest, ids }: ProfileLayoutProps) {
   const Name = embedded || mode === "owner" ? "h2" : "h1";
-  const craft = f.position || services[0] || "";
+  const craft = f.position || serviceLabel(services[0] ?? "");
   // How they work (mode and travel, transport, insurance when shared) and what they bring, as the facts table reads.
   const works = [
     `${modeLabel[f.mode]}${f.travel ? ` · ${f.travel}` : ""}`,
@@ -312,7 +313,7 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
               {(helps.length ? helps : services).map((s, i) => (
                 <li key={s} className="flex items-baseline gap-4 border-t border-line py-3 first:border-t-0 first:pt-0 sm:border-t-2 sm:border-line-strong sm:pb-5 sm:nth-2:border-t-0 sm:nth-2:pt-0">
                   <span aria-hidden="true" className="w-6 shrink-0 text-label-sm text-ink-muted tabular-nums">{String(i + 1).padStart(2, "0")}</span>
-                  <span className="grid"><span className="font-display text-editorial-lg font-bold tracking-tight text-ink">{s}</span>{rate && !helps.length && <span className="text-body-sm text-ink-muted">From {rate}</span>}</span>
+                  <span className="grid"><span className="font-display text-editorial-lg font-bold tracking-tight text-ink">{helps.length ? s : serviceLabel(s)}</span>{rate && !helps.length && <span className="text-body-sm text-ink-muted">From {rate}</span>}</span>
                 </li>
               ))}
             </ol>
@@ -434,7 +435,7 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
                   <span className="flex min-w-0 flex-1 items-end justify-between gap-3 lg:mt-4">
                     <span className="grid min-w-0 gap-1">
                       <span className="truncate font-display text-editorial-lg font-bold tracking-tight text-ink group-hover:underline lg:text-heading-md">{o.name}</span>
-                      <span className="truncate text-body-md text-ink-muted">{profile.fields.position || profile.fields.services[0]}</span>
+                      <span className="truncate text-body-md text-ink-muted">{profile.fields.position || serviceLabel(profile.fields.services[0] ?? "")}</span>
                     </span>
                     {hasRate(profile.fields.rate) && <span className="shrink-0 text-right font-display text-heading-md text-ink tabular-nums lg:text-heading-lg">${profile.fields.rate}<span className="block text-label-sm text-ink-muted">/ {basisShort[profile.fields.basis]}</span></span>}
                   </span>

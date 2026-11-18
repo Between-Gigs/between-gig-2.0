@@ -7,7 +7,7 @@
  * opens its field. Patti's and Peter's corrections to that mockup are applied: "Your name" (not "public name"), up to
  * five services with their standard description, the film and TV questions, 1 of 4 personality questions, and no "0%".
  */
-import { Button, Checkbox, Field, Input, RadioGroup, Select, Switch, Textarea } from "@ds/components";
+import { Button, Checkbox, Field, Input, RadioGroup, Select, Textarea } from "@ds/components";
 import { cx } from "@ds/components/cx";
 import { Camera, Crop as CropIcon, GripVertical, Lock, MapPin, Pencil, Play, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import * as React from "react";
@@ -15,10 +15,16 @@ import { data } from "@/lib/data";
 import { laServiceAreas, onSetSkills, serviceChoices } from "@/lib/data/taxonomy";
 import { personalityQuestions } from "@/lib/profile/personality";
 import { departmentFieldRetired } from "@/lib/profile/department-retirement";
+import { servicePickerLabel, serviceLabel, serviceMatches } from "@/lib/profile/service-labels";
 import { serviceDescription } from "@/lib/profile/service-descriptions";
+import { customServiceFrom, OTHER_SERVICE, serviceSelectOptions, type ServiceFields } from "@/lib/profile/service-choice";
+import { ServiceGuidance } from "./ServiceGuidance";
 import { locationControlsEnabled, travelRadiusOptions } from "@/lib/profile/location-controls";
 import { travelPreferenceEnabled } from "@/lib/profile/travel-preference";
 import { customSkillsEnabled } from "@/lib/profile/skills";
+import { AvailabilitySwitch } from "./AvailabilitySwitch";
+import { PhoneInput } from "./PhoneInput";
+import { ExperienceFields } from "./ExperienceFields";
 import { SkillPicker } from "./SkillPicker";
 import { POSTAL_CODE_MAX } from "@/lib/profile/postal";
 import { INSURANCE_NOTES_MAX } from "@/lib/profile/insurance";
@@ -145,20 +151,33 @@ export function CanvasIdentity({ d, set, errors, personId, confirmPhoto, require
 }
 
 /** "How I can help": up to five services, each with its standard description and the Gigster's own line. */
-export function CanvasHelp({ d, set, errors }: SectionProps) {
+export function CanvasHelp({ d, set, errors, onConvertToCustom }: SectionProps & { onConvertToCustom: (expected: ServiceFields, index: number, applied: () => void) => void }) {
   const choices = serviceChoices(data.kind);
   const [adding, setAdding] = React.useState(false);
   const lines = d.serviceLines ?? {};
   const rows = d.services;
   const setLine = (service: string, text: string) => set("serviceLines")({ ...lines, [service]: text.slice(0, SERVICE_LINE_MAX) });
   const replace = (i: number, next: string) => {
+    if (next === OTHER_SERVICE) {
+      const converted = customServiceFrom(d, i, otherVisible);
+      if (!converted) return;
+      onConvertToCustom(d, i, () => {
+        setAdding(false);
+        requestAnimationFrame(() => {
+          const field = document.getElementById("f-other");
+          if (field instanceof HTMLInputElement && field.value === converted.other.split("\n")[0]) field.focus();
+        });
+      });
+      return;
+    }
+    if (rows.some((value, index) => index !== i && serviceMatches(value, next))) return;
     const prev = rows[i];
     const nextLines = { ...lines };
     if (prev && nextLines[prev] !== undefined && nextLines[next] === undefined) { nextLines[next] = nextLines[prev]; delete nextLines[prev]; }
     set("services")(rows.map((s, j) => (j === i ? next : s)));
     set("serviceLines")(nextLines);
   };
-  const add = (next: string) => { if (count >= MAX_SERVICES) return; set("services")([...rows, next]); setAdding(false); };
+  const add = (next: string) => { if (count >= MAX_SERVICES || rows.some(value => serviceMatches(value, next))) return; set("services")([...rows, next]); setAdding(false); };
   const remove = (i: number) => {
     const nextLines = { ...lines };
     delete nextLines[rows[i]];
@@ -170,16 +189,12 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
   const otherVisible = otherOpen || !!d.other.trim();
   const count = rows.length + Number(otherVisible);
   const showBlank = count < MAX_SERVICES && (rows.length === 0 || adding);
-  const OTHER = "__other";
-  const optionsFor = (current?: string) => [
-    ...choices.filter((c) => c === current || !rows.includes(c)).map((c) => ({ value: c, label: c })),
-    // Not on the list: the team reviews a new service before it shows (it is stored as "Something else").
-    ...(current === undefined && !otherVisible ? [{ value: OTHER, label: "Other — name your service" }] : []),
-  ];
+  const OTHER = OTHER_SERVICE;
+  const optionsFor = (current?: string) => serviceSelectOptions(choices, rows, current, otherVisible, servicePickerLabel, serviceMatches);
   // "Something else" holds the service's name on its first line and what they'd do after it.
   const [otherName = "", ...otherRest] = d.other.split("\n");
-  const otherLine = otherRest.join(" ");
-  const setOther = (name: string, line: string) => set("other")(line.trim() ? `${name}\n${line.slice(0, SERVICE_LINE_MAX)}` : name);
+  const otherLine = otherRest.join("\n");
+  const setOther = (name: string, line: string) => set("other")(line ? `${name}\n${line}` : name);
   const pickNew = (next: string) => {
     if (count >= MAX_SERVICES) return;
     if (next !== OTHER) return add(next);
@@ -247,7 +262,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
               <div className="grid gap-4 sm:grid-cols-12 sm:gap-0">
                 <div className="flex items-start gap-1 sm:col-span-5 sm:pr-5">
                   {rows.length > 1 && (
-                    <button type="button" id={`service-grip-${i}`} aria-label={`Move ${s}, service ${i + 1} of ${rows.length}`} aria-describedby="services-hint"
+                    <button type="button" id={`service-grip-${i}`} aria-label={`Move ${servicePickerLabel(s)}, service ${i + 1} of ${rows.length}`} aria-describedby="services-hint"
                       title="Drag to reorder, or use the arrow keys"
                       className={cx("grid size-10 shrink-0 touch-none place-items-center rounded-md text-ink-subtle transition-colors hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-ink-brand",
                         dragging === i ? "cursor-grabbing text-ink-brand" : "cursor-grab")}
@@ -256,15 +271,15 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
                     </button>
                   )}
                   <div className="min-w-0 flex-1">
-                    <label htmlFor={`f-service-${i}`} className="sr-only">Service {i + 1}</label>
+                    <label htmlFor={`f-service-${i}`} className="mb-1 block text-body-sm text-ink-muted">Service {i + 1}</label>
                     <Select id={`f-service-${i}`} options={optionsFor(s)} value={s} onValueChange={(v) => replace(i, v)} />
                   </div>
-                  <button type="button" aria-label={`Remove ${s}`} onClick={() => remove(i)}
+                  <button type="button" aria-label={`Remove ${servicePickerLabel(s)}`} onClick={() => remove(i)}
                     className="grid size-10 shrink-0 place-items-center rounded-md text-ink-muted hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-focus"><Trash2 aria-hidden="true" className="size-4" /></button>
                 </div>
                 <div className="grid min-w-0 gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
                   <label htmlFor={`f-line-${i}`} className="text-body-md text-ink">What can a customer hire you to do?</label>
-                  {!lineError && <p className="text-body-sm text-ink-muted italic">Example: Hang artwork and style a room for a party.</p>}
+                  <p className="text-body-sm text-ink-muted">Describe your own service in one short line.</p>
                   <Textarea id={`f-line-${i}`} rows={2} showCount maxLength={SERVICE_LINE_MAX} value={line} invalid={!!lineError}
                     placeholder="Describe what a customer can hire you to do."
                     onChange={(e) => setLine(s, e.target.value)} />
@@ -272,6 +287,8 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
                 </div>
               </div>
               {standard && <p className="text-body-sm text-ink-muted"><span className="font-semibold text-ink">Standard description</span> · the same for everyone who offers it: {standard}</p>}
+              {serviceLabel(s) !== s && ["Hair Styling", "Makeup Services"].includes(s) && <p className="text-body-sm text-ink-muted">Saved service: {s}</p>}
+              <ServiceGuidance service={s} />
             </li>
           );
         })}
@@ -282,7 +299,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
             <div className="grid gap-4 sm:grid-cols-12 sm:gap-0">
               <div className="flex items-start gap-1 sm:col-span-5 sm:pr-5">
                 <div className="grid min-w-0 flex-1 gap-1.5">
-                  <label htmlFor="f-other" className="text-body-md text-ink">Name of the Service</label>
+                  <label htmlFor="f-other" className="text-body-md text-ink">Your service name</label>
                   <Input id="f-other" value={otherName} maxLength={60} placeholder="e.g. Web design"
                     onChange={(e) => setOther(e.target.value.replace(/\n/g, " "), otherLine)} />
                 </div>
@@ -291,10 +308,10 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
               </div>
               <div className="grid min-w-0 gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
                 <label htmlFor="f-other-line" className="text-body-md text-ink">What can a customer hire you to do?</label>
-                <p className="text-body-sm text-ink-muted italic">Example: Hang artwork and style a room for a party.</p>
+                <p className="text-body-sm text-ink-muted">Describe the service you offer in your own words.</p>
                 <Textarea id="f-other-line" rows={2} showCount maxLength={SERVICE_LINE_MAX} value={otherLine}
                   placeholder="Describe what a customer can hire you to do."
-                  onChange={(e) => setOther(otherName, e.target.value)} />
+                  onChange={(e) => setOther(otherName, e.target.value.slice(0, SERVICE_LINE_MAX))} />
               </div>
             </div>
             <p className="text-body-sm text-ink-muted">The Between Gigs team reviews new services before they show on your profile.</p>
@@ -349,25 +366,23 @@ export function CanvasRates({ d, set, errors, required }: SectionProps & { requi
             : "Leave it empty to show “Rate on request”."}
         </p>
       </div>}
-      <div className="grid gap-1.5">
-        <label htmlFor="f-minimum" className="sr-only">Minimum booking (optional)</label>
-        <Input id="f-minimum" maxLength={stageTwoLimits.bookingMinimum} value={d.bookingMinimum ?? ""} placeholder="Minimum booking, if any" invalid={!!errors.bookingMinimum}
-          onChange={(e) => set("bookingMinimum")(e.target.value.slice(0, stageTwoLimits.bookingMinimum))} />
-      </div>
-      <div id="sec-availability" className="mt-6 grid scroll-mt-40 gap-3 border-t border-line-strong pt-6">
-        <Switch id="f-monthStatus" label="Available for work" checked={available}
+      <section id="sec-availability" aria-labelledby="sec-availability-h" className="mt-6 grid scroll-mt-40 gap-4 border-t border-line-strong pt-6">
+        <H id="sec-availability-h">Availability</H>
+        <div className="grid gap-4 rounded-lg border border-line bg-surface p-4">
+        <AvailabilitySwitch checked={available}
           onChange={(on) => set("monthStatus")(on ? "available" : "away")} />
         {available && (
           <div role="group" aria-label="How available" className="flex flex-wrap gap-2">
             {(["available", "limited"] as const).map((v) => (
               <button key={v} type="button" aria-pressed={d.monthStatus === v} onClick={() => set("monthStatus")(v)}
-                className={cx("inline-flex min-h-9 items-center rounded-full border px-3 text-label-sm font-semibold transition-colors duration-fast focus-visible:outline-2 focus-visible:outline-focus",
+                className={cx("inline-flex min-h-11 items-center rounded-full border px-3 text-label-sm font-semibold transition-colors duration-fast focus-visible:outline-2 focus-visible:outline-focus",
                   d.monthStatus === v ? "border-action bg-action text-on-action" : "border-line-strong text-ink hover:bg-surface-hover")}>
                 {v === "available" ? "Fully available" : "Limited Availability"}
               </button>
             ))}
           </div>
         )}
+        </div>
         {datesOpen ? (
           <div className="grid gap-2">
             <Field label="General availability" optional={!required("dates")} error={errors.dates}>
@@ -381,7 +396,7 @@ export function CanvasRates({ d, set, errors, required }: SectionProps & { requi
             <DateField id="f-start" value={d.earliestStart ?? ""} invalid={!!errors.earliestStart} onChange={set("earliestStart")} />
           </Field>
         ) : <AddLink onClick={openStart}>Earliest start date</AddLink>}
-      </div>
+      </section>
     </section>
   );
 }
@@ -403,34 +418,58 @@ export function CanvasSamples({ d, set }: SectionProps) {
   // Video links (Nov 2026) are behind NEXT_PUBLIC_PROFILE_VIDEO_LINKS; with it off the section is photos only, as before.
   const videos = videoLinksEnabled();
   const samples = visibleSamples(d.workSamples ?? [], videos);
+  const samplesKey = JSON.stringify(samples);
+  const [collection, setCollection] = React.useState({ key: samplesKey });
+  if (collection.key !== samplesKey) setCollection({ key: samplesKey });
+  // Collection changes invalidate every pending photo read, including changes from another tab.
+  const photoRevision = React.useRef({ value: 0 });
+  React.useLayoutEffect(() => {
+    const epoch = photoRevision.current;
+    epoch.value++;
+    return () => { epoch.value++; };
+  }, [samplesKey]);
+  const changeSamples = (next: string[]) => {
+    photoRevision.current.value++;
+    set("workSamples")(next);
+  };
   // "menu": choosing Photo or Video link; "link": the link form (for slot `linkAt`, or a new one when null).
   const [adding, setAdding] = React.useState<"menu" | "link" | null>(null);
   const [linkAt, setLinkAt] = React.useState<number | null>(null);
+  // A form belongs to one exact collection revision. Reorder/removal invalidates it and pending thumbnail work.
+  const [linkBase, setLinkBase] = React.useState("");
+  const linkValid = linkBase === JSON.stringify(samples);
   const saveLink = (sample: string) => {
-    set("workSamples")(linkAt === null ? [...samples, sample].slice(0, MAX_SAMPLES) : samples.map((x, j) => (j === linkAt ? sample : x)));
+    if (!linkValid) { setAdding(null); setLinkAt(null); return; }
+    changeSamples(linkAt === null ? [...samples, sample].slice(0, MAX_SAMPLES) : samples.map((x, j) => (j === linkAt ? sample : x)));
     setAdding(null); setLinkAt(null);
   };
   const input = React.useRef<HTMLInputElement>(null);
   // Which filled slot the next chosen photo replaces; null adds new ones.
-  const replacing = React.useRef<number | null>(null);
+  const photoRequest = React.useRef(0);
+  const replacing = React.useRef<{ at: number | null; revision: number; request: number } | null>(null);
   const [problem, setProblem] = React.useState("");
   const pick = async (files: FileList | null) => {
-    const at = replacing.current; replacing.current = null;
+    // Direct file-input changes add photos too (assistive tooling and the existing upload contract).
+    const target = replacing.current ?? { at: null, revision: ++photoRevision.current.value, request: ++photoRequest.current };
+    replacing.current = null;
+    const { at, revision, request } = target;
     const list = [...(files ?? [])].filter((f) => f.type.startsWith("image/")).slice(0, at === null ? MAX_SAMPLES - samples.length : 1);
     if (!list.length) return;
     try {
       setProblem("");
       const added = await Promise.all(list.map((f) => resize(f)));
-      set("workSamples")(at === null ? [...samples, ...added].slice(0, MAX_SAMPLES) : samples.map((x, j) => (j === at ? added[0] : x)));
-    } catch { setProblem("We couldn't read that photo. Try another one."); }
+      if (request !== photoRequest.current) return;
+      if (revision !== photoRevision.current.value) { setProblem("Your work samples changed. Choose the photo again."); return; }
+      changeSamples(at === null ? [...samples, ...added].slice(0, MAX_SAMPLES) : samples.map((x, j) => (j === at ? added[0] : x)));
+    } catch { if (revision === photoRevision.current.value) setProblem("We couldn't read that photo. Try another one."); }
   };
-  const choose = (at: number | null) => { replacing.current = at; input.current?.click(); };
+  const choose = (at: number | null) => { setProblem(""); replacing.current = { at, revision: ++photoRevision.current.value, request: ++photoRequest.current }; input.current?.click(); };
   // Fit (Justin, 14 Nov 2026): Adjust shows the whole photo with the thumbnail's frame over it; saving stores only
   // the alignment on the photo's link (lib/profile/work-fit.ts), so the lightbox still opens the whole image.
-  const [fitting, setFitting] = React.useState<number | null>(null);
+  const [fitting, setFitting] = React.useState<{ at: number; collection: typeof collection } | null>(null);
   const saveFit = (fit: Fit) => {
-    if (fitting === null) return;
-    set("workSamples")(samples.map((x, j) => (j === fitting ? withFit(x, fit) : x)));
+    if (!fitting || fitting.collection !== collection) return;
+    changeSamples(samples.map((x, j) => (j === fitting.at ? withFit(x, fit) : x)));
     setFitting(null);
   };
   // Order (Justin, 14 Nov 2026): drag a photo by its handle onto another place, or focus the handle and use the arrow
@@ -438,7 +477,7 @@ export function CanvasSamples({ d, set }: SectionProps) {
   const tiles = React.useRef<(HTMLElement | null)[]>([]);
   const [dragging, setDragging] = React.useState<number | null>(null);
   const [said, setSaid] = React.useState("");
-  const move = (from: number, to: number) => { const next = [...samples]; const [x] = next.splice(from, 1); next.splice(to, 0, x); set("workSamples")(next); };
+  const move = (from: number, to: number) => { const next = [...samples]; const [x] = next.splice(from, 1); next.splice(to, 0, x); changeSamples(next); };
   const drag = (e: React.PointerEvent) => {
     if (dragging === null) return;
     const to = tiles.current.findIndex((el, j) => {
@@ -491,16 +530,16 @@ export function CanvasSamples({ d, set }: SectionProps) {
                     </button>
                   )}
                   <span className="absolute inset-x-2 bottom-2 flex justify-end gap-2">
-                    {!videos && !clip && <button type="button" aria-label={`Adjust the fit of work sample ${i + 1}`} title="Adjust the fit" onClick={() => setFitting(i)}
+                    {!clip && (!videos || data.kind === "sample") && <button type="button" aria-label={`Adjust the fit of work sample ${i + 1}`} title="Adjust the fit" onClick={() => setFitting({ at: i, collection })}
                       className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><CropIcon aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">Adjust</span></button>}
-                    <button type="button" aria-label={clip ? `Edit video link ${i + 1}` : `Replace work sample ${i + 1}`} title={clip ? "Edit the link" : "Replace"} onClick={() => (clip ? (setLinkAt(i), setAdding("link")) : choose(i))}
+                    <button type="button" aria-label={clip ? `Edit video link ${i + 1}` : `Replace work sample ${i + 1}`} title={clip ? "Edit the link" : "Replace"} onClick={() => (clip ? (setLinkBase(JSON.stringify(samples)), setLinkAt(i), setAdding("link")) : choose(i))}
                       className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><RefreshCw aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">{clip ? "Edit" : "Replace"}</span></button>
-                    <button type="button" aria-label={`Remove work sample ${i + 1}`} title="Remove" onClick={() => set("workSamples")(samples.filter((_, j) => j !== i))}
+                    <button type="button" aria-label={`Remove work sample ${i + 1}`} title="Remove" onClick={() => changeSamples(samples.filter((_, j) => j !== i))}
                       className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><X aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">Remove</span></button>
                   </span>
                 </figure>
               ) : (
-                <button type="button" onClick={() => (videos ? (setLinkAt(null), setAdding("menu")) : choose(null))} aria-label={i === samples.length ? undefined : "Add a work sample"} aria-expanded={videos && i === samples.length ? adding !== null : undefined} disabled={i > samples.length}
+                <button type="button" onClick={() => (videos ? (setLinkBase(JSON.stringify(samples)), setLinkAt(null), setAdding("menu")) : choose(null))} aria-label={i === samples.length ? undefined : "Add a work sample"} aria-expanded={videos && i === samples.length ? adding !== null : undefined} disabled={i > samples.length}
                   className="grid aspect-video w-full place-content-center justify-items-center gap-2 rounded-lg border-2 border-dashed border-line-dashed bg-surface/60 text-ink transition-colors duration-fast hover:border-ink-brand hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-default disabled:hover:border-line-dashed disabled:hover:bg-surface/60">
                   <Camera aria-hidden="true" className={cx("size-7", i === samples.length ? "text-ink" : "text-ink-subtle")} strokeWidth={1.5} />
                   {i === samples.length && <span className="flex items-center gap-1.5 text-body-md"><Plus aria-hidden="true" className="size-4" />Add a work sample</span>}
@@ -519,8 +558,9 @@ export function CanvasSamples({ d, set }: SectionProps) {
           <Button type="button" variant="ghost" size="md" onClick={() => setAdding(null)}>Cancel</Button>
         </div>
       )}
-      {videos && adding === "link" && <VideoLinkForm initial={linkAt === null ? undefined : samples[linkAt]} onSave={saveLink} onCancel={() => { setAdding(null); setLinkAt(null); }} toImage={(f) => resize(f, 800)} />}
-      {fitting !== null && samples[fitting] && <FitCropper sample={samples[fitting]} onCancel={() => setFitting(null)} onSave={saveFit} />}
+      {videos && adding === "link" && !linkValid && <p role="status" className="text-body-sm text-ink-muted">Your work samples changed. Choose the video again to edit it.</p>}
+      {videos && adding === "link" && linkValid && <VideoLinkForm key={`${linkAt ?? "new"}:${linkBase}`} initial={linkAt === null ? undefined : samples[linkAt]} onSave={saveLink} onCancel={() => { setAdding(null); setLinkAt(null); }} toImage={(f) => resize(f, 800)} />}
+      {fitting && fitting.collection === collection && samples[fitting.at] && <FitCropper key={`${fitting.at}:${samplesKey}`} sample={samples[fitting.at]} onCancel={() => setFitting(null)} onSave={saveFit} />}
     </section>
   );
 }
@@ -535,26 +575,28 @@ export function CanvasExperience({ d, set, errors, required }: SectionProps & { 
         <H id="sec-film-h" size="md">Skills &amp; experience</H>
         <p className="text-body-md text-ink">What kind of work do you do in the entertainment industry, and how does that experience help you deliver this service?</p>
         {expOpen ? (
-          <div className="grid items-start gap-6 lg:grid-cols-2">
+          <>
             {!retired && <Field label="Department or role" optional={!required("position")} error={errors.position}>
               <Input id="f-position" maxLength={DEPARTMENT_MAX} value={d.position} placeholder="e.g. Costume & wardrobe" onChange={(e) => set("position")(e.target.value.slice(0, DEPARTMENT_MAX))} />
             </Field>}
-            <div className="grid gap-2">
+            <ExperienceFields fields={{
+              skills: (<div className="grid gap-2">
               <p className="text-label-md text-ink">On-set skills{!required("skills") && <span className="ml-2 text-body-sm font-normal text-ink-subtle">Optional</span>}</p>
               {customSkillsEnabled()
                 ? <SkillPicker value={d.skills} describedBy={errors.skills ? "f-skills-error" : undefined} onChange={(skills,added) => { set("skills")(skills); if (!retired && !d.position.trim() && added && onSetSkills.includes(added)) set("position")(added); }} />
                 : <Pills label="On-set skills" options={onSetSkills} isOn={(o) => d.skills.includes(o)}
                     onToggle={(o) => { set("skills")(d.skills.includes(o) ? d.skills.filter((s) => s !== o) : [...d.skills, o]); if (!retired && !d.position.trim()) set("position")(o); }} />}
               <GroupError id="f-skills-error">{errors.skills}</GroupError>
-            </div>
-            <Field label="Years in the Entertainment Industry" optional={!required("years")} error={errors.years}>
+            </div>),
+              years: (<Field label="Years in the Entertainment Industry" optional={!required("years")} error={errors.years}>
               <Input id="f-years" inputMode="numeric" value={d.years} placeholder="e.g. 9" className="max-w-32" onChange={(e) => set("years")(e.target.value.replace(/\D/g, "").slice(0, 2))} />
-            </Field>
-            <Field label="How can customers benefit from your entertainment industry experience?" optional={!required("about")} error={errors.about}
+            </Field>),
+              about: (<Field label="How can customers benefit from your entertainment industry experience?" optional={!required("about")} error={errors.about}
               hint="For example: “Building sets for film and television. I bring that same craftsmanship, creativity, and attention to detail to custom furniture, home improvements, and special projects.”">
               <Textarea id="f-about" rows={5} showCount maxLength={ABOUT_MAX} value={d.about} onChange={(e) => set("about")(e.target.value)} />
-            </Field>
-          </div>
+            </Field>),
+            }} />
+          </>
         ) : <AddLink id="f-about" onClick={openExp}>Add experience</AddLink>}
       </section>
   );
@@ -668,8 +710,7 @@ export function CanvasContact({ d, set, errors, email }: SectionProps & { email:
       {open && (
         <div className="grid gap-4 sm:max-w-2xl sm:grid-cols-2">
           <Field label="Mobile number" optional error={errors.bookingMobile}>
-            <Input id="f-mobile" type="tel" inputMode="tel" autoComplete="tel" maxLength={stageTwoLimits.bookingMobile} value={d.bookingMobile ?? ""}
-              placeholder="+1 213 555 0123" onChange={(e) => set("bookingMobile")(e.target.value.slice(0, stageTwoLimits.bookingMobile))} />
+            <PhoneInput id="f-mobile" value={d.bookingMobile ?? ""} invalid={!!errors.bookingMobile} onChange={set("bookingMobile")} />
           </Field>
           <div className="grid content-start gap-1.5">
             <p className="text-label-md text-ink">Email</p>

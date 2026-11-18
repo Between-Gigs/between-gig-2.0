@@ -11,7 +11,8 @@ import { ArrowRight, ArrowUpRight, Camera, Check, Heart, LogIn, MapPin, PencilLi
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type * as React from "react";
-import { selectLook, setUnstyled, useLook, useUnstyled } from "@/components/site/LookSync";
+import { usePersonalLook, usePersonalUnstyled } from "@/components/site/PersonalPreferences";
+import { useLook, useUnstyled } from "@/components/site/LookSync";
 import { Page } from "@/components/site/Page";
 import { lookIds, looks, type Look } from "@/lib/look";
 import { Badge, Banner, IconButton, Kbd, Progress, SegmentedControl, Skeleton, Tag, ThemeToggle } from "@ds/components";
@@ -83,6 +84,7 @@ const type: { name: string; cls: string; sample: string }[] = [
 ];
 
 export function DesignSystemPage() {
+  const setUnstyled = usePersonalUnstyled();
   const current = useLook();
   const plain = useUnstyled();
   const active = useActiveSection(nav.flatMap((g) => g.items.map((i) => i.id)));
@@ -399,6 +401,8 @@ function SampleSegments() {
 }
 
 function ThemeCard({ look, active }: { look: Look; active: boolean }) {
+  const selectLook = usePersonalLook();
+  const setUnstyled = usePersonalUnstyled();
   const go = (href: string) => (event: React.MouseEvent) => { event.preventDefault(); setUnstyled(false); selectLook(look); window.location.assign((event.currentTarget as HTMLAnchorElement).href || href); };
   return (
     <li className={cx("grid content-start gap-3 rounded-lg border bg-surface p-4", active ? "border-line-strong ring-2 ring-border-focus" : "border-line")}>

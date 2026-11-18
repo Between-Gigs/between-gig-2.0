@@ -1,4 +1,5 @@
 "use client";
+import { serviceLabel } from "@/lib/profile/service-labels";
 import { publishGateOn } from "@/lib/profile/publish-gate";
 import { Button, Drawer, useToast, cx } from "@ds/components";
 import { CalendarDays, ChevronLeft, ChevronRight, CircleCheck, CircleDashed, ExternalLink, MapPin, MessageSquareWarning, Sparkles, Wallet } from "lucide-react";
@@ -162,7 +163,7 @@ export function PersonDrawer({ rows, index, onIndex, onClose, onChanged }: {
                     [Wallet, "Rate", f.rate ? `$${f.rate}/${basisShort[f.basis]}` : "On request"],
                     [CalendarDays, "This month", monthStatusLabel[f.monthStatus]],
                     [MapPin, "Areas", f.areas.join(" · ") || "—"],
-                    [Sparkles, "Services", f.services.join(", ") || "—"],
+                    [Sparkles, "Services", f.services.map(serviceLabel).join(", ") || "—"],
                   ] as const).map(([Icon, k, v]) => (
                     <li key={k} className="flex min-w-0 gap-3 border-b border-line py-3">
                       <span className="grid size-8 shrink-0 place-items-center text-ink"><Icon className="size-5" strokeWidth={1.75} aria-hidden="true" /></span>

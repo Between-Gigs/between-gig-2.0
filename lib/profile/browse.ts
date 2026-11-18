@@ -1,3 +1,4 @@
+import { serviceLabel } from "./service-labels";
 import { isPublicStatus } from "@/lib/profile/publish-gate";
 import type { MonthStatus, Person, Profile } from "@/lib/data/types";
 import { laServiceAreas, monthStatusLabel } from "@/lib/data/taxonomy";
@@ -62,7 +63,7 @@ export function filterGigsters(list: Listed[], f: BrowseFilters): Listed[] {
     if (f.area && !x.areas.some((a) => areaSlug(a) === f.area)) return false;
     if (f.availability && x.monthStatus !== f.availability) return false;
     if (words.length) {
-      const hay = [x.name || person.name, x.position, craft, ...x.skills, ...x.services].filter(Boolean).join(" ").toLowerCase();
+      const hay = [x.name || person.name, x.position, craft, ...x.skills, ...x.services.flatMap(s => [s, serviceLabel(s)])].filter(Boolean).join(" ").toLowerCase();
       if (!words.every((w) => hay.includes(w))) return false;
     }
     return true;

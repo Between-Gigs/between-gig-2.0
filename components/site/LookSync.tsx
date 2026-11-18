@@ -5,8 +5,14 @@ import { defaultLook, hasSiteLook, isBrandPage, isLook, lookKey, unstyledKey, ty
 
 const changeEvent = "bg2-look-change";
 let unsaved: Look | undefined;
+let documentLook: Look | undefined;
+let entryLook: Look | undefined;
 
 function readLook(): Look {
+  const requested = new URL(window.location.href).searchParams.get("look");
+  if (isLook(requested)) entryLook = requested;
+  if (entryLook) return entryLook;
+  if (documentLook) return documentLook;
   if (unsaved) return unsaved;
   try {
     const saved = localStorage.getItem(lookKey);
@@ -36,7 +42,21 @@ export function useLook() {
   return useSyncExternalStore(subscribe, readLook, () => defaultLook);
 }
 
+/** Personal appearance is document-local: same-origin samples/tabs cannot rewrite their parent’s look. */
+export function selectDocumentLook(look: Look, manual = false) {
+  if (manual) {
+    entryLook = undefined;
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("look")) { url.searchParams.delete("look"); window.history.replaceState(window.history.state, "", url); }
+    delete document.documentElement.dataset.entryLook;
+  }
+  documentLook = look;
+  window.dispatchEvent(new Event(changeEvent));
+}
+
 export function selectLook(look: Look) {
+  documentLook = undefined;
+  entryLook = undefined;
   // A shared theme link is an entry point. A later manual choice must still survive refresh.
   const url = new URL(window.location.href);
   if (url.searchParams.has("look")) {
@@ -51,8 +71,23 @@ export function selectLook(look: Look) {
   window.dispatchEvent(new Event(changeEvent));
 }
 
+let documentPlain: boolean | undefined;
+let entryPlain: boolean | undefined;
+export function selectDocumentUnstyled(on: boolean, manual = false) {
+  if (manual) {
+    entryPlain = undefined;
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("unstyled")) { url.searchParams.delete("unstyled"); window.history.replaceState(window.history.state, "", url); }
+  }
+  documentPlain = on;
+  window.dispatchEvent(new Event(changeEvent));
+}
 let unsavedPlain: boolean | undefined;
 function readUnstyled() {
+  const requested = new URL(window.location.href).searchParams.get("unstyled");
+  if (requested === "1" || requested === "0") entryPlain = requested === "1";
+  if (entryPlain !== undefined) return entryPlain;
+  if (documentPlain !== undefined) return documentPlain;
   if (unsavedPlain !== undefined) return unsavedPlain;
   try { return localStorage.getItem(unstyledKey) === "1"; } catch { return false; }
 }
@@ -63,6 +98,8 @@ export function useUnstyled() {
 }
 
 export function setUnstyled(on: boolean) {
+  documentPlain = undefined;
+  entryPlain = undefined;
   const url = new URL(window.location.href);
   if (url.searchParams.has("unstyled")) {
     url.searchParams.delete("unstyled");

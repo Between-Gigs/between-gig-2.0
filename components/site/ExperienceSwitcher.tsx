@@ -1,28 +1,42 @@
 "use client";
 import { Menu, cx } from "@ds/components";
 import { BriefcaseBusiness, ChevronDown, LayoutDashboard, LayoutGrid, type LucideIcon } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { data } from "@/lib/data";
 import { basePath } from "@/lib/site";
+import { useNavigationMode, usePersonalPreferences } from "./PersonalPreferences";
+import type { NavigationMode } from "@/lib/navigation-preferences";
+import { useStaffMenuVisibility } from "./StaffNavigationVisibility";
 import { useSession } from "@/lib/session";
-
-const experiences: { href: string; label: string; short: string; icon: LucideIcon }[] = [
-  { href: "/profile/canvas/", label: "Gigster Experience · edit my profile", short: "Gigster", icon: BriefcaseBusiness },
-  { href: "/owners/", label: "Owner Experience · dashboard", short: "Owner", icon: LayoutDashboard },
-  { href: "/hub/", label: "Hub · all work in progress", short: "Hub", icon: LayoutGrid },
-];
 
 /** Navigation changes the workspace, never the signed-in identity or their authority. */
 export function ExperienceSwitcher({ className }: { className?: string }) {
   const { session } = useSession();
-  const pathname = usePathname();
   const router = useRouter();
-  if (session?.role !== "owner") return null;
-  const selected = pathname.startsWith("/profile") ? 0 : pathname.startsWith("/hub") || pathname.startsWith("/preview") || (basePath === "/hub" && pathname === "/") ? 2 : 1;
-  const CurrentIcon = experiences[selected].icon;
+  const selected = useNavigationMode();
+  const { update } = usePersonalPreferences();
+  const { menu } = useStaffMenuVisibility();
+  const sampleDeveloper = selected === "developer" && data.kind === "sample";
+  if (!session && !sampleDeveloper) return null;
+  const allExperiences: { mode: NavigationMode; href: string; label: string; icon: LucideIcon }[] = [
+    { mode: "gigster" as const, href: "/profile/canvas/", label: "Gigster Mode", icon: BriefcaseBusiness },
+    ...(session?.role === "owner" || sampleDeveloper ? [{ mode: "owner" as const, href: "/owners/", label: "Owner Mode", icon: LayoutDashboard }] : []),
+    ...(session?.role === "owner" || sampleDeveloper ? [{ mode: "developer" as const, href: session?.role === "owner" && data.kind === "live" ? "/owners/developer/" : "/hub/", label: "Developer Mode", icon: LayoutGrid }] : []),
+  ];
+  const experiences = allExperiences.filter(item => session?.role !== "owner" || menu.modes.includes(item.mode));
+  if (!experiences.length) return null;
+  const current = allExperiences.find(item => item.mode === selected) ?? experiences[0];
+  if (experiences.length < 2 && current.mode === experiences[0].mode && !sampleDeveloper) return null;
+  const CurrentIcon = current.icon;
   return <span className={className}><Menu align="end" className="max-sm:max-w-72"
-    items={experiences.map((item, i) => ({ label: item.label, icon: <item.icon />, checked: i === selected || undefined, onSelect: () => { if (data.kind === "live" && item.href === "/hub/") window.location.assign(item.href); else router.push(basePath === "/hub" && item.href === "/hub/" ? "/" : item.href); } }))}
-    trigger={<button type="button" aria-label="Switch experience" className={cx("inline-flex min-h-11 max-sm:size-11 max-sm:justify-center max-sm:p-0 shrink-0 items-center gap-2 rounded-lg border border-line bg-surface px-3 text-label-md text-ink hover:bg-surface-hover")}>
-      <CurrentIcon aria-hidden="true" className="size-4" /><span className="max-sm:sr-only">{experiences[selected].short}</span><ChevronDown aria-hidden="true" className="hidden size-4 sm:block" />
+    items={experiences.map(item => ({ label: item.label, icon: <item.icon />, checked: item.mode === selected, onSelect: () => {
+      update({ mode: item.mode });
+      // The public sandbox never carries a live identity. Leave its base path for real account destinations.
+      if (basePath === "/hub" && item.mode !== "developer") window.location.assign(item.href);
+      else if (data.kind === "live" && item.href === "/hub/") window.location.assign(item.href);
+      else router.push(basePath === "/hub" && item.href === "/hub/" ? "/" : item.href);
+    } }))}
+    trigger={<button type="button" aria-label={`Switch experience: ${current.label}`} className={cx("inline-flex min-h-11 max-sm:size-11 max-sm:justify-center max-sm:p-0 shrink-0 items-center gap-2 rounded-lg border border-line bg-surface px-3 text-label-md text-ink hover:bg-surface-hover")}>
+      <CurrentIcon aria-hidden="true" className="size-4" /><span className="max-sm:sr-only">{current.label}</span><ChevronDown aria-hidden="true" className="hidden size-4 sm:block" />
     </button>} /></span>;
 }

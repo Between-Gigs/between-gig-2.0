@@ -1,4 +1,5 @@
 "use client";
+import { serviceLabel } from "@/lib/profile/service-labels";
 import { Badge, cx } from "@ds/components";
 import { Clapperboard, MapPin } from "lucide-react";
 import * as React from "react";
@@ -86,7 +87,7 @@ export function ProfilePreviewCard({ fields: d, personId, badge = "Live preview"
         )}
         <Live value={d.services} className={cx("flex min-h-5 flex-wrap gap-1.5", ring(1))}>
           {shown.length
-            ? <>{shown.map((t) => <Badge key={t} tone="brand" size="sm">{t}</Badge>)}{d.services.length > 3 && <Badge tone="neutral" size="sm">+{d.services.length - 3}</Badge>}</>
+            ? <>{shown.map((t) => <Badge key={t} tone="brand" size="sm">{serviceLabel(t)}</Badge>)}{d.services.length > 3 && <Badge tone="neutral" size="sm">+{d.services.length - 3}</Badge>}</>
             : live ? later(1, "Your services") : <><span aria-hidden="true" className="h-5 w-24 bg-surface-sunken" /><span aria-hidden="true" className="h-5 w-16 bg-surface-sunken" /></>}
         </Live>
         <Live value={d.about} className={cx("block", ring(3))}>

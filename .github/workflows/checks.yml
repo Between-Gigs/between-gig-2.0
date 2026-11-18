@@ -48,16 +48,48 @@ jobs:
           node scripts/qa/owner-sidebar.mjs
           node scripts/qa/admin-shell.mjs
           node scripts/qa/admin-navigation.mjs
+          node scripts/qa/navigation-modes.mjs
+          node scripts/qa/staff-navigation.mjs
+          node scripts/qa/staff-access-planner.mjs
           node scripts/qa/social-preview.mjs
           node scripts/qa/signed-out-navigation.mjs
           node scripts/qa/home-hero.mjs
           node scripts/qa/storyboard-profile.mjs
           node scripts/qa/professionals-copy.mjs
           node scripts/qa/sample-order.mjs
+          node scripts/qa/portfolio-edit-guards.mjs
           node scripts/qa/patti-editor-presentation.mjs
           node scripts/qa/profile-guidance.mjs
+          node scripts/qa/service-labels.mjs
+          node scripts/qa/service-guidance.mjs
+          node scripts/qa/service-conversion-guard.mjs
+          node scripts/qa/gigster-priority.mjs
           pnpm qa:flow
           node scripts/qa/funnel-cohort.mjs
+      - name: Save service guidance captures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: service-guidance-evidence
+          path: |
+            deliverables/service-labels
+            deliverables/service-guidance
+            deliverables/service-conversion-guard
+          if-no-files-found: warn
+      - name: Save Gigster profile adjustment captures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gigster-priority-evidence
+          path: deliverables/gigster-priority
+          if-no-files-found: warn
+      - name: Save navigation modes and settings captures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: navigation-modes-evidence
+          path: deliverables/navigation-modes
+          if-no-files-found: warn
       - name: Save admin navigation captures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -91,7 +123,28 @@ jobs:
         run: |
           node scripts/qa/clerk-contract.mjs
       - name: Server build (no internal routes) and its checks
-        run: pnpm build:server && pnpm build:preview && pnpm check:server && node scripts/qa/server-hub.mjs
+        run: pnpm build:server && pnpm build:preview && pnpm check:server && QA_SCREENSHOT_DIR=deliverables/server-hub node scripts/qa/server-hub.mjs
+      - name: Save Staff navigation captures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: staff-navigation-evidence
+          path: deliverables/staff-navigation
+          if-no-files-found: warn
+      - name: Save Staff access planner captures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: staff-access-planner-evidence
+          path: deliverables/staff-access-planner
+          if-no-files-found: warn
+      - name: Save verified Hub access captures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: verified-hub-access-evidence
+          path: deliverables/server-hub
+          if-no-files-found: warn
       # The deployed builds are live (api): there, no page may ship the sample data. Caught here, not at deploy.
       - name: Live server build, code-split check
         env:

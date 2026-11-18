@@ -1,4 +1,5 @@
 "use client";
+import { servicePickerLabel, servicePickerValues } from "@/lib/profile/service-labels";
 import { Badge, Banner, Button, Drawer, Field, IconButton, Input, RadioGroup, Skeleton, Stepper, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
 import { AlertCircle, ArrowLeft, ArrowRight, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, CloudCheck, Eye, Film, GripVertical, Inbox, Link2, LoaderCircle, MapPin, MessageSquareWarning, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
@@ -259,7 +260,7 @@ function Builder({ personId }: { personId: string }) {
                       </div>
                       <div className="grid gap-3">
                         <p className="text-label-md text-ink">Off-set services {optional("services") && <span className="font-normal text-ink-subtle">· optional </span>}<span className="font-normal text-ink-subtle">· what you'd offer between gigs</span></p>
-                        <ChipPicker id="f-services" label="Off-set services" options={serviceChoices(data.kind)} value={d.services} onChange={set("services")} invalid={!!err("services")} describedBy={err("services") ? "services-error" : undefined} />
+                        <ChipPicker id="f-services" label="Off-set services" optionLabel={servicePickerLabel} options={servicePickerValues(d.services, serviceChoices(data.kind))} value={d.services} onChange={set("services")} invalid={!!err("services")} describedBy={err("services") ? "services-error" : undefined} />
                         {err("services") && <p id="services-error" className="text-body-sm text-danger">{err("services")}</p>}
                       </div>
                       <Field label="Something else?" optional hint="Other services go to a private review. They don't appear on your profile or become bookable automatically.">

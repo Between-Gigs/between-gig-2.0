@@ -1,18 +1,22 @@
 "use client";
 import { useLook } from "@/components/site/LookSync";
-import { Button, Drawer, IconButton, Input, Logo, ThemeToggle, cx } from "@ds/components";
-import { ChevronDown, ChevronRight, Image as ImageIcon, Palette, Route, Ellipsis, Inbox, LayoutDashboard, ListChecks, Mail, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Search, Users, X, type LucideIcon } from "lucide-react";
+import { Button, Drawer, IconButton, Input, Logo, cx } from "@ds/components";
+import { PenLine, Shapes, Sparkles, ChevronDown, ChevronRight, Image as ImageIcon, Palette, Route, Ellipsis, Inbox, LayoutDashboard, ListChecks, Mail, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Search, Users, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import { data, type DashboardSummary } from "@/lib/data";
 import { LookSwitcher } from "@/components/site/LookSwitcher";
+import { PersonalThemeToggle, useNavigationMode, usePersonalPreferences } from "@/components/site/PersonalPreferences";
 import { ExperienceSwitcher } from "@/components/site/ExperienceSwitcher";
 import { AccountMenu, SiteHeader } from "@/components/site/SiteHeader";
 import { Icon3D } from "@/components/ui/Icon3D";
 import type { Icon3DName } from "@/lib/icons3d";
 import { markArea } from "@/lib/split-area";
 import { ownerEmailPreview, ownerPreviewLink } from "@/lib/owner-email-preview";
+import { NAVIGATION_GROUPS, type NavigationItemId } from "@/lib/staff-navigation/registry";
+import { useStaffMenuVisibility } from "@/components/site/StaffNavigationVisibility";
+import { modeDestination } from "@/lib/navigation-preferences";
 import { basePath } from "@/lib/site";
 import { AppFrameContext as FrameContext, useInAppFrame } from "@/components/site/AppFrameContext";
 
@@ -22,45 +26,49 @@ markArea("bg-split:dashboard");
 export const COLLAPSED_KEY = "bg2-owner-nav-collapsed";
 
 type CountKey = "review" | "people" | "waitlist";
-interface Item { href: string; label: string; icon: LucideIcon; art: Icon3DName; fullPage?: boolean; exact?: boolean; count?: CountKey; hint?: string; short?: string; disabled?: boolean }
+interface Item { id: NavigationItemId; href: string; label: string; icon: LucideIcon; art: Icon3DName; fullPage?: boolean; exact?: boolean; count?: CountKey; hint?: string; short?: string; disabled?: boolean }
 
-const previewItem = (path: string, label: string, icon: LucideIcon, art: Icon3DName): Item => ({ ...ownerPreviewLink(data.kind, path), label, icon, art });
+const previewItem = (path: string, icon: LucideIcon, art: Icon3DName): Omit<Item, "id" | "label"> => ({ ...ownerPreviewLink(data.kind, path), icon, art });
 
 /** The owners' sections, grouped by the job: see the day, look after Gigsters, talk to people. */
-const sections: { title: string; items: Item[] }[] = [
-  { title: "Overview", items: [{ href: "/owners/", label: "Dashboard", icon: LayoutDashboard, art: "house", exact: true }, { href: data.kind === "live" ? "/hub/" : basePath === "/hub" ? "/" : "/hub/", label: "Hub", icon: LayoutDashboard, art: "house", fullPage: data.kind === "live", exact: true }] },
-  {
-    title: "Gigsters",
-    items: [
-      { href: "/owners/review/", label: "Review queue", short: "Review", icon: Inbox, art: "eyes", count: "review", hint: "waiting for review" },
-      { href: "/owners/people/", label: "People", icon: Users, art: "handshake", count: "people", hint: "invited so far" },
-      { href: "/owners/waitlist/", label: "Waitlist", icon: ListChecks, art: "hourglass_done", count: "waitlist", hint: "not invited yet" },
-    ],
-  },
-  { title: "Team", items: [{ href: "/owners/staff/", label: "Staff", icon: Users, art: "handshake" }] },
-  { title: "Previews", items: [
-    previewItem("/preview/#journey-h", "Page Previews", LayoutDashboard, "framed_picture"),
-    previewItem("/preview/social/", "Social Previews", ImageIcon, "framed_picture"),
-    { ...ownerEmailPreview(data.kind), label: "Email Previews", icon: Mail, art: "envelope" },
-    previewItem("/preview/forms/", "Forms", ListChecks, "clipboard"),
-    previewItem("/preview/funnels/", "Funnels", Route, "film_frames"),
-  ] },
-  { title: "Studio", items: [
-    previewItem("/preview/design-system/", "Design System", Palette, "artist_palette"),
-    previewItem("/preview/wallpapers/", "Wallpapers", ImageIcon, "framed_picture"),
-    { href: "#media-library", label: "Media Library", icon: ImageIcon, art: "package", disabled: true },
-  ] },
-];
+type OwnerItemId = Exclude<NavigationItemId, "my_profile" | "edit_profile">;
+const destinations: Record<OwnerItemId, Omit<Item, "id" | "label">> = {
+  dashboard: { href: "/owners/", icon: LayoutDashboard, art: "house", exact: true },
+  hub: { href: data.kind === "live" ? "/owners/developer/" : basePath === "/hub" ? "/" : "/hub/", icon: LayoutDashboard, art: "house", exact: true },
+  review: { href: "/owners/review/", short: "Review", icon: Inbox, art: "eyes", count: "review", hint: "waiting for review" },
+  people: { href: "/owners/people/", icon: Users, art: "handshake", count: "people", hint: "invited so far" },
+  waitlist: { href: "/owners/waitlist/", icon: ListChecks, art: "hourglass_done", count: "waitlist", hint: "not invited yet" },
+  staff: { href: "/owners/staff/", icon: Users, art: "handshake" },
+  page_previews: previewItem("/preview/#journey-h", LayoutDashboard, "framed_picture"),
+  social_previews: previewItem("/preview/social/", ImageIcon, "framed_picture"),
+  email_previews: { ...ownerEmailPreview(data.kind), icon: Mail, art: "envelope" },
+  forms: previewItem("/preview/forms/", ListChecks, "clipboard"),
+  funnels: previewItem("/preview/funnels/", Route, "film_frames"),
+  design_system: previewItem("/preview/design-system/", Palette, "artist_palette"),
+  wallpapers: previewItem("/preview/wallpapers/", ImageIcon, "framed_picture"),
+  media_library: { href: "#media-library", icon: ImageIcon, art: "package", disabled: true },
+  copywriting: { href: "#copywriting", icon: PenLine, art: "clipboard", disabled: true },
+  skills: { href: "#skills", icon: Sparkles, art: "clipboard", disabled: true },
+  characters: { href: "#characters", icon: Shapes, art: "framed_picture", disabled: true },
+};
+const sections: { title: string; items: Item[] }[] = NAVIGATION_GROUPS.filter(group => group.id !== "profile").map(group => ({
+  title: group.title, items: group.items.map(item => ({ ...destinations[item.id as OwnerItemId], id: item.id, label: item.label })),
+}));
 
 const SECTION_KEY = "bg2-owner-nav-sections";
 const SectionContext = React.createContext<{ closed: string[]; change: (closed: string[]) => void } | null>(null);
 const ModeContext = React.createContext<"owner" | "preview">("owner");
 function useSections() {
   const preview = React.useContext(ModeContext) === "preview";
-  if (!preview) return sections;
-  return sections.filter(group => ["Overview", "Previews", "Studio"].includes(group.title)).map(group => group.title !== "Overview" ? group : {
-    ...group, items: group.items.map(item => item.label !== "Dashboard" ? item : { ...item, hint: "Owner access required", fullPage: basePath === "/hub" }),
-  });
+  const navigation = useNavigationMode();
+  const { menu } = useStaffMenuVisibility();
+  const available = sections.map(group => ({ ...group, items: group.items.filter(item => menu.items.includes(item.id)) })).filter(group => group.items.length);
+  if (!preview && navigation === "owner") return available.filter(group => ["Overview", "Gigsters"].includes(group.title));
+  // Developer navigation is a directory of guarded destinations, independent of the sandbox's fictional role.
+  // Keeping these as real document links under /hub prevents the sample router from taking over live routes.
+  return available.map(group => ({ ...group, items: group.items.map(item => ({ ...item,
+    ...(modeDestination(item.href, basePath).fullPage ? { fullPage: true } : {}),
+  })) }));
 }
 
 function countsFrom(d: DashboardSummary): Record<CountKey, number> {
@@ -99,6 +107,7 @@ export function OwnerShell({ children, section, fit = false }: { children: React
  */
 export function OwnerFrame({ children, section: fixed, fit: fixedFit = false, mode = "owner" }: { children: React.ReactNode; section?: string; fit?: boolean; mode?: "owner" | "preview" }) {
   const look = useLook();
+  const navigationMode = useNavigationMode();
   const brand = look !== "swiss";
   const modern = look === "modern";
   const [drawer, setDrawer] = React.useState(false);
@@ -155,7 +164,7 @@ export function OwnerFrame({ children, section: fixed, fit: fixedFit = false, mo
 
   return (
     <ModeContext.Provider value={mode}><SectionContext.Provider value={{ closed: closedSections, change: changeSections }}><FrameContext.Provider value={ctx}>
-      <div data-admin-shell={mode} data-modern-owner={modern ? "" : undefined} className="flex h-dvh flex-col bg-bg text-ink max-sm:[&>header>div>div]:gap-1">
+      <div data-navigation-mode={navigationMode} data-admin-shell={mode} data-modern-owner={modern ? "" : undefined} className="flex h-dvh flex-col bg-bg text-ink max-sm:[&>header>div>div]:gap-1">
         {modern ? <ModernOwnerToolbar onOpenNav={() => setDrawer(true)} /> : <SiteHeader app onOpenNav={brand || mode === "preview" ? () => setDrawer(true) : undefined} />}
         <div className="flex min-h-0 flex-1">
           <nav aria-label={mode === "owner" ? "Owner workspace" : "Preview workspace"} className={cx("hidden embedded:hidden! shrink-0 flex-col border-r border-line lg:flex nav-collapsed:w-18", brand ? "w-66 bg-tint-sand" : "w-60 bg-bg")}>
@@ -179,7 +188,7 @@ export function OwnerFrame({ children, section: fixed, fit: fixedFit = false, mo
             {data.kind === "sample" && <p className={cx("mx-auto w-full max-w-7xl shrink-0 3xl:max-w-(--breakpoint-2xl) px-4 text-caption text-ink-muted sm:px-6 lg:px-10", fit ? "pb-6 lg:pb-3" : "pb-6")}>Sample data: everyone shown here is fictional.</p>}
           </main>
         </div>
-        {!brand && mode === "owner" && <TabBar counts={counts} section={section} onOpenNav={() => setDrawer(true)} />}
+        {!brand && mode === "owner" && <OwnerMobileTabs counts={counts} section={section} onOpenNav={() => setDrawer(true)} />}
       </div>
     </FrameContext.Provider></SectionContext.Provider></ModeContext.Provider>
   );
@@ -217,12 +226,13 @@ function useFind(onDone?: () => void) {
 function ModernOwnerToolbar({ onOpenNav }: { onOpenNav: () => void }) {
   const { q, setQ, find } = useFind();
   const preview = React.useContext(ModeContext) === "preview";
+  const { preferences } = usePersonalPreferences();
   return <header className="mo-toolbar embedded:hidden! max-sm:gap-1!">
     <IconButton label="Open owner menu" variant="ghost" onClick={onOpenNav} icon={<MenuIcon />} className="lg:hidden" />
     <Link href="/" aria-label="Between Gigs home" className="mo-logo min-w-0"><Logo height={24} className="hidden max-w-full sm:block" /><Logo layout="mark" height={24} className="sm:hidden" /></Link>
     {!preview && <form role="search" onSubmit={find}><Input type="search" size="sm" aria-label="Search people" placeholder="Search people by name or email…" start={<Search />} value={q} onChange={event => setQ(event.target.value)} /></form>}
     <time>{new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</time>
-    <ExperienceSwitcher /><LookSwitcher compact /><ThemeToggle size="sm" showLabel={false} /><AccountMenu />
+    <ExperienceSwitcher />{preferences.showThemeChooser && <><LookSwitcher compact /><PersonalThemeToggle /></>}<AccountMenu />
   </header>;
 }
 
@@ -332,9 +342,10 @@ function SidebarSections({ counts, section, onNavigate, drawer = false }: { coun
  * (with its count), People, Waitlist, and More (grouped navigation). It sits under the page's own scroller, so it
  * never covers the page or a sticky bar.
  */
-function TabBar({ counts, section, onOpenNav }: { counts: Record<CountKey, number> | null; section?: string; onOpenNav: () => void }) {
+export function OwnerMobileTabs({ counts, section, onOpenNav }: { counts: Record<CountKey, number> | null; section?: string; onOpenNav: () => void }) {
   const active = useActive(section);
-  const all = sections.flatMap((s) => s.items);
+  const visibleSections = useSections();
+  const all = visibleSections.flatMap((s) => s.items);
   const tabs = all.filter((i) => i.href.startsWith("/owners/")).slice(0, 4);
   const rest = all.filter((i) => !tabs.includes(i));
   const moreActive = rest.some(active);
