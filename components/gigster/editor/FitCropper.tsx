@@ -14,9 +14,10 @@ export const THUMB = 16 / 9;
  * smaller. The live preview shows the thumbnail. Saving stores only the alignment: buyers who open the photo in the
  * lightbox still see all of it.
  */
-export function FitCropper({ sample, onCancel, onSave }: { sample: string; onCancel: () => void; onSave: (fit: Fit) => void }) {
+export function FitCropper({ sample, onCancel, onSave, saving = false, previewHint = "This is how the photo shows on your profile. Opened, it shows whole.", title = "Adjust the fit", description = "Drag the frame over your photo, or zoom, to choose what the thumbnail shows. Buyers who open the photo still see all of it." }: { sample: string; onCancel: () => void; onSave: (fit: Fit) => void; saving?: boolean; previewHint?: string; title?: string; description?: string }) {
   const { src, fit: saved } = parseSample(sample);
   const [fit, setFit] = React.useState<Fit | null>(saved);
+  const [problem, setProblem] = React.useState("");
   const stage = React.useRef<HTMLDivElement>(null);
   const drag = React.useRef<{ px: number; py: number; cx: number; cy: number } | null>(null);
   React.useEffect(() => {
@@ -24,6 +25,7 @@ export function FitCropper({ sample, onCancel, onSave }: { sample: string; onCan
     let live = true;
     const i = new Image();
     i.onload = () => { if (live) setFit({ cx: 0.5, cy: 0.5, z: 1, a: i.naturalWidth / i.naturalHeight }); };
+    i.onerror = () => { if (live) setProblem("We couldn’t load this image. Close this window and choose another image."); };
     i.src = asset(src);
     return () => { live = false; };
   }, [src, saved]);
@@ -35,9 +37,10 @@ export function FitCropper({ sample, onCancel, onSave }: { sample: string; onCan
   const r = fit ? rectFor(fit, THUMB) : null;
   const pct = (v: number) => `${v * 100}%`;
   return (
-    <Modal open onClose={onCancel} size="lg" title="Adjust the fit"
-      description="Drag the frame over your photo, or zoom, to choose what the thumbnail shows. Buyers who open the photo still see all of it."
-      footer={<><Button variant="ghost" onClick={onCancel}>Cancel</Button><Button variant="primary" iconStart={<Check />} disabled={!fit} onClick={() => fit && onSave(fit)}>Save fit</Button></>}>
+    <Modal open onClose={onCancel} size="lg" title={title}
+      description={description}
+      footer={<><Button variant="ghost" onClick={onCancel}>Cancel</Button><Button variant="primary" iconStart={<Check />} aria-describedby={!fit ? "fit-status" : undefined} disabled={!fit || saving} onClick={() => fit && !saving && onSave(fit)}>{saving ? "Saving…" : "Save fit"}</Button></>}>
+      {!fit && <p id="fit-status" role="status" className="text-body-sm text-ink-muted">{problem || "Loading image…"}</p>}
       <div className="grid gap-6 sm:grid-cols-5 sm:items-start">
         <div className="grid gap-4 sm:col-span-3">
           <div ref={stage} role="application" tabIndex={0} aria-label="Thumbnail frame. Drag it, or use the arrow keys to move it."
@@ -81,7 +84,7 @@ export function FitCropper({ sample, onCancel, onSave }: { sample: string; onCan
           <div data-fit-preview className="relative aspect-video w-full overflow-hidden rounded-lg border border-line bg-surface-sunken">
             {r && <img src={asset(src)} alt="How the thumbnail will look" draggable={false} className="absolute" style={rectStyle(r)} />}
           </div>
-          <p className="text-body-sm text-ink-muted">This is how the photo shows on your profile. Opened, it shows whole.</p>
+          <p className="text-body-sm text-ink-muted">{previewHint}</p>
         </div>
       </div>
     </Modal>

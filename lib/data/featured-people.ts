@@ -7,7 +7,6 @@ type ExampleDetails = {
   fields: Pick<ProfileFields, "years" | "position" | "skills" | "services" | "areas" | "travel" | "rate" | "basis" | "about" | "tools" | "transport" | "mode">;
   earliest: string;
   mobile: string;
-  minimum: string;
   personality: string;
   hireableJobs: string;
   availability: "available" | "limited";
@@ -16,7 +15,7 @@ type ExampleDetails = {
 
 const details: Record<ExampleId, ExampleDetails> = {
   simone: {
-    zip: "90026", earliest: "2026-11-16", mobile: "+1 213-555-0101", minimum: "Two hours", availability: "limited",
+    zip: "90026", earliest: "2026-11-16", mobile: "+1 213-555-0101", availability: "limited",
     personality: "I collect paint swatches from every set I work on.",
     hireableJobs: "I can restyle your room, sketch a furniture layout and source pieces within your budget.",
     fields: {
@@ -28,7 +27,7 @@ const details: Record<ExampleId, ExampleDetails> = {
     jobs: ["Restyle one room around furniture you own", "Build a mood board and measured layout", "Source lighting and furnishings to a budget"],
   },
   luis: {
-    zip: "91505", earliest: "2026-11-28", mobile: "+1 213-555-0102", minimum: "One design consultation", availability: "limited",
+    zip: "91505", earliest: "2026-11-28", mobile: "+1 213-555-0102", availability: "limited",
     personality: "I keep the good offcuts for miniature furniture.",
     hireableJobs: "I design custom freestanding furniture, build displays and repair favorite pieces.",
     fields: {
@@ -40,7 +39,7 @@ const details: Record<ExampleId, ExampleDetails> = {
     jobs: ["Design a made-to-fit freestanding sideboard", "Build a portable retail display", "Repair and refinish a favorite piece of furniture"],
   },
   renee: {
-    zip: "90028", earliest: "2026-11-17", mobile: "+1 213-555-0103", minimum: "Three hours", availability: "available",
+    zip: "90028", earliest: "2026-11-17", mobile: "+1 213-555-0103", availability: "available",
     personality: "My emergency kit always includes cake candles.",
     hireableJobs: "I can coordinate your vendors, write the run of show and run your event day.",
     fields: {
@@ -52,7 +51,7 @@ const details: Record<ExampleId, ExampleDetails> = {
     jobs: ["Create a timeline for a garden dinner", "Confirm vendor schedules and deliveries", "Coordinate setup and guest arrival on event day"],
   },
   devon: {
-    zip: "90034", earliest: "2026-11-18", mobile: "+1 213-555-0104", minimum: "One scouting package", availability: "available",
+    zip: "90034", earliest: "2026-11-18", mobile: "+1 213-555-0104", availability: "available",
     personality: "My favorite finds usually begin with an interesting doorway.",
     hireableJobs: "I scout venues and photograph the best options against your brief and budget.",
     fields: {
@@ -81,7 +80,7 @@ export const featuredPeople: SeedPerson[] = professionalExamples.map((card) => {
       ...d.fields, name: card.name, zip: d.zip, photo: `art/samples/cards/${card.img}-portrait.jpg`,
       credits: [card.credits], imdb: "", languages: "English", insurance: "private",
       monthStatus: d.availability, dates: card.availability,
-      bookingMobile: d.mobile, earliestStart: d.earliest, bookingMinimum: d.minimum, personality: d.personality, hireableJobs: d.hireableJobs,
+      bookingMobile: d.mobile, earliestStart: d.earliest, personality: d.personality, hireableJobs: d.hireableJobs,
       // The Gigster editor's answers: their one line for the service, and the question the personality line answers.
       serviceLines: Object.fromEntries(d.fields.services.map((s) => [s, d.hireableJobs])), personalityQuestion: "never-guess",
     },

@@ -37,11 +37,10 @@ export function ModernProfile({ person, fields: f, mode, embedded, draft, part, 
   const dates = monthStatusLabel[f.monthStatus];
   const how = [modeLabel[f.mode], f.travel, extendedTravelLabel(f.travelBeyondLA), f.transport, !unseen && f.insurance === "yes" ? insuranceLabel.yes : ""].filter(Boolean).join(" · ");
   const start = data.kind === "sample" ? startDateLabel(f.earliestStart) : "";
-  const minimum = data.kind === "sample" ? f.bookingMinimum?.trim() : "";
   const availability = <div className="modern-availability">
     <b><i data-away={f.monthStatus === "away"} />{dates}</b>{f.dates && <p>{f.dates}</p>}
-    {(start || minimum) && <dl>{start && <div><dt>Earliest start</dt><dd>{start}</dd></div>}
-      {minimum && <div><dt>Minimum booking</dt><dd>{minimum}</dd></div>}</dl>}
+    {start && <dl>{start && <div><dt>Earliest start</dt><dd>{start}</dd></div>}
+</dl>}
   </div>;
   const stats: [string, React.ReactNode][] = [];
   if (f.years || editing) stats.push(["In the business", part ? part("years", { content: f.years || null, hint: "Add years", kind: "line" }) : <>{f.years}<small> yrs</small></>]);

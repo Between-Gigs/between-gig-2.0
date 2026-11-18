@@ -19,12 +19,12 @@ const cred = { kind: "session", token: "t" } as const;
 describe("M1: no photo alignment while Company OS can't keep it", () => {
   const editor = fs.readFileSync("components/gigster/editor/canvas.tsx", "utf8");
   const img = fs.readFileSync("components/profile/FittedImg.tsx", "utf8");
-  it("hides Adjust under the flag and shows it when the flag is off, so a fit is never silently dropped", () => {
-    expect(editor).toMatch(/\{!videos && !clip && <button[^>]*Adjust the fit/);
+  it("gates video-enabled live Adjust while allowing explicitly local sample alignment", () => {
+    expect(editor).toContain('!clip && (!videos || data.kind === "sample")');
   });
-  it("renders photos centred under the flag, whatever fragment an old string carries", () => {
-    expect(img).toContain("videoLinksEnabled()");
-    expect(img).toMatch(/const fit = .*videoLinksEnabled\(\)/);
+  it("renders supplied local alignment without adding unsupported thumbnail fragments", () => {
+    expect(img).toContain("const fit = parsed.fit;");
+    expect(img).not.toContain("videoLinksEnabled()");
   });
 });
 
