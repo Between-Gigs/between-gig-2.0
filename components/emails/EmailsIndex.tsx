@@ -9,8 +9,11 @@ import { ButtonLink } from "@/components/ui/ButtonLink";
 import { OwnerPage, Panel, Row, RowSkeletons } from "@/components/owners/kit";
 import { emailTemplateHref } from "@/lib/owner-email-preview";
 import { basePath } from "@/lib/site";
-import { DiagnosticEmail } from "./DiagnosticEmail";
-import { InviteAddresses } from "./InviteAddresses";
+import { diagnostic } from "@/emails/diagnostic";
+import { previewContext } from "./preview";
+import { useEmailHubStatus } from "./EmailActions";
+import { lifecycleWords, usageWords } from "@/lib/email-hub";
+
 import { renderPreview } from "./preview";
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -20,6 +23,7 @@ const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "sh
  * outbox of everything "sent" so far. Nothing else moves when you switch.
  */
 export function EmailsIndex() {
+  const status = useEmailHubStatus();
   const [outbox, setOutbox] = React.useState<OutboxEmail[] | null>(null);
   const [thumbs, setThumbs] = React.useState<Record<string, string>>({});
   const [tab, setTab] = React.useState("templates");
@@ -31,17 +35,15 @@ export function EmailsIndex() {
 
   return (
     <AppPage>
-      <OwnerPage title="Emails" meta={tab === "templates" ? activeEmailNames.length : outbox?.length}
-        description={`Email template previews and a fictional sample outbox, not live delivery history. ${data.kind === "live" ? "Only the separate diagnostic can send one approved test." : "Nothing here sends email."} Open a template to review it on desktop and phone.`}
+      <OwnerPage title="Emails" meta={tab === "templates" ? activeEmailNames.length + 1 : outbox?.length}
+        description={`Email template previews and a fictional sample outbox, not live delivery history. ${data.kind === "live" ? "Open a detail view for separate test and real-send controls." : "Nothing here sends email."} Open a template to review it on desktop and phone.`}
         actions={
           // In the pinned bar, so switching never needs a scroll back up.
           <SegmentedControl label="Show" value={tab} onChange={setTab}
-            options={[{ value: "templates", label: "Active templates", icon: <Mail /> }, { value: "outbox", label: `Sample outbox${outbox?.length ? ` (${outbox.length})` : ""}`, icon: <Send /> }]} />
+            options={[{ value: "templates", label: "Templates", icon: <Mail /> }, { value: "outbox", label: `Sample outbox${outbox?.length ? ` (${outbox.length})` : ""}`, icon: <Send /> }]} />
         }>
-          <DiagnosticEmail />
-          <InviteAddresses />
           {tab === "templates" ? (
-            <ul className="grid items-start gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <ul className="grid items-stretch gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {activeEmailNames.map((n) => {
                 const t = emailTemplates[n];
                 const sample = renderPreview(n, undefined, "light");
@@ -52,7 +54,9 @@ export function EmailsIndex() {
                       <h2 className="font-display text-heading-sm text-ink">
                         <a href={emailTemplateHref(data.kind, n, basePath)} className="rounded-xs after:absolute after:inset-0 group-hover:text-ink-brand">{t.label}</a>
                       </h2>
-                      <p className="text-body-sm text-ink-muted">{t.when}</p>
+                      <p className="text-body-sm text-ink-muted">Intended use: {t.when}</p>
+                      <p className="text-body-sm text-ink-subtle">{lifecycleWords}</p>
+                      <p className="text-body-sm text-ink-subtle">{usageWords(status[n])}</p>
                       <dl className="mt-auto grid gap-0.5 border-t border-line pt-3 text-body-sm">
                         <div><dt className="sr-only">Subject</dt><dd className="truncate font-semibold text-ink">{sample.subject}</dd></div>
                         <div><dt className="sr-only">Preheader</dt><dd className="line-clamp-2 text-ink-subtle">{sample.preheader}</dd></div>
@@ -62,6 +66,14 @@ export function EmailsIndex() {
                   </li>
                 );
               })}
+              <li className="group relative flex flex-col overflow-hidden rounded-lg border border-line bg-surface">
+                <EmailThumb html={diagnostic(previewContext()).html} />
+                <div className="flex flex-1 flex-col gap-1 p-5">
+                  <h2 className="font-display text-heading-sm text-ink"><a href={data.kind === "live" ? "/owners/emails/?template=diagnostic" : `${basePath}/emails/?template=diagnostic`} className="after:absolute after:inset-0">Diagnostic email</a></h2>
+                  <p className="text-body-sm text-ink-muted">Bounded diagnostic test; backend authorization and receipt determine availability.</p>
+                  <p className="text-body-sm text-ink-subtle">Approval / publication: not verified. No automatic trigger.</p>
+                </div>
+              </li>
             </ul>
           ) : outbox?.length === 0 ? (
                 <EmptyState icon={<Inbox />} title="Nothing sent yet" headingLevel={3}
@@ -112,7 +124,7 @@ function EmailThumb({ html }: { html?: string }) {
   };
   const doc = html?.replace("</head>", "<style>html,body{overflow:hidden!important;scrollbar-width:none}::-webkit-scrollbar{display:none}</style></head>");
   return (
-    <div ref={box} aria-hidden="true" className="relative overflow-hidden border-b border-line bg-surface-embed" style={{ height: `${Math.ceil(height * scale)}px` }}>
+    <div ref={box} aria-hidden="true" className="relative overflow-hidden border-b border-line bg-surface-embed" style={{ height: "240px" }}>
       {doc && (
         <iframe title="" tabIndex={-1} sandbox="allow-same-origin" srcDoc={doc} scrolling="no" onLoad={measure}
           className="pointer-events-none absolute top-0 left-0 w-150 origin-top-left"

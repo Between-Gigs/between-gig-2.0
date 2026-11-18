@@ -16,7 +16,7 @@ export function previewContext(): EmailContext {
  * prefers-color-scheme media query, which follows the OS, not the preview toggle.
  */
 export function forceScheme(html: string, scheme: PreviewScheme) {
-  return html.replace("@media (prefers-color-scheme:dark){", scheme === "dark" ? "@media all{" : "@media not all{");
+  return html.replace(/@media\s*\(prefers-color-scheme:\s*dark\)\s*\{/g, scheme === "dark" ? "@media all{" : "@media not all{");
 }
 
 /** The sample invite opens this site's own demo invite, so a walkthrough can start in the inbox. */

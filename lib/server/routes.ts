@@ -19,6 +19,7 @@ import * as gigs from "./gigs";
 import { cleanSamples } from "./work-samples";
 import { videoLinksEnabled } from "@/lib/profile/video-links";
 import { diagnosticRequest } from "./diagnostic";
+import { emailHubStatus, testHubEmail } from "./email-hub";
 
 type Access = "optional" | "session" | "owner" | "public" | "funnel";
 type Args = unknown[];
@@ -62,6 +63,8 @@ export function cleanFields(v: unknown): ProfileFields {
 }
 
 export const ROUTES = {
+  "emails.hubStatus": { access: "owner", run: emailHubStatus },
+  "emails.testTemplate": { access: "owner", run: testHubEmail },
   "emails.diagnosticStatus": { access: "owner", run: (ctx, args) => diagnosticRequest(ctx, args, false) },
   "emails.sendDiagnostic": { access: "owner", run: (ctx, args) => diagnosticRequest(ctx, args, true) },
   "auth.session": { access: "optional", run: (ctx) => (ctx.cred.kind === "session" ? gigs.session(ctx) : Promise.resolve(null)) },
@@ -241,7 +244,8 @@ export async function handle(name: RouteName, req: Request, deps: Deps = {}): Pr
   let args: Args;
   try {
     const body = JSON.parse(text || "{}") as { args?: unknown };
-    if (name.startsWith("emails.") && (!body || Object.keys(body).length !== 1 || !Array.isArray(body.args) || body.args.length !== 0)) return json(400, { error: "invalid_diagnostic_request" });
+    if (name.startsWith("emails.") && (!body || Object.keys(body).length !== 1 || !Array.isArray(body.args))) return json(400, { error: "invalid_email_request" });
+    if ((name === "emails.sendDiagnostic" || name === "emails.diagnosticStatus") && (!body || Object.keys(body).length !== 1 || !Array.isArray(body.args) || body.args.length !== 0)) return json(400, { error: "invalid_diagnostic_request" });
     args = Array.isArray(body.args) ? body.args : [];
   } catch {
     return json(400, { error: "invalid body" });

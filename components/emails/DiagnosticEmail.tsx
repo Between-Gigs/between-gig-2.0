@@ -1,12 +1,14 @@
 "use client";
 import * as React from "react";
-import { Button } from "@ds/components";
+import { Breadcrumbs, Button, SegmentedControl, Textarea } from "@ds/components";
 import { diagnostic } from "@/emails/diagnostic";
 import { data } from "@/lib/data";
 import { apiSource } from "@/lib/data/api";
 import { basePath } from "@/lib/site";
-import { previewContext } from "./preview";
+import { forceScheme, previewContext, type PreviewScheme } from "./preview";
 import { DiagnosticReceipts, type Receipt } from "./DiagnosticReceipts";
+import { AppPage } from "@/components/site/AppPage";
+import { OwnerPage } from "@/components/owners/kit";
 type Status = {
   enabled: boolean;
   recipient: string | null;
@@ -16,6 +18,10 @@ type Status = {
   receipts?: Receipt[];
 };
 export function DiagnosticEmail() {
+  const [scheme, setScheme] = React.useState<PreviewScheme>("light");
+  const [mode, setMode] = React.useState("test");
+  const [typed, setTyped] = React.useState("");
+  const lock = React.useRef(false);
   const live = data.kind === "live";
   const [status, setStatus] = React.useState<Status | null>(null);
   const [message, setMessage] = React.useState("");
@@ -67,6 +73,9 @@ export function DiagnosticEmail() {
       queueMicrotask(() => void request().catch((e) => setMessage(e.message)));
   }, [live, request]);
   const act = async (send: boolean) => {
+    if (lock.current) return;
+    if (send && (typed.trim().toLowerCase() !== "jmassion@gmail.com" || mode !== "test" || !window.confirm("Send the one backend-authorized diagnostic to jmassion@gmail.com? This sends an actual diagnostic email."))) return;
+    lock.current = true;
     setBusy(true);
     setMessage("");
     try {
@@ -78,12 +87,14 @@ export function DiagnosticEmail() {
           : "Status unavailable. Refresh before retrying.",
       );
     } finally {
+      lock.current = false;
       setBusy(false);
     }
   };
   const receipt = status?.receipt;
   const receipts = status?.receipts ?? (receipt ? [receipt] : []);
   return (
+    <AppPage><OwnerPage title="Diagnostic email" description="Bounded test, separate from automatic email triggers." breadcrumbs={<Breadcrumbs items={[{ label: "Emails", href: live ? "/owners/emails/" : `${basePath}/emails/` }, { label: "Diagnostic" }]} />}>
     <section
       className="mb-6 grid gap-4 rounded-lg border border-line bg-surface p-5"
       aria-labelledby="diagnostic-heading"
@@ -92,17 +103,21 @@ export function DiagnosticEmail() {
         id="diagnostic-heading"
         className="font-display text-heading-md text-ink"
       >
-        Diagnostic email · approved test
+        Diagnostic email · authorization checked by backend
       </h2>
       <p className="text-body-sm text-ink-muted">
         From hello@between-gigs.com, only to jmassion@gmail.com. Uses our
         existing background, logo and footer. This is separate from invitations,
         welcome emails and the fictional outbox.
       </p>
+      <SegmentedControl label="Send type" value={mode} onChange={setMode} options={[{ value: "test", label: "Test email" }, { value: "real", label: "Real email" }]} />
+      <label htmlFor="diagnostic-recipient" className="text-label-sm text-ink">Diagnostic recipient</label>
+      <Textarea id="diagnostic-recipient" rows={2} value={typed} onChange={e => setTyped(e.target.value)} placeholder="jmassion@gmail.com" disabled={busy} />
+      <p className="text-body-sm text-ink-subtle">{mode === "real" ? "Real send unavailable. This diagnostic only supports a bounded backend-authorized test." : "Enter jmassion@gmail.com. The backend pins this recipient; other addresses require separate authorization. Approval / publication status is not inferred from this preview."}</p>
       <div className="flex flex-wrap gap-3">
         <Button
           size="sm"
-          disabled={!live || busy || !status?.enabled || !!receipt}
+          disabled={!live || busy || !status?.enabled || !!receipt || mode !== "test" || typed.trim().toLowerCase() !== "jmassion@gmail.com"}
           onClick={() => void act(true)}
         >
           {busy ? "Checking…" : status?.authorization === "revised" ? "Send one revised diagnostic" : "Send one diagnostic"}
@@ -116,6 +131,8 @@ export function DiagnosticEmail() {
           {phone ? "Desktop preview" : "Phone preview"}
         </Button>
       </div>
+      <SegmentedControl label="Mail client theme" value={scheme} onChange={v => setScheme(v as PreviewScheme)} options={[{ value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} />
+      <p className="text-body-sm text-ink-subtle">Browser simulation; email apps may recolor messages differently.</p>
       <div
         role="status"
         aria-live="polite"
@@ -149,12 +166,12 @@ export function DiagnosticEmail() {
             ref={frame}
             title="Diagnostic email preview"
             sandbox="allow-same-origin"
-            srcDoc={html}
+            srcDoc={forceScheme(html, scheme)}
             onLoad={fit}
             className="w-full border-0"
           />
         )}
       </div>
-    </section>
+    </section></OwnerPage></AppPage>
   );
 }

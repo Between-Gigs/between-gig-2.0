@@ -53,7 +53,7 @@ export const emailTemplates = {
     render: comingSoon, sample: { kind: "talent" },
   } satisfies TemplateInfo<ComingSoonProps>,
   approved: {
-    name: "approved", label: "Profile approved", when: "When an owner approves a submitted profile.",
+    name: "approved", label: "Profile approved", when: "When a reviewed profile is published; approval alone does not publish.",
     render: approved, sample: { firstName: "Imani", profileUrl: "https://between-gigs.com/p/imani-carter/", editUrl: "https://between-gigs.com/profile/canvas/" },
   } satisfies TemplateInfo<ApprovedProps>,
   "changes-requested": {

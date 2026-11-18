@@ -58,7 +58,7 @@ export function companyOs(cfg: CompanyOsConfig) {
   const base = `${cfg.url}/t/${encodeURIComponent(cfg.tenant)}`;
   const bearer = (c: Credential) => (c.kind === "session" ? c.token : c.kind === "reader" ? cfg.readerToken : cfg.submitterToken);
 
-  async function call<T>(cred: Credential, method: string, path: string, body?: unknown): Promise<T> {
+  async function call<T>(cred: Credential, method: string, path: string, body?: unknown, requestHeaders?: { "Idempotency-Key": string }): Promise<T> {
     const token = bearer(cred);
     if (!token) throw new CompanyOsError(cred.kind === "session" ? 401 : 503, cred.kind === "session" ? "unauthorized" : "service_identity_not_configured");
     let res: Response;
@@ -66,7 +66,7 @@ export function companyOs(cfg: CompanyOsConfig) {
       res = await doFetch(`${base}${path}`, {
         method,
         // No content-type on a bodyless request (Company OS refuses an empty JSON body).
-        headers: { authorization: `Bearer ${token}`, ...(body === undefined ? {} : { "content-type": "application/json" }) },
+        headers: { ...requestHeaders, authorization: `Bearer ${token}`, ...(body === undefined ? {} : { "content-type": "application/json" }) },
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: AbortSignal.timeout(cfg.timeoutMs ?? TIMEOUT_MS),
         cache: "no-store",

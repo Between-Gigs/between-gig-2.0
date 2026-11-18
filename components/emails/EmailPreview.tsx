@@ -11,18 +11,22 @@ import { OwnerPage } from "@/components/owners/kit";
 import { renderPreview, type PreviewScheme } from "./preview";
 import { basePath } from "@/lib/site";
 
+import { EmailActions, useEmailHubStatus } from "./EmailActions";
+import { lifecycleWords, usageWords } from "@/lib/email-hub";
+
 const widths = { desktop: "w-full max-w-160", mobile: "w-full max-w-sm" } as const;
 
 /** /emails/[name]: one template in light or dark, desktop or phone width, with its subject, preheader and text twin. */
-export function EmailPreview({ name }: { name: EmailTemplate }) {
+export function EmailPreview({ name, owner = false }: { name: EmailTemplate; owner?: boolean }) {
   return (
     <React.Suspense fallback={<AppPage><span /></AppPage>}>
-      <Preview name={name} />
+      <Preview name={name} owner={owner} />
     </React.Suspense>
   );
 }
 
-function Preview({ name }: { name: EmailTemplate }) {
+function Preview({ name, owner = false }: { name: EmailTemplate; owner?: boolean }) {
+  const status = useEmailHubStatus();
   const brand = useLook() !== "swiss";
   const t = emailTemplates[name];
   const outboxId = useSearchParams().get("outbox");
@@ -41,15 +45,23 @@ function Preview({ name }: { name: EmailTemplate }) {
 
   React.useEffect(() => {
     const props = queued?.props;
-    setEmail(renderPreview(name, props, scheme)); // eslint-disable-line react-hooks/set-state-in-effect
-  }, [name, queued, scheme]);
+    const rendered = renderPreview(name, props, scheme);
+    if (owner) rendered.html = rendered.html.replace(/<a\b([^>]*?)href="[^"]*"([^>]*)>/g, '<a$1aria-disabled="true"$2>');
+    setEmail(rendered); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [name, queued, scheme, owner]);
 
   // Grow the frame to the email's height, so the page scrolls, not the frame.
   const fit = () => {
     const doc = frame.current?.contentDocument;
-    if (frame.current && doc?.body) frame.current.style.height = `${doc.documentElement.scrollHeight}px`;
+    if (frame.current && doc?.body) frame.current.style.height = `${doc.body.scrollHeight}px`;
   };
-  React.useEffect(() => { fit(); }, [width, email]);
+  React.useEffect(() => {
+    const el = frame.current;
+    if (!el) return;
+    const resize = new ResizeObserver(fit);
+    resize.observe(el);
+    return () => resize.disconnect();
+  }, [width, email, tab]);
 
   const copy = async (text: string, what: string) => {
     try { await navigator.clipboard.writeText(text); toast({ message: `${what} copied`, tone: "success" }); }
@@ -60,9 +72,12 @@ function Preview({ name }: { name: EmailTemplate }) {
     <AppPage>
       {/* The owner pages' slim bar: pinned while you scroll, with its one action in reach. */}
       <OwnerPage title={t.label} description={t.when}
-        breadcrumbs={<Breadcrumbs items={[{ label: "Emails", href: `${basePath}/emails/` }, { label: t.label }]} />}
+        breadcrumbs={<Breadcrumbs items={[{ label: "Emails", href: owner ? "/owners/emails/" : `${basePath}/emails/` }, { label: t.label }]} />}
         actions={email && <Button size="sm" iconEnd={<Copy />} onClick={() => copy(email.html, name === "invite" ? "Preview HTML" : "HTML")}>{name === "invite" ? "Copy preview HTML" : "Copy HTML"}</Button>}>
-      {!queued && name === "invite" && <Banner tone="info" title="Sample invitation · nothing sent">Press Create your profile to continue the sample walkthrough. Unsubscribe is inactive here; delivered emails receive a recipient-specific unsubscribe link.</Banner>}
+      <p className="text-body-sm text-ink-subtle">{lifecycleWords}. {usageWords(status[name])}</p>
+      {owner && <p className="text-body-sm text-ink-subtle">Source preview with fictional details; links are inactive. Stored sending content may differ.</p>}
+      {owner && <EmailActions name={name} status={status[name]} />}
+      {!owner && !queued && name === "invite" && <Banner tone="info" title="Sample invitation · nothing sent">Press Create your profile to continue the sample walkthrough. Unsubscribe is inactive here; delivered emails receive a recipient-specific unsubscribe link.</Banner>}
       {queued && <Banner tone="info" title="From the sample outbox">Showing the email queued for {queued.to}. Nothing was sent.</Banner>}
 
       <div className="grid gap-6 lg:grid-cols-12">
@@ -91,7 +106,7 @@ function Preview({ name }: { name: EmailTemplate }) {
               options={[{ value: "light", label: "Light", icon: <Sun /> }, { value: "dark", label: "Dark", icon: <Moon /> }]} />
             <SegmentedControl label="Screen width" value={width} onChange={(v) => setWidth(v as keyof typeof widths)}
               options={[{ value: "desktop", label: "Desktop", icon: <Monitor /> }, { value: "mobile", label: "Phone", icon: <Smartphone /> }]} />
-            <p className="text-body-sm text-ink-subtle">This browser preview simulates the template’s theme rules. Email apps may recolor messages differently, including Gmail and Outlook; actual inbox rendering can vary.</p>
+            <p className="text-body-sm text-ink-subtle">{name === "invite" && "The invitation is intentionally light-only in both modes. "}This browser preview simulates the template’s theme rules. Email apps may recolor messages differently, including Gmail and Outlook; actual inbox rendering can vary.</p>
           </section>
           <section aria-labelledby="notes-h" className={brand ? "rounded-lg border border-line bg-surface p-5" : "border-t-4 border-line-strong pt-4"}>
             <h2 id="notes-h" className="font-display text-heading-md text-ink">Email format</h2>
