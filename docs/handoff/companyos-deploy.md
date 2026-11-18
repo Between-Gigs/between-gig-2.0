@@ -21,7 +21,7 @@ The canonical Hub is /hub/. The old /preview/ entry and its descendants redirect
 
 The server mounts a separate static sample build under /hub (lib/server/preview.ts). Its root page is the Hub; the original sample home remains at /hub/home/. The temporary build copy changes those routes without altering the Pages export or the real app. Nested sample tools use the same mount, CSP hashes and filesystem-containment checks. No Clerk key, Company OS URL or service credential reaches this sandbox.
 
-The Hub is publicly accessible for testing, while real /owners/* and /api/staff/* remain protected by the existing test gate and verified Company OS superadmin session. Navigation between the live app and this separate static build uses full-page navigation. See [Hub, experiences and staff](hub-staff.md).
+The Hub document server requires a current Company OS-verified super-admin session, independently of the passphrase test gate. Legacy preview cookies and sample roles grant no access. Real /owners/* and /api/staff/* retain their existing protections. Navigation between the live app and this separate static build uses full-page navigation. See [Hub, experiences and staff](hub-staff.md).
 
 Pages and Railway test both follow main through their existing checked workflows. Production is still manually released.
 
@@ -43,7 +43,7 @@ The test site is on the public internet, so `proxy.server.ts` puts a passphrase 
   A new passphrase signs everyone out.
 - 5 wrong tries in 15 minutes from one address get 429.
 - Exempt: `/webhooks/resend/` (signed by Resend), `/email/*` (mail clients fetch the images without a cookie), and
-  `/healthz/` (Railway's healthcheck), plus GET/HEAD reads of `/hub/*`, `/preview/*`, and `/preview-access/` while Hub testing remains public.
+  `/healthz/` (Railway's healthcheck), plus GET/HEAD requests to `/hub/*`, `/preview/*`, and `/preview-access/`. This is only a passphrase-gate exemption: Hub documents and aliases still require a currently verified super-admin session; non-sensitive static assets remain readable.
 - Everything behind it is `noindex`. Without `COOKIE_SIGNING_SECRET` it answers 503 (fail closed).
 
 `deploy-test.yml` refuses to run without both secrets; `deploy-prod.yml` refuses a `TEST_GATE_PASSPHRASE`, and the
@@ -71,7 +71,7 @@ of them.
 - `scripts/check-bundle.mjs`: no `cos_svc_`, `sk_live`, `sk_test`, `CLERK_SECRET` or `*.railway.internal` in what
   browsers download, the preview export included. In its Studio source copy, only real secret values count.
 - `scripts/check-server.mjs`: starts the server. Live routes 200, internal ones 404, headers and nonces on every page,
-  `/healthz/` 200 and the public Hub/legacy aliases, with real app/API gates preserved. A second start with a passphrase checks the test gate.
+  `/healthz/` readiness and anonymous Hub/legacy-alias login redirects, with non-sensitive Hub assets and the real app/API gates preserved. A second start with a passphrase checks the test gate.
 - `scripts/check-split.mjs`: the code-splitting rules above.
 
 ### Security headers
