@@ -38,6 +38,7 @@ try {
     await context.close(); console.log(`PASS saved Night / legacy Day real DS controls ${width}`);
   }
   for (const width of [320, 390, 768, 1440]) for (const theme of ["light", "dark"]) {
+    console.log(`START navigation modes/settings ${width}/${theme}`);
     const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: theme, reducedMotion: "reduce" });
     await context.addInitScript(theme => localStorage.setItem("bg-theme", theme), theme);
     const page = await context.newPage(); const errors = []; page.on("pageerror", error => errors.push(error.message));
@@ -52,6 +53,7 @@ try {
     let sidebar = await nav();
     assert.deepEqual(await sidebar.locator("[data-owner-section] > button").allTextContents(), ["Overview", "Gigsters"]);
     assert.equal(await sidebar.getByRole("link", { name: "Staff", exact: true }).count(), 0);
+    console.log(`STEP ${width}/${theme}: focused Owner navigation ready`);
     await shot("owner"); if (width < 1024) await page.keyboard.press("Escape");
     await page.goto(local.url + "/owners/developer/");
     await page.getByText("The Hub below is a fictional sample workspace.", { exact: false }).waitFor();
@@ -73,11 +75,17 @@ try {
     assert.deepEqual(await page.evaluate(() => ({ look: document.documentElement.dataset.look, theme: document.documentElement.dataset.theme, legacyLook: localStorage.getItem("bg2-site-look-v2"), legacyTheme: localStorage.getItem("bg-theme"), unstyled: document.documentElement.hasAttribute("data-unstyled"), legacyPlain: localStorage.getItem("bg2-unstyled") })), outerAppearance, "another sample account in the same-origin iframe cannot change outer appearance or legacy keys");
     await child.evaluate(() => window.bgSample.signInAs("owner"));
     assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).session), parentIdentity, "fictional iframe role changes never replace parent identity");
+    console.log(`STEP ${width}/${theme}: iframe identity and appearance isolation passed`);
+    // Theme interactions scroll the child and can scroll its outer owner content to the focused control.
+    // Reset both real scroll containers directly; do not wait on a background iframe animation frame.
+    await child.evaluate(() => { window.scrollTo({ top: 0, left: 0, behavior: "instant" }); for (const main of document.querySelectorAll("main")) { main.scrollTop = 0; main.scrollLeft = 0; } });
+    await page.evaluate(() => { window.scrollTo({ top: 0, left: 0, behavior: "instant" }); for (const main of document.querySelectorAll("main")) { main.scrollTop = 0; main.scrollLeft = 0; } });
     await shot("private-hub");
     await page.goto(local.url + "/owners/"); await account.waitFor();
     await header.getByRole("button", { name: "Switch experience" }).press("ArrowDown");
     await page.getByRole("menuitemradio", { name: "Developer Mode", exact: true }).click();
     await page.waitForURL("**/hub/");
+    console.log(`STEP ${width}/${theme}: Developer navigation ready`);
     sidebar = await nav(); await sidebar.getByRole("link", { name: "Staff", exact: true }).waitFor();
     await sidebar.getByRole("link", { name: "Hub", exact: true }).waitFor(); await shot("developer");
     if (width < 1024) await page.keyboard.press("Escape");
@@ -85,6 +93,11 @@ try {
     await account.click(); await page.getByRole("menuitem", { name: "My Settings", exact: true }).click();
     let settings = page.getByRole("dialog", { name: "My Settings", exact: true }); await settings.waitFor();
     assert.equal(await settings.getByLabel("Show theme chooser in navigation").isChecked(), false);
+    const settingsDiagnostic = await settings.evaluate(dialog => ({ html: dialog.outerHTML, selects: [...dialog.querySelectorAll("select")].map(select => ({ id: select.id, labels: [...select.labels].map(label => label.textContent), value: select.value })) }));
+    fs.writeFileSync(`deliverables/navigation-modes/settings-before-theme-${width}-${theme}.json`, JSON.stringify(settingsDiagnostic, null, 2));
+    console.log(`STEP ${width}/${theme}: Settings before Theme selection ${JSON.stringify(settingsDiagnostic.selects)}`);
+    await shot("settings-before-theme");
+    await settings.getByRole("combobox", { name: "Theme", exact: true }).waitFor();
     await settings.getByLabel("Theme", { exact: true }).selectOption("swiss");
     await settings.getByLabel("Show theme chooser in navigation").check(); await shot("settings");
     await page.keyboard.press("Escape"); await settings.waitFor({ state: "hidden" });
