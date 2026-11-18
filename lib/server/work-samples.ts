@@ -26,10 +26,17 @@ function photoSource(s: string): { src: string; image_fit?: string } {
   if (at < 0) return { src: s };
   const image_fit = canonicalImageFit(s.slice(at + 5));
   if (!image_fit) throw new CompanyOsError(422, "invalid_image_fit", "That photo alignment is invalid. Adjust the photo again.");
-  return { src: s.slice(0, at), image_fit };
+  const src = s.slice(0, at);
+  if (!MEDIA.test(src)) throw new CompanyOsError(422, "invalid_image_fit", "Save this photo first, then adjust its fit.");
+  return { src, image_fit };
 }
 
 const str = (v: unknown) => (typeof v === "string" ? v : "");
+
+/** Reject fitted pending uploads before any profile or sample mutation, including direct saveDraft callers. */
+export function assertSavedPhotoFits(v: readonly string[]): void {
+  for (const s of v) if (typeof s === "string" && !s.startsWith("video:")) photoSource(s);
+}
 
 /** What a browser may send as its work-sample list: photos (new as data URLs, stored as /media links) and video entries. */
 export function cleanSamples(v: unknown): string[] {
@@ -67,12 +74,13 @@ export type SamplePlan = {
   removeFiles: string[];
   positionPatches: { id: string; position: number }[];
   fitPatches: { id: string; image_fit: string }[];
-  photoUploads: { dataUrl: string; position: number; image_fit?: string }[];
+  photoUploads: { dataUrl: string; position: number }[];
   /** `item` is a stored link; `create` the index in `itemCreates`. */
   thumbUploads: ({ item: string; dataUrl: string } | { create: number; dataUrl: string })[];
 };
 
 export function planSamples(want: readonly string[], items: Row[], files: Row[]): SamplePlan {
+  assertSavedPhotoFits(want);
   const plan: SamplePlan = { itemDeletes: [], itemUpdates: [], itemCreates: [], removeFiles: [], positionPatches: [], fitPatches: [], photoUploads: [], thumbUploads: [] };
   const photos = new Map(files.filter((f) => f.data.kind === "portfolio").map((f) => [f.id, f]));
   const thumbFiles = new Set(files.filter((f) => f.data.kind === "video_thumbnail").map((f) => f.id));
@@ -94,7 +102,7 @@ export function planSamples(want: readonly string[], items: Row[], files: Row[])
         if (image_fit !== undefined && image_fit !== canonicalImageFit(f.data.image_fit)) plan.fitPatches.push({ id: f.id, image_fit });
         if (Number(f.data.position ?? 0) !== position) plan.positionPatches.push({ id: f.id, position });
         position++;
-      } else if (DATA_IMAGE.test(src)) plan.photoUploads.push({ dataUrl: src, position: position++, ...(image_fit ? { image_fit } : {}) });
+      } else if (DATA_IMAGE.test(src)) plan.photoUploads.push({ dataUrl: src, position: position++ });
       continue;
     }
     const caption = sample.caption, thumb = sample.thumb ?? "";
@@ -183,17 +191,7 @@ export async function saveSamples({ cos, cred }: { cos: Cos; cred: Credential },
     // A file's place is a nicety: if Company OS won't move it, the order it was uploaded in stands.
     for (const p of plan.positionPatches) await cos.patch(cred, "file", p.id, { position: p.position }).catch(() => undefined);
     const created = plan.itemCreates.length ? (await cos.batch(cred, plan.itemCreates.map((o) => ({ ...o, data: { ...o.data, profile: profileId } })))).ids : [];
-    for (const p of plan.photoUploads) {
-      const id = await upload(p.dataUrl, "portfolio", p.position);
-      if (p.image_fit) {
-        try { await persistFit(id, p.image_fit); }
-        catch (e) {
-          // No successful response will adopt this id. Avoid duplicating the upload on retry.
-          await cos.remove(cred, "file", id).catch(() => undefined);
-          throw e;
-        }
-      }
-    }
+    for (const p of plan.photoUploads) await upload(p.dataUrl, "portfolio", p.position);
     for (const t of plan.thumbUploads) {
       const item = "item" in t ? t.item : created[t.create]!;
       const id = await upload(t.dataUrl, "video_thumbnail");
