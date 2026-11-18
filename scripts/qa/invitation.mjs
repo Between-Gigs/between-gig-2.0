@@ -153,9 +153,24 @@ try {
       await page.addScriptTag({content:fs.readFileSync("node_modules/axe-core/axe.min.js","utf8")});
       const violations=await page.evaluate(async()=>(await window.axe.run(document,{runOnly:{type:"tag",values:["wcag2a","wcag2aa","wcag21aa"]}})).violations.map(v=>({id:v.id,targets:v.nodes.map(n=>n.target)})));
       assert.deepEqual(violations,[],"standalone email accessibility/contrast");
-      if(!blocked){const hash=createHash("sha256").update(await image.screenshot()).digest("hex");if(theme==="light")artHashes.set(width,hash);else assert.equal(hash,artHashes.get(width),"approved image pixels unchanged across simulated themes");}
       phoneMetrics.push({viewportWidth:width,theme,imagesBlocked:blocked,imageWidth:metrics.width,imageHeight:metrics.height,effectiveBakedLead:blocked?null:lead,effectiveBakedCta:blocked?null:cta,htmlCtaHeight:ctaHeight});
       await page.screenshot({path:`deliverables/invitation/email-viewport-${width}-${theme}${blocked?"-images-blocked":""}.png`,fullPage:true});
+      if(!blocked){
+        const capture=await image.screenshot();
+        const hash=createHash("sha256").update(capture).digest("hex");
+        const rendering=await image.evaluate(image=>{
+          const box=image.getBoundingClientRect(),style=getComputedStyle(image);
+          return {currentSrc:image.currentSrc,src:image.src,naturalWidth:image.naturalWidth,naturalHeight:image.naturalHeight,
+            rect:{x:box.x,y:box.y,width:box.width,height:box.height,top:box.top,bottom:box.bottom,left:box.left,right:box.right},
+            devicePixelRatio,filter:style.filter,mixBlendMode:style.mixBlendMode,opacity:style.opacity,transform:style.transform,imageRendering:style.imageRendering,
+            ancestors:[image,...(function*(node){while(node.parentElement){node=node.parentElement;yield node;}})(image)].map(node=>{const s=getComputedStyle(node);return {tag:node.tagName,className:node.className,background:s.backgroundColor,filter:s.filter,mixBlendMode:s.mixBlendMode,opacity:s.opacity,transform:s.transform};})};
+        });
+        fs.writeFileSync(`deliverables/invitation/art-pixels-${width}-${theme}.png`,capture);
+        fs.writeFileSync(`deliverables/invitation/art-pixels-${width}-${theme}.json`,JSON.stringify({pngSha256:hash,...rendering},null,2));
+        fs.writeFileSync("deliverables/invitation/email-viewport-metrics.json",JSON.stringify(phoneMetrics,null,2));
+        console.log(`ART pixel evidence saved ${width}/${theme}: ${hash}; rect=${JSON.stringify(rendering.rect)}; filter=${rendering.filter}; blend=${rendering.mixBlendMode}`);
+        if(theme==="light")artHashes.set(width,hash);else assert.equal(hash,artHashes.get(width),"approved image pixels unchanged across simulated themes; inspect saved art-pixels PNGs and JSON on mismatch");
+      }
       await page.close();
       console.log(`PASS standalone email ${width}/${theme}/images-blocked=${blocked}`);
     }
