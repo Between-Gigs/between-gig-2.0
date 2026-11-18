@@ -16,11 +16,12 @@ const row = (id: string, data: Record<string, unknown>): Row => ({ id, data, cre
 const jpeg = (s: string) => `data:image/jpeg;base64,${Buffer.from(s).toString("base64")}`;
 const cred = { kind: "session", token: "t" } as const;
 
-describe("M1: no photo alignment while Company OS can't keep it", () => {
+describe("M1: Company OS keeps nondestructive photo alignment", () => {
   const editor = fs.readFileSync("components/gigster/editor/canvas.tsx", "utf8");
   const img = fs.readFileSync("components/profile/FittedImg.tsx", "utf8");
-  it("gates video-enabled live Adjust while allowing explicitly local sample alignment", () => {
-    expect(editor).toContain('!clip && (!videos || data.kind === "sample")');
+  it("allows photo Adjust with video links while excluding video tiles", () => {
+    expect(editor).toContain('!clip && <button type="button" aria-label={`Adjust the fit');
+    expect(editor).not.toContain('!clip && (!videos || data.kind === "sample")');
   });
   it("renders supplied local alignment without adding unsupported thumbnail fragments", () => {
     expect(img).toContain("const fit = parsed.fit;");
