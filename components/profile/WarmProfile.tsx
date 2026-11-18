@@ -1,4 +1,5 @@
 "use client";
+import { serviceLabel } from "@/lib/profile/service-labels";
 import { PublicBookingDetails } from "./PublicBookingDetails";
 import { WorkTile } from "@/components/profile/WorkTile";
 import { workMeta } from "@/lib/profile/video-links";
@@ -161,7 +162,7 @@ export function WarmProfile({ person, fields: f, mode, embedded, similar = [], d
               {(helps.length ? helps : services).map((s, i) => (
                 <li key={s} className="grid content-start gap-3 rounded-lg border border-line bg-surface p-4 shadow-xs">
                   <span aria-hidden="true" className={cx("grid size-11 place-items-center rounded-md", iconTint(i))}><Icon3D name={craftIcon(s, services[0])} className="size-7" /></span>
-                  <span className="grid"><span className="text-label-md text-ink">{s}</span>{rate && !helps.length && <span className="text-body-sm text-ink-muted">From {rate}</span>}</span>
+                  <span className="grid"><span className="text-label-md text-ink">{helps.length ? s : serviceLabel(s)}</span>{rate && !helps.length && <span className="text-body-sm text-ink-muted">From {rate}</span>}</span>
                 </li>
               ))}
             </ul>
@@ -251,7 +252,7 @@ export function WarmProfile({ person, fields: f, mode, embedded, similar = [], d
                   <div className="size-16 shrink-0 overflow-hidden rounded-md"><PersonPhoto id={o.id} name={o.name} src={profile.fields.photo || undefined} alt="" className="size-full transition-transform duration-slow group-hover:scale-105" /></div>
                   <span className="grid min-w-0 flex-1 justify-items-start gap-0.5">
                     <span className="truncate text-label-md text-ink">{o.name}</span>
-                    <span className="truncate text-body-sm text-ink-muted">{profile.fields.position || profile.fields.services[0]}</span>
+                    <span className="truncate text-body-sm text-ink-muted">{profile.fields.position || serviceLabel(profile.fields.services[0] ?? "")}</span>
                     {hasRate(profile.fields.rate) && <span className="mt-1 rounded-full bg-tint-butter px-2.5 py-0.5 text-label-sm text-tint-ink">${profile.fields.rate}/{basisShort[profile.fields.basis]}</span>}
                   </span>
                   <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-tint-mint-soft text-tint-ink transition-transform duration-base group-hover:translate-x-0.5"><ArrowRight className="size-4" /></span>

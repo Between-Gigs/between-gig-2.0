@@ -60,6 +60,7 @@ jobs:
           node scripts/qa/portfolio-edit-guards.mjs
           node scripts/qa/patti-editor-presentation.mjs
           node scripts/qa/profile-guidance.mjs
+          node scripts/qa/service-labels.mjs
           node scripts/qa/service-guidance.mjs
           node scripts/qa/service-conversion-guard.mjs
           node scripts/qa/gigster-priority.mjs
@@ -71,6 +72,7 @@ jobs:
         with:
           name: service-guidance-evidence
           path: |
+            deliverables/service-labels
             deliverables/service-guidance
             deliverables/service-conversion-guard
           if-no-files-found: warn

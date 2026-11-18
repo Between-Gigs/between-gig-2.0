@@ -1,0 +1,9 @@
+# Existing service choices and approved display labels
+
+Candidate 1.6.8 continues PR82 using the seven existing supported category values. New selections use the approved names, including Beauty, Hair & Makeup, Parties & Event Planning, and Photography & Videography. Labels are shared across editors, public profiles, browse/search, and owner filters. Video Editing & Digital Content remains unavailable until its tenant option is verified active in test and production.
+
+Storage retains the original ten-value taxonomy and existing option keys. Historical Hair, Makeup, Laundry, and unknown saved answers remain visible without migration, loss, or replacement. Historical Hair/Makeup bookmarked filters keep their narrow meaning; the new Beauty filter includes all three variants. Owner service bookmarks now initialize the filter. Personal descriptions remain literal, and the previous release's atomic Other conversion/cancellation guards are retained. BFF row matching recognizes historical friendly values so unrelated edits reuse existing row IDs and values.
+
+Validation: 74 focused tests across labels, guidance/conversion, browse, field mappings, seeds, DataSource contract, and BFF operations; types, ESLint, token check, static build, and eight service-label browser cases at 320/390/768/1440 in light/dark. Browser cases use fictional local sample data: legacy/unknown values, autosave/reorder/reload, four public layouts, private Other exclusion, owner bookmark and asymmetric category filtering, Axe, overflow, and blocked external requests. Existing guidance/conversion regressions also run in CI. This evidence does not establish authenticated hosted save/reload coverage.
+
+No backend option activation, permission changes, email publication, sends, or sending-control edits. Rollback target: v1.6.7. Remaining PR82 work must reconcile with this slice and preserve the 1.6.7 reducer/Other guards rather than merge its older branch unchanged.

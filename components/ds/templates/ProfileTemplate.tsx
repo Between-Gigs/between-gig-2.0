@@ -18,6 +18,7 @@ import type { ProfileLayoutProps } from "@/components/profile/ProfileView";
 import { WorkDetails } from "@/components/profile/WorkDetails";
 import { basisShort, monthStatusLabel } from "@/lib/data/taxonomy";
 import { personalityQuestionText } from "@/lib/profile/personality";
+import { serviceLabel } from "@/lib/profile/service-labels";
 import { serviceDescription } from "@/lib/profile/service-descriptions";
 import { startDateLabel } from "@/lib/profile/stage-two";
 import { hasRate } from "@/lib/profile/validate";
@@ -67,7 +68,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
   pageLabel, services, helps, portfolio, sample, editing, show, priced, rate, where, credits, unseen, reviewed, P,
   creditRows, resumeUrl, questions, sections, saved, onSave, onShare, onPhoto, onRequest }: ProfileLayoutProps) {
   const Name = embedded || mode === "owner" ? "h2" : "h1";
-  const craft = f.position || services[0] || f.skills[0] || "";
+  const craft = f.position || serviceLabel(services[0] ?? "") || f.skills[0] || "";
   const title = f.title?.trim() || "";
   // Booking answers (earliest start, minimum, personality) show when the profile has them; a public read on live has none yet.
   const start = startDateLabel(f.earliestStart);
@@ -131,7 +132,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
                 const line = lineOf(s) || (services.length === 1 && f.hireableJobs?.trim()) || "", standard = serviceDescription(s);
                 return (
                   <li key={s} className="grid gap-x-6 gap-y-1 border-t border-line py-4 first:border-t-0 first:pt-0 sm:grid-cols-12">
-                    <span className="text-label-lg font-semibold text-ink sm:col-span-4">{s}</span>
+                    <span className="text-label-lg font-semibold text-ink sm:col-span-4">{serviceLabel(s)}</span>
                     <span className="grid gap-1 sm:col-span-8">
                       <span className="text-body-md text-ink">{line || (standard ? standard : rate ? `From ${rate}` : "Rate agreed first")}</span>
                       {line && standard && <span className="text-body-sm text-ink-muted">{standard}</span>}
@@ -280,7 +281,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
           <ul className="grid gap-3">
             {similar.slice(0, 3).map(({ person: o, profile }) => (
               <li key={o.id} className="min-w-0">
-                <ProfileResultCard href={`/p/${o.slug}/`} name={o.name} service={profile.fields.position || profile.fields.services[0] || ""}
+                <ProfileResultCard href={`/p/${o.slug}/`} name={o.name} service={profile.fields.position || serviceLabel(profile.fields.services[0] ?? "")}
                   line={profile.extras?.tagline} area={profile.fields.areas.join(", ") || undefined} availability={monthStatusLabel[profile.fields.monthStatus]}
                   rate={hasRate(profile.fields.rate) ? `$${profile.fields.rate}/${basisShort[profile.fields.basis]}` : undefined} photo={profile.fields.photo || undefined} />
               </li>

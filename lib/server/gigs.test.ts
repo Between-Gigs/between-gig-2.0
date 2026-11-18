@@ -170,3 +170,21 @@ describe("draftOps on an approved or published profile", () => {
     }
   });
 });
+
+it("keeps all legacy service rows, personal lines and custom text unchanged on repeated saves and reorders", () => {
+  const services=["Hair Styling","Makeup Services","Beauty & Personal Styling","Wardrobe & Laundry Care","Event Styling"];
+  const f={...fields,services,serviceLines:Object.fromEntries(services.map(s=>[s,`My own ${s} answer.`])),other:"Custom restoration\nMy custom description."};
+  const wire=toProfile(f,{extras:true});
+  const old=stored(f);old.profile.data={...old.profile.data,...wire.data};
+  const decoded=fromProfile(old.profile.data,old.items.map(r=>r.data) as unknown as Parameters<typeof fromProfile>[1],f.photo);
+  expect(decoded.services).toEqual(services);expect(decoded.serviceLines).toEqual(f.serviceLines);expect(decoded.other).toBe(f.other);
+  expect(draftOps(PERSON,decoded,old,true)).toEqual([]);
+  expect(draftOps(PERSON,decoded,old,true)).toEqual([]);
+  const moved=draftOps(PERSON,{...decoded,services:[...services].reverse()},old,true);
+  expect(moved).toHaveLength(4);expect(moved.every(o=>o.op==="update"&&o.entity==="profile_item"&&Object.keys(o.data!).join()==="position")).toBe(true);
+});
+it("does not replace a historical raw legacy service label on an unrelated availability save",()=>{
+  const f={...fields,services:["Hair Styling"]};const old=stored(f);
+  old.items.find(r=>r.data.kind==="service")!.data.value="Hair Styling";
+  expect(draftOps(PERSON,{...f,monthStatus:"limited"},old)).toEqual([{op:"update",entity:"profile",id:"prof",data:{availability_status:"limited"}}]);
+});

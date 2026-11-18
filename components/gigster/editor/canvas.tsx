@@ -15,6 +15,7 @@ import { data } from "@/lib/data";
 import { laServiceAreas, onSetSkills, serviceChoices } from "@/lib/data/taxonomy";
 import { personalityQuestions } from "@/lib/profile/personality";
 import { departmentFieldRetired } from "@/lib/profile/department-retirement";
+import { servicePickerLabel, serviceLabel, serviceMatches } from "@/lib/profile/service-labels";
 import { serviceDescription } from "@/lib/profile/service-descriptions";
 import { customServiceFrom, OTHER_SERVICE, serviceSelectOptions, type ServiceFields } from "@/lib/profile/service-choice";
 import { ServiceGuidance } from "./ServiceGuidance";
@@ -169,14 +170,14 @@ export function CanvasHelp({ d, set, errors, onConvertToCustom }: SectionProps &
       });
       return;
     }
-    if (rows.some((value, index) => index !== i && value === next)) return;
+    if (rows.some((value, index) => index !== i && serviceMatches(value, next))) return;
     const prev = rows[i];
     const nextLines = { ...lines };
     if (prev && nextLines[prev] !== undefined && nextLines[next] === undefined) { nextLines[next] = nextLines[prev]; delete nextLines[prev]; }
     set("services")(rows.map((s, j) => (j === i ? next : s)));
     set("serviceLines")(nextLines);
   };
-  const add = (next: string) => { if (count >= MAX_SERVICES || rows.includes(next)) return; set("services")([...rows, next]); setAdding(false); };
+  const add = (next: string) => { if (count >= MAX_SERVICES || rows.some(value => serviceMatches(value, next))) return; set("services")([...rows, next]); setAdding(false); };
   const remove = (i: number) => {
     const nextLines = { ...lines };
     delete nextLines[rows[i]];
@@ -189,7 +190,7 @@ export function CanvasHelp({ d, set, errors, onConvertToCustom }: SectionProps &
   const count = rows.length + Number(otherVisible);
   const showBlank = count < MAX_SERVICES && (rows.length === 0 || adding);
   const OTHER = OTHER_SERVICE;
-  const optionsFor = (current?: string) => serviceSelectOptions(choices, rows, current, otherVisible);
+  const optionsFor = (current?: string) => serviceSelectOptions(choices, rows, current, otherVisible, servicePickerLabel, serviceMatches);
   // "Something else" holds the service's name on its first line and what they'd do after it.
   const [otherName = "", ...otherRest] = d.other.split("\n");
   const otherLine = otherRest.join("\n");
@@ -261,7 +262,7 @@ export function CanvasHelp({ d, set, errors, onConvertToCustom }: SectionProps &
               <div className="grid gap-4 sm:grid-cols-12 sm:gap-0">
                 <div className="flex items-start gap-1 sm:col-span-5 sm:pr-5">
                   {rows.length > 1 && (
-                    <button type="button" id={`service-grip-${i}`} aria-label={`Move ${s}, service ${i + 1} of ${rows.length}`} aria-describedby="services-hint"
+                    <button type="button" id={`service-grip-${i}`} aria-label={`Move ${servicePickerLabel(s)}, service ${i + 1} of ${rows.length}`} aria-describedby="services-hint"
                       title="Drag to reorder, or use the arrow keys"
                       className={cx("grid size-10 shrink-0 touch-none place-items-center rounded-md text-ink-subtle transition-colors hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-ink-brand",
                         dragging === i ? "cursor-grabbing text-ink-brand" : "cursor-grab")}
@@ -273,7 +274,7 @@ export function CanvasHelp({ d, set, errors, onConvertToCustom }: SectionProps &
                     <label htmlFor={`f-service-${i}`} className="mb-1 block text-body-sm text-ink-muted">Service {i + 1}</label>
                     <Select id={`f-service-${i}`} options={optionsFor(s)} value={s} onValueChange={(v) => replace(i, v)} />
                   </div>
-                  <button type="button" aria-label={`Remove ${s}`} onClick={() => remove(i)}
+                  <button type="button" aria-label={`Remove ${servicePickerLabel(s)}`} onClick={() => remove(i)}
                     className="grid size-10 shrink-0 place-items-center rounded-md text-ink-muted hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-focus"><Trash2 aria-hidden="true" className="size-4" /></button>
                 </div>
                 <div className="grid min-w-0 gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
@@ -286,6 +287,7 @@ export function CanvasHelp({ d, set, errors, onConvertToCustom }: SectionProps &
                 </div>
               </div>
               {standard && <p className="text-body-sm text-ink-muted"><span className="font-semibold text-ink">Standard description</span> · the same for everyone who offers it: {standard}</p>}
+              {serviceLabel(s) !== s && ["Hair Styling", "Makeup Services"].includes(s) && <p className="text-body-sm text-ink-muted">Saved service: {s}</p>}
               <ServiceGuidance service={s} />
             </li>
           );
