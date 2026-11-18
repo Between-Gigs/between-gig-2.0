@@ -229,4 +229,3 @@ export function ManualEmailControls({ name, identity, release }: { name: ManualE
       confirmLabel="Start a separate resend" tone="default" />
   </div>;
 }
-
