@@ -42,6 +42,12 @@ try {
         assert.ok(hierarchy.label < hierarchy.heading, "auth eyebrow remains smaller than the headline");
         assert.ok(hierarchy.fits, "auth eyebrow fits its column");
         fs.writeFileSync(`deliverables/auth-preview/${route}-${width}-${theme}.json`, JSON.stringify(hierarchy, null, 2));
+        // Keyboard checks can scroll the sticky header into the middle of a full-page capture.
+        // Restore the initial viewport after those checks, then let sticky positioning settle.
+        await page.evaluate(async () => {
+          scrollTo({ top: 0, left: 0, behavior: "instant" });
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        });
         await page.screenshot({ path: `deliverables/auth-preview/${route}-${width}-${theme}.png`, fullPage: true });
       }
     }
