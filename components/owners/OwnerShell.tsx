@@ -1,7 +1,7 @@
 "use client";
 import { useLook } from "@/components/site/LookSync";
 import { Button, Drawer, IconButton, Input, Logo, cx } from "@ds/components";
-import { ChevronDown, ChevronRight, Image as ImageIcon, Palette, Route, Ellipsis, Inbox, LayoutDashboard, ListChecks, Mail, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Search, Users, X, type LucideIcon } from "lucide-react";
+import { PenLine, Shapes, Sparkles, ChevronDown, ChevronRight, Image as ImageIcon, Palette, Route, Ellipsis, Inbox, LayoutDashboard, ListChecks, Mail, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Search, Users, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
@@ -47,6 +47,9 @@ const destinations: Record<OwnerItemId, Omit<Item, "id" | "label">> = {
   design_system: previewItem("/preview/design-system/", Palette, "artist_palette"),
   wallpapers: previewItem("/preview/wallpapers/", ImageIcon, "framed_picture"),
   media_library: { href: "#media-library", icon: ImageIcon, art: "package", disabled: true },
+  copywriting: { href: "#copywriting", icon: PenLine, art: "clipboard", disabled: true },
+  skills: { href: "#skills", icon: Sparkles, art: "clipboard", disabled: true },
+  characters: { href: "#characters", icon: Shapes, art: "framed_picture", disabled: true },
 };
 const sections: { title: string; items: Item[] }[] = NAVIGATION_GROUPS.filter(group => group.id !== "profile").map(group => ({
   title: group.title, items: group.items.map(item => ({ ...destinations[item.id as OwnerItemId], id: item.id, label: item.label })),
