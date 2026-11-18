@@ -3,7 +3,7 @@
  * is never cropped, so a buyer opening it in the lightbox sees the whole image at its own ratio. The alignment rides
  * on the photo's link as a fragment, "<src>#fit=cx,cy,z,a" (centre x/y as fractions of the image, zoom ≥ 1, image
  * width/height), so it moves with the photo through reorder, replace and remove, and anything that only loads the
- * link (an <img>, the lightbox) ignores it. Work samples are browser-only fields (lib/data/api.ts LOCAL_ONLY_FIELDS).
+ * link (an <img>, the lightbox) ignores it. With video links enabled, the server persists the fragment as file.image_fit metadata; the original bytes stay unchanged.
  */
 export type Fit = { cx: number; cy: number; z: number; a: number };
 /** A rectangle inside the image, as fractions of its width and height. */
