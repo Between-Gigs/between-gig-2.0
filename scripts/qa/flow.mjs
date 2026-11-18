@@ -63,9 +63,11 @@ export async function flow({ browser, base, outDir }) {
     })
     && await step("sign-out", async () => {
       await page.goto(`${base}/preview/`);
-      await page.getByRole("navigation", { name: "Preview workspace", exact: true }).getByRole("button", { name: "Log out", exact: true }).click();
+      await page.locator("header").first().getByRole("button", { name: /^Account:/ }).click();
+      await page.getByRole("menuitem", { name: "Log out", exact: true }).click();
       await page.waitForURL(/\/login\/\?signedOut=1/);
       await expectText("You're logged out");
+      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2"))?.session ?? null), null, "logout clears the sample session");
     })
     && await step("sign-in-code", async () => {
       await page.getByLabel("Email").fill("riley.park@example.com");
