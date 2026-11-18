@@ -75,8 +75,9 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           # The checkout keeps no token (persist-credentials: false): this one fetch gets it as a header.
-          auth="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)"
-          git -c "http.extraheader=$auth" fetch --quiet --force --tags origin
+          auth="$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)"
+          echo "::add-mask::$auth"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" fetch --quiet --force --tags origin
           tag="v$VERSION"
           if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
             echo "::error::$tag already exists. Choose the next version."
@@ -180,8 +181,9 @@ jobs:
           } > "$RUNNER_TEMP/tag-message.txt"
           git tag -a "$tag" "$SHA" -F "$RUNNER_TEMP/tag-message.txt"
           # The checkout keeps no token (persist-credentials: false): only this push gets it, as a header.
-          auth="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)"
-          git -c "http.extraheader=$auth" push origin "refs/tags/$tag"
+          auth="$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)"
+          echo "::add-mask::$auth"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push origin "refs/tags/$tag"
           {
             echo "### Released $tag"
             echo ""

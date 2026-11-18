@@ -4,9 +4,23 @@ name: Signup checks
 #   fast   docs and unit tests only: install, typecheck, lint, unit tests, the Pages and server builds and their checks
 #   areas  the fast job plus the QA scripts of the areas the change touches (scripts/ci/run-areas.mjs)
 #   all    a shared or unknown file: the fast job plus every QA script
-# One job, so the setup is paid once. Pushes to main are not checked here: Cut release checks everything changed since
-# the last verified release on the exact commit it tags, and Deploy web (test) runs its own checks on main.
+# One job, so the setup is paid once. A push to main runs the fast checks only (mode fast: no plan diff, no area or
+# browser checks); Cut release checks everything changed since the last verified release on the exact commit it tags,
+# and Deploy web (test) runs its own checks on main.
 on:
+  push:
+    branches: [main]
+    paths-ignore:
+      # Agent and playbook files only: no app code, build or test reads them
+      # (playbook rule E14; docs are not ignored because some checks read them).
+      - AGENTS.md
+      - CLAUDE.md
+      - docs/playbook-inbox.md
+      - .github/pull_request_template.md
+      - .github/playbook-entry.sha256
+      - .github/workflows/playbook-check.yml
+      - scripts/check-agent-entry.sh
+      - .claude/**
   pull_request:
     paths-ignore:
       # Agent and playbook files only: no app code, build or test reads them
@@ -36,9 +50,15 @@ jobs:
       - name: Plan the checks by area
         id: plan
         env:
+          EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: node scripts/ci/affected-areas.mjs --base "$BASE_SHA" --head "$HEAD_SHA"
+        run: |
+          if [ "$EVENT_NAME" = push ]; then
+            echo "mode=fast" >> "$GITHUB_OUTPUT"
+          else
+            node scripts/ci/affected-areas.mjs --base "$BASE_SHA" --head "$HEAD_SHA"
+          fi
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         if: steps.plan.outputs.mode != 'none'
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4

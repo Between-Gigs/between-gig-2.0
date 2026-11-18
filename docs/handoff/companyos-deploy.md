@@ -152,7 +152,7 @@ one-time import below.
    `_railway-verify.test` TXT record exactly as Railway shows them; the TXT value starts `railway-verify=`) and set
    `APP_URL` (`https://test.between-gigs.com`) in the `test` environments of both repos. Then Company OS *Deploy API
    (test)* → this repo's *Deploy web (test)* (it ends with a check from outside that the address serves the gated
-   site) → test the flows → Company OS *Deploy API (prod)* → *Cut release* here (bump `package.json`'s version first)
+   site) → test the flows → Company OS *Deploy API (prod)* → *Cut release* here (the tag is the version; no version-bump pull request)
    → *Deploy web (prod)* from that tag. Rollback: deploy the previous tag.
    Last, remove the generated `*.up.railway.app` domain from `web`.
 

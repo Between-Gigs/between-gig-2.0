@@ -212,11 +212,15 @@ const runOf = (step: string) => step.split(/^\s*(?:- )?run: /m)[1] ?? "";
 const AREAS_OR_ALL = "if: steps.plan.outputs.mode == 'areas' || steps.plan.outputs.mode == 'all'";
 
 describe("CI by area", () => {
-  it("PR checks stay one job, on pull requests only (main relies on Cut release), with full history for the diff", () => {
+  it("PR checks stay one job, on pull requests and pushes to main (a push is fast checks only), with full history for the diff", () => {
     const yml = read("checks.yml");
     expect(jobs(yml.split(/^jobs:$/m)[1])).toEqual(["signup"]);
-    expect(yml).toMatch(/^on:\n {2}pull_request:\n/m);
-    expect(yml).not.toMatch(/^ {2}push:/m);
+    const on = yml.split(/^on:\n/m)[1].split(/^concurrency:/m)[0];
+    expect(on).toMatch(/^ {2}push:\n {4}branches: \[main\]\n {4}paths-ignore:\n/m);
+    expect(on).toMatch(/^ {2}pull_request:\n {4}paths-ignore:\n/m);
+    const ignores = (ev: string) => new RegExp(`^ {2}${ev}:\\n(?: {4}branches: \\[main\\]\\n)? {4}paths-ignore:\\n((?: {6}.*\\n)+)`, "m").exec(on)![1].split("\n").filter((l) => /^\s+- /.test(l));
+    expect(ignores("push").length).toBeGreaterThan(3);
+    expect(ignores("push")).toEqual(ignores("pull_request"));
     const checkout = steps(yml).find((s) => s.includes("actions/checkout@"))!;
     expect(checkout).toContain("fetch-depth: '0'");
     expect(checkout).toContain("persist-credentials: false");
@@ -227,7 +231,9 @@ describe("CI by area", () => {
     const plan = s.find((x) => x.includes("id: plan"))!;
     expect(plan).toContain("BASE_SHA: ${{ github.event.pull_request.base.sha }}");
     expect(plan).toContain("HEAD_SHA: ${{ github.event.pull_request.head.sha }}");
-    expect(runOf(plan)).toBe('node scripts/ci/affected-areas.mjs --base "$BASE_SHA" --head "$HEAD_SHA"');
+    expect(plan).toContain("EVENT_NAME: ${{ github.event_name }}");
+    // On a push to main there is no pull request: the mode is fast (no area or browser checks), without diffing.
+    expect(runOf(plan)).toMatch(/if \[ "\$EVENT_NAME" = push \]; then\n\s+echo "mode=fast" >> "\$GITHUB_OUTPUT"\n\s+else\n\s+node scripts\/ci\/affected-areas\.mjs --base "\$BASE_SHA" --head "\$HEAD_SHA"\n\s+fi/);
     expect(s.findIndex((x) => x.includes("id: plan"))).toBeLessThan(s.findIndex((x) => x.includes("pnpm install")));
   });
 
@@ -303,5 +309,23 @@ describe("CI by area", () => {
     expect(prod).toMatch(/^ {2}TAG: \$\{\{ github\.ref_name \}\}$/m);
     expect(steps(prod).find((x) => x.includes("railway up"))!).toContain('--message "$TAG"');
     expect(read("release.yml")).not.toMatch(/Bump package\.json/);
+  });
+
+  it("every job that uses an extraheader scopes it to github.com, builds the credential with a single %s, and masks it", () => {
+    let seen = 0;
+    for (const name of workflows) {
+      const yml = read(name);
+      for (const body of yml.split(/^jobs:$/m)[1]?.split(/^ {2}(?=[a-z][a-z0-9_-]*:$)/m) ?? []) {
+        if (!/extraheader/.test(body)) continue;
+        seen++;
+        const label = `${name}: ${body.split("\n")[0]}`;
+        expect(body, label).toContain("printf 'x-access-token:%s'");
+        expect(body, label).not.toContain("%%s");
+        expect(body, label).toMatch(/-c "http\.https:\/\/github\.com\/\.extraheader=/);
+        expect(body, label).not.toMatch(/-c "http\.extraheader/);
+        expect(body, label).toContain('echo "::add-mask::$auth"');
+      }
+    }
+    expect(seen).toBeGreaterThanOrEqual(3);
   });
 });
