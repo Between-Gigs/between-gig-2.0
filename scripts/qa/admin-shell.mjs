@@ -78,11 +78,14 @@ try {
       assert.equal(await frame.locator("header").filter({ visible: true }).count(), 1); assert.equal(await frame.locator("footer").count(), 1);
       assert.equal(await frame.locator("main").count(), 1); assert.equal(await page.locator("main").count(), 1);
       assert.equal(await frame.locator('iframe[data-admin-page-preview]').count(), 0, "no recursive admin frame");
-      await frame.getByRole("button", { name: /^Account:/ }).click();
-      await frame.getByRole("menuitem", { name: "My Settings", exact: true }).click();
-      const switcher = frame.getByRole("dialog", { name: "My Settings", exact: true }).getByRole("switch", { name: "Night mode", exact: true });
+      assert.equal(await frame.getByRole("button", { name: /^Account:/ }).count(), 0, "faithful visitor header does not expose the outer signed-in account");
+      const switcher = frame.locator("header").getByRole("switch", { name: "Night mode", exact: true });
       const old = await switcher.getAttribute("aria-checked"); await switcher.click();
-      await page.waitForFunction(old => document.querySelector('iframe[data-admin-page-preview]')?.contentDocument?.querySelector('dialog [role="switch"]')?.getAttribute("aria-checked") !== old, old);
+      await page.waitForFunction(old => {
+        const doc = document.querySelector('iframe[data-admin-page-preview]')?.contentDocument;
+        return doc?.querySelector('header [role="switch"]')?.getAttribute("aria-checked") !== old
+          && doc?.documentElement.getAttribute("data-theme") === (old === "true" ? "light" : "dark");
+      }, old);
       const standalone = page.getByRole("link", { name: "Open standalone page", exact: true });
       const standaloneHref = await standalone.getAttribute("href"); assert.ok(standaloneHref.includes("preview=standalone"));
       await page.screenshot({ path: `deliverables/admin-shell/draft-${width}-${theme}.png`, fullPage: true });

@@ -7,6 +7,36 @@ const local = await serve("out");
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? "/usr/bin/chromium" });
 fs.mkdirSync("deliverables/navigation-modes", { recursive: true });
 try {
+  // Real DS controls: a saved account Night preference must beat the older Day fallback even
+  // before Settings opens, after reload, and when the optional navigation toggle mounts.
+  for (const width of [390, 1440]) {
+    const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: "light", reducedMotion: "reduce" });
+    await context.addInitScript(() => localStorage.setItem("bg-theme", "light"));
+    const page = await context.newPage(); await page.goto(local.url + "/"); await page.waitForFunction(() => !!window.bgSample);
+    await page.evaluate(async () => {
+      await window.bgSample.signInAs("owner");
+      const session = JSON.parse(localStorage.getItem("bg2-sample-v2")).session;
+      localStorage.setItem("bg2-navigation-preferences-v1:sample:" + encodeURIComponent(session.email.toLowerCase()), JSON.stringify({ showThemeChooser: false, theme: "dark" }));
+    });
+    const assertNight = async () => {
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      assert.equal(await page.locator("html").getAttribute("data-theme"), "dark", "controlled DS toggle never reapplies captured legacy Day");
+      assert.equal(await page.evaluate(() => localStorage.getItem("bg-theme")), "light", "personal Night leaves legacy Day intact");
+    };
+    await page.goto(local.url + "/owners/");
+    const header = page.locator("header").first(); const account = header.getByRole("button", { name: /^Account:/ });
+    await account.waitFor(); await page.waitForFunction(() => document.documentElement.dataset.theme === "dark"); await assertNight();
+    await page.reload(); await account.waitFor(); await page.waitForFunction(() => document.documentElement.dataset.theme === "dark"); await assertNight();
+    await account.click(); await page.getByRole("menuitem", { name: "My Settings", exact: true }).click();
+    const settings = page.getByRole("dialog", { name: "My Settings", exact: true }); await settings.waitFor(); await assertNight();
+    assert.equal(await settings.getByRole("switch", { name: "Night mode" }).getAttribute("aria-checked"), "true");
+    await settings.getByLabel("Show theme chooser in navigation").check();
+    await page.keyboard.press("Escape"); await settings.waitFor({ state: "hidden" });
+    await header.getByRole("switch", { name: "Night mode" }).waitFor(); await assertNight();
+    assert.equal(await header.getByRole("switch", { name: "Night mode" }).getAttribute("aria-checked"), "true");
+    await page.screenshot({ path: `deliverables/navigation-modes/saved-night-legacy-day-${width}.png` });
+    await context.close(); console.log(`PASS saved Night / legacy Day real DS controls ${width}`);
+  }
   for (const width of [320, 390, 768, 1440]) for (const theme of ["light", "dark"]) {
     const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: theme, reducedMotion: "reduce" });
     await context.addInitScript(theme => localStorage.setItem("bg-theme", theme), theme);
