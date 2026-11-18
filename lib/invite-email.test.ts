@@ -97,6 +97,9 @@ describe("canonical Stage 2 invitation", () => {
     expect(email.html).not.toContain("background-image:linear-gradient");
     expect(email.html).not.toContain("-webkit-text-fill-color");
     expect(email.html).toContain(`.e-invite-email .e-invite-html-cta a{color:${light.onActionStrong}!important}`);
+    expect(email.html).toContain('.e-invite-email .e-invite-html-cta td{background-color:#f7f3ec!important}');
+    expect(email.html).toContain('.e-invite-email .e-invite-html-cta a{color:#0f3d29!important}');
+    expect(email.html).toContain('[data-ogsc] .e-invite-email .e-invite-html-cta td{background-color:#f7f3ec!important}');
     expect(email.html.match(/<h1/g)).toHaveLength(1);
   });
 
