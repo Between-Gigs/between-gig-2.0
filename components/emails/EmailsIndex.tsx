@@ -71,8 +71,10 @@ export function EmailsIndex() {
                 <EmailThumb html={thumbs.diagnostic} />
                 <div className="flex flex-1 flex-col gap-1 p-5">
                   <h2 className="font-display text-heading-sm text-ink"><a href={data.kind === "live" ? "/owners/emails/?template=diagnostic" : `${basePath}/emails/?template=diagnostic`} className="after:absolute after:inset-0">Diagnostic email</a></h2>
-                  <p className="text-body-sm text-ink-muted">Bounded diagnostic test; backend authorization and receipt determine availability.</p>
-                  <p className="text-body-sm text-ink-subtle">Approval / publication: not verified. No automatic trigger.</p>
+                  <p className="text-body-sm text-ink-muted">Fictional TEST email to one entered address; existing one-time authorization and receipt are separate.</p>
+                  <p className="text-body-sm text-ink-subtle">{lifecycleWords}</p>
+                  <p className="text-body-sm text-ink-subtle">Backend content: {status.diagnostic?.content.replaceAll("_", " ") ?? "not verified"}</p>
+                  <p className="text-body-sm text-ink-subtle">{usageWords(status.diagnostic)}</p>
                 </div>
               </li>
             </ul>

@@ -1,8 +1,11 @@
 import type { EmailTemplate } from "./data/types";
+export type EmailSendName = EmailTemplate | "diagnostic";
 export const hubEmailKeys: Record<EmailTemplate, string> = {
   invite: "invite", approved: "approved", "changes-requested": "changes_requested",
   "profile-submitted": "profile_submitted", "sign-in-code": "sign_in_code", welcome: "welcome", "coming-soon": "coming_soon",
 };
+/** Test adapters do not acquire content-release or non-test send authority. */
+export const testEmailKeys: Record<EmailSendName, string> = { ...hubEmailKeys, diagnostic: "diagnostic" };
 export type EmailHubEntry = {
   lifecycle: "unknown";
   content: "enabled" | "disabled" | "not_installed" | "unknown";
@@ -10,7 +13,7 @@ export type EmailHubEntry = {
   triggers: string[];
   testEnabled: boolean;
 };
-export type EmailHubStatus = Partial<Record<EmailTemplate, EmailHubEntry>>;
+export type EmailHubStatus = Partial<Record<EmailSendName, EmailHubEntry>>;
 export const lifecycleWords = "Approval / publication: not verified";
 export function usageWords(entry?: EmailHubEntry) {
   if (!entry) return "Usage: not verified";

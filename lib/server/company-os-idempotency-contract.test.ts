@@ -13,7 +13,7 @@ const root = process.env.COMPANY_OS_CONTRACT_ROOT;
 const read = (name: string) => {
   if (!root) throw new Error("Set COMPANY_OS_CONTRACT_ROOT to the private source checkout");
   const text = fs.readFileSync(path.join(root, name === "errors" ? "apps/api/src/errors.ts" : "apps/api/src/services/idempotency.ts"), "utf8");
-  const sha = name === "errors" ? "f8c3e6be3ad3322b6e06c7792b6d970ea3a61297fe72fff184f76d7aaec252a4" : "69188b5c755cdbae4810bc9d5561261bcd21a3a0e9c113f99249bd8ff81b0718";
+  const sha = name === "errors" ? "c80f1b270af9e07723fafc53c676350ae87fa24914e9a74eccfb682c27406691" : "69188b5c755cdbae4810bc9d5561261bcd21a3a0e9c113f99249bd8ff81b0718";
   if (createHash("sha256").update(text).digest("hex") !== sha) throw new Error("Company OS parser source changed; review and update the pinned contract before relying on it.");
   return text;
 };

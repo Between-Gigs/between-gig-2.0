@@ -48,7 +48,17 @@ describe("owner email hub safety", () => {
       await expect(testHubEmail(f.ctx, [{ name: "approved", recipient: "a@example.org", requestId: id, startedAt: Date.now(), ...extra }])).rejects.toMatchObject({ status: 400 });
     }
     const f = setup();
-    await expect(testHubEmail(f.ctx, [{ name: "diagnostic", recipient: "a@example.org", requestId: id, startedAt: Date.now() }])).rejects.toMatchObject({ status: 400 });
+    await expect(testHubEmail(f.ctx, [{ name: "unknown", recipient: "a@example.org", requestId: id, startedAt: Date.now() }])).rejects.toMatchObject({ status: 400 });
+  });
+  it("tests diagnostic through the generic fictional template endpoint without using bounded authorization", async () => {
+    const f = setup(true, [{ id, data: { key: "diagnostic", channel: "email", active: true, subject: "[DIAGNOSTIC] Sample", body: "Fictional diagnostic", body_html: "<p>Fictional diagnostic</p>" } }], []);
+    expect((await emailHubStatus(f.ctx, [])).diagnostic).toMatchObject({ testEnabled: true, lifecycle: "unknown", usage: "inactive" });
+    await testHubEmail(f.ctx, [{ name: "diagnostic", recipient: "another@example.org", requestId: id, startedAt: Date.now() }]);
+    const request = f.calls.at(-1)!;
+    expect(request.path).toBe("/t/between-gigs/comms/template-tests");
+    expect(request.body).toMatchObject({ templateId: id, recipient: "another@example.org", mode: "live", source: { subject: "[DIAGNOSTIC] Sample" } });
+    expect(request.headers.get("Idempotency-Key")).toBe(`owner-email_${id}`);
+    expect(f.calls.some(c => c.path.endsWith("/diagnostic"))).toBe(false);
   });
   it("uses the backend copy and durable replay key; never writes contacts, templates or real comms logs", async () => {
     const f = setup();

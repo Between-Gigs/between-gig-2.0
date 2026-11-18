@@ -1,11 +1,11 @@
 "use client";
 import * as React from "react";
 import { Button, SegmentedControl, Textarea } from "@ds/components";
-import { data, type EmailTemplate } from "@/lib/data";
+import { data } from "@/lib/data";
 import { apiSource } from "@/lib/data/api";
 import { useSession } from "@/lib/session";
 import { basePath } from "@/lib/site";
-import { plainRecipient, type EmailHubEntry, type EmailHubStatus } from "@/lib/email-hub";
+import { plainRecipient, type EmailHubEntry, type EmailHubStatus, type EmailSendName } from "@/lib/email-hub";
 import { EMAIL_TEST_RETRY_MS, TEST_RETRY_EXPIRED, reusableEmailTest, savedEmailTest, type EmailTestAttempt } from "@/lib/email-test-retry";
 import { clerkEnabled } from "@/lib/auth/clerk";
 import { isManualEmailName, type ReleaseStatus } from "@/lib/email-manual";
@@ -30,14 +30,14 @@ export function useEmailHubStatus() {
   }, []);
   return status;
 }
-export function EmailActions(props: { name: EmailTemplate; status?: EmailHubEntry }) {
+export function EmailActions(props: { name: EmailSendName; status?: EmailHubEntry }) {
   const { session, loading } = useSession();
   const email = session?.email ?? "";
   const ownerKey = session?.personId ?? email;
   return <EmailActionsForOwner key={`${ownerKey}:${email}:${props.name}:${loading ? "loading" : "ready"}`} {...props}
     identity={loading ? "" : email} ownerKey={loading ? "" : ownerKey} />;
 }
-function EmailActionsForOwner({ name, status, identity, ownerKey }: { name: EmailTemplate; status?: EmailHubEntry; identity: string; ownerKey: string }) {
+function EmailActionsForOwner({ name, status, identity, ownerKey }: { name: EmailSendName; status?: EmailHubEntry; identity: string; ownerKey: string }) {
   const [release, setRelease] = React.useState<ReleaseStatus>();
   const [mode, setMode] = React.useState("test");
   const [recipient, setRecipient] = React.useState("");
@@ -120,6 +120,6 @@ function EmailActionsForOwner({ name, status, identity, ownerKey }: { name: Emai
       </>}
       <p role="status" aria-live="polite" className="text-body-sm text-ink-muted">{message}</p>
     </section>
-    <TemplateReleaseControls name={name} enabled={live && !!ownerKey} status={release} onStatus={setRelease} />
+    {name !== "diagnostic" && <TemplateReleaseControls name={name} enabled={live && !!ownerKey} status={release} onStatus={setRelease} />}
   </>;
 }

@@ -15,6 +15,18 @@ function setup(admin = true) {
   return { ctx: { cos, cred: { kind: "session" as const, token: "owner" }, appUrl: "https://between-gigs.com" }, calls };
 }
 describe("manual email gateway boundaries", () => {
+  it("does not grant content-release or real-send commands to the diagnostic test adapter", async () => {
+    const commands = [
+      [manualStatus, ["diagnostic"]],
+      ...["draft", "approve", "publish", "revoke"].map(action => [releaseVersion, [{ name: "diagnostic", action, templateId: uuid, sourceHash: hash, ...(action === "draft" ? {} : { releaseId: uuid }) }]] as const),
+      [previewReal, [{ name: "diagnostic", recipient: "a@example.org" }]],
+    ] as const;
+    for (const [command, args] of commands) {
+      const f = setup();
+      await expect(command(f.ctx, [...args])).rejects.toMatchObject({ status: 400 });
+      expect(f.calls.every(c => c.path.endsWith("/me"))).toBe(true);
+    }
+  });
   it("requires actual superadmin before every read or write", async () => {
     for (const [fn, args] of [[manualStatus,["approved"]],[releaseVersion,[{name:"approved",action:"draft",templateId:uuid,sourceHash:hash}]],[previewReal,[{name:"approved",recipient:"a@example.org"}]],[sendReal,[{name:"approved",requestId:uuid,binding}]],[realReceipt,[{name:"approved",requestId:uuid}]]] as const) {
       const f=setup(false); await expect(fn(f.ctx,[...args])).rejects.toMatchObject({status:403}); expect(f.calls).toHaveLength(1);

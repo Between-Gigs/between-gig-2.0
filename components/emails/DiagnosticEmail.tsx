@@ -9,6 +9,7 @@ import { forceScheme, previewContext, type PreviewScheme } from "./preview";
 import { DiagnosticReceipts, type Receipt } from "./DiagnosticReceipts";
 import { AppPage } from "@/components/site/AppPage";
 import { OwnerPage } from "@/components/owners/kit";
+import { EmailActions, useEmailHubStatus } from "./EmailActions";
 type Status = {
   enabled: boolean;
   recipient: string | null;
@@ -18,6 +19,7 @@ type Status = {
   receipts?: Receipt[];
 };
 export function DiagnosticEmail() {
+  const hubStatus = useEmailHubStatus();
   const [scheme, setScheme] = React.useState<PreviewScheme>("light");
   const [mode, setMode] = React.useState("test");
   const [typed, setTyped] = React.useState("");
@@ -94,7 +96,10 @@ export function DiagnosticEmail() {
   const receipt = status?.receipt;
   const receipts = status?.receipts ?? (receipt ? [receipt] : []);
   return (
-    <AppPage><OwnerPage title="Diagnostic email" description="Bounded test, separate from automatic email triggers." breadcrumbs={<Breadcrumbs items={[{ label: "Emails", href: live ? "/owners/emails/" : `${basePath}/emails/` }, { label: "Diagnostic" }]} />}>
+    <AppPage><OwnerPage title="Diagnostic email" description="Test the stored diagnostic with fictional data, or inspect the separate one-time authorization." breadcrumbs={<Breadcrumbs items={[{ label: "Emails", href: live ? "/owners/emails/" : `${basePath}/emails/` }, { label: "Diagnostic" }]} />}>
+    <EmailActions name="diagnostic" status={hubStatus.diagnostic} />
+    <details className="mt-6">
+      <summary className="cursor-pointer text-label-sm text-ink">Existing one-time diagnostic authorization and receipt</summary>
     <section
       className="mb-6 grid gap-4 rounded-lg border border-line bg-surface p-5"
       aria-labelledby="diagnostic-heading"
@@ -110,7 +115,7 @@ export function DiagnosticEmail() {
         existing background, logo and footer. This is separate from invitations,
         welcome emails and the fictional outbox.
       </p>
-      <SegmentedControl label="Send type" value={mode} onChange={setMode} options={[{ value: "test", label: "Test email" }, { value: "real", label: "Real email" }]} />
+      <SegmentedControl label="One-time authorization type" value={mode} onChange={setMode} options={[{ value: "test", label: "Bounded test" }, { value: "real", label: "Non-test unavailable" }]} />
       <label htmlFor="diagnostic-recipient" className="text-label-sm text-ink">Diagnostic recipient</label>
       <Textarea id="diagnostic-recipient" rows={2} value={typed} onChange={e => setTyped(e.target.value)} placeholder="jmassion@gmail.com" disabled={busy} />
       <p className="text-body-sm text-ink-subtle">{mode === "real" ? "Real send unavailable. This diagnostic only supports a bounded backend-authorized test." : "Enter jmassion@gmail.com. The backend pins this recipient; other addresses require separate authorization. Approval / publication status is not inferred from this preview."}</p>
@@ -127,12 +132,7 @@ export function DiagnosticEmail() {
             Refresh delivery status
           </Button>
         )}
-        <Button size="sm" onClick={() => setPhone((v) => !v)}>
-          {phone ? "Desktop preview" : "Phone preview"}
-        </Button>
       </div>
-      <SegmentedControl label="Mail client theme" value={scheme} onChange={v => setScheme(v as PreviewScheme)} options={[{ value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} />
-      <p className="text-body-sm text-ink-subtle">Browser simulation; email apps may recolor messages differently.</p>
       <div
         role="status"
         aria-live="polite"
@@ -156,6 +156,13 @@ export function DiagnosticEmail() {
         inbox placement. Failed, bounced or cancelled do not renew an authorization. Each approved test can be queued only once. Refresh after an uncertain request; duplicate clicks reuse
         the same request.
       </p>
+    </section></details>
+    <section aria-label="Diagnostic source preview" className="mt-6 grid gap-4 rounded-lg border border-line bg-surface p-5">
+      <Button size="sm" onClick={() => setPhone((v) => !v)}>
+        {phone ? "Desktop preview" : "Phone preview"}
+      </Button>
+      <SegmentedControl label="Mail client theme" value={scheme} onChange={v => setScheme(v as PreviewScheme)} options={[{ value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} />
+      <p className="text-body-sm text-ink-subtle">Source preview; stored test copy may differ. Browser simulation; email apps may recolor messages differently.</p>
       <div
         className={
           phone ? "mx-auto w-full max-w-sm" : "mx-auto w-full max-w-160"
