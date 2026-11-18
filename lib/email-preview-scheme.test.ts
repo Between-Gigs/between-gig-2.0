@@ -18,7 +18,7 @@ describe("preview theme forcing", () => {
     expect(forceScheme(html, "light")).toContain("@media not all{");
     for(const scheme of ["light","dark"] as const){
       expect(forceScheme(html,scheme)).toContain('name="color-scheme" content="light"');
-      expect(forceScheme(html,scheme)).toContain('/email/invitation-hero-approved.png');
+      expect(forceScheme(html,scheme)).toContain('/email/invitation-hero-approved.jpg');
     }
   });
 });

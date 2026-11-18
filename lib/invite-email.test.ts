@@ -47,7 +47,7 @@ describe("canonical Stage 2 invitation", () => {
   it("links the exact approved hero image without live text over artwork", () => {
     const html = invite(props).html;
     expect(html).toContain('class="e-invite-artwork"');
-    expect(html).toContain('/email/invitation-hero-approved.png');
+    expect(html).toContain('/email/invitation-hero-approved.jpg');
     expect(html).toContain('width="598" height="784"');
     expect(html).not.toContain('class="e-invite-scene"');
     expect(html).not.toContain('class="e-k-card"');
@@ -116,8 +116,16 @@ describe("canonical Stage 2 invitation", () => {
     expect(image.readUInt32BE(16)).toBe(INVITE_HERO.width);
     expect(image.readUInt32BE(20)).toBe(INVITE_HERO.height);
     expect(INVITE_HERO.copy).toEqual({eyebrow:INVITE_COPY.eyebrow,title:[...INVITE_COPY.title],lead:INVITE_COPY.lead,cta:INVITE_COPY.cta});
+    { const jpg=readFileSync(new URL("../public/email/invitation-hero-approved.jpg",import.meta.url));
+      expect(createHash("sha256").update(jpg).digest("hex")).toBe("0b0ab928f85382802fa3103b722178b404a320ca1594b4a9ee5b839728ab7174");
+      expect(jpg.length).toBe(153430); const sof=jpg.indexOf(Buffer.from([255,192])); expect(sof).toBeGreaterThan(0);
+      expect(jpg.readUInt16BE(sof+5)).toBe(784); expect(jpg.readUInt16BE(sof+7)).toBe(598); }
+    { const jpg=readFileSync(new URL("../public/email/invitation-hero-approved-mobile.jpg",import.meta.url));
+      expect(createHash("sha256").update(jpg).digest("hex")).toBe("1826ee65658a442fb43be6e169797b5b139d39811ef68512c5b1de306e23d75c");
+      expect(jpg.length).toBe(46853); const sof=jpg.indexOf(Buffer.from([255,192])); expect(sof).toBeGreaterThan(0);
+      expect(jpg.readUInt16BE(sof+5)).toBe(340); expect(jpg.readUInt16BE(sof+7)).toBe(260); }
     const html=invite(props,{assetBase:"https://test.example",siteUrl:"https://test.example"}).html;
-    expect(html).toContain('src="https://test.example/email/invitation-hero-approved.png"');
+    expect(html).toContain('src="https://test.example/email/invitation-hero-approved.jpg"');
   });
 
   it("uses an approved mobile raster with readable baked text at the narrowest actual 260px frame",()=>{
