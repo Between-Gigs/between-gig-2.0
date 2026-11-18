@@ -22,11 +22,11 @@ describe("real navigation renderers honor menu visibility without removing recov
   it.each(["gigster", "owner", "developer"])("keeps centered profile links in %s mode while honoring item visibility", mode => {
     state.mode = mode;
     state.menu = { modes: ["gigster", "owner", "developer"], items: ["my_profile", "edit_profile"] };
-    const full = renderToStaticMarkup(React.createElement(SiteHeader, { app: true }));
+    const full = renderToStaticMarkup(React.createElement(SiteHeader));
     expect(full).toContain('href="/profile/"');
     expect(full).toContain('href="/profile/canvas/"');
     state.menu = { modes: ["gigster", "owner", "developer"], items: ["my_profile"] };
-    const filtered = renderToStaticMarkup(React.createElement(SiteHeader, { app: true }));
+    const filtered = renderToStaticMarkup(React.createElement(SiteHeader));
     expect(filtered).toContain('href="/profile/"');
     expect(filtered).not.toContain('href="/profile/canvas/"');
   });
