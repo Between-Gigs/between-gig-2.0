@@ -12,7 +12,7 @@ import { asset } from "@/lib/site";
 import { useSession } from "@/lib/session";
 
 import { MySettings } from "./MySettings";
-import { PersonalThemeToggle, useNavigationMode, usePersonalPreferences } from "./PersonalPreferences";
+import { PersonalThemeToggle, usePersonalPreferences } from "./PersonalPreferences";
 import { LookSwitcher } from "./LookSwitcher";
 import { ExperienceSwitcher } from "./ExperienceSwitcher";
 
@@ -26,10 +26,9 @@ interface NavLink { href: string; label: string }
 export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNav?: () => void } = {}) {
   const pathname = usePathname();
   const { session, loading } = useSession();
-  const mode = useNavigationMode();
   const { preferences } = usePersonalPreferences();
 
-  const links: NavLink[] = session && mode === "gigster"
+  const links: NavLink[] = session
     ? [{ href: "/profile/", label: "My profile" }, { href: "/profile/canvas/", label: "Edit profile" }]
     : [];
 

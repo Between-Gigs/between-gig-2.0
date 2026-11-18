@@ -80,11 +80,13 @@ describe("public header authentication states", () => {
     expect(html).toContain('aria-label="Account: Test"');
     expect(html).not.toContain(">Sign in</a>");
   });
-  it.each([false, true])("gives owners the mode switch and account controls (app=%s)", app => {
+  it.each([["/owners/", false], ["/owners/", true], ["/owners/developer/", true]] as const)("keeps owner profile links, mode switch and account controls on %s (app=%s)", (pathname, app) => {
     state.session = { role: "owner", name: "Owner", email: "owner@example.com" };
-    state.pathname = "/owners/";
+    state.pathname = pathname;
     const html = render({ app });
-    expect(html).not.toContain('aria-label="Main"');
+    expect(html).toContain('aria-label="Main"');
+    expect(html).toContain('href="/profile/"');
+    expect(html).toContain('href="/profile/canvas/"');
     expect(html).toContain('aria-label="Switch experience:');
     expect(html).not.toContain('class="md:hidden"');
     expect(html).toContain('aria-label="Account: Owner"');
