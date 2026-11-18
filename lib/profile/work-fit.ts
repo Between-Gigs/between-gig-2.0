@@ -41,3 +41,8 @@ export function rectFor(fit: Fit, frame: number): Rect {
 export const rectStyle = (r: Rect) => ({
   width: `${100 / r.w}%`, height: `${100 / r.h}%`, left: `${(-r.x / r.w) * 100}%`, top: `${(-r.y / r.h) * 100}%`, maxWidth: "none",
 });
+
+/** Hosted mixed-media photos must be saved/adopted before fit editing; local sample mode remains immediate. */
+export function canAdjustPhoto(sample: string, needsStoredPhoto: boolean): boolean {
+  return !sample.startsWith("video:") && (!needsStoredPhoto || /^\/media\/[A-Za-z0-9-]{1,64}$/.test(parseSample(sample).src));
+}
