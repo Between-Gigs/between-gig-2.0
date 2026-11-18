@@ -3,8 +3,9 @@ name: Signup checks
 #   none   only agent and playbook files: nothing runs
 #   fast   docs and unit tests only: install, typecheck, lint, unit tests, the Pages and server builds and their checks
 #   areas  the fast job plus the QA scripts of the areas the change touches (scripts/ci/run-areas.mjs); v2: code
-#          under app/, components/, lib/, emails/ and styles/ touches the areas whose routes import it (graph in
-#          areas.json; scripts/ci/areas.test.ts fails if the walk could miss an import)
+#          under app/, components/, lib/, emails/ and styles/ touches every area whose QA scripts visit a page that
+#          imports it (graph in areas.json; scripts/ci/areas.test.ts fails if the walk could miss an import or an
+#          area's entries miss a page its scripts visit)
 #   all    a shared or unknown file, or code the root layout, sign-in or a page no area lists reaches: the fast job
 #          plus every QA script
 # One job, so the setup is paid once. A push to main runs the fast checks only (mode fast: no plan diff, no area or

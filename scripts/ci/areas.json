@@ -212,43 +212,134 @@
         "app/privacy/**",
         "app/terms/**",
         "app/licensing-insurance/**",
-        "app/provider-standards/**"
+        "app/provider-standards/**",
+        "app/join/page.tsx",
+        "app/login/page.tsx",
+        "app/owners/layout.tsx",
+        "app/owners/page.tsx",
+        "app/profile/layout.tsx",
+        "app/profile/page.tsx"
       ],
       "signup": [
-        "app/api/funnel/**"
+        "app/api/funnel/**",
+        "app/join/page.tsx",
+        "app/owners/layout.tsx",
+        "app/owners/page.tsx",
+        "app/privacy/page.tsx",
+        "app/profile/canvas/page.tsx",
+        "app/profile/layout.tsx",
+        "app/profile/page.tsx"
       ],
       "profile": [
         "app/profile/**",
         "app/p/**",
         "app/media/**",
         "app/api/profiles/**",
-        "app/api/video-thumb/**"
+        "app/api/video-thumb/**",
+        "app/hub/page.tsx",
+        "app/owners/developer/page.tsx",
+        "app/owners/layout.tsx",
+        "app/owners/page.tsx",
+        "app/owners/people/page.tsx",
+        "app/owners/staff/page.tsx",
+        "app/preview/page.tsx",
+        "app/privacy/page.tsx"
       ],
       "owners": [
         "app/owners/**",
         "app/api/owners/**",
-        "app/api/people/**"
+        "app/api/people/**",
+        "app/(served)/hub/[[...path]]/route.server.ts",
+        "app/(served)/preview/[[...path]]/route.server.ts",
+        "app/api/staff/[action]/route.server.ts",
+        "app/emails/page.tsx",
+        "app/healthz/route.server.ts",
+        "app/hub/page.tsx",
+        "app/login/page.tsx",
+        "app/preview/design-system/page.tsx",
+        "app/preview/forms/page.tsx",
+        "app/preview/funnels/page.tsx",
+        "app/preview/page.tsx",
+        "app/preview/social/page.tsx",
+        "app/preview/wallpapers/page.tsx",
+        "app/professionals/page.tsx",
+        "app/profile/canvas/page.tsx",
+        "app/profile/layout.tsx"
       ],
       "staff": [
         "app/owners/staff/**",
         "app/api/staff/**",
         "app/api/staff-navigation/**",
-        "app/owners/layout.tsx"
+        "app/owners/layout.tsx",
+        "app/(served)/hub/[[...path]]/route.server.ts",
+        "app/(served)/preview/[[...path]]/route.server.ts",
+        "app/healthz/route.server.ts",
+        "app/hub/page.tsx",
+        "app/login/page.tsx",
+        "app/owners/developer/page.tsx",
+        "app/owners/emails/page.tsx",
+        "app/owners/page.tsx",
+        "app/owners/people/page.tsx",
+        "app/preview/page.tsx",
+        "app/profile/canvas/page.tsx",
+        "app/profile/layout.tsx"
       ],
       "hub": [
         "app/hub/**",
         "app/(served)/**",
         "app/preview-access/**",
         "app/api/preview/**",
-        "app/preview/page.tsx"
+        "app/preview/page.tsx",
+        "app/api/staff/[action]/route.server.ts",
+        "app/healthz/route.server.ts",
+        "app/login/page.tsx",
+        "app/owners/developer/page.tsx",
+        "app/owners/emails/page.tsx",
+        "app/owners/layout.tsx",
+        "app/owners/page.tsx",
+        "app/owners/people/page.tsx",
+        "app/owners/staff/page.tsx",
+        "app/professionals/page.tsx",
+        "app/profile/canvas/page.tsx",
+        "app/profile/layout.tsx"
       ],
       "emails": [
         "app/emails/**",
         "app/unsubscribe/**",
-        "app/api/emails/**"
+        "app/api/emails/**",
+        "app/(served)/hub/[[...path]]/route.server.ts",
+        "app/(served)/preview/[[...path]]/route.server.ts",
+        "app/api/staff/[action]/route.server.ts",
+        "app/healthz/route.server.ts",
+        "app/hub/page.tsx",
+        "app/login/page.tsx",
+        "app/owners/emails/page.tsx",
+        "app/owners/layout.tsx",
+        "app/owners/staff/page.tsx",
+        "app/preview/page.tsx"
       ],
       "preview": [
-        "app/preview/**"
+        "app/preview/**",
+        "app/(served)/hub/[[...path]]/route.server.ts",
+        "app/(served)/preview/[[...path]]/route.server.ts",
+        "app/api/staff/[action]/route.server.ts",
+        "app/healthz/route.server.ts",
+        "app/hub/page.tsx",
+        "app/login/page.tsx",
+        "app/owners/emails/page.tsx",
+        "app/owners/layout.tsx",
+        "app/owners/page.tsx",
+        "app/owners/staff/page.tsx",
+        "app/profile/canvas/page.tsx",
+        "app/profile/layout.tsx"
+      ]
+    },
+    "dynamic": {
+      "scripts/ci/affected-areas.mjs": [],
+      "scripts/ci/area-imports.mjs": [],
+      "scripts/qa/service-conversion-guard.mjs": [],
+      "scripts/render-companyos-emails.mjs": [
+        "emails/{index,config,diagnostic}.ts"
       ]
     }
   }

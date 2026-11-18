@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildGraph, classify, graphProblems, normalizeScript, validateConfig } from "./affected-areas.mjs";
+import { buildGraph, classify, graphProblems, matchGlob, normalizeScript, validateConfig } from "./affected-areas.mjs";
 import { importProblems } from "./area-imports.mjs";
 
 // scripts/ci/areas.json decides which checks a change runs (playbook rule E14). No check may be lost: every script
@@ -81,6 +81,43 @@ describe("scripts/ci/areas.json", () => {
     expect(graphProblems({ config, files: repoFiles, read })).toEqual([]);
   });
 
+  // Every page a QA script visits (and the layouts above it) is an entry of each area that runs the script: a change
+  // only that page imports must run the script. Visits are the route-like string literals in the script, matched to
+  // app/**/page.tsx and route handlers (route groups dropped, [param] and [[...path]] segments as wildcards).
+  it("each area's graph.entries cover every page its QA scripts visit", () => {
+    const appFiles = repoFiles.filter((f) => f.startsWith("app/"));
+    const pages = appFiles.filter((f) => /(^|\/)(page\.tsx|route\.server\.ts|route\.ts)$/.test(f));
+    const routeOf = (f: string) => "/" + f.replace(/^app\/?/, "").replace(/(^|\/)(page\.tsx|route\.server\.ts|route\.ts)$/, "").split("/").filter((x) => x && !/^\(.*\)$/.test(x)).join("/");
+    const re = (r: string) => new RegExp("^" + r.replace(/\/\[\[\.\.\.[^\]]+\]\]/g, "(?:/.*)?").replace(/\[\.\.\.[^\]]+\]/g, ".+").replace(/\[[^\]]+\]/g, "[^/]+") + "/?$");
+    const table = pages.map((f) => ({ f, r: re(routeOf(f)), route: routeOf(f) }));
+    const pageFor = (u: string) => {
+      const hits = table.filter((t) => t.r.test(u));
+      const exact = hits.filter((t) => !t.route.includes("["));
+      return (exact.length ? exact : hits).map((t) => t.f);
+    };
+    const layoutsAbove = (f: string) => {
+      const parts = f.split("/");
+      const out: string[] = [];
+      for (let i = parts.length - 1; i >= 2; i--) {
+        const l = `${parts.slice(0, i).join("/")}/layout.tsx`;
+        if (appFiles.includes(l)) out.push(l);
+      }
+      return out;
+    };
+    const missing: string[] = [];
+    for (const [area, a] of Object.entries(config.areas as Record<string, { scripts: unknown[] }>)) {
+      for (const sc of a.scripts.map((x) => normalizeScript(x).name as string)) {
+        for (const m of read(sc).matchAll(/["'`](\/(?:between-gig-2\.0\/)?[a-z][a-z0-9\-/[\]]*)/g)) {
+          const u = m[1].replace(/^\/between-gig-2\.0/, "").replace(/\/+$/, "") || "/";
+          for (const p of pageFor(u)) for (const f of [p, ...layoutsAbove(p)]) {
+            if (!config.graph.entries[area].some((g: string) => matchGlob(g, f))) missing.push(`${area}: ${f} (${sc} visits ${u})`);
+          }
+        }
+      }
+    }
+    expect([...new Set(missing)]).toEqual([]);
+  });
+
   it("runs every script with node, and every listed script exists", () => {
     expect(config.runner).toEqual(["node"]);
     for (const name of listed) expect(existsSync(new URL(name, root)), name).toBe(true);
@@ -123,16 +160,16 @@ describe("scripts/ci/areas.json", () => {
     expect(mode("app/totally-new/page.tsx").mode).toBe("all");
     expect(mode("components/owners/OwnerShell.tsx").mode).toBe("all");
     expect(mode("components/site/Page.tsx").mode).toBe("all");
-    expect(mode("app/profile/page.tsx")).toMatchObject({ mode: "areas", areas: ["profile"] });
-    expect(mode("app/page.tsx", "app/owners/staff/page.tsx")).toMatchObject({ mode: "areas", areas: ["owners", "public", "staff"] });
-    // v2: a helper runs the areas whose routes import it, not everything.
-    expect(mode("lib/profile/skills.ts")).toMatchObject({ mode: "areas", areas: ["profile"] });
-    expect(mode("lib/server/staff.ts")).toMatchObject({ mode: "areas", areas: ["staff"] });
-    expect(mode("components/owners/OwnerStaff.tsx")).toMatchObject({ mode: "areas", areas: ["owners", "staff"] });
-    expect(mode("components/emails/EmailPreview.tsx")).toMatchObject({ mode: "areas", areas: ["emails", "owners"] });
-    expect(mode("components/landing/ForProfessionals.tsx")).toMatchObject({ mode: "areas", areas: ["public"] });
-    // The owners layout wraps the staff pages too.
-    expect(mode("app/owners/layout.tsx")).toMatchObject({ mode: "areas", areas: ["owners", "staff"] });
+    // v2: a page or helper runs the areas whose QA scripts visit a page that imports it (other areas' scripts visit
+    // these routes too, so most changes run several areas).
+    const areas = (...files: string[]) => mode(...files).areas.join(",");
+    expect(areas("app/profile/page.tsx")).toBe("profile,public,signup");
+    expect(areas("app/page.tsx", "app/owners/staff/page.tsx")).toBe("emails,hub,owners,preview,profile,public,staff");
+    expect(areas("lib/profile/skills.ts")).toBe("hub,owners,preview,profile,signup,staff");
+    expect(areas("lib/server/staff.ts")).toBe("emails,hub,owners,preview,staff");
+    expect(areas("components/emails/EmailPreview.tsx")).toBe("emails,hub,owners,preview,staff");
+    expect(areas("components/landing/ForProfessionals.tsx")).toBe("hub,owners,public");
+    for (const f of ["lib/profile/skills.ts", "components/landing/ForProfessionals.tsx"]) expect(mode(f).mode, f).toBe("areas");
     // A QA script's own file runs its area.
     expect(mode("scripts/qa/home-hero.mjs")).toMatchObject({ mode: "areas", areas: ["public"] });
   });
