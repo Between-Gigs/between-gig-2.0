@@ -33,15 +33,14 @@ function JoinLink({ children, label }: { children: React.ReactNode; label?: stri
   );
 }
 
-
 /** Original descriptive copy, rendered in the current design system. Review stays on sign-up. */
-function SpecialtyCards({ items, review = false }: { items: readonly { name: string; description: string }[]; review?: boolean }) {
+function SpecialtyCards({ items, review = false, headingAs = "h4" }: { items: readonly { name: string; description: string }[]; review?: boolean; headingAs?: "h3" | "h4" }) {
   return (
     <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {items.map((item) => (
         <li key={item.name} className="flex min-w-0">
           <article className="flex w-full flex-col gap-3 rounded-lg border border-line bg-surface-sunken p-5">
-            <Heading level="h3" as="h4">{item.name}{review && " · Scope Review"}</Heading>
+            <Heading level="h3" as={headingAs}>{item.name}{review && " · Scope Review"}</Heading>
             <Text>{item.description}</Text>
             {review && <div className="mt-auto"><JoinLink label={`Register background for review — ${item.name}`}>Register background for review</JoinLink></div>}
           </article>
@@ -117,7 +116,7 @@ export function ForProfessionals() {
         <div className="grid gap-6 rounded-xl border border-line bg-surface p-6 sm:p-10">
           <Heading level="h1" id="specialties-h">More specialties. More of the crew.</Heading>
           <Text>Named skills and industry backgrounds, with the exact service chosen and confirmed by each provider.</Text>
-          <SpecialtyCards items={specialties} />
+          <SpecialtyCards items={specialties} headingAs="h3" />
           <Heading level="h3" as="h3">Additional everyday specialties</Heading>
           <SpecialtyCards items={everydaySpecialties} />
           <Heading level="h3" as="h3">Specialist production backgrounds</Heading>
