@@ -30,10 +30,10 @@ export function Heading({ level = "h2", as: Tag = "h2", className, children, ...
 }
 
 /** Small uppercase label above a heading, with the short green accent rule from the references. */
-export function Eyebrow({ children, rule = false, className }: { children: React.ReactNode; rule?: boolean; className?: string }) {
+export function Eyebrow({ children, rule = false, size = "sm", className }: { children: React.ReactNode; rule?: boolean; size?: "sm" | "lg"; className?: string }) {
   return (
     <div className={cx("grid justify-items-start gap-3", className)}>
-      <p className="text-eyebrow tracking-widest text-ink-muted uppercase" style={{ fontSize: "var(--text-label-sm)" }}>{children}</p>
+      <p className="text-eyebrow tracking-widest text-ink-muted uppercase" style={{ fontSize: size === "lg" ? "var(--text-heading-lg)" : "var(--text-label-sm)", ...(size === "lg" ? { lineHeight: "var(--text-heading-lg--line-height)" } : {}) }}>{children}</p>
       {rule && <span aria-hidden="true" className="h-0.5 w-10 rounded-full bg-focus" />}
     </div>
   );
