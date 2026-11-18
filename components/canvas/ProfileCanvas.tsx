@@ -1,5 +1,5 @@
 "use client";
-import { servicePickerLabel, servicePickerValues } from "@/lib/profile/service-catalogue";
+import { serviceLabel, servicePickerLabel, servicePickerValues } from "@/lib/profile/service-catalogue";
 import { APPROVED_EDIT_HINT, APPROVED_NOT_PUBLIC, APPROVED_NOT_PUBLIC_LINE, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
 import { Badge, Button, Field, Input, RadioGroup, Skeleton, Slider, Textarea, cx, useToast } from "@ds/components";
 import { Reveal, startPageTransition } from "@ds/motion";
@@ -78,7 +78,7 @@ const pick = (f: ProfileFields, keys: Iterable<keyof ProfileFields>) => Object.f
 function starterAbout(d: ProfileFields): string {
   const role = (d.position || d.skills[0] || "film and TV").toLowerCase();
   const credit = pinnedCredits(d)[0]?.split("·")[0]?.trim();
-  const services = d.services.slice(0, 2).map((s) => s.toLowerCase()).join(" and ");
+  const services = d.services.slice(0, 2).map((s) => serviceLabel(s).toLowerCase()).join(" and ");
   const where = d.market === "la" && d.areas.length ? ` around ${d.areas.slice(0, 2).join(" and ")}` : "";
   return [
     `I've spent ${d.years ? `${d.years} years` : "years"} in ${role}${credit ? `, on productions like ${credit}` : ""}.`,

@@ -1,5 +1,5 @@
 "use client";
-import { serviceLabel } from "@/lib/profile/service-catalogue";
+import { serviceLabel, serviceFilterValues } from "@/lib/profile/service-catalogue";
 import { ownerLabel, publishGateOn } from "@/lib/profile/publish-gate";
 import { Button, Drawer, Input, SegmentedControl, Select, cx } from "@ds/components";
 import { ArrowRight, LayoutGrid, List, Mail, MapPin, Search, SlidersHorizontal, X } from "lucide-react";
@@ -95,7 +95,7 @@ function People() {
         <Select aria-label="Craft" size={inline ? "sm" : undefined} className={w} value={query.craft} onValueChange={set("craft")}
           options={[{ value: "all", label: "Any craft" }, ...crafts.map((c) => ({ value: c.label, label: c.label }))]} />
         <Select aria-label="Service" size={inline ? "sm" : undefined} className={w} value={query.service} onValueChange={set("service")}
-          options={[{ value: "all", label: "Any service" }, ...serviceChoices(data.kind).map((x) => ({ value: x, label: serviceLabel(x) }))]} />
+          options={[{ value: "all", label: "Any service" }, ...serviceFilterValues(serviceChoices(data.kind), query.service).map((x) => ({ value: x, label: serviceLabel(x) }))]} />
         <Select aria-label="Area" size={inline ? "sm" : undefined} className={w} value={query.area} onValueChange={set("area")}
           options={[{ value: "all", label: "Any area" }, ...laServiceAreas.map((x) => ({ value: x, label: x }))]} />
         <Select aria-label="Availability" size={inline ? "sm" : undefined} className={w} value={query.availability} onValueChange={set("availability")}

@@ -91,3 +91,8 @@ export const servicePickerValues = (selected: string[], choices: string[]) => [.
 
 /** Distinguish separate historical Beauty answers in multi-select controls. */
 export const servicePickerLabel = (value: string) => ["Hair Styling", "Makeup Services"].includes(value) ? `${serviceLabel(value)} · saved: ${value}` : serviceLabel(value);
+
+/** Filtering is not a new-profile choice: retired Laundry and a bookmarked legacy filter stay available. */
+export const serviceFilterValues = (choices: string[], current = "all") => [...new Set([
+  ...choices, "Wardrobe & Laundry Care", ...(current !== "all" ? [current] : []),
+])];

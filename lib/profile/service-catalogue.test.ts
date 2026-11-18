@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { serviceCatalogue, serviceCategory, serviceLabel, serviceMatches, serviceOptions, serviceValue } from "./service-catalogue";
+import { serviceCatalogue, serviceCategory, serviceLabel, serviceMatches, serviceOptions, serviceValue, serviceFilterValues } from "./service-catalogue";
 import { fromProfile, toProfile } from "../data/companyos/fields";
 import { blankFields } from "../data/fields";
 
@@ -37,4 +37,11 @@ describe("approved service catalogue and legacy persistence", () => {
       expect(fromProfile(wire.data,wire.items,"")).toMatchObject({services:f.services,serviceLines:f.serviceLines});
     }
   });
+});
+
+it("keeps retired and bookmarked filters available while excluding retired values from new profile choices",()=>{
+ const values=serviceCatalogue.map(c=>c.value);
+ expect(serviceFilterValues(values)).toContain("Wardrobe & Laundry Care");
+ expect(serviceFilterValues(values,"Hair Styling")).toContain("Hair Styling");
+ expect(serviceOptions([]).some(o=>o.value==="Wardrobe & Laundry Care")).toBe(false);
 });
