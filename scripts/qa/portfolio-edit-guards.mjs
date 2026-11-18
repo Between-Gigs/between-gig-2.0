@@ -29,6 +29,13 @@ try {
     await page.goto(url + "/profile/canvas/");
     await page.locator("#sec-work figure img").first().waitFor();
     const before = await read(page);
+    // Preserve direct input uploads as additions, without requiring a chooser button click first.
+    await page.locator('#sec-work input[type="file"]').setInputFiles({ name: "direct-add.jpg", mimeType: "image/jpeg", buffer: Buffer.from(before[0].split(",")[1], "base64") });
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).drafts.find(d => d.personId === "maya").fields.workSamples.length === 3);
+    const appended = await read(page);
+    assert.ok(appended[0] === before[0] && appended[1] === before[1], "direct input appends without replacing existing photos");
+    await page.getByRole("button", { name: "Remove work sample 3", exact: true }).click();
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).drafts.find(d => d.personId === "maya").fields.workSamples.length === 2);
     // Hold the decoded replacement while the user reorders the existing samples.
     let release;
     const pending = new Promise(resolve => release = resolve);

@@ -435,8 +435,9 @@ export function CanvasSamples({ d, set }: SectionProps) {
   const replacing = React.useRef<{ at: number | null; revision: number; request: number } | null>(null);
   const [problem, setProblem] = React.useState("");
   const pick = async (files: FileList | null) => {
-    const target = replacing.current; replacing.current = null;
-    if (!target) return;
+    // Direct file-input changes add photos too (assistive tooling and the existing upload contract).
+    const target = replacing.current ?? { at: null, revision: ++photoRevision.current.value, request: ++photoRequest.current };
+    replacing.current = null;
     const { at, revision, request } = target;
     const list = [...(files ?? [])].filter((f) => f.type.startsWith("image/")).slice(0, at === null ? MAX_SAMPLES - samples.length : 1);
     if (!list.length) return;
