@@ -14,6 +14,7 @@ import { Icon3D } from "@/components/ui/Icon3D";
 import type { Icon3DName } from "@/lib/icons3d";
 import { markArea } from "@/lib/split-area";
 import { ownerEmailPreview, ownerPreviewLink } from "@/lib/owner-email-preview";
+import { modeDestination } from "@/lib/navigation-preferences";
 import { basePath } from "@/lib/site";
 import { AppFrameContext as FrameContext, useInAppFrame } from "@/components/site/AppFrameContext";
 
@@ -60,8 +61,12 @@ const ModeContext = React.createContext<"owner" | "preview">("owner");
 function useSections() {
   const preview = React.useContext(ModeContext) === "preview";
   const navigation = useNavigationMode();
-  if (!preview) return navigation === "owner" ? sections.filter(group => ["Overview", "Gigsters"].includes(group.title)) : sections;
-  return sections.filter(group => ["Developer", "Previews", "Studio"].includes(group.title));
+  if (!preview && navigation === "owner") return sections.filter(group => ["Overview", "Gigsters"].includes(group.title));
+  // Developer navigation is a directory of guarded destinations, independent of the sandbox's fictional role.
+  // Keeping these as real document links under /hub prevents the sample router from taking over live routes.
+  return sections.map(group => ({ ...group, items: group.items.map(item => ({ ...item,
+    ...(modeDestination(item.href, basePath).fullPage ? { fullPage: true } : {}),
+  })) }));
 }
 
 function countsFrom(d: DashboardSummary): Record<CountKey, number> {

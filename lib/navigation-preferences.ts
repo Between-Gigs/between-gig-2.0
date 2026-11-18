@@ -32,3 +32,8 @@ export function writePreferenceRecord(key: string, value: string, storage: Pick<
   try { if (!storage) throw new Error("storage unavailable"); storage.setItem(key, value); memory.delete(key); }
   catch { memory.set(key, value); }
 }
+
+/** Real owner destinations leave the Hub's fictional sample application; the destination rechecks authority. */
+export function modeDestination(href: string, basePath: string) {
+  return { href, fullPage: basePath === "/hub" && /^\/owners(?:\/|$)/.test(href) };
+}

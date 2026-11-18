@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { navigationMode, parseNavigationPreferences, preferenceKey, readPreferenceRecord, writePreferenceRecord } from "./navigation-preferences";
+import { navigationMode, parseNavigationPreferences, preferenceKey, readPreferenceRecord, writePreferenceRecord, modeDestination } from "./navigation-preferences";
 describe("navigation presentation preferences", () => {
   it("separates actual accounts and data sources while normalizing email identity", () => {
     expect(preferenceKey("live", " Owner@Example.com ")).toBe(preferenceKey("live", "owner@example.com"));
@@ -30,6 +30,13 @@ describe("navigation presentation preferences", () => {
     writePreferenceRecord("user", "saved for visit", undefined, memory);
     expect(readPreferenceRecord("user", undefined, memory)).toBe("saved for visit");
     expect(readPreferenceRecord("unknown", undefined, memory)).toBe("");
+  });
+  it("leaves sample Hub base paths for real guarded owner destinations", () => {
+    for (const href of ["/owners/", "/owners/people/", "/owners/review/", "/owners/waitlist/", "/owners/staff/"]) {
+      expect(modeDestination(href, "/hub")).toEqual({ href, fullPage: true });
+      expect(modeDestination(href, "")).toEqual({ href, fullPage: false });
+    }
+    expect(modeDestination("/preview/forms/", "/hub").fullPage).toBe(false);
   });
   it("uses route context without granting any authority", () => {
     expect(navigationMode("/hub/", "", "gigster")).toBe("developer");

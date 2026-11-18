@@ -25,8 +25,8 @@ try {
     const menu = page.getByRole("button", { name: "Open owner menu", exact: true });
     const openNav = async () => { if (width < 1024) await menu.click(); return width < 1024 ? page.getByRole("dialog", { name: "Preview workspace", exact: true }) : page.getByRole("navigation", { name: "Preview workspace", exact: true }); };
     let nav = await openNav();
-    assert.equal(await nav.getByRole("link", { name: "People", exact: true }).count(), 0);
-    assert.equal(await nav.getByRole("link", { name: "Review queue", exact: true }).count(), 0);
+    assert.equal(await nav.getByRole("link", { name: "People", exact: true }).count(), 1, "Developer directory includes the existing guarded People destination");
+    assert.equal(await nav.getByRole("link", { name: "Review queue", exact: true }).count(), 1, "visible links do not grant owner authority");
     assert.equal(await nav.getByRole("searchbox").count(), 0, "no owner data search in read-only preview navigation");
     await nav.getByRole("link", { name: "Email Previews", exact: true }).click();
     await page.getByRole("heading", { name: "Emails", exact: true }).waitFor();

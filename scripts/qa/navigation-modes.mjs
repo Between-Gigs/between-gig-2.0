@@ -18,7 +18,7 @@ try {
     const header = page.locator("header").first();
     const account = header.getByRole("button", { name: /^Account:/ }); await account.waitFor();
     assert.equal(await header.getByRole("switch", { name: "Night mode" }).count(), 0, "authenticated appearance defaults to My Settings");
-    const nav = async () => { if (width < 1024) { await page.getByRole("button", { name: /Open owner menu|More owner pages/ }).filter({ visible: true }).first().click(); return page.getByRole("dialog").filter({ has: page.getByRole("button", { name: "Collapse all", exact: true }) }); } return page.getByRole("navigation", { name: "Owner workspace", exact: true }); };
+    const nav = async () => { if (width < 1024) { await page.getByRole("button", { name: /Open owner menu|More owner pages/ }).filter({ visible: true }).first().click(); return page.getByRole("dialog").filter({ has: page.getByRole("button", { name: "Collapse all", exact: true }) }); } return page.getByRole("navigation", { name: /^(Owner|Preview) workspace$/, exact: true }); };
     let sidebar = await nav();
     assert.deepEqual(await sidebar.locator("[data-owner-section] > button").allTextContents(), ["Overview", "Gigsters"]);
     assert.equal(await sidebar.getByRole("link", { name: "Staff", exact: true }).count(), 0);
@@ -58,6 +58,7 @@ try {
     await settings.getByLabel("Theme", { exact: true }).selectOption("swiss");
     await settings.getByLabel("Show theme chooser in navigation").check(); await shot("settings");
     await page.keyboard.press("Escape"); await settings.waitFor({ state: "hidden" });
+    assert.equal(await account.evaluate(button => document.activeElement === button), true, "Settings Escape restores focus to Account");
     await header.getByRole("switch", { name: "Night mode" }).waitFor();
     await page.reload(); await account.waitFor(); await header.getByRole("switch", { name: "Night mode" }).waitFor();
     assert.equal(await page.locator("html").getAttribute("data-look"), "swiss");
@@ -86,6 +87,12 @@ try {
     await page.waitForFunction(() => document.documentElement.dataset.look === "modern");
     await page.waitForFunction(expected => document.documentElement.dataset.theme === expected, outerAppearance.theme === "dark" ? "light" : "dark");
     assert.equal(await page.locator("html").getAttribute("data-look"), "modern", "another account restores its own iframe-selected preference instead of inheriting the owner theme");
+    await page.goto(local.url + "/hub/"); await account.waitFor();
+    const previewNav = await nav();
+    await previewNav.getByRole("link", { name: "Staff", exact: true }).waitFor();
+    await previewNav.getByRole("link", { name: "People", exact: true }).waitFor();
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).session.role), "gigster", "complete Developer directory does not promote a fictional Gigster");
+    if (width < 1024) await page.keyboard.press("Escape");
     await page.goto(local.url + "/owners/developer/"); await page.getByText("Owners only", { exact: true }).waitFor();
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     assert.deepEqual(errors, []); await context.close(); console.log(`PASS navigation modes/settings ${width}/${theme}`);
