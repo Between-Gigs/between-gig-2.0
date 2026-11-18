@@ -17,7 +17,6 @@ vi.mock("@ds/components", () => ({
   cx: (...items: unknown[]) => items.filter(Boolean).join(" "),
 }));
 vi.mock("@/components/site/LookSwitcher", () => ({ LookSwitcher: () => null }));
-vi.mock("@/components/site/ExperienceSwitcher", () => ({ ExperienceSwitcher: () => null }));
 import { SiteHeader } from "@/components/site/SiteHeader";
 
 const render = (props = {}) => renderToStaticMarkup(React.createElement(SiteHeader, props));
@@ -80,15 +79,20 @@ describe("public header authentication states", () => {
     expect(html).toContain('aria-label="Account: Test"');
     expect(html).not.toContain(">Sign in</a>");
   });
-  it("preserves signed-in owner navigation", () => {
+  it.each([false, true])("gives owners Gigster profile links and both header controls (app=%s)", app => {
     state.session = { role: "owner", name: "Owner", email: "owner@example.com" };
-    const html = render();
-    expect(html).toContain("Gigster Experience");
-    expect(html).toContain("Owner Experience");
-    expect(html).toContain(">Hub<");
+    const html = render({ app });
+    expect(html).toContain(">My profile</a>");
+    expect(html).toContain(">Edit profile</a>");
+    expect(html).toContain('aria-label="Switch experience"');
+    expect(html).not.toContain('class="md:hidden"');
+    expect(html).toContain('aria-label="Account: Owner"');
     expect(html).not.toContain(">Sign in</a>");
   });
-  it("leaves the owner app shell account controls with its sidebar", () => {
-    expect(render({ app: true })).not.toContain(">Sign in</a>");
+  it("keeps signed-out preview chrome free of account and sign-in controls", () => {
+    const html = render({ app: true });
+    expect(html).not.toContain(">Sign in</a>");
+    expect(html).not.toContain('aria-label="Switch experience"');
+    expect(html).not.toContain('aria-label="Account:');
   });
 });

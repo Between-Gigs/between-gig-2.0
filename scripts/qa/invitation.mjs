@@ -7,6 +7,7 @@ import { serve } from "./serve.mjs";
 const { server, url } = await serve("out", { base: process.env.NEXT_PUBLIC_BASE_PATH ?? "" });
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? "/usr/bin/chromium" });
 fs.mkdirSync("deliverables/invitation", { recursive: true });
+let canonicalHtml;
 try {
   for (const width of [320, 390, 768, 1440]) for (const theme of ["light", "dark"]) for (const blocked of [false, true]) {
     const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: theme, reducedMotion: "reduce" });
@@ -35,7 +36,8 @@ try {
       // Run the actual email HTML in an isolated QA document: the product iframe intentionally blocks scripts.
       const emailPage = await context.newPage();
       await emailPage.setViewportSize({ width: await page.locator("iframe").evaluate(el => el.clientWidth), height: 900 });
-      await emailPage.setContent(await frame.locator("html").evaluate(el => el.outerHTML));
+      canonicalHtml = await frame.locator("html").evaluate(el => el.outerHTML);
+      await emailPage.setContent(canonicalHtml);
       await emailPage.locator(".e-invite-scene").screenshot({ path: `deliverables/invitation/hero-${width}-${theme}${blocked ? "-images-blocked" : ""}.png` });
       if (!blocked) {
         await emailPage.addScriptTag({ content: fs.readFileSync("node_modules/axe-core/axe.min.js", "utf8") });
@@ -79,5 +81,39 @@ try {
     assert.equal(await page.getByRole("link", { name: "1 · Invitation" }).getAttribute("href"), `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/emails/invite/`);
     await context.close();
   }
+  // Direct email viewport boundaries: the desktop PDF correction must not leak into mobile overrides.
+  const boundaryContext = await browser.newContext();
+  const boundaryMetrics = [];
+  try {
+    for (const width of [619, 620, 621, 640]) {
+      const page = await boundaryContext.newPage();
+      await page.setViewportSize({ width, height: 1000 });
+      await page.setContent(canonicalHtml);
+      await page.evaluate(() => document.fonts.ready);
+      const metrics = await page.locator(".e-invite-scene").evaluate(scene => {
+        const box = scene.getBoundingClientRect();
+        const logo = scene.querySelector(".e-invite-logo").getBoundingClientRect();
+        const action = scene.querySelector(".e-invite-button-link").getBoundingClientRect();
+        const center = getComputedStyle(scene.querySelector(".e-invite-center"));
+        const eyebrow = getComputedStyle(scene.querySelector(".e-invite-eyebrow"));
+        return { height: box.height, logoWidth: logo.width, logoHeight: logo.height,
+          top: logo.top - box.top, actionTop: action.top - box.top, actionBottom: action.bottom - box.top,
+          paddingTop: parseFloat(center.paddingTop), paddingBottom: parseFloat(center.paddingBottom),
+          gap: parseFloat(eyebrow.marginTop), eyebrow: parseFloat(eyebrow.fontSize) };
+      });
+      boundaryMetrics.push({ width, ...metrics });
+      const close = (actual, expected, label) => assert.ok(Math.abs(actual - expected) < .1, `${width}px ${label}: ${actual} ≈ ${expected}`);
+      if (width > 620) {
+        for (const [key, expected] of Object.entries({ height: 784, logoWidth: 235.2, logoHeight: 73.5, top: 144.5,
+          actionTop: 523.5, actionBottom: 571.5, paddingBottom: 212.5, gap: 45.5, eyebrow: 22 })) close(metrics[key], expected, key);
+      } else {
+        for (const [key, expected] of Object.entries({ logoWidth: 136, logoHeight: 42, paddingTop: width * .165,
+          paddingBottom: width * .34, gap: 32, eyebrow: 14 })) close(metrics[key], expected, key);
+      }
+      await page.locator(".e-invite-scene").screenshot({ path: `deliverables/invitation/boundary-${width}.png` });
+      await page.close();
+    }
+    fs.writeFileSync("deliverables/invitation/geometry.json", JSON.stringify(boundaryMetrics, null, 2));
+  } finally { await boundaryContext.close(); }
   console.log("PASS: canonical invitation, copy, footer, keyboard CTA, light intent in both themes, images-blocked fallback, legacy alias and account stage at 320/390/768/1440px (16 layouts)");
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
