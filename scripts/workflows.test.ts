@@ -208,7 +208,7 @@ it("the deploy preflight asks for no activation receipts, and the server healthc
 // CI by area (playbook rule E14): the PR checks and Cut release run only what a change needs (scripts/ci/areas.json).
 const jobs = (yml: string) => [...yml.matchAll(/^ {2}([a-z][a-z0-9_-]*):$/gm)].map((m) => m[1]);
 const job = (yml: string, name: string) => yml.split(new RegExp(`^ {2}${name}:$`, "m"))[1].split(/^ {2}[a-z][a-z0-9_-]*:$/m)[0];
-const runOf = (step: string) => step.split(/\n\s+run: /)[1] ?? "";
+const runOf = (step: string) => step.split(/^\s*(?:- )?run: /m)[1] ?? "";
 const AREAS_OR_ALL = "if: steps.plan.outputs.mode == 'areas' || steps.plan.outputs.mode == 'all'";
 
 describe("CI by area", () => {
@@ -295,7 +295,7 @@ describe("CI by area", () => {
 
   it("the tag carries the verified-baseline marker, written only after the checks job passed", () => {
     const tag = job(read("release.yml"), "tag");
-    expect(tag).toContain("printf 'checks: areas-v1\\n'");
+    expect(tag).toContain("printf 'checks: areas-v1\\n");
   });
 
   it("the version comes from the tag: production deploys and labels the tag it was started from", () => {

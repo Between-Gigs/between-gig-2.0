@@ -2,12 +2,17 @@
 # THE way to make a release tag, so every tag looks the same.
 #
 #   "Run workflow" (version X.Y.Z, one-line summary)
-#       ─► guard (main, version format, not taken, higher than the last tag, equal to package.json's version,
-#                 company-os.json valid and not the placeholder) ─► checks (tests + server build and its checks)
-#       ─► tag (annotated, on the exact commit that was checked) ─► summary
+#       ─► guard (main, version format, not taken, higher than the last tag, company-os.json valid and not the
+#                 placeholder) ─► checks (CI by area since the last verified release: the fast job always, then the
+#                 QA scripts of the areas changed; everything when there is no verified release)
+#       ─► tag (annotated, on the exact commit that was checked, with the line "checks: areas-v1") ─► summary
+#
+# The tag is the one source of the version: package.json's "version" is not read by the app or by any workflow, so
+# no version-bump pull request is needed. The tag's "checks: areas-v1" line marks it as a verified baseline for the
+# next release's checks (scripts/ci/affected-areas.mjs --release); only this workflow writes release tags (E9).
 #
 # How to run it: Actions -> "Cut release" -> Run workflow -> keep "Branch: main" -> version (e.g. 0.3.0, without the
-# v) -> summary -> Run. Bump package.json's "version" in the release pull request first. Then deploy it: Actions ->
+# v) -> summary -> Run. Then deploy it: Actions ->
 # "Deploy web (prod)" -> Use workflow from -> Tags -> the new tag, after the Company OS release it requires is live.
 name: Cut release
 run-name: Cut release v${{ inputs.version }}
@@ -16,7 +21,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "New version, MAJOR.MINOR.PATCH without the v (e.g. 0.3.0). Must be higher than the last release and equal to package.json's version."
+        description: "New version, MAJOR.MINOR.PATCH without the v (e.g. 0.3.0). Must be higher than the last release."
         required: true
         type: string
       summary:
@@ -64,7 +69,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - name: Version is new, higher and package.json's; company-os.json is valid
+      - name: Version is new and higher; company-os.json is valid
         id: check
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -82,11 +87,6 @@ jobs:
             echo "::error::$tag is not higher than the last release $last."
             exit 1
           fi
-          pkg="$(jq -er '.version' package.json)"
-          if [ "$pkg" != "$VERSION" ]; then
-            echo "::error::package.json says version $pkg, not $VERSION. Bump it on main in a pull request first."
-            exit 1
-          fi
           if ! requires="$(node scripts/check-company-os.mjs | sed -n 's/^Requires Company OS //p')" || [ -z "$requires" ]; then
             echo "::error::company-os.json is missing, invalid or still the placeholder. Fix it on main in a pull request first."
             exit 1
@@ -95,17 +95,28 @@ jobs:
           echo "requires=$requires" >> "$GITHUB_OUTPUT"
           echo "Last release: ${last:-none} · new: $tag at $GITHUB_SHA · requires Company OS $requires"
 
+  # The fast job always runs (mode none counts as fast at release); the area QA scripts run for areas or all.
   checks:
     needs: guard
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: read
+    outputs:
+      mode: ${{ steps.plan.outputs.mode }}
+      base: ${{ steps.plan.outputs.base }}
     steps:
+      # Full history and tags: the plan compares with the last release tag that carries "checks: areas-v1".
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
           ref: ${{ needs.guard.outputs.sha }}
+          fetch-depth: '0'
+      - name: Plan the checks since the last verified release
+        id: plan
+        env:
+          SHA: ${{ needs.guard.outputs.sha }}
+        run: node scripts/ci/affected-areas.mjs --release --head "$SHA"
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -113,8 +124,27 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck && pnpm lint && pnpm lint:values && pnpm test
+      - name: Pages build and its route check
+        run: pnpm build && node scripts/check-pages.mjs
       - name: Server build (no internal routes) and its checks
         run: pnpm build:server && pnpm build:preview && pnpm check:server
+      - name: Use the runner's installed Chrome for browser checks
+        if: steps.plan.outputs.mode == 'areas' || steps.plan.outputs.mode == 'all'
+        run: |
+          bg_chrome_path=$(command -v google-chrome)
+          test -x "$bg_chrome_path"
+          "$bg_chrome_path" --version
+          echo "CHROMIUM_PATH=$bg_chrome_path" >> "$GITHUB_ENV"
+      - name: Area checks (scripts/ci/areas.json)
+        if: steps.plan.outputs.mode == 'areas' || steps.plan.outputs.mode == 'all'
+        env:
+          MODE: ${{ steps.plan.outputs.mode }}
+          AREAS: ${{ steps.plan.outputs.areas }}
+        run: node scripts/ci/run-areas.mjs --mode "$MODE" --areas "$AREAS"
+      - name: Live server build, code-split check
+        env:
+          NEXT_PUBLIC_DATA_SOURCE: api
+        run: pnpm build:server && node scripts/check-split.mjs
 
   tag:
     needs: [guard, checks]
@@ -124,6 +154,8 @@ jobs:
     env:
       SHA: ${{ needs.guard.outputs.sha }}
       REQUIRES: ${{ needs.guard.outputs.requires }}
+      CHECKS_MODE: ${{ needs.checks.outputs.mode }}
+      CHECKS_BASE: ${{ needs.checks.outputs.base }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -140,6 +172,9 @@ jobs:
           {
             printf '%s: %s\n\n' "$tag" "$SUMMARY"
             printf 'Requires Company OS %s\n\n' "$REQUIRES"
+            printf 'Checked: mode %s since %s\n' "$CHECKS_MODE" "${CHECKS_BASE:-no verified release}"
+            # Only after the checks job passed (this job needs it): the next release may diff from this tag.
+            printf 'checks: areas-v1\n\n'
             printf 'Cut by %s with the Cut release workflow: %s/%s/actions/runs/%s\n' \
               "$GITHUB_ACTOR" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
           } > "$RUNNER_TEMP/tag-message.txt"

@@ -1,0 +1,233 @@
+{
+  "version": 1,
+  "runner": ["node"],
+  "shared": [
+    "package.json",
+    "pnpm-lock.yaml",
+    "tsconfig.json",
+    "next.config.ts",
+    "eslint.config.mjs",
+    "postcss.config.mjs",
+    "vitest.config.ts",
+    "proxy.server.ts",
+    "company-os.json",
+    ".env.example",
+    ".gitignore",
+    ".railway/**",
+    ".github/workflows/{checks,release,deploy-test,deploy-prod,pages,hub-cleanup,invitation-preview}.yml",
+    "scripts/ci/**",
+    "scripts/*.mjs",
+    "scripts/qa/{serve,routes,run,rules,flow}.mjs",
+    "scripts/qa/fixtures/**",
+    "app/layout.tsx",
+    "app/globals.css",
+    "app/not-found.tsx",
+    "app/robots.ts",
+    "app/sitemap.ts",
+    "app/healthz/**",
+    "app/webhooks/**",
+    "app/login/**",
+    "app/join/**",
+    "app/api/auth/**",
+    "lib/auth/**",
+    "components/auth/**",
+    "styles/modern-auth.css",
+    "styles/look-*.css",
+    "styles/unstyled.css",
+    "lib/data/**",
+    "lib/server/**",
+    "lib/security/**",
+    "lib/session.ts",
+    "lib/guard.ts",
+    "lib/site.ts",
+    "components/ds/**",
+    "components/ui/**",
+    "components/site/**",
+    "packages/**",
+    "public/**",
+    "tests/**"
+  ],
+  "fast": [
+    "docs/**",
+    "README.md",
+    "MILESTONES.md",
+    "**/*.test.ts"
+  ],
+  "ignore": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "docs/playbook-inbox.md",
+    ".github/pull_request_template.md",
+    ".github/playbook-entry.sha256",
+    ".github/workflows/playbook-check.yml",
+    "scripts/check-agent-entry.sh",
+    ".claude/**"
+  ],
+  "areas": {
+    "public": {
+      "paths": [
+        "app/page.tsx",
+        "app/professionals/**",
+        "app/storyboard/**",
+        "app/privacy/**",
+        "app/terms/**",
+        "app/licensing-insurance/**",
+        "app/provider-standards/**",
+        "components/home/**",
+        "components/landing/**",
+        "components/funnel/**",
+        "components/storyboard/**",
+        "components/policy/**",
+        "lib/social-preview.ts",
+        "lib/og.ts",
+        "lib/og-pages.json",
+        "lib/storyboard.ts",
+        "lib/professional-examples.ts",
+        "scripts/qa/{home-hero,social-preview,signed-out-navigation,storyboard-profile,professionals-copy}.mjs"
+      ],
+      "scripts": [
+        "scripts/qa/home-hero.mjs",
+        "scripts/qa/social-preview.mjs",
+        "scripts/qa/signed-out-navigation.mjs",
+        "scripts/qa/storyboard-profile.mjs",
+        "scripts/qa/professionals-copy.mjs"
+      ]
+    },
+    "signup": {
+      "paths": [
+        "app/api/funnel/**",
+        "components/journey/**",
+        "scripts/qa/{auth-data,auth-flow,clerk-entry,clerk-contract,stage-two-journey}.mjs"
+      ],
+      "scripts": [
+        "scripts/qa/auth-data.mjs",
+        "scripts/qa/auth-flow.mjs",
+        "scripts/qa/profile-entry.mjs",
+        "scripts/ci/qa-flow.mjs",
+        "scripts/qa/funnel-cohort.mjs",
+        "scripts/qa/clerk-contract.mjs",
+        { "name": "scripts/ci/clerk-entry.mjs", "env": { "NEXT_PUBLIC_BASE_PATH": "/between-gig-2.0", "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_Z2xhZC1tb25rZXktNjkwOC5jbGVyay5hY2NvdW50cy5kZXYk" } }
+      ]
+    },
+    "profile": {
+      "paths": [
+        "app/profile/**",
+        "app/p/**",
+        "app/media/**",
+        "app/api/profiles/**",
+        "app/api/video-thumb/**",
+        "components/profile/**",
+        "components/canvas/**",
+        "components/builder/**",
+        "components/gigster/**",
+        "lib/profile/**",
+        "lib/look.ts",
+        "styles/{modern-editor,profile-editor,simple-profile}.css",
+        "scripts/qa/{profile-entry,sample-order,portfolio-edit-guards,patti-editor-presentation,profile-guidance,service-labels,service-guidance,service-conversion-guard,gigster-priority}.mjs"
+      ],
+      "scripts": [
+        "scripts/qa/profile-entry.mjs",
+        "scripts/qa/sample-order.mjs",
+        "scripts/qa/portfolio-edit-guards.mjs",
+        "scripts/qa/patti-editor-presentation.mjs",
+        "scripts/qa/profile-guidance.mjs",
+        "scripts/qa/service-labels.mjs",
+        "scripts/qa/service-guidance.mjs",
+        "scripts/qa/service-conversion-guard.mjs",
+        "scripts/qa/gigster-priority.mjs",
+        "scripts/qa/hub-staff.mjs",
+        "scripts/qa/navigation-modes.mjs",
+        "scripts/ci/qa-flow.mjs"
+      ]
+    },
+    "owners": {
+      "paths": [
+        "app/owners/**",
+        "app/api/owners/**",
+        "app/api/people/**",
+        "components/owners/**",
+        "components/people/**",
+        "lib/owners/**",
+        "styles/modern-owners.css",
+        "scripts/qa/{owner-sidebar,admin-shell,admin-navigation,navigation-modes,funnel-cohort}.mjs"
+      ],
+      "scripts": [
+        "scripts/qa/owner-sidebar.mjs",
+        "scripts/qa/admin-shell.mjs",
+        "scripts/qa/admin-navigation.mjs",
+        "scripts/qa/navigation-modes.mjs",
+        "scripts/qa/service-labels.mjs",
+        "scripts/qa/funnel-cohort.mjs",
+        "scripts/qa/hub-staff.mjs",
+        "scripts/qa/staff-navigation.mjs",
+        "scripts/qa/staff-access-planner.mjs",
+        "scripts/ci/qa-flow.mjs",
+        { "name": "scripts/qa/server-hub.mjs", "env": { "QA_SCREENSHOT_DIR": "deliverables/server-hub" } }
+      ]
+    },
+    "staff": {
+      "paths": [
+        "app/owners/staff/**",
+        "app/api/staff/**",
+        "app/api/staff-navigation/**",
+        "lib/staff/**",
+        "lib/staff-navigation/**",
+        "scripts/qa/{staff-navigation,staff-access-planner}.mjs"
+      ],
+      "scripts": [
+        "scripts/qa/staff-navigation.mjs",
+        "scripts/qa/staff-access-planner.mjs",
+        "scripts/qa/hub-staff.mjs",
+        "scripts/qa/navigation-modes.mjs",
+        { "name": "scripts/qa/server-hub.mjs", "env": { "QA_SCREENSHOT_DIR": "deliverables/server-hub" } }
+      ]
+    },
+    "hub": {
+      "paths": [
+        "app/hub/**",
+        "app/(served)/**",
+        "app/preview-access/**",
+        "app/api/preview/**",
+        "lib/hub-target.ts",
+        "lib/navigation-preferences.ts",
+        "lib/admin-preview.ts",
+        "lib/preview-access.ts",
+        "scripts/qa/{hub-staff,server-hub}.mjs"
+      ],
+      "scripts": [
+        "scripts/qa/hub-staff.mjs",
+        "scripts/qa/admin-navigation.mjs",
+        "scripts/qa/navigation-modes.mjs",
+        "scripts/qa/staff-navigation.mjs",
+        { "name": "scripts/qa/server-hub.mjs", "env": { "QA_SCREENSHOT_DIR": "deliverables/server-hub" } }
+      ]
+    },
+    "emails": {
+      "paths": [
+        "app/emails/**",
+        "app/unsubscribe/**",
+        "app/api/emails/**",
+        "components/emails/**",
+        "emails/**",
+        "lib/email-*.ts",
+        "lib/owner-email-preview.ts"
+      ],
+      "scripts": [
+        { "name": "scripts/qa/server-hub.mjs", "env": { "QA_SCREENSHOT_DIR": "deliverables/server-hub" } }
+      ]
+    },
+    "preview": {
+      "paths": [
+        "app/preview/**",
+        "components/preview/**",
+        "lib/guide-thumbnail.ts",
+        "lib/preview-note.ts",
+        "scripts/qa/guide-appearance.mjs"
+      ],
+      "scripts": [
+        "scripts/ci/qa-flow.mjs",
+        "scripts/qa/social-preview.mjs"
+      ]
+    }
+  }
+}
