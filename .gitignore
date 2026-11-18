@@ -17,3 +17,6 @@ public/studio-source/
 
 # Generated for Company OS by scripts/seed-companyos.ts (copied over by hand, never committed here)
 .out/
+# Agent tier and model log (local to each developer)
+.claude/tier
+.claude/model-log.jsonl
