@@ -1,6 +1,8 @@
 /* The canonical Stage 2 invitation. Browser previews and send-time HTML use this one source. */
 const INVITE_SIGN_OFF = "The Between Gigs Team";
-import { craftButton, craftHero, craftLayout, craftP, craftPaper, craftSignOff, craftTitle, k, SANS } from "./craft";
+import { craftButton, craftLayout, craftP, craftPaper, craftSignOff, k } from "./craft";
+import { invitationHero } from "./invite-hero";
+import { invitationAppearance } from "./invite-appearance";
 import { defaultContext, esc, textFooter, type EmailContext, type RenderedEmail } from "./layout";
 
 export interface InviteProps {
@@ -32,11 +34,6 @@ export const INVITE_COPY = {
 
 export function invite({ inviteUrl, unsubscribeUrl = INVITE_UNSUBSCRIBE }: InviteProps, ctx: EmailContext = defaultContext): RenderedEmail {
   const c = INVITE_COPY;
-  const hero = [
-    craftTitle(c.title).replace('class="e-k-h1"', 'class="e-k-h1 e-invite-title"').replace("font-size:46px;line-height:48px", "font-size:50px;line-height:52px"),
-    `<p class="e-invite-lead" style="margin:0 auto;max-width:420px;font-family:${SANS};font-size:17px;line-height:26px;color:${k.ink}">${esc(c.lead).replace("\n", "<br>")}</p>`,
-    `<div class="e-invite-action" style="padding-top:24px">${craftButton(inviteUrl, c.cta, { hero: true })}</div>`,
-  ].join("\n");
   const details = [
     craftP(esc(c.opening), { size: 16, mb: 20, color: k.ink }),
     craftP(`<strong>${esc(c.stage)}</strong>`, { size: 16, mb: 20, color: k.ink }),
@@ -44,16 +41,16 @@ export function invite({ inviteUrl, unsubscribeUrl = INVITE_UNSUBSCRIBE }: Invit
     craftP(`<strong>${esc(c.nextTitle)}</strong> ${esc(c.next)}`, { size: 16, mb: 24, color: k.ink }),
     // The close is centred on the button (Anowar, 14 Nov 2026): the question, the button, the thanks and the sign-off.
     craftP(`<strong>${esc(c.ready)}</strong>`, { size: 16, mb: 16, color: k.ink, center: true }),
-    craftButton(inviteUrl, c.cta),
+    craftButton(inviteUrl, c.cta).replace("<table ", '<table class="e-invite-html-cta" '),
     `<div style="padding-top:24px">${craftP(esc(c.closing), { size: 16, color: k.ink, center: true })}</div>`,
     craftSignOff(INVITE_SIGN_OFF, 22, true, true),
   ].join("\n");
-  const body = craftHero({ eyebrow: c.eyebrow, inner: hero, ctx, openPaper: true }) + craftPaper(details);
+  const body = invitationHero(inviteUrl, ctx) + craftPaper(details).replace("<table ", '<table class="e-invite-paper" ');
   const text = `${c.subject}\n\n${c.eyebrow.toUpperCase()}\n\n${c.title.join(" ")}\n\n${c.lead}\n\n${c.cta.toUpperCase()}:\n${inviteUrl}\n\n${c.opening}\n\n${c.stage}\n\n${c.introduction}\n\n${c.nextTitle} ${c.next}\n\n${c.ready}\n\n${c.cta.toUpperCase()}:\n${inviteUrl}\n\n${c.closing}\n\n${INVITE_SIGN_OFF}\n\n${textFooter(INVITE_REASON, ctx.siteUrl, unsubscribeUrl)}`;
   return {
     subject: c.subject,
     preheader: c.preheader,
     text,
-    html: craftLayout({ title: c.subject, preheader: c.preheader, body, reason: INVITE_REASON, ctx, unsubscribe: unsubscribeUrl, lightOnly: true, center: true }),
+    html: invitationAppearance(craftLayout({ title: c.subject, preheader: c.preheader, body, reason: INVITE_REASON, ctx, unsubscribe: unsubscribeUrl, lightOnly: true, center: true })),
   };
 }
