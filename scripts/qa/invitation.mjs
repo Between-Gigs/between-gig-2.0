@@ -4,6 +4,7 @@ import fs from "node:fs";
 import { createHash } from "node:crypto";
 import { chromium } from "playwright-core";
 import { serve } from "./serve.mjs";
+import { containedPixelClip } from "./invitation-pixel-clip.mjs";
 
 const { server, url } = await serve("out", { base: process.env.NEXT_PUBLIC_BASE_PATH ?? "" });
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? "/usr/bin/chromium" });
@@ -25,6 +26,11 @@ async function resetScroll(html) {
     for(const element of document.querySelectorAll("*"))if(element.scrollTop||element.scrollLeft)element.scrollTo({top:0,left:0,behavior:"instant"});
     window.scrollTo({top:0,left:0,behavior:"instant"});
   });
+}
+async function captureImageContent(page,image) {
+  const rect=await image.evaluate(image=>{const box=image.getBoundingClientRect();return {x:box.x,y:box.y,width:box.width,height:box.height};});
+  const clip=containedPixelClip(rect),png=await page.screenshot({clip});
+  return {clip,png,hash:createHash("sha256").update(png).digest("hex")};
 }
 try {
   for (const width of [320, 390, 768, 1440]) for (const theme of ["light", "dark"]) for (const blocked of [false, true]) {
@@ -131,7 +137,7 @@ try {
   } finally {await boundaryContext.close();}
   // Actual email viewport widths are distinct from the owner-preview iframe widths above.
   const standalone=await browser.newContext({reducedMotion:"reduce"});
-  const phoneMetrics=[],artHashes=new Map();
+  const phoneMetrics=[],artHashes=new Map(),artGeometry=new Map();
   try {
     for(const width of [320,390])for(const theme of ["light","dark"])for(const blocked of [false,true]) {
       console.log(`START standalone email ${width}/${theme}/images-blocked=${blocked}`);
@@ -165,11 +171,17 @@ try {
             devicePixelRatio,filter:style.filter,mixBlendMode:style.mixBlendMode,opacity:style.opacity,transform:style.transform,imageRendering:style.imageRendering,
             ancestors:[image,...(function*(node){while(node.parentElement){node=node.parentElement;yield node;}})(image)].map(node=>{const s=getComputedStyle(node);return {tag:node.tagName,className:node.className,background:s.backgroundColor,filter:s.filter,mixBlendMode:s.mixBlendMode,opacity:s.opacity,transform:s.transform};})};
         });
+        const content=await captureImageContent(page,image);
         fs.writeFileSync(`deliverables/invitation/art-pixels-${width}-${theme}.png`,capture);
-        fs.writeFileSync(`deliverables/invitation/art-pixels-${width}-${theme}.json`,JSON.stringify({pngSha256:hash,...rendering},null,2));
+        fs.writeFileSync(`deliverables/invitation/art-content-${width}-${theme}.png`,content.png);
+        fs.writeFileSync(`deliverables/invitation/art-pixels-${width}-${theme}.json`,JSON.stringify({pngSha256:hash,contentPngSha256:content.hash,contentClip:content.clip,...rendering},null,2));
         fs.writeFileSync("deliverables/invitation/email-viewport-metrics.json",JSON.stringify(phoneMetrics,null,2));
         console.log(`ART pixel evidence saved ${width}/${theme}: ${hash}; rect=${JSON.stringify(rendering.rect)}; filter=${rendering.filter}; blend=${rendering.mixBlendMode}`);
-        if(theme==="light")artHashes.set(width,hash);else assert.equal(hash,artHashes.get(width),"approved image pixels unchanged across simulated themes; inspect saved art-pixels PNGs and JSON on mismatch");
+        if(theme==="light"){artHashes.set(width,content.hash);artGeometry.set(width,{rect:rendering.rect,src:rendering.currentSrc,clip:content.clip});}
+        else {
+          assert.deepEqual({rect:rendering.rect,src:rendering.currentSrc,clip:content.clip},artGeometry.get(width),"same source image and capture geometry across themes");
+          assert.equal(content.hash,artHashes.get(width),"all fully contained image pixels unchanged across simulated themes; full rounded-edge captures remain diagnostic evidence");
+        }
       }
       await page.close();
       console.log(`PASS standalone email ${width}/${theme}/images-blocked=${blocked}`);
@@ -180,8 +192,13 @@ try {
     await forced.locator(".e-invite-artwork img:visible").evaluate(image=>image.decode());
     // An explicit QA-only adverse recolour model, not an emulation of a particular Gmail build.
     await forced.addStyleTag({content:'.e-body,.e-outer{background-color:#0b2e1f!important}.e-card,.e-invite-paper{background-color:#133a28!important}.e-invite-paper p,.e-subtle,.e-link{color:#eaf4ee!important}.e-invite-html-cta td{background-color:#0f3d29!important}.e-invite-html-cta a{color:#ffffff!important}'});
-    const forcedHash=createHash("sha256").update(await forced.locator(".e-invite-artwork img:visible").screenshot()).digest("hex");
-    assert.equal(forcedHash,artHashes.get(390),"HTML recolouring cannot recolour baked artwork pixels in this browser model");
+    const forcedImage=forced.locator(".e-invite-artwork img:visible");
+    const forcedFull=await forcedImage.screenshot(),forcedContent=await captureImageContent(forced,forcedImage);
+    fs.writeFileSync("deliverables/invitation/art-pixels-forced-recolour-390.png",forcedFull);
+    fs.writeFileSync("deliverables/invitation/art-content-forced-recolour-390.png",forcedContent.png);
+    fs.writeFileSync("deliverables/invitation/art-content-forced-recolour-390.json",JSON.stringify({clip:forcedContent.clip,contentPngSha256:forcedContent.hash},null,2));
+    assert.deepEqual(forcedContent.clip,artGeometry.get(390).clip,"forced model keeps identical contained-image geometry");
+    assert.equal(forcedContent.hash,artHashes.get(390),"all fully contained artwork pixels unchanged by this explicit HTML recolour model");
     await forced.addScriptTag({content:fs.readFileSync("node_modules/axe-core/axe.min.js","utf8")});
     assert.deepEqual(await forced.evaluate(async()=>(await window.axe.run(document,{runOnly:{type:"tag",values:["wcag2a","wcag2aa","wcag21aa"]}})).violations.map(v=>v.id)),[]);
     await forced.screenshot({path:"deliverables/invitation/SIMULATION-forced-html-recolour-390.png",fullPage:true});
