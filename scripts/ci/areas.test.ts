@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { classify, normalizeScript, validateConfig } from "./affected-areas.mjs";
+import { buildGraph, classify, graphProblems, normalizeScript, validateConfig } from "./affected-areas.mjs";
 import { importProblems } from "./area-imports.mjs";
 
 // scripts/ci/areas.json decides which checks a change runs (playbook rule E14). No check may be lost: every script
@@ -9,6 +9,9 @@ import { importProblems } from "./area-imports.mjs";
 const root = new URL("../../", import.meta.url);
 const config = JSON.parse(readFileSync(new URL("scripts/ci/areas.json", root), "utf8"));
 const repoFiles = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" }).split("\n").filter(Boolean);
+const read = (p: string) => readFileSync(new URL(p, root), "utf8");
+// v2: app/, components/, lib/, emails/ and styles/ are classified by their importers (graph in areas.json).
+const graph = buildGraph({ config, files: repoFiles.filter((f) => existsSync(new URL(f, root))), read });
 
 // The QA scripts the old checks.yml ran, as `node <path>`, in workflow order.
 const OLD_QA_SCRIPTS = [
@@ -68,10 +71,14 @@ describe("scripts/ci/areas.json", () => {
 
   it("no file in an area is imported from shared, fast, unknown or another area's code (areas.json cannot fail open)", () => {
     const problems = importProblems({
-      config, files: repoFiles, read: (p: string) => readFileSync(new URL(p, root), "utf8"),
+      config, files: repoFiles, read,
       aliases: { "@/": "", "@ds/": "packages/design-system/src/" },
     });
     expect(problems).toEqual([]);
+  });
+
+  it("the import graph has no blind spot (no non-literal import, no unresolved specifier, no dead glob or seam)", () => {
+    expect(graphProblems({ config, files: repoFiles, read })).toEqual([]);
   });
 
   it("runs every script with node, and every listed script exists", () => {
@@ -105,18 +112,27 @@ describe("scripts/ci/areas.json", () => {
   });
 
   it("classifies the shapes the plan names", () => {
-    const mode = (...files: string[]) => classify(files, config, { protectedPaths: ["scripts/ci/areas.json"] });
+    const mode = (...files: string[]) => classify(files, config, { protectedPaths: ["scripts/ci/areas.json"], graph });
     expect(mode("AGENTS.md", ".claude/settings.json").mode).toBe("none");
     expect(mode("docs/ui-rules.md").mode).toBe("fast");
     for (const shared of ["package.json", "pnpm-lock.yaml", "lib/auth/clerk.ts", "components/auth/LoginView.tsx", "app/layout.tsx",
-      "app/globals.css", "lib/server/staff.ts", "components/ds/atoms/index.tsx", ".github/workflows/checks.yml", "scripts/ci/qa-flow.mjs"]) {
+      "app/globals.css", "components/ds/atoms/index.tsx", ".github/workflows/checks.yml", "scripts/ci/qa-flow.mjs"]) {
       expect(mode(shared).mode, shared).toBe("all");
     }
+    // A page no area lists, and code the root layout mounts on every page (AdminRoutes wraps every page in OwnerFrame).
     expect(mode("app/totally-new/page.tsx").mode).toBe("all");
+    expect(mode("components/owners/OwnerShell.tsx").mode).toBe("all");
+    expect(mode("components/site/Page.tsx").mode).toBe("all");
     expect(mode("app/profile/page.tsx")).toMatchObject({ mode: "areas", areas: ["profile"] });
     expect(mode("app/page.tsx", "app/owners/staff/page.tsx")).toMatchObject({ mode: "areas", areas: ["owners", "public", "staff"] });
-    // A helper imported across areas is shared: a change to it runs everything.
-    expect(mode("lib/profile/skills.ts").mode).toBe("all");
+    // v2: a helper runs the areas whose routes import it, not everything.
+    expect(mode("lib/profile/skills.ts")).toMatchObject({ mode: "areas", areas: ["profile"] });
+    expect(mode("lib/server/staff.ts")).toMatchObject({ mode: "areas", areas: ["staff"] });
+    expect(mode("components/owners/OwnerStaff.tsx")).toMatchObject({ mode: "areas", areas: ["owners", "staff"] });
+    expect(mode("components/emails/EmailPreview.tsx")).toMatchObject({ mode: "areas", areas: ["emails", "owners"] });
+    expect(mode("components/landing/ForProfessionals.tsx")).toMatchObject({ mode: "areas", areas: ["public"] });
+    // The owners layout wraps the staff pages too.
+    expect(mode("app/owners/layout.tsx")).toMatchObject({ mode: "areas", areas: ["owners", "staff"] });
     // A QA script's own file runs its area.
     expect(mode("scripts/qa/home-hero.mjs")).toMatchObject({ mode: "areas", areas: ["public"] });
   });

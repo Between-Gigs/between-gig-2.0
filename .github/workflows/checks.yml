@@ -2,8 +2,11 @@ name: Signup checks
 # CI by area (playbook rule E14): the plan step reads the changed files and scripts/ci/areas.json and picks a mode.
 #   none   only agent and playbook files: nothing runs
 #   fast   docs and unit tests only: install, typecheck, lint, unit tests, the Pages and server builds and their checks
-#   areas  the fast job plus the QA scripts of the areas the change touches (scripts/ci/run-areas.mjs)
-#   all    a shared or unknown file: the fast job plus every QA script
+#   areas  the fast job plus the QA scripts of the areas the change touches (scripts/ci/run-areas.mjs); v2: code
+#          under app/, components/, lib/, emails/ and styles/ touches the areas whose routes import it (graph in
+#          areas.json; scripts/ci/areas.test.ts fails if the walk could miss an import)
+#   all    a shared or unknown file, or code the root layout, sign-in or a page no area lists reaches: the fast job
+#          plus every QA script
 # One job, so the setup is paid once. A push to main runs the fast checks only (mode fast: no plan diff, no area or
 # browser checks); Cut release checks everything changed since the last verified release on the exact commit it tags,
 # and Deploy web (test) runs its own checks on main.

@@ -5,10 +5,10 @@
 #       ─► guard (main, version format, not taken, higher than the last tag, company-os.json valid and not the
 #                 placeholder) ─► checks (CI by area since the last verified release: the fast job always, then the
 #                 QA scripts of the areas changed; everything when there is no verified release)
-#       ─► tag (annotated, on the exact commit that was checked, with the line "checks: areas-v1") ─► summary
+#       ─► tag (annotated, on the exact commit that was checked, with the line "checks: areas-v2") ─► summary
 #
 # The tag is the one source of the version: package.json's "version" is not read by the app or by any workflow, so
-# no version-bump pull request is needed. The tag's "checks: areas-v1" line marks it as a verified baseline for the
+# no version-bump pull request is needed. The tag's "checks: areas-v2" line marks it as a verified baseline for the
 # next release's checks (scripts/ci/affected-areas.mjs --release); only this workflow writes release tags (E9).
 #
 # How to run it: Actions -> "Cut release" -> Run workflow -> keep "Branch: main" -> version (e.g. 0.3.0, without the
@@ -107,7 +107,7 @@ jobs:
       mode: ${{ steps.plan.outputs.mode }}
       base: ${{ steps.plan.outputs.base }}
     steps:
-      # Full history and tags: the plan compares with the last release tag that carries "checks: areas-v1".
+      # Full history and tags: the plan compares with the last release tag that carries "checks: areas-v2".
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
@@ -175,7 +175,7 @@ jobs:
             printf 'Requires Company OS %s\n\n' "$REQUIRES"
             printf 'Checked: mode %s since %s\n' "$CHECKS_MODE" "${CHECKS_BASE:-no verified release}"
             # Only after the checks job passed (this job needs it): the next release may diff from this tag.
-            printf 'checks: areas-v1\n\n'
+            printf 'checks: areas-v2\n\n'
             printf 'Cut by %s with the Cut release workflow: %s/%s/actions/runs/%s\n' \
               "$GITHUB_ACTOR" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
           } > "$RUNNER_TEMP/tag-message.txt"
