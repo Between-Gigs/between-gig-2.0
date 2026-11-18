@@ -5,6 +5,7 @@ import { Check, Copy, Link as LinkIcon, Plus, RefreshCw, Search, ShieldCheck, Us
 import { data } from "@/lib/data";
 import { staff } from "@/lib/staff/selected";
 import type { StaffAction, StaffGateway, StaffPermission, StaffScope, StaffSnapshot, StaffUser } from "@/lib/staff/sample";
+import { StaffNavigation } from "./StaffNavigation";
 import { OwnerGate } from "./OwnerGate";
 import { OwnerShell } from "./OwnerShell";
 import { OwnerPage, Panel } from "./kit";
@@ -27,7 +28,9 @@ export function OwnerStaff() {
 
 function Staff() {
   const [snapshot, setSnapshot] = React.useState<StaffSnapshot | null>(null);
-  const [tab, setTab] = React.useState<"people" | "rules">("people");
+  const navigationEntry = React.useSyncExternalStore(() => () => {}, () => new URLSearchParams(window.location.search).get("view") === "navigation", () => false);
+  const [selectedTab, setTab] = React.useState<"people" | "rules" | "navigation" | null>(null);
+  const tab = selectedTab ?? (navigationEntry ? "navigation" : "people");
   const [query, setQuery] = React.useState("");
   const [includeGigsters, setIncludeGigsters] = React.useState(false);
   const [inviteOpen, setInviteOpen] = React.useState(false);
@@ -85,8 +88,9 @@ function Staff() {
     {data.kind === "sample" && <p className="rounded-lg border border-line bg-surface-selected px-4 py-3 text-body-sm text-ink"><strong>Fictional sample.</strong> Changes stay in this browser. Invitations and emails are not sent.</p>}
     <div className="grid gap-3 sm:grid-cols-3">{stats.map(({ value, label, icon: Icon }) => <div key={label} className="flex items-center gap-3 rounded-xl border border-line bg-surface p-4"><span className="grid size-11 shrink-0 place-items-center rounded-lg bg-surface-selected text-ink-brand"><Icon className="size-5" aria-hidden="true" /></span><div><p className="font-display text-heading-lg tabular-nums text-ink">{value}</p><p className="text-body-sm text-ink-muted">{label}</p></div></div>)}</div>
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-2">
-      <div className="flex gap-1" aria-label="Staff views">
+      <div className="flex min-w-0 flex-wrap gap-1" aria-label="Staff views">
         <Button variant={tab === "people" ? "strong" : "ghost"} aria-pressed={tab === "people"} onClick={() => setTab("people")} iconStart={<Users />}>Team members</Button>
+        <Button variant={tab === "navigation" ? "strong" : "ghost"} aria-pressed={tab === "navigation"} onClick={() => setTab("navigation")}>Navigation</Button>
         <Button variant={tab === "rules" ? "strong" : "ghost"} aria-pressed={tab === "rules"} onClick={() => setTab("rules")} iconStart={<ShieldCheck />}>Role access</Button>
       </div>
       <Button variant="ghost" size="sm" iconStart={<RefreshCw />} disabled={busy} onClick={() => void mutate(refresh, "Staff list refreshed.")}>Refresh</Button>
@@ -109,7 +113,7 @@ function Staff() {
       </form>
     </Panel>}
 
-    {tab === "people" ? <Panel title="Team members" count={visible.length}>
+    {tab === "navigation" ? snapshot ? <StaffNavigation staff={snapshot} /> : <p role="status">Loading staff accounts…</p> : tab === "people" ? <Panel title="Team members" count={visible.length}>
       <div className="mb-5 grid gap-2"><label htmlFor="staff-search" className={small}>Find a team member</label><div className="relative"><Search className="pointer-events-none absolute top-3.5 left-3 size-4 text-ink-muted" aria-hidden="true" /><input id="staff-search" className={cx(control, "pl-10")} type="search" placeholder="Search name, email, or role" value={query} onChange={(e) => setQuery(e.target.value)} /></div></div>
       <label className="mb-5 flex min-h-11 items-center gap-3 text-body-sm text-ink-muted"><input type="checkbox" className="size-4" checked={includeGigsters} onChange={(event) => setIncludeGigsters(event.target.checked)} />Include Gigster-only accounts to give someone team access</label>
       {!snapshot ? <p aria-busy="true" className="py-10 text-body-md text-ink-muted">{error ? "Staff could not be loaded. Use Refresh to try again." : "Loading staff…"}</p> : !visible.length ? <p className="py-10 text-body-md text-ink-muted">No team members match this search.</p> : <ul className="grid gap-3">{visible.map((user) => <li key={user.userId} className="rounded-xl border border-line bg-bg p-4 sm:p-5">

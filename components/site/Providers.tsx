@@ -4,6 +4,7 @@ import { ClerkLayer } from "@/components/auth/ClerkLayer";
 import { clerkEnabled } from "@/lib/auth/clerk";
 import { HorizonComets } from "./HorizonComets";
 import { TiltCards } from "./TiltCards";
+import { StaffNavigationVisibility } from "./StaffNavigationVisibility";
 import { PersonalAppearanceSync } from "./PersonalPreferences";
 import { SampleHook } from "./SampleHook";
 
@@ -18,7 +19,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           Skip to content
         </a>
         <PersonalAppearanceSync />
-        {children}
+        <StaffNavigationVisibility>{children}</StaffNavigationVisibility>
         <SampleHook />
         <HorizonComets />
         <TiltCards />

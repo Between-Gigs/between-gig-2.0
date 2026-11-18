@@ -6,6 +6,7 @@ import { data } from "@/lib/data";
 import { basePath } from "@/lib/site";
 import { useNavigationMode, usePersonalPreferences } from "./PersonalPreferences";
 import type { NavigationMode } from "@/lib/navigation-preferences";
+import { useStaffMenuVisibility } from "./StaffNavigationVisibility";
 import { useSession } from "@/lib/session";
 
 /** Navigation changes the workspace, never the signed-in identity or their authority. */
@@ -14,15 +15,18 @@ export function ExperienceSwitcher({ className }: { className?: string }) {
   const router = useRouter();
   const selected = useNavigationMode();
   const { update } = usePersonalPreferences();
+  const { menu } = useStaffMenuVisibility();
   const sampleDeveloper = selected === "developer" && data.kind === "sample";
   if (!session && !sampleDeveloper) return null;
-  const experiences: { mode: NavigationMode; href: string; label: string; icon: LucideIcon }[] = [
-    { mode: "gigster", href: "/profile/canvas/", label: "Gigster Mode", icon: BriefcaseBusiness },
+  const allExperiences: { mode: NavigationMode; href: string; label: string; icon: LucideIcon }[] = [
+    { mode: "gigster" as const, href: "/profile/canvas/", label: "Gigster Mode", icon: BriefcaseBusiness },
     ...(session?.role === "owner" || sampleDeveloper ? [{ mode: "owner" as const, href: "/owners/", label: "Owner Mode", icon: LayoutDashboard }] : []),
     ...(session?.role === "owner" || sampleDeveloper ? [{ mode: "developer" as const, href: session?.role === "owner" && data.kind === "live" ? "/owners/developer/" : "/hub/", label: "Developer Mode", icon: LayoutGrid }] : []),
   ];
-  if (experiences.length < 2 && !sampleDeveloper) return null;
-  const current = experiences.find(item => item.mode === selected) ?? experiences[0];
+  const experiences = allExperiences.filter(item => session?.role !== "owner" || menu.modes.includes(item.mode));
+  if (!experiences.length) return null;
+  const current = allExperiences.find(item => item.mode === selected) ?? experiences[0];
+  if (experiences.length < 2 && current.mode === experiences[0].mode && !sampleDeveloper) return null;
   const CurrentIcon = current.icon;
   return <span className={className}><Menu align="end" className="max-sm:max-w-72"
     items={experiences.map(item => ({ label: item.label, icon: <item.icon />, checked: item.mode === selected, onSelect: () => {
