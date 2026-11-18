@@ -1,8 +1,30 @@
 name: Signup checks
 on:
   pull_request:
+    paths-ignore:
+      # Agent and playbook files only: no app code, build or test reads them
+      # (playbook rule E14; docs are not ignored because some checks read them).
+      - AGENTS.md
+      - CLAUDE.md
+      - docs/playbook-inbox.md
+      - .github/pull_request_template.md
+      - .github/playbook-entry.sha256
+      - .github/workflows/playbook-check.yml
+      - scripts/check-agent-entry.sh
+      - .claude/**
   push:
     branches: [main]
+    paths-ignore:
+      # Agent and playbook files only: no app code, build or test reads them
+      # (playbook rule E14; docs are not ignored because some checks read them).
+      - AGENTS.md
+      - CLAUDE.md
+      - docs/playbook-inbox.md
+      - .github/pull_request_template.md
+      - .github/playbook-entry.sha256
+      - .github/workflows/playbook-check.yml
+      - scripts/check-agent-entry.sh
+      - .claude/**
 concurrency:
   group: signup-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
