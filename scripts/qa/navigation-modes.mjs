@@ -59,8 +59,26 @@ try {
     await page.getByText("The Hub below is a fictional sample workspace.", { exact: false }).waitFor();
     const embedded = page.frameLocator('iframe[data-developer-hub]');
     await embedded.getByRole("heading", { name: "Choose your experience" }).waitFor();
+    // The heading exists in server markup before AdminRoutes' client-ready snapshot removes its
+    // initial shell. Wait for the real embedded state, then retain strict no-duplicate assertions.
+    try {
+      await page.waitForFunction(() => {
+        const doc = document.querySelector('iframe[data-developer-hub]')?.contentDocument;
+        return !!doc?.documentElement.hasAttribute("data-embedded") && doc.querySelector("[data-admin-shell]") === null;
+      });
+    } catch (error) {
+      const diagnostic = await page.evaluate(() => {
+        const frame = document.querySelector('iframe[data-developer-hub]'), doc = frame?.contentDocument;
+        return { parentPath: location.pathname, frameSrc: frame?.getAttribute("src"), frameName: frame?.getAttribute("name"), frameMarked: frame?.hasAttribute("data-developer-hub"), childUrl: doc?.location.href, childRoot: doc?.documentElement.outerHTML.slice(0, 1200), shellCount: doc?.querySelectorAll("[data-admin-shell]").length, headings: [...(doc?.querySelectorAll("h1,h2") ?? [])].map(heading => heading.textContent) };
+      });
+      fs.writeFileSync(`deliverables/navigation-modes/embedded-readiness-failure-${width}-${theme}.json`, JSON.stringify(diagnostic, null, 2));
+      await shot("embedded-readiness-failure");
+      console.log(`FAIL embedded readiness ${width}/${theme}: ${JSON.stringify(diagnostic)}`);
+      throw error;
+    }
     assert.equal(await embedded.locator("[data-admin-shell]").count(), 0, "embedded sample has no second sidebar");
     assert.equal(await embedded.locator("header").filter({ visible: true }).count(), 0, "embedded sample has no duplicate top navigation");
+    console.log(`STEP ${width}/${theme}: embedded chrome hydrated without a second shell`);
     const parentIdentity = await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).session);
     const outerAppearance = await page.evaluate(() => ({ look: document.documentElement.dataset.look, theme: document.documentElement.dataset.theme, legacyLook: localStorage.getItem("bg2-site-look-v2"), legacyTheme: localStorage.getItem("bg-theme"), unstyled: document.documentElement.hasAttribute("data-unstyled"), legacyPlain: localStorage.getItem("bg2-unstyled") }));
     const child = await (await page.locator('iframe[data-developer-hub]').elementHandle()).contentFrame();
