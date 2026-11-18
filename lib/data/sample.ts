@@ -1,3 +1,4 @@
+import { serviceLabel, serviceMatches } from "@/lib/profile/service-catalogue";
 import { withoutPrivateDetails } from "@/lib/profile/details";
 import { withTravelRequirement } from "@/lib/profile/location-controls";
 import { APPROVED_NOT_PUBLIC_SAMPLE } from "./seed";
@@ -203,7 +204,7 @@ function matches(s: PersonSummary, q: PeopleQuery) {
   const f = s.fields;
   if (q.status && q.status !== "all" && s.person.status !== q.status) return false;
   if (q.source && q.source !== "all" && s.person.source !== q.source) return false;
-  if (q.service && q.service !== "all" && !f?.services.includes(q.service)) return false;
+  if (q.service && q.service !== "all" && !f?.services.some(s => serviceMatches(s, q.service!))) return false;
   if (q.area && q.area !== "all" && !f?.areas.includes(q.area)) return false;
   if (q.availability && q.availability !== "all" && f?.monthStatus !== q.availability) return false;
   if (q.craft && q.craft !== "all" && craftOf(f?.position, f?.skills) !== q.craft) return false;
@@ -212,7 +213,7 @@ function matches(s: PersonSummary, q: PeopleQuery) {
   if (q.profile === "no-photo" && f?.photo) return false;
   const text = q.text?.trim().toLowerCase();
   if (text) {
-    const hay = [s.person.name, s.person.email, s.person.waitlistZip, f?.position, f?.about, ...(f?.services ?? []), ...(f?.skills ?? []), ...(f?.areas ?? [])]
+    const hay = [s.person.name, s.person.email, s.person.waitlistZip, f?.position, f?.about, ...(f?.services ?? []).flatMap(s => [s, serviceLabel(s)]), ...(f?.skills ?? []), ...(f?.areas ?? [])]
       .filter(Boolean).join(" ").toLowerCase();
     if (!text.split(/\s+/).every((w) => hay.includes(w))) return false;
   }

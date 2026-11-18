@@ -1,4 +1,5 @@
 "use client";
+import { serviceLabel, servicePickerLabel, servicePickerValues } from "@/lib/profile/service-catalogue";
 /*
  * A standalone, unstyled profile page with plain editing (A/B against /profile/canvas/).
  *
@@ -177,13 +178,13 @@ export function SimpleProfile() {
         <h2 id="h-what">What you do</h2>
         {editing ? <>
           <Checks k="skills" legend="On-set skills" options={onSetSkills} form={form} toggle={toggle} err={err} />
-          <Checks k="services" legend="Services you offer" options={offSetServices} form={form} toggle={toggle} err={err} />
-          <Text k="other" label="Anything else you offer (optional)" form={form} set={set} err={err} described={described} />
+          <Checks k="services" legend="Services you offer" options={servicePickerValues(form.services, offSetServices)} form={form} toggle={toggle} err={err} />
+          <Text k="other" label="Other — name your service (optional)" form={form} set={set} err={err} described={described} />
         </> : <>
           <h3>On-set skills</h3>
           {f.skills.length ? <ul>{f.skills.map((s) => <li key={s}>{s}</li>)}</ul> : <p className="empty">None picked yet.</p>}
           <h3>Services</h3>
-          {f.services.length || f.other ? <ul>{[...f.services, f.other].filter(Boolean).map((s) => <li key={s}>{s}</li>)}</ul> : <p className="empty">None picked yet.</p>}
+          {f.services.length || f.other ? <ul>{[...f.services.map(serviceLabel), f.other].filter(Boolean).map((s, i) => <li key={i}>{s}</li>)}</ul> : <p className="empty">None picked yet.</p>}
         </>}
       </section>
 
@@ -314,7 +315,7 @@ function Checks({ k, legend, options, form, toggle, err }: {
   return (
     <fieldset id={`f-${k}`}>
       <legend>{legend}</legend>
-      {options.map((o) => <label key={o}><input type="checkbox" checked={form[k].includes(o)} onChange={() => toggle(k, o)} /> {o}</label>)}
+      {options.map((o) => <label key={o}><input type="checkbox" checked={form[k].includes(o)} onChange={() => toggle(k, o)} /> {k === "services" ? servicePickerLabel(o) : o}</label>)}
       {err(k)}
     </fieldset>
   );

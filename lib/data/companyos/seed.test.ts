@@ -1,3 +1,4 @@
+import { legacyServiceValues } from "../../profile/service-catalogue";
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildSeed, buildWaitlist, seedPeople } from "../seed.ts";
@@ -42,7 +43,7 @@ describe("toCompanyOsSeed", () => {
     const statuses = new Set(profiles.map((p) => p.data.status));
     expect([...statuses].sort()).toEqual(["approved", "changes_requested", "draft", "submitted"]);
     for (const p of profiles) expect(String(p.data.public_handle)).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
-    const known = new Set([...onSetSkills, ...offSetServices, ...laServiceAreas].map(optionKey));
+    const known = new Set([...onSetSkills, ...offSetServices, ...legacyServiceValues, ...laServiceAreas].map(optionKey));
     for (const i of of("profile_item").filter((i) => i.data.kind !== "credit")) expect(known).toContain(i.data.value);
   });
 

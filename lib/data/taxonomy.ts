@@ -1,3 +1,5 @@
+import { serviceCatalogue } from "../profile/service-catalogue";
+
 /*
  * Option lists for the questionnaire and search. The on-set / off-set lists and LA areas come from the
  * design system's GigsterOnboarding template (marked there as a draft taxonomy, subject to the client's
@@ -7,11 +9,13 @@
 
 export const onSetSkills = ["Wardrobe & costume", "Props", "Set decoration", "Lighting & grip", "Camera", "Hair & makeup", "Art department", "Locations", "Production office"];
 
-export const offSetServices = ["Wardrobe & Personal Styling", "Wardrobe & Laundry Care", "Furniture & Creative Builds", "Beauty & Personal Styling", "Makeup Services", "Hair Styling", "Interior Styling", "Event Styling", "Photography & Portraits", "Lighting Design"];
+/** Stable saved values; render the approved customer-facing names with serviceLabel. */
+export const offSetServices = serviceCatalogue.map(c => c.value);
 
-/** Two illustrated examples use service categories from the call sheet outside the live questionnaire taxonomy. */
+/** New choices use the same approved catalogue in every mode; old sample answers remain readable. */
 export function serviceChoices(source: "sample" | "live") {
-  return source === "sample" ? [...offSetServices, "Events & Organization", "Venue & Location Scouting"] : offSetServices;
+  void source;
+  return offSetServices;
 }
 
 export const laServiceAreas = ["Eastside", "Downtown", "Hollywood", "Westside", "The Valley", "Pasadena area", "South Bay"];
