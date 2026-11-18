@@ -155,6 +155,12 @@ type Cos = Pick<CompanyOs, "batch" | "remove" | "patch" | "startUpload" | "putBy
  */
 export async function saveSamples({ cos, cred }: { cos: Cos; cred: Credential }, profileId: string, want: readonly string[], items: Row[], files: Row[]): Promise<void> {
   const plan = planSamples(want, items, files);
+  const persistFit = async (id: string, image_fit: string) => {
+    const saved = await cos.patch(cred, "file", id, { image_fit });
+    // A generic PATCH may succeed against a rolled-back schema that drops unknown fields.
+    // Do not report saved unless the authorized returned row carries the requested alignment.
+    if (canonicalImageFit(saved?.data?.image_fit) !== image_fit) throw new CompanyOsError(422, "image_fit_not_available");
+  };
   const upload = async (dataUrl: string, kind: string, position?: number) => {
     const { mime, bytes } = bytesOf(dataUrl);
     const { file, uploadUrl } = await cos.startUpload(cred, { ownerEntity: "profile", ownerId: profileId, kind, filename: `${kind}.${mime.split("/")[1] === "jpeg" ? "jpg" : mime.split("/")[1]}`, mime, sizeBytes: bytes.byteLength, ...(position === undefined ? {} : { position }) });
@@ -170,7 +176,7 @@ export async function saveSamples({ cos, cred }: { cos: Cos; cred: Credential },
   };
   try {
     // Fit is content, not a best-effort position nicety. Refusal must surface before other sample mutations.
-    for (const p of plan.fitPatches) await cos.patch(cred, "file", p.id, { image_fit: p.image_fit });
+    for (const p of plan.fitPatches) await persistFit(p.id, p.image_fit);
     const first = [...plan.itemDeletes, ...plan.itemUpdates];
     if (first.length) await cos.batch(cred, first);
     for (const id of plan.removeFiles) await cos.remove(cred, "file", id);
@@ -180,7 +186,7 @@ export async function saveSamples({ cos, cred }: { cos: Cos; cred: Credential },
     for (const p of plan.photoUploads) {
       const id = await upload(p.dataUrl, "portfolio", p.position);
       if (p.image_fit) {
-        try { await cos.patch(cred, "file", id, { image_fit: p.image_fit }); }
+        try { await persistFit(id, p.image_fit); }
         catch (e) {
           // No successful response will adopt this id. Avoid duplicating the upload on retry.
           await cos.remove(cred, "file", id).catch(() => undefined);
