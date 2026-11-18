@@ -218,7 +218,8 @@
         "app/owners/layout.tsx",
         "app/owners/page.tsx",
         "app/profile/layout.tsx",
-        "app/profile/page.tsx"
+        "app/profile/page.tsx",
+        "app/preview/social/page.tsx"
       ],
       "signup": [
         "app/api/funnel/**",
@@ -228,7 +229,12 @@
         "app/privacy/page.tsx",
         "app/profile/canvas/page.tsx",
         "app/profile/layout.tsx",
-        "app/profile/page.tsx"
+        "app/profile/page.tsx",
+        "app/hub/page.tsx",
+        "app/login/page.tsx",
+        "app/preview/page.tsx",
+        "app/preview/page/page.tsx",
+        "app/preview/profiles/page.tsx"
       ],
       "profile": [
         "app/profile/**",
@@ -243,7 +249,8 @@
         "app/owners/people/page.tsx",
         "app/owners/staff/page.tsx",
         "app/preview/page.tsx",
-        "app/privacy/page.tsx"
+        "app/privacy/page.tsx",
+        "app/login/page.tsx"
       ],
       "owners": [
         "app/owners/**",
@@ -264,7 +271,11 @@
         "app/preview/wallpapers/page.tsx",
         "app/professionals/page.tsx",
         "app/profile/canvas/page.tsx",
-        "app/profile/layout.tsx"
+        "app/profile/layout.tsx",
+        "app/join/page.tsx",
+        "app/p/page.tsx",
+        "app/preview/drafts/home-peter/page.tsx",
+        "app/preview/page/page.tsx"
       ],
       "staff": [
         "app/owners/staff/**",
@@ -337,7 +348,11 @@
     "dynamic": {
       "scripts/ci/affected-areas.mjs": [],
       "scripts/ci/area-imports.mjs": [],
-      "scripts/qa/service-conversion-guard.mjs": [],
+      "scripts/qa/service-conversion-guard.mjs": [
+        "components/gigster/editor/canvas.tsx",
+        "components/profile/LiveEditWarning.tsx",
+        "lib/profile/service-choice.ts"
+      ],
       "scripts/render-companyos-emails.mjs": [
         "emails/{index,config,diagnostic}.ts"
       ]

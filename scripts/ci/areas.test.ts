@@ -77,8 +77,10 @@ describe("scripts/ci/areas.json", () => {
     expect(problems).toEqual([]);
   });
 
-  it("the import graph has no blind spot (no non-literal import, no unresolved specifier, no dead glob or seam)", () => {
-    expect(graphProblems({ config, files: repoFiles, read })).toEqual([]);
+  it("the import graph has no blind spot (no non-literal import, no unresolved or undeclared specifier, no dead glob or seam)", () => {
+    const pkg = JSON.parse(read("package.json"));
+    const packages = [...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.devDependencies ?? {})];
+    expect(graphProblems({ config, files: repoFiles, read, packages })).toEqual([]);
   });
 
   // Every page a QA script visits (and the layouts above it) is an entry of each area that runs the script: a change
@@ -107,7 +109,8 @@ describe("scripts/ci/areas.json", () => {
     const missing: string[] = [];
     for (const [area, a] of Object.entries(config.areas as Record<string, { scripts: unknown[] }>)) {
       for (const sc of a.scripts.map((x) => normalizeScript(x).name as string)) {
-        for (const m of read(sc).matchAll(/["'`](\/(?:between-gig-2\.0\/)?[a-z][a-z0-9\-/[\]]*)/g)) {
+        // After a quote, a backtick or a `${…}` (`${url}/preview/forms/`): every path-like literal.
+        for (const m of read(sc).matchAll(/["'`}](\/(?:between-gig-2\.0\/)?[a-z][a-z0-9\-/[\]]*)/g)) {
           const u = m[1].replace(/^\/between-gig-2\.0/, "").replace(/\/+$/, "") || "/";
           for (const p of pageFor(u)) for (const f of [p, ...layoutsAbove(p)]) {
             if (!config.graph.entries[area].some((g: string) => matchGlob(g, f))) missing.push(`${area}: ${f} (${sc} visits ${u})`);
