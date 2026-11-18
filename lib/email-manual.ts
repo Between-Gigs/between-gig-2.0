@@ -65,7 +65,7 @@ export function isManualEmailName(value: unknown): value is ManualEmailName {
 }
 
 export function manualRecipient(value: unknown): string | null {
-  if (typeof value !== "string" || /[\x00-\x1f\x7f]/.test(value)) return null; // eslint-disable-line no-control-regex
+  if (typeof value !== "string" || /[\x00-\x1f\x7f]/.test(value)) return null;
   return plainRecipient(value);
 }
 
