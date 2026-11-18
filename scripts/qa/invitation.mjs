@@ -9,6 +9,23 @@ const { server, url } = await serve("out", { base: process.env.NEXT_PUBLIC_BASE_
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? "/usr/bin/chromium" });
 fs.mkdirSync("deliverables/invitation", { recursive: true });
 let canonicalHtml;
+async function assertFits(html,stage) {
+  const dimensions=await html.evaluate(()=>({
+    viewport:innerWidth,scrollWidth:document.documentElement.scrollWidth,
+    overflowing:[...document.querySelectorAll("body,table,td,div,h1,p,a,img")].map(element=>{
+      const box=element.getBoundingClientRect(),style=getComputedStyle(element);
+      return {tag:element.tagName,className:element.className,left:box.left,right:box.right,width:box.width,cssWidth:style.width,paddingLeft:style.paddingLeft,paddingRight:style.paddingRight,display:style.display};
+    }).filter(box=>box.width>0&&(box.left<-.5||box.right>innerWidth+1)).sort((a,b)=>b.right-a.right).slice(0,12)
+  }));
+  assert.ok(dimensions.scrollWidth<=dimensions.viewport+1,`${stage}: ${JSON.stringify(dimensions)}`);
+}
+async function resetScroll(html) {
+  await html.evaluate(async()=>{
+    for(const element of document.querySelectorAll("*"))if(element.scrollTop||element.scrollLeft)element.scrollTo({top:0,left:0,behavior:"instant"});
+    window.scrollTo({top:0,left:0,behavior:"instant"});
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  });
+}
 try {
   for (const width of [320, 390, 768, 1440]) for (const theme of ["light", "dark"]) for (const blocked of [false, true]) {
     const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: theme, reducedMotion: "reduce" });
@@ -69,10 +86,11 @@ try {
     assert.equal(await frame.getByRole("link", { name: "Unsubscribe", exact: true }).count(), 0);
     assert.equal(await frame.getByRole("link", { name: "Privacy", exact: true }).getAttribute("href"), "https://between-gigs.com/privacy/");
     assert.equal(await frame.getByRole("link", { name: "Contact support", exact: true }).getAttribute("href"), "mailto:hello@between-gigs.com");
-    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "page fits viewport");
-    assert.ok(await frame.locator("html").evaluate(el => el.scrollWidth <= innerWidth + 1), "email fits iframe");
+    await assertFits(page.locator("html"),`owner preview ${width}/${theme}/${blocked}`);
+    await assertFits(frame.locator("html"),`email iframe ${width}/${theme}/${blocked}`);
     assert.equal(await frame.locator('meta[name="color-scheme"]').getAttribute("content"), "light");
-    await page.evaluate(() => scrollTo(0, 0));
+    await resetScroll(frame.locator("html"));
+    await resetScroll(page.locator("html"));
     await page.screenshot({ path: `deliverables/invitation/${width}-${theme}${blocked ? "-images-blocked" : ""}.png`, fullPage: true });
     await page.goto(`${url}/preview/gigster-journey/?source=legacy#invite`);
     await page.waitForURL(location => location.pathname.endsWith("/emails/invite/") && location.searchParams.get("source") === "legacy" && location.hash === "#invite");
@@ -85,7 +103,7 @@ try {
   const boundaryContext=await browser.newContext();
   const boundaryMetrics=[];
   try {
-    for(const width of [262,298,320,390,619,620,621,640]) {
+    for(const width of [262,298,320,390,619,620,621,622,623,624,640]) {
       const page=await boundaryContext.newPage();await page.setViewportSize({width,height:1000});
       await page.setContent(canonicalHtml);await page.locator(".e-invite-artwork img:visible").evaluate(async image=>{await image.decode();});
       const metrics=await page.locator(".e-invite-artwork img:visible").evaluate(image=>({width:image.getBoundingClientRect().width,height:image.getBoundingClientRect().height,mobile:image.src.includes("-mobile.png")}));
@@ -93,7 +111,7 @@ try {
       assert.ok(metrics.width<=width);assert.ok(Math.abs(metrics.height/metrics.width-source.height/source.width)<.01);
       assert.equal(metrics.mobile,width<=620);
       if(width===262){assert.ok(metrics.width>=260);assert.ok(source.lead*metrics.width/source.width>=12);assert.ok(source.cta*metrics.width/source.width>=12);}
-      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+      await assertFits(page.locator("html"),`actual email viewport ${width}`);
       boundaryMetrics.push({width,...metrics,bakedLeadSize:source.lead*metrics.width/source.width,bakedCtaSize:source.cta*metrics.width/source.width});
       await page.locator(".e-invite-artwork").screenshot({path:`deliverables/invitation/boundary-${width}.png`});await page.close();
     }
@@ -123,7 +141,7 @@ try {
       const ctaHeight=(await htmlCta.boundingBox()).height;
       const lead=12*metrics.width/260,cta=12*metrics.width/260;
       if(!blocked)assert.ok(lead>=12&&cta>=12);assert.ok(ctaHeight>=44);
-      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+      await assertFits(page.locator("html"),`actual email viewport ${width}`);
       assert.equal(metrics.naturalWidth,blocked?0:260);
       await page.addScriptTag({content:fs.readFileSync("node_modules/axe-core/axe.min.js","utf8")});
       const violations=await page.evaluate(async()=>(await window.axe.run(document,{runOnly:{type:"tag",values:["wcag2a","wcag2aa","wcag21aa"]}})).violations.map(v=>({id:v.id,targets:v.nodes.map(n=>n.target)})));

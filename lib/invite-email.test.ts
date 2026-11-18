@@ -3,6 +3,7 @@ import { INVITE_COPY, INVITE_REASON, INVITE_UNSUBSCRIBE, invite } from "@/emails
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { INVITE_HERO } from "@/emails/invite-hero";
+import { light } from "@/emails/tokens";
 import { renderPreview } from "@/components/emails/preview";
 
 const props = { inviteUrl: "https://example.test/join/?invite=sample&source=email", email: "sample@example.test" };
@@ -95,8 +96,14 @@ describe("canonical Stage 2 invitation", () => {
     expect(email.html).toContain('<html lang="en" dir="ltr"');
     expect(email.html).not.toContain("background-image:linear-gradient");
     expect(email.html).not.toContain("-webkit-text-fill-color");
-    expect(email.html).toContain(".e-invite-email .e-invite-html-cta a{color:#ffffff!important}");
+    expect(email.html).toContain(`.e-invite-email .e-invite-html-cta a{color:${light.onActionStrong}!important}`);
     expect(email.html.match(/<h1/g)).toHaveLength(1);
+  });
+
+  it("keeps the fixed 600px email within the 621–623px desktop gutter gap",()=>{
+    const html=invite(props).html;
+    expect(html).toContain('@media (max-width:624px){');
+    expect(html).toContain('.e-invite-email .e-edge{padding-left:0!important;padding-right:0!important}');
   });
 
   it("binds the baked hero bytes and copy to their approved provenance",()=>{

@@ -23,5 +23,5 @@ export function invitationAppearance(html: string) {
     .replace('class="e-body"', 'class="e-body e-invite-email"')
     .replace('class="e-outer"', 'class="e-outer e-invite-email"')
     .replace(/(<(?:div|table)\b)(?![^>]*\blang=)/g, '$1 lang="en" dir="ltr"')
-    .replace("</style>", `.e-invite-email .e-invite-html-cta td{background-color:#0f3d29!important}\n.e-invite-email .e-invite-html-cta a{color:#ffffff!important}\n@media (max-width:620px){\n.e-invite-email .e-invite-desktop{display:none!important;max-height:0!important;overflow:hidden!important}\n.e-invite-email .e-invite-mobile{display:block!important;max-height:none!important;overflow:visible!important}\n}\n@media (prefers-color-scheme:dark){${dark}}\n${outlook}\n</style>`);
+    .replace("</style>", `.e-invite-email .e-invite-html-cta td{background-color:#0f3d29!important}\n.e-invite-email .e-invite-html-cta a{color:#ffffff!important}\n@media (max-width:624px){\n.e-invite-email .e-edge{padding-left:0!important;padding-right:0!important}\n}\n@media (max-width:620px){\n.e-invite-email .e-invite-desktop{display:none!important;max-height:0!important;overflow:hidden!important}\n.e-invite-email .e-invite-mobile{display:block!important;max-height:none!important;overflow:visible!important}\n}\n@media (prefers-color-scheme:dark){${dark}}\n${outlook}\n</style>`);
 }
