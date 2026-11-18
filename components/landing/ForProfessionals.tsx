@@ -33,6 +33,24 @@ function JoinLink({ children, label }: { children: React.ReactNode; label?: stri
   );
 }
 
+
+/** Original descriptive copy, rendered in the current design system. Review stays on sign-up. */
+function SpecialtyCards({ items, review = false }: { items: readonly { name: string; description: string }[]; review?: boolean }) {
+  return (
+    <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {items.map((item) => (
+        <li key={item.name} className="flex min-w-0">
+          <article className="flex w-full flex-col gap-3 rounded-lg border border-line bg-surface-sunken p-5">
+            <Heading level="h3" as="h4">{item.name}{review && " · Scope Review"}</Heading>
+            <Text>{item.description}</Text>
+            {review && <div className="mt-auto"><JoinLink label={`Register background for review — ${item.name}`}>Register background for review</JoinLink></div>}
+          </article>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function ForProfessionals() {
   return (
     <Page bare>
@@ -99,12 +117,12 @@ export function ForProfessionals() {
         <div className="grid gap-6 rounded-xl border border-line bg-surface p-6 sm:p-10">
           <Heading level="h1" id="specialties-h">More specialties. More of the crew.</Heading>
           <Text>Named skills and industry backgrounds, with the exact service chosen and confirmed by each provider.</Text>
-          <ul className="flex flex-wrap gap-2">{specialties.map(s=><li key={s} className="rounded-lg border border-line bg-surface-sunken px-3 py-2 text-body-sm">{s}</li>)}</ul>
+          <SpecialtyCards items={specialties} />
           <Heading level="h3" as="h3">Additional everyday specialties</Heading>
-          <ul className="flex flex-wrap gap-2">{everydaySpecialties.map(s=><li key={s} className="rounded-lg border border-line bg-surface-sunken px-3 py-2 text-body-sm">{s}</li>)}</ul>
+          <SpecialtyCards items={everydaySpecialties} />
           <Heading level="h3" as="h3">Specialist production backgrounds</Heading>
-          <ul className="flex flex-wrap gap-2">{productionBackgrounds.map(s=><li key={s} className="rounded-lg border border-line bg-surface-sunken px-3 py-2 text-body-sm">{s}</li>)}</ul>
           <Text muted>These categories require separate scope, qualification and safety review. A department title is not proof of credentials, availability or a service someone offers. No automatic provider matching or booking is enabled for them.</Text>
+          <SpecialtyCards items={productionBackgrounds} review />
           <details className="border-t border-line pt-3"><summary className="min-h-11 cursor-pointer py-3 text-label-md font-semibold text-ink">Industry departments represented</summary><ul className="grid gap-3 py-3 text-body-md text-ink-muted">{industryDepartments.map(s=><li key={s}>{s}</li>)}</ul></details>
           <Text size="sm" muted>Joining records your interest; it does not verify qualifications or activate a service.</Text>
         </div>
@@ -130,11 +148,11 @@ export function ForProfessionals() {
                       <Heading level="h2" as="h3">{p.name}</Heading>
                       <p className="text-label-md font-semibold text-ink-brand">{p.title}</p>
                     </div>
-                    <Text>{p.services}</Text>
-                    <p className="inline-flex gap-2 text-body-sm text-ink-muted"><Clapperboard className="mt-0.5 size-4 shrink-0 text-ink-subtle" aria-label="Background" /><span>{p.background}<br /><span>Credits include: {p.credits}</span></span></p>
+                    <div className="grid gap-1"><p className="text-label-md font-semibold text-ink-muted">Services</p><Text>{p.services}</Text></div>
+                    <p className="inline-flex gap-2 text-body-sm text-ink-muted"><Clapperboard className="mt-0.5 size-4 shrink-0 text-ink-subtle" aria-hidden="true" /><span><span className="block text-label-md font-semibold text-ink-muted">Background</span>{p.background}<br /><span>Credits include: {p.credits}</span></span></p>
                     <dl className="mt-auto grid gap-2 border-t border-line pt-3 text-body-sm sm:grid-cols-2 sm:gap-4">
-                      <div className="flex gap-2"><dt><Tag className="mt-0.5 size-4 text-ink-subtle" aria-label="Pricing" /></dt><dd className="text-label-md text-ink tabular-nums">{p.pricing}</dd></div>
-                      <div className="flex gap-2"><dt><CalendarClock className="mt-0.5 size-4 text-ink-subtle" aria-label="Availability" /></dt><dd className="text-ink-muted">{p.availability}</dd></div>
+                      <div className="grid content-start gap-1"><dt className="inline-flex items-center gap-2 text-label-md font-semibold text-ink-muted"><Tag className="size-4 text-ink-subtle" aria-hidden="true" />Pricing</dt><dd className="text-label-md text-ink tabular-nums">{p.pricing}</dd></div>
+                      <div className="grid content-start gap-1"><dt className="inline-flex items-center gap-2 text-label-md font-semibold text-ink-muted"><CalendarClock className="size-4 text-ink-subtle" aria-hidden="true" />Availability</dt><dd className="text-ink-muted">{p.availability}</dd></div>
                     </dl>
                     <div className="flex flex-wrap items-center gap-x-6">
                       <JoinLink label={`Create a profile like ${p.name}'s: go to sign-up`}>Create a profile like this</JoinLink>

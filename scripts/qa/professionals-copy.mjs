@@ -11,7 +11,28 @@ try{for(const width of [320,390,768,1024,1440])for(const theme of ['light','dark
  await context.addInitScript(t=>localStorage.setItem('bg-theme',t),theme);
  const page=await context.newPage();await page.goto(url+'/professionals/');await page.waitForLoadState('networkidle');await page.evaluate(()=>document.fonts.ready);
  const main=page.locator('main');
- for(const copy of ['More specialties. More of the crew.','Named skills and industry backgrounds, with the exact service chosen and confirmed by each provider.','Joining records your interest; it does not verify qualifications or activate a service.','Wallpaper Installation','Production Medic','Vectorworks & CAD','Sample professional profiles','Maya','Credits include: Jurassic Park, Obsession, Planet of the Apes','Sample profiles, services and pricing shown for illustration.','Your expertise. New clients. On your terms.','Professional FAQ']) assert.ok(await main.getByText(copy,{exact:true}).count(),`${width}/${theme}: missing ${copy}`);
+ const specialtyCards=page.locator('#specialties article');
+ assert.equal(await specialtyCards.count(),20);
+ for(const [name,description,review] of [["Photography & Videography","Photography, videos and original video production",false],["Locations & Location Management","Scouting, coordination and practical location logistics",false],["Vectorworks & CAD","Drafting and visualization; professional sign-off is separate",false],["Costumes, Cosplay & Custom-made Clothing","Tailoring, alterations and custom costume construction",false],["Landscaping & Greens","Landscaping and plant/greenery specialties confirmed by the provider",false],["Wardrobe & Personal Styling","Personal styling and outfits for a person or occasion",false],["Personal Shopping","Source clothing, gifts and everyday items",false],["Closet & Wardrobe Organization","Sort clothing and create an organized wardrobe",false],["Wallpaper Installation","Wallcovering preparation and installation, with surface condition and job scope agreed first.",false],["Project Management","Timelines, logistics, scheduling and coordination for an agreed project.",false],["Math & Technical Tutoring","Teaching and study support in a tutor’s demonstrated subject. Not engineering design, certification or professional sign-off.",false],["Costume Aging & Dyeing","Character finishes and color work for clothing or costumes; materials, care and safe handling to confirm.",false],["Wardrobe & Laundry Care","Garment-specific cleaning and care, with fabric requirements and specialist treatments agreed first.",false],["Rigging","Specialist rigging inquiry only. Relevant credentials, venue rules, insurance and job-specific safety review are required; no provider is matched here.",true],["Stunts","Industry background and specialist inquiry only. Training, supervision, insurance and job-specific safety must be reviewed before any work.",true],["Intimacy Coordination","Specialist production background. Training, consent protocols and the specific production scope need review; no provider is matched here.",true],["Armorer","Industry background only. This listing does not offer weapons, handling or instruction. Any production inquiry requires separate legal, credential and safety review.",true],["SFX Makeup","Character and special-effects makeup inquiry. Confirm the artist’s specific experience, materials and application requirements; generic makeup experience is not sufficient.",true],["Pyrotechnics","Industry background only, not an available fireworks service. Licensing, permissions, insurance and a separate safety review are required; no provider is matched here.",true],["Production Medic","Industry background only. No medical advice, care or emergency response is offered here. Any production request requires separate licensing and scope review.",true]]) {
+  const heading=review?name+' · Scope Review':name;
+  const card=specialtyCards.filter({has:page.getByRole('heading',{name:heading,exact:true})});
+  assert.equal(await card.count(),1,`${width}/${theme}: ${heading}`);
+  assert.equal(await card.getByText(description,{exact:true}).count(),1);
+  assert.ok(await card.isVisible());
+ }
+ const reviewLinks=page.locator('#specialties').getByRole('link',{name:/^Register background for review —/});
+ assert.equal(await reviewLinks.count(),7);
+ for(const link of await reviewLinks.all())assert.equal(await link.getAttribute('href'),'/join/');
+ const sampleCards=page.locator('#profiles article');
+ assert.equal(await sampleCards.count(),4);
+ for(const card of await sampleCards.all()) {
+  for(const label of ['Background','Services','Pricing','Availability'])assert.equal(await card.getByText(label,{exact:true}).count(),1);
+  const order=await card.innerText();
+  assert.ok(order.indexOf('Services')<order.indexOf('Background'));
+  assert.ok(order.indexOf('Background')<order.indexOf('Pricing'));
+ }
+
+ for(const copy of ['More specialties. More of the crew.','Named skills and industry backgrounds, with the exact service chosen and confirmed by each provider.','Joining records your interest; it does not verify qualifications or activate a service.','Wallpaper Installation','Production Medic · Scope Review','Vectorworks & CAD','Sample professional profiles','Maya','Credits include: Jurassic Park, Obsession, Planet of the Apes','Sample profiles, services and pricing shown for illustration.','Your expertise. New clients. On your terms.','Professional FAQ']) assert.ok(await main.getByText(copy,{exact:true}).count(),`${width}/${theme}: missing ${copy}`);
  assert.equal(await main.locator('summary').filter({hasText:'Explore service ideas'}).count(),10);
  assert.equal(await main.getByRole('link',{name:/^I offer this service —/}).count(),10);
  for(const link of await main.getByRole('link',{name:/^I offer this service —/}).all()) assert.equal(await link.getAttribute('href'),'/join/');
