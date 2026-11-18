@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import http from "node:http";
-import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import { chromium } from "playwright-core";
 import { serve } from "./serve.mjs";
@@ -78,7 +77,6 @@ try {
     await context.close();
   }
   // Exercise actual React component document replacement and late content changes without application APIs.
-  const require = createRequire(import.meta.url);
   const esbuildDir = fs.readdirSync("node_modules/.pnpm").find(name => name.startsWith("esbuild@"));
   const { build } = await import(pathToFileURL(path.resolve("node_modules/.pnpm/" + esbuildDir + "/node_modules/esbuild/lib/main.js")));
   const entry = `import React from 'react';import {createRoot} from 'react-dom/client';import {EmailPreviewFrame} from './components/emails/EmailPreviewFrame';
