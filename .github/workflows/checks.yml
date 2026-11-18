@@ -57,6 +57,13 @@ jobs:
           name: admin-navigation-evidence
           path: deliverables/admin-navigation
           if-no-files-found: warn
+      - name: Save Storyboard design system captures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: storyboard-design-system-evidence
+          path: deliverables/storyboard-profile
+          if-no-files-found: warn
       - name: Save Professionals implementation captures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

@@ -50,9 +50,9 @@ export function craftHero({ eyebrow, inner, ctx, openPaper = false }: { eyebrow:
   const strip = `${ctx.assetBase}/email/craft-invitation-desktop.jpg`;
   const logo = `${ctx.assetBase}/email/between-gigs-wide-on-light.png`;
   if (openPaper) return `<table ${T} class="e-invite-scene" width="100%" height="784" bgcolor="${k.cream}" background="${esc(frame)}" style="height:784px;background-color:${k.cream};background-image:url('${esc(frame)}');background-size:100% 100%;background-position:center;background-repeat:no-repeat">
-<tr><td class="e-invite-center" align="center" valign="top" style="padding:148px 96px 206px;font-family:${SANS};text-align:center">
-<img class="e-invite-logo" src="${esc(logo)}" width="200" height="62" alt="Between Gigs" style="display:block;margin:0 auto;width:200px;height:62px;border:0;color:${k.ink};font-size:18px;font-weight:600">
-<p class="e-invite-eyebrow" style="margin:60px 0 10px;font-size:22px;line-height:28px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:${k.muted}">${esc(eyebrow)}</p>
+<tr><td class="e-invite-center" align="center" valign="top" style="padding:144.5px 96px 212.5px;font-family:${SANS};text-align:center">
+<img class="e-invite-logo" src="${esc(logo)}" width="235" height="74" alt="Between Gigs" style="display:block;margin:0 auto;width:235.2px;height:73.5px;border:0;color:${k.ink};font-size:18px;font-weight:600">
+<p class="e-invite-eyebrow" style="margin:45.5px 0 10px;font-size:22px;line-height:28px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:${k.muted}">${esc(eyebrow)}</p>
 <div class="e-invite-rule" style="margin:0 auto 22px;width:28px;height:2px;line-height:2px;font-size:1px;background-color:${k.rule}">&nbsp;</div>
 ${inner}
 </td></tr></table>`;
