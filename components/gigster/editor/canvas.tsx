@@ -16,6 +16,8 @@ import { laServiceAreas, onSetSkills, serviceChoices } from "@/lib/data/taxonomy
 import { personalityQuestions } from "@/lib/profile/personality";
 import { departmentFieldRetired } from "@/lib/profile/department-retirement";
 import { serviceDescription } from "@/lib/profile/service-descriptions";
+import { customServiceFrom, OTHER_SERVICE, serviceSelectOptions, type ServiceFields } from "@/lib/profile/service-choice";
+import { ServiceGuidance } from "./ServiceGuidance";
 import { locationControlsEnabled, travelRadiusOptions } from "@/lib/profile/location-controls";
 import { travelPreferenceEnabled } from "@/lib/profile/travel-preference";
 import { customSkillsEnabled } from "@/lib/profile/skills";
@@ -148,20 +150,33 @@ export function CanvasIdentity({ d, set, errors, personId, confirmPhoto, require
 }
 
 /** "How I can help": up to five services, each with its standard description and the Gigster's own line. */
-export function CanvasHelp({ d, set, errors }: SectionProps) {
+export function CanvasHelp({ d, set, errors, onConvertToCustom }: SectionProps & { onConvertToCustom: (expected: ServiceFields, index: number, applied: () => void) => void }) {
   const choices = serviceChoices(data.kind);
   const [adding, setAdding] = React.useState(false);
   const lines = d.serviceLines ?? {};
   const rows = d.services;
   const setLine = (service: string, text: string) => set("serviceLines")({ ...lines, [service]: text.slice(0, SERVICE_LINE_MAX) });
   const replace = (i: number, next: string) => {
+    if (next === OTHER_SERVICE) {
+      const converted = customServiceFrom(d, i, otherVisible);
+      if (!converted) return;
+      onConvertToCustom(d, i, () => {
+        setAdding(false);
+        requestAnimationFrame(() => {
+          const field = document.getElementById("f-other");
+          if (field instanceof HTMLInputElement && field.value === converted.other.split("\n")[0]) field.focus();
+        });
+      });
+      return;
+    }
+    if (rows.some((value, index) => index !== i && value === next)) return;
     const prev = rows[i];
     const nextLines = { ...lines };
     if (prev && nextLines[prev] !== undefined && nextLines[next] === undefined) { nextLines[next] = nextLines[prev]; delete nextLines[prev]; }
     set("services")(rows.map((s, j) => (j === i ? next : s)));
     set("serviceLines")(nextLines);
   };
-  const add = (next: string) => { if (count >= MAX_SERVICES) return; set("services")([...rows, next]); setAdding(false); };
+  const add = (next: string) => { if (count >= MAX_SERVICES || rows.includes(next)) return; set("services")([...rows, next]); setAdding(false); };
   const remove = (i: number) => {
     const nextLines = { ...lines };
     delete nextLines[rows[i]];
@@ -173,16 +188,12 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
   const otherVisible = otherOpen || !!d.other.trim();
   const count = rows.length + Number(otherVisible);
   const showBlank = count < MAX_SERVICES && (rows.length === 0 || adding);
-  const OTHER = "__other";
-  const optionsFor = (current?: string) => [
-    ...choices.filter((c) => c === current || !rows.includes(c)).map((c) => ({ value: c, label: c })),
-    // Not on the list: the team reviews a new service before it shows (it is stored as "Something else").
-    ...(current === undefined && !otherVisible ? [{ value: OTHER, label: "Other — name your service" }] : []),
-  ];
+  const OTHER = OTHER_SERVICE;
+  const optionsFor = (current?: string) => serviceSelectOptions(choices, rows, current, otherVisible);
   // "Something else" holds the service's name on its first line and what they'd do after it.
   const [otherName = "", ...otherRest] = d.other.split("\n");
-  const otherLine = otherRest.join(" ");
-  const setOther = (name: string, line: string) => set("other")(line.trim() ? `${name}\n${line.slice(0, SERVICE_LINE_MAX)}` : name);
+  const otherLine = otherRest.join("\n");
+  const setOther = (name: string, line: string) => set("other")(line ? `${name}\n${line}` : name);
   const pickNew = (next: string) => {
     if (count >= MAX_SERVICES) return;
     if (next !== OTHER) return add(next);
@@ -259,7 +270,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
                     </button>
                   )}
                   <div className="min-w-0 flex-1">
-                    <label htmlFor={`f-service-${i}`} className="sr-only">Service {i + 1}</label>
+                    <label htmlFor={`f-service-${i}`} className="mb-1 block text-body-sm text-ink-muted">Service {i + 1}</label>
                     <Select id={`f-service-${i}`} options={optionsFor(s)} value={s} onValueChange={(v) => replace(i, v)} />
                   </div>
                   <button type="button" aria-label={`Remove ${s}`} onClick={() => remove(i)}
@@ -267,7 +278,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
                 </div>
                 <div className="grid min-w-0 gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
                   <label htmlFor={`f-line-${i}`} className="text-body-md text-ink">What can a customer hire you to do?</label>
-                  {!lineError && <p className="text-body-sm text-ink-muted italic">Example: Hang artwork and style a room for a party.</p>}
+                  <p className="text-body-sm text-ink-muted">Describe your own service in one short line.</p>
                   <Textarea id={`f-line-${i}`} rows={2} showCount maxLength={SERVICE_LINE_MAX} value={line} invalid={!!lineError}
                     placeholder="Describe what a customer can hire you to do."
                     onChange={(e) => setLine(s, e.target.value)} />
@@ -275,6 +286,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
                 </div>
               </div>
               {standard && <p className="text-body-sm text-ink-muted"><span className="font-semibold text-ink">Standard description</span> · the same for everyone who offers it: {standard}</p>}
+              <ServiceGuidance service={s} />
             </li>
           );
         })}
@@ -285,7 +297,7 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
             <div className="grid gap-4 sm:grid-cols-12 sm:gap-0">
               <div className="flex items-start gap-1 sm:col-span-5 sm:pr-5">
                 <div className="grid min-w-0 flex-1 gap-1.5">
-                  <label htmlFor="f-other" className="text-body-md text-ink">Name of the Service</label>
+                  <label htmlFor="f-other" className="text-body-md text-ink">Your service name</label>
                   <Input id="f-other" value={otherName} maxLength={60} placeholder="e.g. Web design"
                     onChange={(e) => setOther(e.target.value.replace(/\n/g, " "), otherLine)} />
                 </div>
@@ -294,10 +306,10 @@ export function CanvasHelp({ d, set, errors }: SectionProps) {
               </div>
               <div className="grid min-w-0 gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
                 <label htmlFor="f-other-line" className="text-body-md text-ink">What can a customer hire you to do?</label>
-                <p className="text-body-sm text-ink-muted italic">Example: Hang artwork and style a room for a party.</p>
+                <p className="text-body-sm text-ink-muted">Describe the service you offer in your own words.</p>
                 <Textarea id="f-other-line" rows={2} showCount maxLength={SERVICE_LINE_MAX} value={otherLine}
                   placeholder="Describe what a customer can hire you to do."
-                  onChange={(e) => setOther(otherName, e.target.value)} />
+                  onChange={(e) => setOther(otherName, e.target.value.slice(0, SERVICE_LINE_MAX))} />
               </div>
             </div>
             <p className="text-body-sm text-ink-muted">The Between Gigs team reviews new services before they show on your profile.</p>
