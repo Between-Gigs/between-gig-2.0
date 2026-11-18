@@ -87,7 +87,8 @@ try {
     assert.ok(await htmlCta.evaluate(a=>a.getBoundingClientRect().height>=44),"HTML CTA remains at least 44px in the actual email viewport with images blocked");
     const colors=await frame.locator(".e-invite-paper p").first().evaluate(p=>({ink:getComputedStyle(p).color,surface:getComputedStyle(p.closest(".e-invite-paper")).backgroundColor}));
     assert.deepEqual(colors,theme==="dark"?{ink:"rgb(251, 248, 242)",surface:"rgb(19, 58, 40)"}:{ink:"rgb(15, 61, 41)",surface:"rgb(247, 243, 236)"},"HTML foreground and surface change together");
-    assert.equal(await htmlCta.evaluate(a=>getComputedStyle(a).color),"rgb(255, 255, 255)");
+    assert.equal(await htmlCta.evaluate(a=>getComputedStyle(a).color),theme==="dark"?"rgb(15, 61, 41)":"rgb(255, 255, 255)");
+    assert.equal(await htmlCta.evaluate(a=>getComputedStyle(a.closest("td")).backgroundColor),theme==="dark"?"rgb(247, 243, 236)":"rgb(15, 61, 41)");
     await frame.getByText("Welcome to Stage 2: Building our Gigster community!", { exact: true }).waitFor();
     assert.equal(await frame.getByText("Between Gigs · 11766 Wilshire Blvd, Los Angeles, CA 90025", { exact: true }).count(), 1);
     assert.equal(await frame.locator('[data-email-unsubscribe]').getAttribute("aria-disabled"), "true");
