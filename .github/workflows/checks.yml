@@ -56,6 +56,7 @@ jobs:
           node scripts/qa/storyboard-profile.mjs
           node scripts/qa/professionals-copy.mjs
           node scripts/qa/sample-order.mjs
+          node scripts/qa/portfolio-edit-guards.mjs
           node scripts/qa/patti-editor-presentation.mjs
           node scripts/qa/profile-guidance.mjs
           node scripts/qa/gigster-priority.mjs

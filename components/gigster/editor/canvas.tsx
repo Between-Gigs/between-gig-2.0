@@ -404,6 +404,20 @@ export function CanvasSamples({ d, set }: SectionProps) {
   // Video links (Nov 2026) are behind NEXT_PUBLIC_PROFILE_VIDEO_LINKS; with it off the section is photos only, as before.
   const videos = videoLinksEnabled();
   const samples = visibleSamples(d.workSamples ?? [], videos);
+  const samplesKey = JSON.stringify(samples);
+  const [collection, setCollection] = React.useState({ key: samplesKey });
+  if (collection.key !== samplesKey) setCollection({ key: samplesKey });
+  // Collection changes invalidate every pending photo read, including changes from another tab.
+  const photoRevision = React.useRef({ value: 0 });
+  React.useLayoutEffect(() => {
+    const epoch = photoRevision.current;
+    epoch.value++;
+    return () => { epoch.value++; };
+  }, [samplesKey]);
+  const changeSamples = (next: string[]) => {
+    photoRevision.current.value++;
+    set("workSamples")(next);
+  };
   // "menu": choosing Photo or Video link; "link": the link form (for slot `linkAt`, or a new one when null).
   const [adding, setAdding] = React.useState<"menu" | "link" | null>(null);
   const [linkAt, setLinkAt] = React.useState<number | null>(null);
@@ -412,30 +426,36 @@ export function CanvasSamples({ d, set }: SectionProps) {
   const linkValid = linkBase === JSON.stringify(samples);
   const saveLink = (sample: string) => {
     if (!linkValid) { setAdding(null); setLinkAt(null); return; }
-    set("workSamples")(linkAt === null ? [...samples, sample].slice(0, MAX_SAMPLES) : samples.map((x, j) => (j === linkAt ? sample : x)));
+    changeSamples(linkAt === null ? [...samples, sample].slice(0, MAX_SAMPLES) : samples.map((x, j) => (j === linkAt ? sample : x)));
     setAdding(null); setLinkAt(null);
   };
   const input = React.useRef<HTMLInputElement>(null);
   // Which filled slot the next chosen photo replaces; null adds new ones.
-  const replacing = React.useRef<number | null>(null);
+  const photoRequest = React.useRef(0);
+  const replacing = React.useRef<{ at: number | null; revision: number; request: number } | null>(null);
   const [problem, setProblem] = React.useState("");
   const pick = async (files: FileList | null) => {
-    const at = replacing.current; replacing.current = null;
+    // Direct file-input changes add photos too (assistive tooling and the existing upload contract).
+    const target = replacing.current ?? { at: null, revision: ++photoRevision.current.value, request: ++photoRequest.current };
+    replacing.current = null;
+    const { at, revision, request } = target;
     const list = [...(files ?? [])].filter((f) => f.type.startsWith("image/")).slice(0, at === null ? MAX_SAMPLES - samples.length : 1);
     if (!list.length) return;
     try {
       setProblem("");
       const added = await Promise.all(list.map((f) => resize(f)));
-      set("workSamples")(at === null ? [...samples, ...added].slice(0, MAX_SAMPLES) : samples.map((x, j) => (j === at ? added[0] : x)));
-    } catch { setProblem("We couldn't read that photo. Try another one."); }
+      if (request !== photoRequest.current) return;
+      if (revision !== photoRevision.current.value) { setProblem("Your work samples changed. Choose the photo again."); return; }
+      changeSamples(at === null ? [...samples, ...added].slice(0, MAX_SAMPLES) : samples.map((x, j) => (j === at ? added[0] : x)));
+    } catch { if (revision === photoRevision.current.value) setProblem("We couldn't read that photo. Try another one."); }
   };
-  const choose = (at: number | null) => { replacing.current = at; input.current?.click(); };
+  const choose = (at: number | null) => { setProblem(""); replacing.current = { at, revision: ++photoRevision.current.value, request: ++photoRequest.current }; input.current?.click(); };
   // Fit (Justin, 14 Nov 2026): Adjust shows the whole photo with the thumbnail's frame over it; saving stores only
   // the alignment on the photo's link (lib/profile/work-fit.ts), so the lightbox still opens the whole image.
-  const [fitting, setFitting] = React.useState<number | null>(null);
+  const [fitting, setFitting] = React.useState<{ at: number; collection: typeof collection } | null>(null);
   const saveFit = (fit: Fit) => {
-    if (fitting === null) return;
-    set("workSamples")(samples.map((x, j) => (j === fitting ? withFit(x, fit) : x)));
+    if (!fitting || fitting.collection !== collection) return;
+    changeSamples(samples.map((x, j) => (j === fitting.at ? withFit(x, fit) : x)));
     setFitting(null);
   };
   // Order (Justin, 14 Nov 2026): drag a photo by its handle onto another place, or focus the handle and use the arrow
@@ -443,7 +463,7 @@ export function CanvasSamples({ d, set }: SectionProps) {
   const tiles = React.useRef<(HTMLElement | null)[]>([]);
   const [dragging, setDragging] = React.useState<number | null>(null);
   const [said, setSaid] = React.useState("");
-  const move = (from: number, to: number) => { const next = [...samples]; const [x] = next.splice(from, 1); next.splice(to, 0, x); set("workSamples")(next); };
+  const move = (from: number, to: number) => { const next = [...samples]; const [x] = next.splice(from, 1); next.splice(to, 0, x); changeSamples(next); };
   const drag = (e: React.PointerEvent) => {
     if (dragging === null) return;
     const to = tiles.current.findIndex((el, j) => {
@@ -496,11 +516,11 @@ export function CanvasSamples({ d, set }: SectionProps) {
                     </button>
                   )}
                   <span className="absolute inset-x-2 bottom-2 flex justify-end gap-2">
-                    {!clip && (!videos || data.kind === "sample") && <button type="button" aria-label={`Adjust the fit of work sample ${i + 1}`} title="Adjust the fit" onClick={() => setFitting(i)}
+                    {!clip && (!videos || data.kind === "sample") && <button type="button" aria-label={`Adjust the fit of work sample ${i + 1}`} title="Adjust the fit" onClick={() => setFitting({ at: i, collection })}
                       className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><CropIcon aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">Adjust</span></button>}
                     <button type="button" aria-label={clip ? `Edit video link ${i + 1}` : `Replace work sample ${i + 1}`} title={clip ? "Edit the link" : "Replace"} onClick={() => (clip ? (setLinkBase(JSON.stringify(samples)), setLinkAt(i), setAdding("link")) : choose(i))}
                       className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><RefreshCw aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">{clip ? "Edit" : "Replace"}</span></button>
-                    <button type="button" aria-label={`Remove work sample ${i + 1}`} title="Remove" onClick={() => set("workSamples")(samples.filter((_, j) => j !== i))}
+                    <button type="button" aria-label={`Remove work sample ${i + 1}`} title="Remove" onClick={() => changeSamples(samples.filter((_, j) => j !== i))}
                       className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-surface px-3 text-label-md text-ink shadow-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus sm:px-2 xl:px-3"><X aria-hidden="true" className="size-4" /><span className="inline sm:hidden xl:inline">Remove</span></button>
                   </span>
                 </figure>
@@ -526,7 +546,7 @@ export function CanvasSamples({ d, set }: SectionProps) {
       )}
       {videos && adding === "link" && !linkValid && <p role="status" className="text-body-sm text-ink-muted">Your work samples changed. Choose the video again to edit it.</p>}
       {videos && adding === "link" && linkValid && <VideoLinkForm key={`${linkAt ?? "new"}:${linkBase}`} initial={linkAt === null ? undefined : samples[linkAt]} onSave={saveLink} onCancel={() => { setAdding(null); setLinkAt(null); }} toImage={(f) => resize(f, 800)} />}
-      {fitting !== null && samples[fitting] && <FitCropper sample={samples[fitting]} onCancel={() => setFitting(null)} onSave={saveFit} />}
+      {fitting && fitting.collection === collection && samples[fitting.at] && <FitCropper key={`${fitting.at}:${samplesKey}`} sample={samples[fitting.at]} onCancel={() => setFitting(null)} onSave={saveFit} />}
     </section>
   );
 }
