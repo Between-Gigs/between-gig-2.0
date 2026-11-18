@@ -10,6 +10,9 @@ on:
       - 'scripts/qa/stage-two-journey.mjs'
       - 'scripts/qa/owner-email-hub.mjs'
       - 'scripts/qa/email-send-controls.mjs'
+      - 'lib/email-test-retry*'
+      - 'lib/server/*idempotency*'
+      - 'tests/contracts/company-os/**'
       - '.github/workflows/invitation-preview.yml'
 permissions:
   contents: read
@@ -26,6 +29,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm exec vitest run lib/email-test-retry.test.ts lib/server/email-hub.test.ts
       - run: pnpm build
       - run: CHROMIUM_PATH=$(command -v google-chrome) node scripts/qa/invitation.mjs
       - run: CHROMIUM_PATH=$(command -v google-chrome) node scripts/qa/stage-two-journey.mjs

@@ -1,3 +1,4 @@
+import { reusableEmailTest } from "../email-test-retry";
 import { hubEmailKeys, plainRecipient, type EmailHubStatus } from "../email-hub";
 import type { EmailTemplate } from "../data/types";
 import type { Ctx } from "./gigs";
@@ -47,7 +48,8 @@ export async function testHubEmail(ctx: Ctx, args: unknown[]) {
   const input = args[0];
   if (args.length !== 1 || !input || typeof input !== "object" || Array.isArray(input)) throw new CompanyOsError(400, "invalid_test_request");
   const p = input as Record<string, unknown>;
-  if (Object.keys(p).sort().join(",") !== "name,recipient,requestId" || typeof p.name !== "string" || !Object.hasOwn(hubEmailKeys, p.name) || typeof p.requestId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(p.requestId)) throw new CompanyOsError(400, "invalid_test_request");
+  if (Object.keys(p).sort().join(",") !== "name,recipient,requestId,startedAt" || typeof p.name !== "string" || !Object.hasOwn(hubEmailKeys, p.name) || typeof p.requestId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(p.requestId)) throw new CompanyOsError(400, "invalid_test_request");
+  if (!reusableEmailTest({ startedAt: typeof p.startedAt === "number" ? p.startedAt : undefined })) throw new CompanyOsError(409, "test_retry_window_expired");
   const recipient = plainRecipient(p.recipient);
   if (!recipient) throw new CompanyOsError(400, "invalid_recipient");
   const row = choose(await templates(ctx), hubEmailKeys[p.name as EmailTemplate]);
@@ -57,5 +59,5 @@ export async function testHubEmail(ctx: Ctx, args: unknown[]) {
   return (await ctx.cos.call<{ data: unknown }>(ctx.cred, "POST", "/comms/template-tests", {
     templateId: row.id, recipient, mode: "live",
     source: { subject: String(row.data.subject ?? ""), body: String(row.data.body ?? ""), bodyHtml: String(row.data.body_html ?? "") },
-  }, { "Idempotency-Key": `owner-email:${p.requestId}` })).data;
+  }, { "Idempotency-Key": `owner-email_${p.requestId}` })).data;
 }

@@ -16,7 +16,7 @@ describe("owner email hub safety", () => {
   it("requires superadmin before reading template data or attempting a test", async () => {
     const f = setup(false);
     await expect(emailHubStatus(f.ctx, [])).rejects.toMatchObject({ status: 403 });
-    await expect(testHubEmail(f.ctx, [{ name: "approved", recipient: "a@example.org", requestId: id }])).rejects.toMatchObject({ status: 403 });
+    await expect(testHubEmail(f.ctx, [{ name: "approved", recipient: "a@example.org", requestId: id, startedAt: Date.now() }])).rejects.toMatchObject({ status: 403 });
     expect(f.calls.every(c => c.path.endsWith("/me"))).toBe(true);
   });
   it("distinguishes enabled content, unverified approval and configured triggers", async () => {
@@ -40,22 +40,22 @@ describe("owner email hub safety", () => {
   it("refuses lists, display names, injection, extra send/content fields and unsupported templates", async () => {
     for (const recipient of ["a@example.org,b@example.org", "a@example.org\nb@example.org", "Name <a@example.org>", "bad", "a@b", "a@example.org;cc@x.org"]) {
       const f = setup();
-      await expect(testHubEmail(f.ctx, [{ name: "approved", recipient, requestId: id }])).rejects.toMatchObject({ status: 400 });
+      await expect(testHubEmail(f.ctx, [{ name: "approved", recipient, requestId: id, startedAt: Date.now() }])).rejects.toMatchObject({ status: 400 });
       expect(f.calls.some(c => c.method === "POST")).toBe(false);
     }
     for (const extra of [{ mode: "real" }, { html: "x" }, { to: "x@example.org" }]) {
       const f = setup();
-      await expect(testHubEmail(f.ctx, [{ name: "approved", recipient: "a@example.org", requestId: id, ...extra }])).rejects.toMatchObject({ status: 400 });
+      await expect(testHubEmail(f.ctx, [{ name: "approved", recipient: "a@example.org", requestId: id, startedAt: Date.now(), ...extra }])).rejects.toMatchObject({ status: 400 });
     }
     const f = setup();
-    await expect(testHubEmail(f.ctx, [{ name: "diagnostic", recipient: "a@example.org", requestId: id }])).rejects.toMatchObject({ status: 400 });
+    await expect(testHubEmail(f.ctx, [{ name: "diagnostic", recipient: "a@example.org", requestId: id, startedAt: Date.now() }])).rejects.toMatchObject({ status: 400 });
   });
   it("uses the backend copy and durable replay key; never writes contacts, templates or real comms logs", async () => {
     const f = setup();
-    await testHubEmail(f.ctx, [{ name: "approved", recipient: "  A@Example.org  ", requestId: id }]);
+    await testHubEmail(f.ctx, [{ name: "approved", recipient: "  A@Example.org  ", requestId: id, startedAt: Date.now() }]);
     const send = f.calls.at(-1)!;
     expect(send.path).toBe("/t/between-gigs/comms/template-tests");
-    expect(send.headers.get("Idempotency-Key")).toBe(`owner-email:${id}`);
+    expect(send.headers.get("Idempotency-Key")).toBe(`owner-email_${id}`);
     expect(send.body).toEqual({ templateId: id, recipient: "a@example.org", mode: "live", source: { subject: "Published", body: "Sample", bodyHtml: "<p>Sample</p>" } });
     expect(f.calls.filter(c => c.method === "POST").every(c => c.path.endsWith("/query") || c.path.endsWith("/template-tests"))).toBe(true);
   });
