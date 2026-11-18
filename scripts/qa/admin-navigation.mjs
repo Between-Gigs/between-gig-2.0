@@ -47,7 +47,7 @@ try {
       const header = page.locator("header").first();
       const account = header.getByRole("button", { name: /^Account:/ });
       await account.waitFor();
-      const switcher = header.getByRole("button", { name: "Switch experience", exact: true });
+      const switcher = header.getByRole("button", { name: /^Switch experience:/ });
       assert.equal(await switcher.isVisible(), true, `${look}/${width}: persistent workspace switch`);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${look}/${width}/${route}: no overflow`);
       const mainLinks = header.getByRole("navigation", { name: "Main", exact: true });
@@ -62,14 +62,14 @@ try {
       await accountMenu.getByRole("menuitem", { name: "Log out", exact: true }).waitFor();
       await closeMenu(page, account, accountMenu);
       const experienceMenu = await openMenu(page, switcher);
-      for (const name of [/Gigster Experience/, /Owner Experience/, /Hub ·/]) assert.equal(await experienceMenu.locator('[role^="menuitem"]').filter({ hasText: name }).isVisible(), true);
+      for (const name of [/Gigster Mode/, /Owner Mode/, /Developer Mode/]) assert.equal(await experienceMenu.locator('[role^="menuitem"]').filter({ hasText: name }).isVisible(), true);
       await closeMenu(page, switcher, experienceMenu);
       if (route === "/profile/canvas/" && width >= 1024) assert.deepEqual(await header.getByRole("navigation", { name: "Main", exact: true }).getByRole("link").allTextContents(), ["My profile", "Edit profile"]);
       assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).session.role), "owner", "navigation keeps authority");
       if (route === "/owners/") {
         if ([320, 1440].includes(width)) await page.screenshot({ path: `deliverables/admin-navigation/owner-${look}-${width}-${theme}.png` });
         const navigationMenu = await openMenu(page, switcher);
-        await navigationMenu.getByRole("menuitem", { name: "Gigster Experience · edit my profile", exact: true }).click();
+        await navigationMenu.getByRole("menuitemradio", { name: "Gigster Mode", exact: true }).click();
         await page.waitForURL("**/profile/canvas/");
         assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("bg2-sample-v2")).session.role), "owner", "switching experience preserves owner authority");
       }

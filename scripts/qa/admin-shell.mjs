@@ -62,6 +62,8 @@ try {
       // Owner UI persists across dashboard and preview navigation without duplicate frames or authority changes.
       await page.evaluate(() => window.bgSample.signInAs("owner")); await page.goto(`${url}/owners/`);
       await page.locator('[data-admin-shell="owner"]').waitFor();
+      await page.getByRole("button", { name: "Switch experience" }).click();
+      await page.getByRole("menuitemradio", { name: "Developer Mode", exact: true }).click();
       await page.evaluate(() => { window.qaOwnerNode = document.querySelector("[data-admin-shell]"); });
       if (width < 1024) await menu.click();
       let ownerNav = width < 1024 ? page.getByRole("dialog", { name: "Owner workspace", exact: true }) : page.getByRole("navigation", { name: "Owner workspace", exact: true });
@@ -76,9 +78,11 @@ try {
       assert.equal(await frame.locator("header").count(), 1); assert.equal(await frame.locator("footer").count(), 1);
       assert.equal(await frame.locator("main").count(), 1); assert.equal(await page.locator("main").count(), 1);
       assert.equal(await frame.locator('iframe[data-admin-page-preview]').count(), 0, "no recursive admin frame");
-      const switcher = frame.getByRole("switch", { name: "Night mode", exact: true });
+      await frame.getByRole("button", { name: /^Account:/ }).click();
+      await frame.getByRole("menuitem", { name: "My Settings", exact: true }).click();
+      const switcher = frame.getByRole("dialog", { name: "My Settings", exact: true }).getByRole("switch", { name: "Night mode", exact: true });
       const old = await switcher.getAttribute("aria-checked"); await switcher.click();
-      await page.waitForFunction(old => document.querySelector('iframe[data-admin-page-preview]')?.contentDocument?.querySelector('[role="switch"]')?.getAttribute("aria-checked") !== old, old);
+      await page.waitForFunction(old => document.querySelector('iframe[data-admin-page-preview]')?.contentDocument?.querySelector('dialog [role="switch"]')?.getAttribute("aria-checked") !== old, old);
       const standalone = page.getByRole("link", { name: "Open standalone page", exact: true });
       const standaloneHref = await standalone.getAttribute("href"); assert.ok(standaloneHref.includes("preview=standalone"));
       await page.screenshot({ path: `deliverables/admin-shell/draft-${width}-${theme}.png`, fullPage: true });

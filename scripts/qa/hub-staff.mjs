@@ -68,7 +68,7 @@ try {
   await page.goto(base + "/owners/");
   await page.getByRole("button", { name: "Switch experience" }).waitFor();
   await page.getByRole("button", { name: "Switch experience" }).click();
-  await page.getByRole("menuitem", { name: /Gigster Experience/ }).click();
+  await page.getByRole("menuitemradio", { name: /Gigster Mode/ }).click();
   await page.getByRole("button", { name: "Submit for review", exact: true }).first().waitFor();
   for (const width of [390, 420, 768]) {
     await page.setViewportSize({ width, height: 900 });

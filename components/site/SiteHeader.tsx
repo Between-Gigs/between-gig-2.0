@@ -1,6 +1,6 @@
 "use client";
-import { Avatar, IconButton, Logo, Menu, ThemeToggle, cx, type MenuEntry } from "@ds/components";
-import { LogOut, Menu as MenuIcon, PencilLine, UserRound } from "lucide-react";
+import { Avatar, IconButton, Logo, Menu, cx, type MenuEntry } from "@ds/components";
+import { LogOut, Menu as MenuIcon, PencilLine, Settings, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
@@ -9,6 +9,8 @@ import { data } from "@/lib/data";
 import { asset } from "@/lib/site";
 import { useSession } from "@/lib/session";
 
+import { MySettings } from "./MySettings";
+import { PersonalThemeToggle, useNavigationMode, usePersonalPreferences } from "./PersonalPreferences";
 import { LookSwitcher } from "./LookSwitcher";
 import { ExperienceSwitcher } from "./ExperienceSwitcher";
 
@@ -22,8 +24,10 @@ interface NavLink { href: string; label: string }
 export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNav?: () => void } = {}) {
   const pathname = usePathname();
   const { session, loading } = useSession();
+  const mode = useNavigationMode();
+  const { preferences } = usePersonalPreferences();
 
-  const links: NavLink[] = session
+  const links: NavLink[] = session && mode === "gigster"
     ? [{ href: "/profile/", label: "My profile" }, { href: "/profile/canvas/", label: "Edit profile" }]
     : [];
 
@@ -65,8 +69,8 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
         <div className={cx("flex flex-1 items-center justify-end gap-1 sm:gap-2", links.length === 0 ? (session || loading ? "swiss:md:col-span-9" : "swiss:md:col-span-3") : "swiss:md:col-span-4")}>
           <ExperienceSwitcher />
           {/* The theme is picked (Green Room). Only owners/admins, and the Hub, keep the Theme menu for reviewing alternatives. */}
-          {(session?.role === "owner" || /^\/(hub|preview)(\/|$)/.test(pathname)) && <><span className="hidden sm:contents"><LookSwitcher /></span><span className="sm:hidden"><LookSwitcher compact /></span></>}
-          <ThemeToggle size="sm" showLabel={false} className="pr-0.5!" />
+          {preferences.showThemeChooser && <><span className="hidden sm:contents"><LookSwitcher /></span><span className="sm:hidden"><LookSwitcher compact /></span></>}
+          {(preferences.showThemeChooser || (!session && !app)) && <PersonalThemeToggle />}
           {loading ? <span className="h-11 w-11" aria-hidden="true" /> : session ? <AccountMenu /> : app ? null : (
             // Two clear doors (Justin, 14 Nov 2026): a quiet Sign in and a filled Sign up, the common pattern for
             // sign-up-led sites. Sign up steps aside on the sign-up page itself.
@@ -97,6 +101,7 @@ export function AccountMenu() {
   const auth = useAuthActions();
   const router = useRouter();
   const pathname = usePathname();
+  const [settings, setSettings] = React.useState(false);
   const signOut = async () => {
     await auth.signOut();
     // Clerk's sign-out navigates by itself (to /login/?signedOut=1).
@@ -109,13 +114,14 @@ export function AccountMenu() {
     { heading: session.role === "owner" ? "Signed in as owner" : "Signed in" },
     { label: "My profile", icon: <UserRound />, onSelect: () => router.push("/profile/") },
     { label: "Edit profile", icon: <PencilLine />, onSelect: () => router.push("/profile/canvas/") },
+    { label: "My Settings", icon: <Settings />, onSelect: () => setSettings(true) },
     "separator",
     { label: "Log out", icon: <LogOut />, onSelect: () => void signOut() },
   ] : [];
 
   if (!session) return null;
   return (
-    <Menu align="end" items={menu} className="max-sm:max-w-72"
+    <><Menu align="end" items={menu} className="max-sm:max-w-72"
       header={
         <div className="flex items-center gap-3 px-3 pt-2 pb-3">
           <Avatar name={displayName} src={photo} size="lg" className="swiss:rounded-none" />
@@ -128,7 +134,7 @@ export function AccountMenu() {
           className="grid size-11 place-items-center rounded-full ring-2 ring-line transition-shadow duration-fast hover:ring-ink-brand aria-expanded:ring-ink-brand swiss:rounded-none swiss:ring-0 swiss:hover:ring-2 swiss:hover:ring-line-strong swiss:aria-expanded:ring-4 swiss:aria-expanded:ring-line-strong">
           <Avatar name={displayName} src={photo} size="md" className="swiss:size-11 swiss:rounded-none swiss:text-label-md" />
         </button>
-      } />
+      } />{settings && <MySettings open={settings} onClose={() => setSettings(false)} />}</>
   );
 }
 

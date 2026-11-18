@@ -1,12 +1,13 @@
 "use client";
 import { useLook } from "@/components/site/LookSync";
-import { Button, Drawer, IconButton, Input, Logo, ThemeToggle, cx } from "@ds/components";
+import { Button, Drawer, IconButton, Input, Logo, cx } from "@ds/components";
 import { ChevronDown, ChevronRight, Image as ImageIcon, Palette, Route, Ellipsis, Inbox, LayoutDashboard, ListChecks, Mail, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Search, Users, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import { data, type DashboardSummary } from "@/lib/data";
 import { LookSwitcher } from "@/components/site/LookSwitcher";
+import { PersonalThemeToggle, useNavigationMode, usePersonalPreferences } from "@/components/site/PersonalPreferences";
 import { ExperienceSwitcher } from "@/components/site/ExperienceSwitcher";
 import { AccountMenu, SiteHeader } from "@/components/site/SiteHeader";
 import { Icon3D } from "@/components/ui/Icon3D";
@@ -28,7 +29,8 @@ const previewItem = (path: string, label: string, icon: LucideIcon, art: Icon3DN
 
 /** The owners' sections, grouped by the job: see the day, look after Gigsters, talk to people. */
 const sections: { title: string; items: Item[] }[] = [
-  { title: "Overview", items: [{ href: "/owners/", label: "Dashboard", icon: LayoutDashboard, art: "house", exact: true }, { href: data.kind === "live" ? "/hub/" : basePath === "/hub" ? "/" : "/hub/", label: "Hub", icon: LayoutDashboard, art: "house", fullPage: data.kind === "live", exact: true }] },
+  { title: "Overview", items: [{ href: "/owners/", label: "Dashboard", icon: LayoutDashboard, art: "house", exact: true }] },
+  { title: "Developer", items: [{ href: data.kind === "live" ? "/owners/developer/" : basePath === "/hub" ? "/" : "/hub/", label: "Hub", icon: LayoutDashboard, art: "house", exact: true }] },
   {
     title: "Gigsters",
     items: [
@@ -57,10 +59,9 @@ const SectionContext = React.createContext<{ closed: string[]; change: (closed: 
 const ModeContext = React.createContext<"owner" | "preview">("owner");
 function useSections() {
   const preview = React.useContext(ModeContext) === "preview";
-  if (!preview) return sections;
-  return sections.filter(group => ["Overview", "Previews", "Studio"].includes(group.title)).map(group => group.title !== "Overview" ? group : {
-    ...group, items: group.items.map(item => item.label !== "Dashboard" ? item : { ...item, hint: "Owner access required", fullPage: basePath === "/hub" }),
-  });
+  const navigation = useNavigationMode();
+  if (!preview) return navigation === "owner" ? sections.filter(group => ["Overview", "Gigsters"].includes(group.title)) : sections;
+  return sections.filter(group => ["Developer", "Previews", "Studio"].includes(group.title));
 }
 
 function countsFrom(d: DashboardSummary): Record<CountKey, number> {
@@ -99,6 +100,7 @@ export function OwnerShell({ children, section, fit = false }: { children: React
  */
 export function OwnerFrame({ children, section: fixed, fit: fixedFit = false, mode = "owner" }: { children: React.ReactNode; section?: string; fit?: boolean; mode?: "owner" | "preview" }) {
   const look = useLook();
+  const navigationMode = useNavigationMode();
   const brand = look !== "swiss";
   const modern = look === "modern";
   const [drawer, setDrawer] = React.useState(false);
@@ -155,7 +157,7 @@ export function OwnerFrame({ children, section: fixed, fit: fixedFit = false, mo
 
   return (
     <ModeContext.Provider value={mode}><SectionContext.Provider value={{ closed: closedSections, change: changeSections }}><FrameContext.Provider value={ctx}>
-      <div data-admin-shell={mode} data-modern-owner={modern ? "" : undefined} className="flex h-dvh flex-col bg-bg text-ink max-sm:[&>header>div>div]:gap-1">
+      <div data-navigation-mode={navigationMode} data-admin-shell={mode} data-modern-owner={modern ? "" : undefined} className="flex h-dvh flex-col bg-bg text-ink max-sm:[&>header>div>div]:gap-1">
         {modern ? <ModernOwnerToolbar onOpenNav={() => setDrawer(true)} /> : <SiteHeader app onOpenNav={brand || mode === "preview" ? () => setDrawer(true) : undefined} />}
         <div className="flex min-h-0 flex-1">
           <nav aria-label={mode === "owner" ? "Owner workspace" : "Preview workspace"} className={cx("hidden embedded:hidden! shrink-0 flex-col border-r border-line lg:flex nav-collapsed:w-18", brand ? "w-66 bg-tint-sand" : "w-60 bg-bg")}>
@@ -217,12 +219,13 @@ function useFind(onDone?: () => void) {
 function ModernOwnerToolbar({ onOpenNav }: { onOpenNav: () => void }) {
   const { q, setQ, find } = useFind();
   const preview = React.useContext(ModeContext) === "preview";
+  const { preferences } = usePersonalPreferences();
   return <header className="mo-toolbar embedded:hidden! max-sm:gap-1!">
     <IconButton label="Open owner menu" variant="ghost" onClick={onOpenNav} icon={<MenuIcon />} className="lg:hidden" />
     <Link href="/" aria-label="Between Gigs home" className="mo-logo min-w-0"><Logo height={24} className="hidden max-w-full sm:block" /><Logo layout="mark" height={24} className="sm:hidden" /></Link>
     {!preview && <form role="search" onSubmit={find}><Input type="search" size="sm" aria-label="Search people" placeholder="Search people by name or email…" start={<Search />} value={q} onChange={event => setQ(event.target.value)} /></form>}
     <time>{new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</time>
-    <ExperienceSwitcher /><LookSwitcher compact /><ThemeToggle size="sm" showLabel={false} /><AccountMenu />
+    <ExperienceSwitcher />{preferences.showThemeChooser && <><LookSwitcher compact /><PersonalThemeToggle /></>}<AccountMenu />
   </header>;
 }
 

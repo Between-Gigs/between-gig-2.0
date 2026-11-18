@@ -3,11 +3,14 @@ import { Menu } from "@ds/components";
 import { Palette } from "lucide-react";
 import { lookIds, looks } from "@/lib/look";
 import { asset } from "@/lib/site";
-import { selectLook, setUnstyled, useLook, useUnstyled } from "./LookSync";
+import { usePersonalLook, usePersonalUnstyled } from "./PersonalPreferences";
+import { useLook, useUnstyled } from "./LookSync";
 
 /** Changes the design in place, independently of the Day/Night switch. */
 export function LookSwitcher({ compact = false }: { compact?: boolean } = {}) {
   const current = useLook();
+  const selectLook = usePersonalLook();
+  const setUnstyled = usePersonalUnstyled();
   const plain = useUnstyled();
   return (
     <Menu align="end"

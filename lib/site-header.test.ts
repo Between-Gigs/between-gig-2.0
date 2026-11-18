@@ -79,12 +79,12 @@ describe("public header authentication states", () => {
     expect(html).toContain('aria-label="Account: Test"');
     expect(html).not.toContain(">Sign in</a>");
   });
-  it.each([false, true])("gives owners Gigster profile links and both header controls (app=%s)", app => {
+  it.each([false, true])("gives owners the mode switch and account controls (app=%s)", app => {
     state.session = { role: "owner", name: "Owner", email: "owner@example.com" };
+    state.pathname = "/owners/";
     const html = render({ app });
-    expect(html).toContain(">My profile</a>");
-    expect(html).toContain(">Edit profile</a>");
-    expect(html).toContain('aria-label="Switch experience"');
+    expect(html).not.toContain('aria-label="Main"');
+    expect(html).toContain('aria-label="Switch experience:');
     expect(html).not.toContain('class="md:hidden"');
     expect(html).toContain('aria-label="Account: Owner"');
     expect(html).not.toContain(">Sign in</a>");
@@ -92,7 +92,7 @@ describe("public header authentication states", () => {
   it("keeps signed-out preview chrome free of account and sign-in controls", () => {
     const html = render({ app: true });
     expect(html).not.toContain(">Sign in</a>");
-    expect(html).not.toContain('aria-label="Switch experience"');
+    expect(html).not.toContain('aria-label="Switch experience:');
     expect(html).not.toContain('aria-label="Account:');
   });
 });
