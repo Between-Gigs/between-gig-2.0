@@ -1,12 +1,12 @@
 "use client";
 import { Avatar, IconButton, Logo, Menu, ThemeToggle, cx, type MenuEntry } from "@ds/components";
-import { LogOut, Menu as MenuIcon, PencilLine, UserRound, Users } from "lucide-react";
+import { LogOut, Menu as MenuIcon, PencilLine, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import { useAuthActions } from "@/lib/auth/context";
 import { data } from "@/lib/data";
-import { asset, basePath } from "@/lib/site";
+import { asset } from "@/lib/site";
 import { useSession } from "@/lib/session";
 
 import { LookSwitcher } from "./LookSwitcher";
@@ -16,52 +16,29 @@ interface NavLink { href: string; label: string }
 
 /**
  * The public site's top bar: logo, the links for whoever is signed in, theme, account. In the owners'
- * workspace (`app`) it spans the full width, holds only the theme switch, and the sidebar takes over the
- * links and the account; below lg a menu button opens the sidebar drawer.
+ * workspace (`app`) it spans the full width; below lg a menu button opens the sidebar drawer.
+ * Owners keep their experience switch and the same account control across both layouts.
  */
 export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNav?: () => void } = {}) {
   const pathname = usePathname();
-  const router = useRouter();
   const { session, loading } = useSession();
-  const auth = useAuthActions();
-  const navigate = (href: string) => { if (data.kind === "live" && href === "/hub/") window.location.assign(href); else router.push(href); };
 
-  const links: NavLink[] = (app ? [] : session?.role === "owner"
-    ? [{ href: "/profile/canvas/", label: "Gigster Experience" }, { href: "/owners/", label: "Owner Experience" }, { href: "/hub/", label: "Hub" }]
-    : session?.role === "gigster"
-      ? [{ href: "/profile/", label: "My profile" }, { href: "/profile/canvas/", label: "Edit profile" }]
-      : []).map(link => ({ ...link, href: basePath === "/hub" && link.href === "/hub/" ? "/" : link.href }));
+  const links: NavLink[] = session
+    ? [{ href: "/profile/", label: "My profile" }, { href: "/profile/canvas/", label: "Edit profile" }]
+    : [];
 
-  // Only the most specific matching link is current: on /profile/canvas/ that's "Edit profile", not "My profile";
-  // on /owners/review/ it's "Review", not "Dashboard".
+  // Only the most specific matching link is current: on /profile/canvas/ that's "Edit profile", not "My profile".
   const raw = pathname.endsWith("/") ? pathname : `${pathname}/`;
   // The step-by-step questionnaire is the other way to edit it.
   const path = raw.startsWith("/profile/edit/") ? "/profile/canvas/" : raw;
   const best = links.map((l) => l.href).filter((h) => path.startsWith(h)).sort((a, b) => b.length - a.length)[0];
   const current = (href: string) => href === best;
 
-  const signOut = async () => {
-    await auth.signOut();
-    // Clerk's sign-out navigates by itself (to /login/?signedOut=1).
-    if (auth.provider === "sample") router.push("/login/?signedOut=1");
-  };
-
-  const displayName = session ? (session.name || session.email).replace(/\s*\(.*\)$/, "") : "";
-  const photo = useOwnPhoto(session?.role === "gigster" ? session.personId ?? undefined : undefined, pathname);
-  const menu: MenuEntry[] = session ? [
-    { heading: session.role === "owner" ? "Signed in as owner" : "Signed in" },
-    ...(session.role === "owner"
-      ? links.map((l) => ({ label: l.label, icon: l.href === "/owners/people/" ? <Users /> : undefined, checked: current(l.href) || undefined, onSelect: () => navigate(l.href) }))
-      : [{ label: "My profile", icon: <UserRound />, onSelect: () => router.push("/profile/") }, { label: "Edit profile", icon: <PencilLine />, onSelect: () => router.push("/profile/canvas/") }]),
-    "separator",
-    { label: "Log out", icon: <LogOut />, onSelect: () => void signOut() },
-  ] : [];
-
   return (
     // Swiss (product screens): the same row on a 12-column grid from md (logo · links · account), closed by a 4px ink rule.
     <header className={cx("sticky top-0 embedded:hidden! z-sticky border-b border-line shadow-md" /* a clear drop shadow (client, 13 Nov 2026) */, app ? "bg-surface" : "bg-bg swiss:border-b-0 swiss:shadow-none")}>
       <div className={cx("mx-auto px-4 sm:px-6", app ? "max-w-none lg:px-5" : "max-w-7xl")}>
-      <div className={cx("flex h-16 items-center gap-2 sm:gap-4 lg:h-20", app ? "h-16! gap-2" : "swiss:border-b-4 swiss:border-line-strong swiss:md:grid swiss:md:grid-cols-12 swiss:md:gap-x-6")}>
+      <div className={cx("flex h-16 items-center gap-2 sm:gap-4 lg:h-20", app ? "h-16! gap-2" : session?.role === "owner" ? "swiss:border-b-4 swiss:border-line-strong swiss:lg:grid swiss:lg:grid-cols-12 swiss:lg:gap-x-6" : "swiss:border-b-4 swiss:border-line-strong swiss:md:grid swiss:md:grid-cols-12 swiss:md:gap-x-6")}>
         {onOpenNav && <IconButton label="Open owner menu" variant="ghost" icon={<MenuIcon />} onClick={onOpenNav} className="lg:hidden" />}
         <div className="flex flex-1 items-center swiss:md:col-span-3">
           <Link href="/" aria-label="Between Gigs home" className="inline-flex min-h-11 shrink-0 items-center rounded-md"><Logo height={28} className="hidden sm:block" /><Logo layout="mark" height={28} className="sm:hidden" /></Link>
@@ -74,9 +51,9 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
         )}
         {/* Airbnb-style: the page links sit in the middle, the current one underlined. */}
         {links.length > 0 && (
-          <nav aria-label="Main" className={cx("hidden items-center gap-2 swiss:md:gap-8", links.length > 3 ? "lg:flex swiss:lg:col-span-6 swiss:lg:gap-5" : "md:flex swiss:md:col-span-5")}>
+          <nav aria-label="Main" className={cx("hidden items-center gap-2 swiss:md:gap-8", session?.role === "owner" ? "lg:flex swiss:lg:col-span-5" : "md:flex swiss:md:col-span-5")}>
             {links.map((l) => (
-              <Link key={l.href} href={l.href} onClick={event => { if (data.kind === "live" && l.href === "/hub/") { event.preventDefault(); window.location.assign(l.href); } }} aria-current={current(l.href) ? "page" : undefined}
+              <Link key={l.href} href={l.href} aria-current={current(l.href) ? "page" : undefined}
                 className={cx("relative inline-flex min-h-11 items-center px-3 text-label-md transition-colors duration-fast",
                   "swiss:px-0 swiss:font-display swiss:font-semibold swiss:text-ink swiss:underline-offset-8",
                   current(l.href) ? "text-ink after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:rounded-full after:bg-ink friendly:rounded-full friendly:bg-surface-selected friendly:after:hidden swiss:underline swiss:decoration-4 swiss:after:hidden" : "text-ink-muted hover:text-ink friendly:rounded-full friendly:hover:bg-surface-hover swiss:decoration-2 swiss:hover:underline")}>
@@ -85,27 +62,12 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
             ))}
           </nav>
         )}
-        <div className={cx("flex flex-1 items-center justify-end gap-1 sm:gap-2", links.length > 3 ? "swiss:md:col-span-9 swiss:lg:col-span-3" : links.length === 0 ? (session || loading ? "swiss:md:col-span-9" : "swiss:md:col-span-3") : "swiss:md:col-span-4")}>
-          <ExperienceSwitcher className={app ? undefined : "md:hidden"} />
+        <div className={cx("flex flex-1 items-center justify-end gap-1 sm:gap-2", links.length === 0 ? (session || loading ? "swiss:md:col-span-9" : "swiss:md:col-span-3") : "swiss:md:col-span-4")}>
+          <ExperienceSwitcher />
           {/* The theme is picked (Green Room). Only owners/admins, and the Hub, keep the Theme menu for reviewing alternatives. */}
           {(session?.role === "owner" || /^\/(hub|preview)(\/|$)/.test(pathname)) && <><span className="hidden sm:contents"><LookSwitcher /></span><span className="sm:hidden"><LookSwitcher compact /></span></>}
           <ThemeToggle size="sm" showLabel={false} className="pr-0.5!" />
-          {app ? null : loading ? <span className="h-11 w-20" aria-hidden="true" /> : session ? (
-            <Menu align="end" items={menu}
-              header={
-                <div className="flex items-center gap-3 px-3 pt-2 pb-3">
-                  <Avatar name={displayName} src={photo} size="lg" className="swiss:rounded-none" />
-                  <div className="min-w-0"><p className="truncate text-label-md text-ink">{session.name || "Gigster"}</p><p className="truncate text-body-sm text-ink-muted">{session.email}</p></div>
-                </div>
-              }
-              trigger={
-                // The avatar is the account button: a ring that brightens on hover and while the menu is open.
-                <button type="button" aria-label={`Account: ${session.name || session.email}`}
-                  className="grid size-11 place-items-center rounded-full ring-2 ring-line transition-shadow duration-fast hover:ring-ink-brand aria-expanded:ring-ink-brand swiss:rounded-none swiss:ring-0 swiss:hover:ring-2 swiss:hover:ring-line-strong swiss:aria-expanded:ring-4 swiss:aria-expanded:ring-line-strong">
-                  <Avatar name={displayName} src={photo} size="md" className="swiss:size-11 swiss:rounded-none swiss:text-label-md" />
-                </button>
-              } />
-          ) : (
+          {loading ? <span className="h-11 w-11" aria-hidden="true" /> : session ? <AccountMenu /> : app ? null : (
             // Two clear doors (Justin, 14 Nov 2026): a quiet Sign in and a filled Sign up, the common pattern for
             // sign-up-led sites. Sign up steps aside on the sign-up page itself.
             <>
@@ -126,6 +88,47 @@ export function SiteHeader({ app = false, onOpenNav }: { app?: boolean; onOpenNa
         </p>
       )}
     </header>
+  );
+}
+
+/** One account control for public and owner navigation; workspace changes stay in ExperienceSwitcher. */
+export function AccountMenu() {
+  const { session } = useSession();
+  const auth = useAuthActions();
+  const router = useRouter();
+  const pathname = usePathname();
+  const signOut = async () => {
+    await auth.signOut();
+    // Clerk's sign-out navigates by itself (to /login/?signedOut=1).
+    if (auth.provider === "sample") router.push("/login/?signedOut=1");
+  };
+
+  const displayName = session ? (session.name || session.email).replace(/\s*\(.*\)$/, "") : "";
+  const photo = useOwnPhoto(session?.personId ?? undefined, pathname);
+  const menu: MenuEntry[] = session ? [
+    { heading: session.role === "owner" ? "Signed in as owner" : "Signed in" },
+    { label: "My profile", icon: <UserRound />, onSelect: () => router.push("/profile/") },
+    { label: "Edit profile", icon: <PencilLine />, onSelect: () => router.push("/profile/canvas/") },
+    "separator",
+    { label: "Log out", icon: <LogOut />, onSelect: () => void signOut() },
+  ] : [];
+
+  if (!session) return null;
+  return (
+    <Menu align="end" items={menu} className="max-sm:max-w-72"
+      header={
+        <div className="flex items-center gap-3 px-3 pt-2 pb-3">
+          <Avatar name={displayName} src={photo} size="lg" className="swiss:rounded-none" />
+          <div className="min-w-0 flex-1"><p className="truncate text-label-md text-ink">{session.name || "Gigster"}</p><p className="truncate text-body-sm text-ink-muted">{session.email}</p></div>
+        </div>
+      }
+      trigger={
+        // The avatar is the account button: a ring that brightens on hover and while the menu is open.
+        <button type="button" aria-label={`Account: ${session.name || session.email}`}
+          className="grid size-11 place-items-center rounded-full ring-2 ring-line transition-shadow duration-fast hover:ring-ink-brand aria-expanded:ring-ink-brand swiss:rounded-none swiss:ring-0 swiss:hover:ring-2 swiss:hover:ring-line-strong swiss:aria-expanded:ring-4 swiss:aria-expanded:ring-line-strong">
+          <Avatar name={displayName} src={photo} size="md" className="swiss:size-11 swiss:rounded-none swiss:text-label-md" />
+        </button>
+      } />
   );
 }
 
