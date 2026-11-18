@@ -24,7 +24,7 @@ export const INTERNAL = [
  */
 export const LIVE_PAGES = [
   "/", "/join", "/licensing-insurance", "/login", "/owners", "/owners/people", "/owners/people/[id]", "/owners/review",
-  "/owners/waitlist", "/owners/staff", "/owners/emails", "/owners/developer", "/p", "/p/[slug]", "/preview-access", "/privacy", "/professionals", "/profile", "/profile/canvas", "/profile/edit", "/profile/submitted",
+  "/owners/waitlist", "/owners/staff", "/owners/product-development", "/owners/emails", "/owners/developer", "/p", "/p/[slug]", "/preview-access", "/privacy", "/professionals", "/profile", "/profile/canvas", "/profile/edit", "/profile/submitted",
   "/provider-standards", "/storyboard", "/terms",
 ];
 
@@ -32,7 +32,7 @@ export const LIVE_PAGES = [
 export const LIVE_ROUTES = [
   "/", "/professionals/", "/storyboard/", "/privacy/", "/terms/", "/licensing-insurance/", "/provider-standards/",
   "/join/", "/login/", "/profile/canvas/", "/profile/edit/", "/profile/submitted/", "/profile/", "/p/", "/p/maya/",
-  "/owners/", "/owners/review/", "/owners/people/", "/owners/people/maya/", "/owners/waitlist/", "/owners/staff/", "/owners/emails/", "/owners/developer/", "/preview-access/",
+  "/owners/", "/owners/review/", "/owners/people/", "/owners/people/maya/", "/owners/waitlist/", "/owners/staff/", "/owners/product-development/", "/owners/emails/", "/owners/developer/", "/preview-access/",
 ];
 
 /** SEO metadata routes (app/robots.ts, app/sitemap.ts), live on every build. */

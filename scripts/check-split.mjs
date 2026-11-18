@@ -17,7 +17,7 @@ export const SITE_ROUTES = [
 /** The dashboards: signed-in Gigsters (profile) and owners. */
 export const DASHBOARD_ROUTES = [
   "/owners/emails", "/owners/developer",
-  "/owners", "/owners/people", "/owners/people/[id]", "/owners/review", "/owners/waitlist", "/owners/staff", "/profile", "/profile/canvas", "/profile/edit", "/profile/submitted",
+  "/owners", "/owners/people", "/owners/people/[id]", "/owners/review", "/owners/waitlist", "/owners/staff", "/owners/product-development", "/profile", "/profile/canvas", "/profile/edit", "/profile/submitted",
 ];
 /** Client modules only the dashboards may load. The public profile's own views (PublicProfile, ProfileView) are the site's. */
 export const DASHBOARD_MODULES = [
@@ -50,7 +50,7 @@ export function splitProblems(pages, { live, expect = [] }) {
       problems.push(`${p.route} has no dashboard marker in its chunks (lib/split-area.ts)`);
     }
     if (live) {
-      const leaked = p.chunks.find((c) => c.text.includes(SAMPLE_MARKER) || c.text.includes(SEED_MARKER) || c.text.includes("bg2-staff-sample-v1"));
+      const leaked = p.chunks.find((c) => c.text.includes(SAMPLE_MARKER) || c.text.includes(SEED_MARKER) || c.text.includes("bg2-staff-sample-v1") || c.text.includes("Example: review an onboarding screen"));
       if (leaked) problems.push(`${p.route} ships the sample data (${leaked.name})`);
     }
   }

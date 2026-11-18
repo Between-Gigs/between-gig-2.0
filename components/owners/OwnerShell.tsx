@@ -1,7 +1,7 @@
 "use client";
 import { useLook } from "@/components/site/LookSync";
 import { Button, Drawer, IconButton, Input, Logo, cx } from "@ds/components";
-import { PenLine, Shapes, Sparkles, ChevronDown, ChevronRight, Image as ImageIcon, Palette, Route, Ellipsis, Inbox, LayoutDashboard, ListChecks, Mail, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Search, Users, X, type LucideIcon } from "lucide-react";
+import { ClipboardList, PenLine, Shapes, Sparkles, ChevronDown, ChevronRight, Image as ImageIcon, Palette, Route, Ellipsis, Inbox, LayoutDashboard, ListChecks, Mail, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Search, Users, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
@@ -26,7 +26,7 @@ markArea("bg-split:dashboard");
 export const COLLAPSED_KEY = "bg2-owner-nav-collapsed";
 
 type CountKey = "review" | "people" | "waitlist";
-interface Item { id: NavigationItemId; href: string; label: string; icon: LucideIcon; art: Icon3DName; fullPage?: boolean; exact?: boolean; count?: CountKey; hint?: string; short?: string; disabled?: boolean }
+interface Item { id: NavigationItemId; href: string; label: string; icon: LucideIcon; art: Icon3DName; fullPage?: boolean; exact?: boolean; count?: CountKey; hint?: string; short?: string; disabled?: boolean; wrap?: boolean }
 
 const previewItem = (path: string, icon: LucideIcon, art: Icon3DName): Omit<Item, "id" | "label"> => ({ ...ownerPreviewLink(data.kind, path), icon, art });
 
@@ -44,6 +44,7 @@ const destinations: Record<OwnerItemId, Omit<Item, "id" | "label">> = {
   email_previews: { ...ownerEmailPreview(data.kind), icon: Mail, art: "envelope" },
   forms: previewItem("/preview/forms/", ListChecks, "clipboard"),
   funnels: previewItem("/preview/funnels/", Route, "film_frames"),
+  product_development: { href: "/owners/product-development/", icon: ClipboardList, art: "clipboard", wrap: true },
   design_system: previewItem("/preview/design-system/", Palette, "artist_palette"),
   wallpapers: previewItem("/preview/wallpapers/", ImageIcon, "framed_picture"),
   media_library: { href: "#media-library", icon: ImageIcon, art: "package", disabled: true },
@@ -435,7 +436,7 @@ function NavLink({ item: i, count, active, attention, drawer = false, onNavigate
         {attention && <span aria-hidden="true" className={cx("absolute -top-1 -right-1 hidden size-2.5 rounded-full border-2 border-tint-sand bg-ink", !drawer && "nav-collapsed:block")} />}
       </span>
       <span aria-hidden="true" className={cx("grid min-w-0 flex-1", !drawer && "nav-collapsed:hidden")}>
-        <span className="truncate text-body-md font-bold">{i.label}</span>
+        <span className={cx("text-body-md font-bold", !i.wrap && "truncate")}>{i.label}</span>
         {/* Says what the number counts, so 476 on the Waitlist isn't read as everyone on it. */}
         {i.hint && <span className="truncate text-caption text-ink-subtle">{i.hint}</span>}
       </span>
@@ -461,7 +462,7 @@ function NavLink({ item: i, count, active, attention, drawer = false, onNavigate
         {attention && <span aria-hidden="true" className={cx("absolute -top-1 -right-1.5 hidden size-2.5 rounded-full bg-ink-brand", !drawer && "nav-collapsed:block")} />}
       </span>
       <span aria-hidden="true" className={cx("grid min-w-0 flex-1", !drawer && "nav-collapsed:hidden")}>
-        <span className="truncate font-display text-body-md font-bold">{i.label}</span>
+        <span className={cx("font-display text-body-md font-bold", !i.wrap && "truncate")}>{i.label}</span>
         {/* Says what the number counts, so 476 on the Waitlist isn't read as everyone on it. */}
         {i.hint && <span className={cx("truncate text-caption", active ? "text-bg" : "text-ink-muted")}>{i.hint}</span>}
       </span>
