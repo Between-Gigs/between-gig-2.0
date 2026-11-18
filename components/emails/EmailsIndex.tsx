@@ -30,7 +30,7 @@ export function EmailsIndex() {
   React.useEffect(() => {
     void data.emails.outbox().then(setOutbox);
     // Rendered on the client so the logo URLs resolve against this deployment.
-    setThumbs(Object.fromEntries(activeEmailNames.map((n) => [n, renderPreview(n, undefined, "light").html]))); // eslint-disable-line react-hooks/set-state-in-effect
+    setThumbs({ ...Object.fromEntries(activeEmailNames.map((n) => [n, renderPreview(n, undefined, "light").html])), diagnostic: diagnostic(previewContext()).html }); // eslint-disable-line react-hooks/set-state-in-effect
   }, []);
 
   return (
@@ -56,6 +56,7 @@ export function EmailsIndex() {
                       </h2>
                       <p className="text-body-sm text-ink-muted">Intended use: {t.when}</p>
                       <p className="text-body-sm text-ink-subtle">{lifecycleWords}</p>
+                      <p className="text-body-sm text-ink-subtle">Backend content: {status[n]?.content.replaceAll("_", " ") ?? "not verified"}</p>
                       <p className="text-body-sm text-ink-subtle">{usageWords(status[n])}</p>
                       <dl className="mt-auto grid gap-0.5 border-t border-line pt-3 text-body-sm">
                         <div><dt className="sr-only">Subject</dt><dd className="truncate font-semibold text-ink">{sample.subject}</dd></div>
@@ -67,7 +68,7 @@ export function EmailsIndex() {
                 );
               })}
               <li className="group relative flex flex-col overflow-hidden rounded-lg border border-line bg-surface">
-                <EmailThumb html={diagnostic(previewContext()).html} />
+                <EmailThumb html={thumbs.diagnostic} />
                 <div className="flex flex-1 flex-col gap-1 p-5">
                   <h2 className="font-display text-heading-sm text-ink"><a href={data.kind === "live" ? "/owners/emails/?template=diagnostic" : `${basePath}/emails/?template=diagnostic`} className="after:absolute after:inset-0">Diagnostic email</a></h2>
                   <p className="text-body-sm text-ink-muted">Bounded diagnostic test; backend authorization and receipt determine availability.</p>
@@ -124,7 +125,7 @@ function EmailThumb({ html }: { html?: string }) {
   };
   const doc = html?.replace("</head>", "<style>html,body{overflow:hidden!important;scrollbar-width:none}::-webkit-scrollbar{display:none}</style></head>");
   return (
-    <div ref={box} aria-hidden="true" className="relative overflow-hidden border-b border-line bg-surface-embed" style={{ height: "240px" }}>
+    <div ref={box} aria-hidden="true" className="relative h-60 overflow-hidden border-b border-line bg-surface-embed">
       {doc && (
         <iframe title="" tabIndex={-1} sandbox="allow-same-origin" srcDoc={doc} scrolling="no" onLoad={measure}
           className="pointer-events-none absolute top-0 left-0 w-150 origin-top-left"

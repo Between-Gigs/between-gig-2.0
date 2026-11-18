@@ -25,8 +25,11 @@ export function useEmailHubStatus() {
   }, []);
   return status;
 }
-export function EmailActions({ name, status }: { name: EmailTemplate; status?: EmailHubEntry }) {
+export function EmailActions(props: { name: EmailTemplate; status?: EmailHubEntry }) {
   const { session } = useSession();
+  return <EmailActionsForOwner key={`${session?.email ?? "signed-out"}:${props.name}`} {...props} identity={session?.email ?? ""} />;
+}
+function EmailActionsForOwner({ name, status, identity }: { name: EmailTemplate; status?: EmailHubEntry; identity: string }) {
   const [mode, setMode] = React.useState("test");
   const [recipient, setRecipient] = React.useState("");
   const [busy, setBusy] = React.useState(false);
@@ -34,9 +37,9 @@ export function EmailActions({ name, status }: { name: EmailTemplate; status?: E
   const lock = React.useRef(false);
   const [pending, setPending] = React.useState<{ recipient: string; requestId: string } | null>(null);
   const [storageReady, setStorageReady] = React.useState(false);
-  const storageKey = `bg-email-test:${encodeURIComponent(session?.email ?? "signed-out")}:${name}`;
+  const storageKey = `bg-email-test:${encodeURIComponent(identity || "signed-out")}:${name}`;
   React.useEffect(() => {
-    if (!session?.email) return;
+    if (!identity) return;
     queueMicrotask(() => {
       try {
         const saved = sessionStorage.getItem(storageKey);
@@ -50,7 +53,7 @@ export function EmailActions({ name, status }: { name: EmailTemplate; status?: E
         setStorageReady(true);
       } catch { setMessage("Test sending unavailable: browser cannot safely preserve retry state."); }
     });
-  }, [storageKey, session?.email]);
+  }, [storageKey, identity]);
   const live = data.kind === "live";
   const send = async () => {
     const address = plainRecipient(recipient);

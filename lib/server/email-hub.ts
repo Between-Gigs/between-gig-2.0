@@ -33,7 +33,7 @@ export async function emailHubStatus(ctx: Ctx, args: unknown[]): Promise<EmailHu
     result[name as EmailTemplate] = {
       lifecycle: "unknown", // message_template.active is availability, not a recorded approval.
       content: row ? row.data.active === false ? "disabled" : "enabled" : rows.some(r => r.data.key === key) ? "unknown" : "not_installed",
-      usage: name === "sign-in-code" ? "external" : name === "invite" ? "manual" : enabled?.length ? "configured" : automations === null ? "unknown" : "inactive",
+      usage: enabled?.length ? "configured" : name === "sign-in-code" ? "external" : name === "invite" ? "manual" : automations === null ? "unknown" : "inactive",
       triggers: (enabled ?? []).map(r => {
         const filter = r.data.filter as Record<string, unknown> | undefined;
         return `${String(r.data.event ?? "unknown event")}${typeof filter?.to === "string" ? ` → ${filter.to}` : ""}`;

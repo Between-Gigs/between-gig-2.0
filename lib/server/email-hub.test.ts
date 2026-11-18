@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import { companyOs } from "./companyos";
 import { emailHubStatus, testHubEmail } from "./email-hub";
 const id = "11111111-1111-4111-8111-111111111111";
-function setup(admin = true, templates = [{ id, data: { key: "approved", channel: "email", active: true, subject: "Published", body: "Sample", body_html: "<p>Sample</p>" } }]) {
+function setup(admin = true, templates = [{ id, data: { key: "approved", channel: "email", active: true, subject: "Published", body: "Sample", body_html: "<p>Sample</p>" } }], automations = [{ id: "automation", data: { template: "approved", active: true, event: "profile.reviewed", filter: { to: "published" } } }]) {
   const calls: { path: string; method: string; body: Record<string, unknown>; headers: Headers }[] = [];
   const cos = companyOs({ url: "https://cos.test", tenant: "between-gigs", readerToken: "", submitterToken: "", fetch: (async (url, init) => {
     const path = new URL(String(url)).pathname;
     const body = JSON.parse(String(init?.body ?? "{}"));
     calls.push({ path, method: init?.method ?? "GET", body, headers: new Headers(init?.headers) });
-    return Response.json(path.endsWith("/me") ? { isSuperAdmin: admin } : path.endsWith("/query") ? { data: body.entity === "message_template" ? templates : [{ id: "automation", data: { template: "approved", active: true, event: "profile.reviewed", filter: { to: "published" } } }] } : { data: { enabled: true, status: "queued" } });
+    return Response.json(path.endsWith("/me") ? { isSuperAdmin: admin } : path.endsWith("/query") ? { data: body.entity === "message_template" ? templates : automations } : { data: { enabled: true, status: "queued" } });
   }) as typeof fetch });
   return { ctx: { cos, cred: { kind: "session" as const, token: "owner" }, appUrl: "https://between-gigs.com" }, calls };
 }
@@ -24,6 +24,10 @@ describe("owner email hub safety", () => {
     const s = await emailHubStatus(f.ctx, []);
     expect(s.approved).toMatchObject({ lifecycle: "unknown", content: "enabled", usage: "configured", triggers: ["profile.reviewed → published"] });
     expect(s["sign-in-code"]).toMatchObject({ lifecycle: "unknown", usage: "external", content: "not_installed" });
+  });
+  it("does not hide tenant invitation automations behind a manual-send label", async () => {
+    const f = setup(true, [], [{ id: "auto", data: { template: "invite", active: true, event: "owner.configured", filter: { to: "invited" } } }]);
+    expect((await emailHubStatus(f.ctx, [])).invite?.usage).toBe("configured");
   });
   it("refuses lists, display names, injection, extra send/content fields and unsupported templates", async () => {
     for (const recipient of ["a@example.org,b@example.org", "a@example.org\nb@example.org", "Name <a@example.org>", "bad", "a@b", "a@example.org;cc@x.org"]) {
