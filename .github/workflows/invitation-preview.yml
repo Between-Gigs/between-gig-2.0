@@ -8,6 +8,8 @@ on:
       - 'app/preview/gigster-journey/**'
       - 'scripts/qa/invitation.mjs'
       - 'scripts/qa/stage-two-journey.mjs'
+      - 'scripts/qa/owner-email-hub.mjs'
+      - 'scripts/qa/email-send-controls.mjs'
       - '.github/workflows/invitation-preview.yml'
 permissions:
   contents: read
@@ -27,8 +29,12 @@ jobs:
       - run: pnpm build
       - run: CHROMIUM_PATH=$(command -v google-chrome) node scripts/qa/invitation.mjs
       - run: CHROMIUM_PATH=$(command -v google-chrome) node scripts/qa/stage-two-journey.mjs
+      - run: CHROMIUM_PATH=$(command -v google-chrome) node scripts/qa/owner-email-hub.mjs
+      - run: CHROMIUM_PATH=$(command -v google-chrome) node scripts/qa/email-send-controls.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: invitation-preview
-          path: deliverables/invitation/
+          path: |
+            deliverables/invitation/
+            deliverables/owner-email-hub/

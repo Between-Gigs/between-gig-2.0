@@ -38,6 +38,7 @@ try {
   // Template previews remain public samples; the diagnostic sends only from the protected live owner area.
   assert.equal((await page.goto(base + "/hub/emails/")).status(), 200);
   await page.getByText("Nothing here sends email.", { exact: false }).waitFor();
+  await page.getByRole("link", { name: "Diagnostic email", exact: true }).click();
   assert.equal(await page.getByRole("button", { name: "Send one diagnostic", exact: true }).isDisabled(), true, "sample diagnostic cannot send");
   assert.equal((await page.goto(base + "/owners/emails/")).status(), 401);
   assert.equal((await fetch(base + "/api/emails/sendDiagnostic/", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ args: [] }) })).status, 401);

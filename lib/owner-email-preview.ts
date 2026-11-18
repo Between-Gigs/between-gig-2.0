@@ -15,5 +15,5 @@ export function ownerEmailPreview(kind: "live" | "sample") {
 
 /** Plain anchors must include the static export base path. */
 export function emailTemplateHref(kind: "live" | "sample", name: string, basePath = "") {
-  return `${kind === "live" ? "/hub" : basePath}/emails/${name}/`;
+  return kind === "live" ? `/owners/emails/?template=${encodeURIComponent(name)}` : `${basePath}/emails/${name}/`;
 }

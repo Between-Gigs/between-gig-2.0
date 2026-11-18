@@ -22,6 +22,6 @@ describe("owner preview destinations", () => {
 describe("email template anchor destinations", () => {
  it("preserves local, Hub and Pages paths while live templates use the Hub", () => {
   for (const base of ["", "/hub", "/between-gig-2.0"]) expect(emailTemplateHref("sample", "invite", base)).toBe(`${base}/emails/invite/`);
-  expect(emailTemplateHref("live", "invite")).toBe("/hub/emails/invite/");
+  expect(emailTemplateHref("live", "invite")).toBe("/owners/emails/?template=invite");
  });
 });
