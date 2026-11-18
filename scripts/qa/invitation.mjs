@@ -20,14 +20,15 @@ async function assertFits(html,stage) {
   assert.ok(dimensions.scrollWidth<=dimensions.viewport+1,`${stage}: ${JSON.stringify(dimensions)}`);
 }
 async function resetScroll(html) {
-  await html.evaluate(async()=>{
+  // Do not schedule callbacks in a sandboxed/offscreen iframe; screenshot waits for layout itself.
+  await html.evaluate(()=>{
     for(const element of document.querySelectorAll("*"))if(element.scrollTop||element.scrollLeft)element.scrollTo({top:0,left:0,behavior:"instant"});
     window.scrollTo({top:0,left:0,behavior:"instant"});
-    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
   });
 }
 try {
   for (const width of [320, 390, 768, 1440]) for (const theme of ["light", "dark"]) for (const blocked of [false, true]) {
+    console.log(`START owner-preview ${width}/${theme}/images-blocked=${blocked}`);
     const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: theme, reducedMotion: "reduce" });
     await context.addInitScript(t => localStorage.setItem("bg-theme", t), theme);
     if (blocked) await context.route(/\/email\/.*\.(?:png|jpg|webp)/, route => route.abort());
@@ -89,8 +90,9 @@ try {
     await assertFits(page.locator("html"),`owner preview ${width}/${theme}/${blocked}`);
     await assertFits(frame.locator("html"),`email iframe ${width}/${theme}/${blocked}`);
     assert.equal(await frame.locator('meta[name="color-scheme"]').getAttribute("content"), "light");
-    await resetScroll(frame.locator("html"));
+    console.log(`CAPTURE owner-preview ${width}/${theme}/images-blocked=${blocked}: resetting scroll`);
     await resetScroll(page.locator("html"));
+    await resetScroll(frame.locator("html"));
     await page.screenshot({ path: `deliverables/invitation/${width}-${theme}${blocked ? "-images-blocked" : ""}.png`, fullPage: true });
     await page.goto(`${url}/preview/gigster-journey/?source=legacy#invite`);
     await page.waitForURL(location => location.pathname.endsWith("/emails/invite/") && location.searchParams.get("source") === "legacy" && location.hash === "#invite");
@@ -98,12 +100,14 @@ try {
     await page.getByRole("heading", { name: "Create your Gigster account." }).waitFor();
     assert.equal(await page.getByRole("link", { name: "1 · Invitation" }).getAttribute("href"), `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/emails/invite/`);
     await context.close();
+    console.log(`PASS owner-preview ${width}/${theme}/images-blocked=${blocked}`);
   }
   // Direct boundary and Outlook-marker simulations use the actual rendered HTML, not a mockup.
   const boundaryContext=await browser.newContext();
   const boundaryMetrics=[];
   try {
     for(const width of [262,298,320,390,619,620,621,622,623,624,640]) {
+      console.log(`START actual email boundary ${width}px`);
       const page=await boundaryContext.newPage();await page.setViewportSize({width,height:1000});
       await page.setContent(canonicalHtml);await page.locator(".e-invite-artwork img:visible").evaluate(async image=>{await image.decode();});
       const metrics=await page.locator(".e-invite-artwork img:visible").evaluate(image=>({width:image.getBoundingClientRect().width,height:image.getBoundingClientRect().height,mobile:image.src.includes("-mobile.png")}));
@@ -114,7 +118,9 @@ try {
       await assertFits(page.locator("html"),`actual email viewport ${width}`);
       boundaryMetrics.push({width,...metrics,bakedLeadSize:source.lead*metrics.width/source.width,bakedCtaSize:source.cta*metrics.width/source.width});
       await page.locator(".e-invite-artwork").screenshot({path:`deliverables/invitation/boundary-${width}.png`});await page.close();
+      console.log(`PASS actual email boundary ${width}px`);
     }
+    console.log("START Outlook-marker simulation");
     const outlook=await boundaryContext.newPage();
     await outlook.setContent(canonicalHtml.replaceAll("@media all{","@media not all{"));
     await outlook.locator("html").evaluate(html=>html.setAttribute("data-ogsc",""));
@@ -128,6 +134,7 @@ try {
   const phoneMetrics=[],artHashes=new Map();
   try {
     for(const width of [320,390])for(const theme of ["light","dark"])for(const blocked of [false,true]) {
+      console.log(`START standalone email ${width}/${theme}/images-blocked=${blocked}`);
       const page=await standalone.newPage();await page.setViewportSize({width,height:900});
       if(blocked)await page.route(/\/email\/.*\.(?:png|jpg|webp)/,route=>route.abort());
       await page.setContent(theme==="light"?canonicalHtml.replaceAll("@media all{","@media not all{"):canonicalHtml);
@@ -150,7 +157,9 @@ try {
       phoneMetrics.push({viewportWidth:width,theme,imagesBlocked:blocked,imageWidth:metrics.width,imageHeight:metrics.height,effectiveBakedLead:blocked?null:lead,effectiveBakedCta:blocked?null:cta,htmlCtaHeight:ctaHeight});
       await page.screenshot({path:`deliverables/invitation/email-viewport-${width}-${theme}${blocked?"-images-blocked":""}.png`,fullPage:true});
       await page.close();
+      console.log(`PASS standalone email ${width}/${theme}/images-blocked=${blocked}`);
     }
+    console.log("START adverse HTML recolour simulation");
     const forced=await standalone.newPage();await forced.setViewportSize({width:390,height:900});
     await forced.setContent(canonicalHtml.replaceAll("@media all{","@media not all{"));
     await forced.locator(".e-invite-artwork img:visible").evaluate(image=>image.decode());
