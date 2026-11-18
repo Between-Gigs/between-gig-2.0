@@ -1,6 +1,15 @@
 name: Signup checks
+# CI by area (playbook rule E14): the plan step reads the changed files and scripts/ci/areas.json and picks a mode.
+#   none   only agent and playbook files: nothing runs
+#   fast   docs and unit tests only: install, typecheck, lint, unit tests, the Pages and server builds and their checks
+#   areas  the fast job plus the QA scripts of the areas the change touches (scripts/ci/run-areas.mjs)
+#   all    a shared or unknown file: the fast job plus every QA script
+# One job, so the setup is paid once. A push to main runs the fast checks only (mode fast: no plan diff, no area or
+# browser checks); Cut release checks everything changed since the last verified release on the exact commit it tags,
+# and Deploy web (test) runs its own checks on main.
 on:
-  pull_request:
+  push:
+    branches: [main]
     paths-ignore:
       # Agent and playbook files only: no app code, build or test reads them
       # (playbook rule E14; docs are not ignored because some checks read them).
@@ -12,8 +21,7 @@ on:
       - .github/workflows/playbook-check.yml
       - scripts/check-agent-entry.sh
       - .claude/**
-  push:
-    branches: [main]
+  pull_request:
     paths-ignore:
       # Agent and playbook files only: no app code, build or test reads them
       # (playbook rule E14; docs are not ignored because some checks read them).
@@ -37,59 +45,56 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          fetch-depth: '0'
+      # The PR's refs reach the script through env, never interpolated into run:.
+      - name: Plan the checks by area
+        id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENT_NAME" = push ]; then
+            echo "mode=fast" >> "$GITHUB_OUTPUT"
+          else
+            node scripts/ci/affected-areas.mjs --base "$BASE_SHA" --head "$HEAD_SHA"
+          fi
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        if: steps.plan.outputs.mode != 'none'
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        if: steps.plan.outputs.mode != 'none'
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck && pnpm lint && pnpm lint:values && pnpm test
-      - run: node scripts/qa/auth-data.mjs
-      - run: pnpm build
-      - run: node scripts/check-pages.mjs
+      - name: Install
+        if: steps.plan.outputs.mode != 'none'
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck, lint and unit tests
+        if: steps.plan.outputs.mode != 'none'
+        run: pnpm typecheck && pnpm lint && pnpm lint:values && pnpm test
+      - name: Pages build and its route check
+        if: steps.plan.outputs.mode != 'none'
+        run: pnpm build && node scripts/check-pages.mjs
+      # Before the area scripts: scripts/qa/server-hub.mjs serves this build (.next/standalone).
+      - name: Server build (no internal routes) and its checks
+        if: steps.plan.outputs.mode != 'none'
+        run: pnpm build:server && pnpm build:preview && pnpm check:server
       - name: Use the runner's installed Chrome for browser checks
+        if: steps.plan.outputs.mode == 'areas' || steps.plan.outputs.mode == 'all'
         run: |
           bg_chrome_path=$(command -v google-chrome)
           test -x "$bg_chrome_path"
           "$bg_chrome_path" --version
           echo "CHROMIUM_PATH=$bg_chrome_path" >> "$GITHUB_ENV"
-      - name: Capture auth approval previews
-        run: node scripts/qa/auth-preview.mjs
-      - name: Save auth approval captures
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: auth-eyebrow-approval-evidence
-          path: deliverables/auth-preview
-          if-no-files-found: warn
-      - name: Test signup and existing product flow (sample mode, no real accounts)
-        run: |
-          node scripts/qa/auth-flow.mjs
-          node scripts/qa/profile-entry.mjs
-          node scripts/qa/hub-staff.mjs
-          node scripts/qa/owner-sidebar.mjs
-          node scripts/qa/admin-shell.mjs
-          node scripts/qa/admin-navigation.mjs
-          node scripts/qa/navigation-modes.mjs
-          node scripts/qa/staff-navigation.mjs
-          node scripts/qa/staff-access-planner.mjs
-          node scripts/qa/social-preview.mjs
-          node scripts/qa/signed-out-navigation.mjs
-          node scripts/qa/home-hero.mjs
-          node scripts/qa/storyboard-profile.mjs
-          node scripts/qa/professionals-copy.mjs
-          node scripts/qa/sample-order.mjs
-          node scripts/qa/portfolio-edit-guards.mjs
-          node scripts/qa/patti-editor-presentation.mjs
-          node scripts/qa/profile-guidance.mjs
-          node scripts/qa/service-labels.mjs
-          node scripts/qa/service-guidance.mjs
-          node scripts/qa/service-conversion-guard.mjs
-          node scripts/qa/gigster-priority.mjs
-          pnpm qa:flow
-          node scripts/qa/funnel-cohort.mjs
+      # The QA scripts of the chosen areas (sample mode, no real accounts; Clerk requests blocked or mocked).
+      - name: Area checks (scripts/ci/areas.json)
+        if: steps.plan.outputs.mode == 'areas' || steps.plan.outputs.mode == 'all'
+        env:
+          MODE: ${{ steps.plan.outputs.mode }}
+          AREAS: ${{ steps.plan.outputs.areas }}
+        run: node scripts/ci/run-areas.mjs --mode "$MODE" --areas "$AREAS"
       - name: Save service guidance captures
-        if: always()
+        if: always() && (steps.plan.outputs.mode == 'areas' || steps.plan.outputs.mode == 'all')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: service-guidance-evidence
@@ -99,69 +104,56 @@ jobs:
             deliverables/service-conversion-guard
           if-no-files-found: warn
       - name: Save Gigster profile adjustment captures
-        if: always()
+        if: always() && (steps.plan.outputs.mode == 'areas' || steps.plan.outputs.mode == 'all')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: gigster-priority-evidence
           path: deliverables/gigster-priority
           if-no-files-found: warn
       - name: Save navigation modes and settings captures
-        if: always()
+        if: always() && (steps.plan.outputs.mode == 'areas' || steps.plan.outputs.mode == 'all')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: navigation-modes-evidence
           path: deliverables/navigation-modes
           if-no-files-found: warn
       - name: Save admin navigation captures
-        if: always()
+        if: always() && (steps.plan.outputs.mode == 'areas' || steps.plan.outputs.mode == 'all')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: admin-navigation-evidence
           path: deliverables/admin-navigation
           if-no-files-found: warn
       - name: Save Storyboard design system captures
-        if: always()
+        if: always() && (steps.plan.outputs.mode == 'areas' || steps.plan.outputs.mode == 'all')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: storyboard-design-system-evidence
           path: deliverables/storyboard-profile
           if-no-files-found: warn
       - name: Save Professionals implementation captures
-        if: always()
+        if: always() && (steps.plan.outputs.mode == 'areas' || steps.plan.outputs.mode == 'all')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: professionals-adjusted-evidence
           path: deliverables/professionals-adjusted
           if-no-files-found: warn
-      - name: Build Pages configuration with Clerk
-        run: pnpm build
-        env:
-          NEXT_PUBLIC_BASE_PATH: /between-gig-2.0
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Z2xhZC1tb25rZXktNjkwOC5jbGVyay5hY2NvdW50cy5kZXYk
-      - name: Check password handoff and offline recovery (Clerk requests blocked)
-        run: |
-          node scripts/qa/clerk-entry.mjs
-      - name: Verify signup callbacks, returning login and roles (isolated mock SDK)
-        run: |
-          node scripts/qa/clerk-contract.mjs
-      - name: Server build (no internal routes) and its checks
-        run: pnpm build:server && pnpm build:preview && pnpm check:server && QA_SCREENSHOT_DIR=deliverables/server-hub node scripts/qa/server-hub.mjs
       - name: Save Staff navigation captures
-        if: always()
+        if: always() && (steps.plan.outputs.mode == 'areas' || steps.plan.outputs.mode == 'all')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: staff-navigation-evidence
           path: deliverables/staff-navigation
           if-no-files-found: warn
       - name: Save Staff access planner captures
-        if: always()
+        if: always() && (steps.plan.outputs.mode == 'areas' || steps.plan.outputs.mode == 'all')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: staff-access-planner-evidence
           path: deliverables/staff-access-planner
           if-no-files-found: warn
       - name: Save verified Hub access captures
-        if: always()
+        if: always() && (steps.plan.outputs.mode == 'areas' || steps.plan.outputs.mode == 'all')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: verified-hub-access-evidence
@@ -169,6 +161,7 @@ jobs:
           if-no-files-found: warn
       # The deployed builds are live (api): there, no page may ship the sample data. Caught here, not at deploy.
       - name: Live server build, code-split check
+        if: steps.plan.outputs.mode != 'none'
         env:
           NEXT_PUBLIC_DATA_SOURCE: api
         run: pnpm build:server && node scripts/check-split.mjs

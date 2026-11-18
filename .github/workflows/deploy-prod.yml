@@ -75,12 +75,13 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           # The checkout keeps no token (persist-credentials: false): these fetches get it as a header.
-          auth="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)"
-          if ! git -c "http.extraheader=$auth" fetch --quiet --force origin "refs/tags/$TAG:refs/tags/$TAG"; then
+          auth="$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)"
+          echo "::add-mask::$auth"
+          if ! git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" fetch --quiet --force origin "refs/tags/$TAG:refs/tags/$TAG"; then
             echo "::error::Tag $TAG does not exist on GitHub. Create it with the 'Cut release' workflow."
             exit 1
           fi
-          git -c "http.extraheader=$auth" fetch --quiet --no-tags origin "+refs/heads/main:refs/remotes/origin/main"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" fetch --quiet --no-tags origin "+refs/heads/main:refs/remotes/origin/main"
           kind="$(git cat-file -t "refs/tags/$TAG")"
           if [ "$kind" != "tag" ]; then
             echo "::error::Tag $TAG is a lightweight tag (it points straight at a $kind). Release tags are annotated: create them with the 'Cut release' workflow."

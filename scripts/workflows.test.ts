@@ -59,8 +59,8 @@ describe("the workflows", () => {
   it("PR checks also run the unit tests, the Pages route check and the server build with its checks", () => {
     const yml = read("checks.yml");
     expect(yml).toMatch(/pnpm test\b/);
-    // Right after the plain export (the later one with a base path overwrites out/).
-    expect(yml).toMatch(/- run: pnpm build\n\s+- run: node scripts\/check-pages\.mjs/);
+    // In the same step as the plain export (the Clerk build in scripts/ci/clerk-entry.mjs uses a base path).
+    expect(yml).toContain("run: pnpm build && node scripts/check-pages.mjs");
     expect(yml).toContain("pnpm build:server && pnpm build:preview && pnpm check:server");
   });
 
@@ -203,4 +203,129 @@ it("the deploy preflight asks for no activation receipts, and the server healthc
   expect(readFileSync(new URL("./check-profile-activation.mjs", import.meta.url), "utf8")).not.toMatch(/apiCommit|settingsEvidence|libfile_/);
   for (const name of ["deploy-test.yml", "deploy-prod.yml"]) expect(read(name)).not.toMatch(/settingsEvidence|apiCommit|libfile_/);
   expect(readFileSync(new URL("../.railway/railway.ts", import.meta.url), "utf8")).toMatch(/healthcheck: "\/healthz\/"/);
+});
+
+// CI by area (playbook rule E14): the PR checks and Cut release run only what a change needs (scripts/ci/areas.json).
+const jobs = (yml: string) => [...yml.matchAll(/^ {2}([a-z][a-z0-9_-]*):$/gm)].map((m) => m[1]);
+const job = (yml: string, name: string) => yml.split(new RegExp(`^ {2}${name}:$`, "m"))[1].split(/^ {2}[a-z][a-z0-9_-]*:$/m)[0];
+const runOf = (step: string) => step.split(/^\s*(?:- )?run: /m)[1] ?? "";
+const AREAS_OR_ALL = "if: steps.plan.outputs.mode == 'areas' || steps.plan.outputs.mode == 'all'";
+
+describe("CI by area", () => {
+  it("PR checks stay one job, on pull requests and pushes to main (a push is fast checks only), with full history for the diff", () => {
+    const yml = read("checks.yml");
+    expect(jobs(yml.split(/^jobs:$/m)[1])).toEqual(["signup"]);
+    const on = yml.split(/^on:\n/m)[1].split(/^concurrency:/m)[0];
+    expect(on).toMatch(/^ {2}push:\n {4}branches: \[main\]\n {4}paths-ignore:\n/m);
+    expect(on).toMatch(/^ {2}pull_request:\n {4}paths-ignore:\n/m);
+    const ignores = (ev: string) => new RegExp(`^ {2}${ev}:\\n(?: {4}branches: \\[main\\]\\n)? {4}paths-ignore:\\n((?: {6}.*\\n)+)`, "m").exec(on)![1].split("\n").filter((l) => /^\s+- /.test(l));
+    expect(ignores("push").length).toBeGreaterThan(3);
+    expect(ignores("push")).toEqual(ignores("pull_request"));
+    const checkout = steps(yml).find((s) => s.includes("actions/checkout@"))!;
+    expect(checkout).toContain("fetch-depth: '0'");
+    expect(checkout).toContain("persist-credentials: false");
+  });
+
+  it("the plan step reads the PR's base and head through env, never interpolated into run:", () => {
+    const s = steps(read("checks.yml"));
+    const plan = s.find((x) => x.includes("id: plan"))!;
+    expect(plan).toContain("BASE_SHA: ${{ github.event.pull_request.base.sha }}");
+    expect(plan).toContain("HEAD_SHA: ${{ github.event.pull_request.head.sha }}");
+    expect(plan).toContain("EVENT_NAME: ${{ github.event_name }}");
+    // On a push to main there is no pull request: the mode is fast (no area or browser checks), without diffing.
+    expect(runOf(plan)).toMatch(/if \[ "\$EVENT_NAME" = push \]; then\n\s+echo "mode=fast" >> "\$GITHUB_OUTPUT"\n\s+else\n\s+node scripts\/ci\/affected-areas\.mjs --base "\$BASE_SHA" --head "\$HEAD_SHA"\n\s+fi/);
+    expect(s.findIndex((x) => x.includes("id: plan"))).toBeLessThan(s.findIndex((x) => x.includes("pnpm install")));
+  });
+
+  it("the fast job runs whenever the mode is not none; browser setup and the area scripts only for areas or all", () => {
+    const s = steps(read("checks.yml")).filter((x) => !x.includes("actions/checkout@") && !x.includes("id: plan"));
+    for (const step of s.filter((x) => /pnpm (install|typecheck|build)|action-setup|setup-node/.test(x))) {
+      expect(step, step.split("\n")[0]).toContain("if: steps.plan.outputs.mode != 'none'");
+    }
+    const chrome = s.find((x) => x.includes("google-chrome"))!;
+    expect(chrome).toContain(AREAS_OR_ALL);
+    const areas = s.find((x) => x.includes("scripts/ci/run-areas.mjs"))!;
+    expect(areas).toContain(AREAS_OR_ALL);
+    expect(areas).toContain("MODE: ${{ steps.plan.outputs.mode }}");
+    expect(areas).toContain("AREAS: ${{ steps.plan.outputs.areas }}");
+    expect(runOf(areas)).toBe('node scripts/ci/run-areas.mjs --mode "$MODE" --areas "$AREAS"');
+    for (const upload of s.filter((x) => x.includes("actions/upload-artifact@"))) {
+      expect(upload).toContain("if: always() && (steps.plan.outputs.mode == 'areas' || steps.plan.outputs.mode == 'all')");
+    }
+    // The QA scripts run only through the areas now: no browser script is a step of its own.
+    expect(read("checks.yml")).not.toMatch(/node scripts\/qa\//);
+  });
+
+  it("PR #89's approval capture step is gone", () => {
+    expect(read("checks.yml")).not.toMatch(/auth-preview|auth-eyebrow-approval-evidence/);
+  });
+
+  it("no run: block in the CI-by-area workflows interpolates an expression (event data, inputs, tag or branch names go through env)", () => {
+    for (const name of ["checks.yml", "release.yml"]) {
+      for (const step of steps(read(name))) expect(runOf(step), `${name}: ${step.split("\n")[0].trim()}`).not.toContain("${{");
+    }
+  });
+
+  it("Cut release keeps its guard, checks and tag jobs (scripts/release-check-reuse.mjs reads those names)", () => {
+    expect(jobs(read("release.yml").split(/^jobs:$/m)[1])).toEqual(["guard", "checks", "tag"]);
+    expect(job(read("release.yml"), "tag")).toMatch(/needs: \[guard, checks\]/);
+  });
+
+  it("Cut release no longer needs package.json to hold the version, and still refuses a version not higher than the last tag", () => {
+    const guard = job(read("release.yml"), "guard");
+    expect(guard).not.toMatch(/package\.json/);
+    expect(guard).toContain("is not higher than the last release");
+    expect(guard).toContain('already exists. Choose the next version.');
+    for (const name of workflows) expect(read(name), name).not.toMatch(/jq -er '\.version' package\.json/);
+  });
+
+  it("Cut release checks what changed since the last verified release: the fast job always (none counts as fast), then the areas", () => {
+    const checks = job(read("release.yml"), "checks");
+    const s = steps(checks);
+    const checkout = s.find((x) => x.includes("actions/checkout@"))!;
+    expect(checkout).toContain("fetch-depth: '0'");
+    expect(checkout).toContain("persist-credentials: false");
+    const plan = s.find((x) => x.includes("id: plan"))!;
+    expect(plan).toContain("SHA: ${{ needs.guard.outputs.sha }}");
+    expect(runOf(plan)).toBe('node scripts/ci/affected-areas.mjs --release --head "$SHA"');
+    for (const cmd of ["pnpm typecheck && pnpm lint && pnpm lint:values && pnpm test", "pnpm build && node scripts/check-pages.mjs",
+      "pnpm build:server && pnpm build:preview && pnpm check:server", "pnpm build:server && node scripts/check-split.mjs"]) {
+      const step = s.find((x) => runOf(x).includes(cmd));
+      expect(step, cmd).toBeDefined();
+      expect(step!, cmd).not.toMatch(/\n\s+if:/);
+    }
+    const areas = s.find((x) => x.includes("scripts/ci/run-areas.mjs"))!;
+    expect(areas).toContain(AREAS_OR_ALL);
+    expect(s.find((x) => x.includes("google-chrome"))!).toContain(AREAS_OR_ALL);
+  });
+
+  it("the tag carries the verified-baseline marker, written only after the checks job passed", () => {
+    const tag = job(read("release.yml"), "tag");
+    expect(tag).toContain("printf 'checks: areas-v1\\n");
+  });
+
+  it("the version comes from the tag: production deploys and labels the tag it was started from", () => {
+    const prod = read("deploy-prod.yml");
+    expect(prod).toMatch(/^ {2}TAG: \$\{\{ github\.ref_name \}\}$/m);
+    expect(steps(prod).find((x) => x.includes("railway up"))!).toContain('--message "$TAG"');
+    expect(read("release.yml")).not.toMatch(/Bump package\.json/);
+  });
+
+  it("every job that uses an extraheader scopes it to github.com, builds the credential with a single %s, and masks it", () => {
+    let seen = 0;
+    for (const name of workflows) {
+      const yml = read(name);
+      for (const body of yml.split(/^jobs:$/m)[1]?.split(/^ {2}(?=[a-z][a-z0-9_-]*:$)/m) ?? []) {
+        if (!/extraheader/.test(body)) continue;
+        seen++;
+        const label = `${name}: ${body.split("\n")[0]}`;
+        expect(body, label).toContain("printf 'x-access-token:%s'");
+        expect(body, label).not.toContain("%%s");
+        expect(body, label).toMatch(/-c "http\.https:\/\/github\.com\/\.extraheader=/);
+        expect(body, label).not.toMatch(/-c "http\.extraheader/);
+        expect(body, label).toContain('echo "::add-mask::$auth"');
+      }
+    }
+    expect(seen).toBeGreaterThanOrEqual(3);
+  });
 });
