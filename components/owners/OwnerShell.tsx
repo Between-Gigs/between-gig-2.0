@@ -1,23 +1,18 @@
 "use client";
 import { useLook } from "@/components/site/LookSync";
 import { Button, Drawer, IconButton, Input, Logo, ThemeToggle, cx } from "@ds/components";
-import { initials } from "@ds/components/Avatar";
-import { ChevronDown, ChevronRight, Image as ImageIcon, Palette, Route, Ellipsis, Inbox, LayoutDashboard, ListChecks, LogOut, Mail, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Search, Users, X, type LucideIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, Image as ImageIcon, Palette, Route, Ellipsis, Inbox, LayoutDashboard, ListChecks, Mail, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Search, Users, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import { data, type DashboardSummary } from "@/lib/data";
-import { useAuthActions } from "@/lib/auth/context";
-import { useSession } from "@/lib/session";
 import { LookSwitcher } from "@/components/site/LookSwitcher";
 import { ExperienceSwitcher } from "@/components/site/ExperienceSwitcher";
-import { SiteHeader } from "@/components/site/SiteHeader";
+import { AccountMenu, SiteHeader } from "@/components/site/SiteHeader";
 import { Icon3D } from "@/components/ui/Icon3D";
 import type { Icon3DName } from "@/lib/icons3d";
 import { markArea } from "@/lib/split-area";
-import { SAMPLE_OWNER } from "@/lib/data/fields";
 import { ownerEmailPreview, ownerPreviewLink } from "@/lib/owner-email-preview";
-import { PersonPhoto } from "@/components/people/PersonPhoto";
 import { basePath } from "@/lib/site";
 import { AppFrameContext as FrameContext, useInAppFrame } from "@/components/site/AppFrameContext";
 
@@ -190,38 +185,20 @@ export function OwnerFrame({ children, section: fixed, fit: fixedFit = false, mo
   );
 }
 
-/** Where you are ("Owners · People") on the left, who is signed in (square photo, name) on the right, over a thick rule. */
+/** Where you are ("Owners · People") and the phone search, over a thick rule. */
 function TopLine({ section }: { section?: string }) {
   const sections = useSections();
   const mode = React.useContext(ModeContext);
   const pathname = usePathname();
-  const { session } = useSession();
   const path = pathname.endsWith("/") ? pathname : `${pathname}/`;
   const all = sections.flatMap((s) => s.items);
   const here = section ? all.find((i) => i.href === section) : all.filter((i) => (i.exact ? path === i.href : path.startsWith(i.href))).sort((x, y) => y.href.length - x.href.length)[0];
-  const name = session ? (session.name || session.email).replace(/\s*\(.*\)$/, "") : "";
   return (
     <div className="mb-6 flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b-4 border-line-strong pb-2">
       <p className="min-w-0 flex-1 truncate text-label-sm font-bold tracking-widest text-ink-muted uppercase">{mode === "owner" ? "Owners" : "Previews"}{here ? ` · ${here.label}` : ""}</p>
       {mode === "owner" && <PhoneSearch />}
-      {session && (
-        <span className="flex min-w-0 items-center gap-3">
-          {/* Phones: just the photo, so "Owners · Review queue" reads in full. */}
-          <span className="grid min-w-0 text-right max-sm:hidden">
-            <span className="truncate font-display text-label-md font-extrabold text-ink">{name}</span>
-            <span className="truncate text-caption text-ink-muted">{mode === "preview" ? "Preview session" : session.email === SAMPLE_OWNER.email ? "Sample owner" : "Owner"}</span>
-          </span>
-          <OwnerFace name={name} email={session.email} className="size-11" />
-        </span>
-      )}
     </div>
   );
-}
-
-/** The signed-in owner's square photo: only the fictional sample owner has one (Patti); anyone else gets their initials. */
-function OwnerFace({ name, email, className }: { name: string; email: string; className?: string }) {
-  if (email === SAMPLE_OWNER.email) return <PersonPhoto id="patti" name={name} src="img/people/patti.jpg" alt="" className={cx("shrink-0", className)} />;
-  return <span aria-hidden="true" className={cx("grid shrink-0 place-items-center bg-surface-sunken font-display text-label-md font-extrabold text-ink", className)}>{initials(name)}</span>;
 }
 
 /** "Find a person": opens People filtered by the name or email typed. */
@@ -240,12 +217,12 @@ function useFind(onDone?: () => void) {
 function ModernOwnerToolbar({ onOpenNav }: { onOpenNav: () => void }) {
   const { q, setQ, find } = useFind();
   const preview = React.useContext(ModeContext) === "preview";
-  return <header className="mo-toolbar embedded:hidden!">
+  return <header className="mo-toolbar embedded:hidden! max-sm:gap-1!">
     <IconButton label="Open owner menu" variant="ghost" onClick={onOpenNav} icon={<MenuIcon />} className="lg:hidden" />
-    <Link href="/" aria-label="Between Gigs home" className="mo-logo min-w-0"><Logo height={24} className="max-w-full" /></Link>
+    <Link href="/" aria-label="Between Gigs home" className="mo-logo min-w-0"><Logo height={24} className="hidden max-w-full sm:block" /><Logo layout="mark" height={24} className="sm:hidden" /></Link>
     {!preview && <form role="search" onSubmit={find}><Input type="search" size="sm" aria-label="Search people" placeholder="Search people by name or email…" start={<Search />} value={q} onChange={event => setQ(event.target.value)} /></form>}
     <time>{new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</time>
-    <ExperienceSwitcher /><LookSwitcher compact /><ThemeToggle size="sm" showLabel={false} />
+    <ExperienceSwitcher /><LookSwitcher compact /><ThemeToggle size="sm" showLabel={false} /><AccountMenu />
   </header>;
 }
 
@@ -259,16 +236,6 @@ function useActive(section?: string) {
     return !item.disabled && (item.exact ? path === href : path.startsWith(href));
   }).sort((a, b) => b.href.split(/[?#]/)[0].length - a.href.split(/[?#]/)[0].length)[0]?.href;
   return (i: Item) => !i.disabled && (section ? i.href === section : i.href === best);
-}
-
-/** Signs out; Clerk's sign-out navigates by itself (to /login/?signedOut=1). */
-function useSignOut() {
-  const auth = useAuthActions();
-  const router = useRouter();
-  return async () => {
-    await auth.signOut();
-    if (auth.provider === "sample") router.push("/login/?signedOut=1");
-  };
 }
 
 function CardNavigation({ counts, section, toggle, searchRef, onOpenSearch, onNavigate, drawer = false }: {
@@ -299,7 +266,6 @@ function CardNavigation({ counts, section, toggle, searchRef, onOpenSearch, onNa
         <SidebarSections counts={counts} section={section} onNavigate={onNavigate} drawer={drawer} />
       </div>
 
-      <Account drawer={drawer} />
     </div>
   );
 }
@@ -328,7 +294,6 @@ function OwnerNav({ counts, section, toggle, searchRef, onOpenSearch }: {
         <SidebarSections counts={counts} section={section} />
       </div>
 
-      <Account />
     </div>
   );
 }
@@ -362,38 +327,9 @@ function SidebarSections({ counts, section, onNavigate, drawer = false }: { coun
   </div>;
 }
 
-/** Who is signed in, and signing out: the foot of the sidebar (collapsed, just the sign-out button). */
-function Account({ drawer = false }: { drawer?: boolean } = {}) {
-  const brand = useLook() !== "swiss";
-  const rail = (classes: string) => drawer ? "" : classes;
-  const { session } = useSession();
-  const signOut = useSignOut();
-  if (!session) return null;
-  const name = (session.name || session.email).replace(/\s*\(.*\)$/, "");
-  if (brand) return (
-    <div className={cx("flex items-center gap-3 rounded-lg bg-surface p-3 shadow-xs", !drawer && "mx-3", rail("nav-collapsed:mx-auto nav-collapsed:flex-col nav-collapsed:gap-2 nav-collapsed:bg-transparent nav-collapsed:p-0 nav-collapsed:shadow-none"))}>
-      <span title={`${name} · ${session.email}`} aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full bg-tint-peach font-display text-label-md text-tint-ink">{initials(name)}</span>
-      <div className={cx("grid min-w-0 flex-1", rail("nav-collapsed:hidden"))}>
-        <span className="truncate text-label-md text-ink">{name}</span>
-        <span className="truncate text-caption text-ink-subtle">{session.email}</span>
-      </div>
-      <IconButton variant="ghost" size="sm" label="Log out" icon={<LogOut />} onClick={() => void signOut()} />
-    </div>
-  );
-  return (
-    <div className="mx-4 flex items-center gap-3 border-t border-line pt-3 nav-collapsed:mx-auto nav-collapsed:border-0 nav-collapsed:pt-0">
-      <div title={`${name} · ${session.email}`} className="grid min-w-0 flex-1 nav-collapsed:hidden">
-        <span className="truncate text-label-md font-bold text-ink">{name}</span>
-        <span className="truncate text-caption text-ink-muted">{session.email}</span>
-      </div>
-      <IconButton variant="ghost" size="sm" label="Log out" icon={<LogOut />} onClick={() => void signOut()} />
-    </div>
-  );
-}
-
 /**
  * Below the lg breakpoint the sidebar gives way to a tab bar along the foot of the screen: Dashboard, Review
- * (with its count), People, Waitlist, and More (grouped navigation and account actions). It sits under the page's own scroller, so it
+ * (with its count), People, Waitlist, and More (grouped navigation). It sits under the page's own scroller, so it
  * never covers the page or a sticky bar.
  */
 function TabBar({ counts, section, onOpenNav }: { counts: Record<CountKey, number> | null; section?: string; onOpenNav: () => void }) {
