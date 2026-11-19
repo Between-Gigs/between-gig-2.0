@@ -11,6 +11,8 @@ import { PhotoStage } from "@/components/ds/organisms";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { useSession } from "@/lib/session";
+import { usePersonalPreferences } from "@/components/site/PersonalPreferences";
+import { signedInHomeDestination } from "@/lib/navigation-preferences";
 import { JoinButton } from "./JoinCta";
 
 export const STILL_LIFE = { image: "/art/stage/still-life-desktop.jpg", portrait: "/art/stage/still-life-portrait.jpg" } as const;
@@ -22,8 +24,9 @@ export function ComingSoon() {
   // Someone already signed in gets their own way in instead of the sign-up button (Anowar, 14 Nov 2026). Visitors,
   // and everyone while the session is still being read, see the client's "Create your Gigster profile".
   const { session, loading } = useSession();
+  const { preferences } = usePersonalPreferences();
   const member = loading ? null : session;
-  const cta = member ? (member.role === "owner" ? { href: "/owners/", label: "Go to the dashboard" } : { href: "/profile/", label: "Go to my profile" }) : null;
+  const cta = member ? signedInHomeDestination(member.role, preferences.mode) : null;
   return (
     <div className="flex min-h-dvh flex-col overflow-x-clip bg-bg text-ink">
       <SiteHeader />

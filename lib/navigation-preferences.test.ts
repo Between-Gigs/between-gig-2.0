@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { navigationMode, parseNavigationPreferences, preferenceKey, readPreferenceRecord, writePreferenceRecord, modeDestination } from "./navigation-preferences";
+import { navigationMode, parseNavigationPreferences, preferenceKey, readPreferenceRecord, writePreferenceRecord, modeDestination, signedInHomeDestination } from "./navigation-preferences";
 describe("navigation presentation preferences", () => {
   it("separates actual accounts and data sources while normalizing email identity", () => {
     expect(preferenceKey("live", " Owner@Example.com ")).toBe(preferenceKey("live", "owner@example.com"));
@@ -45,5 +45,17 @@ describe("navigation presentation preferences", () => {
     expect(navigationMode("/owners/", "", "owner")).toBe("owner");
     expect(navigationMode("/owners/people/", "", "developer")).toBe("developer");
     expect(navigationMode("/profile/canvas/", "", "developer")).toBe("gigster");
+  });
+});
+
+describe("signed-in homepage destination", () => {
+  it("respects an owner's explicit Gigster selection", () => {
+    expect(signedInHomeDestination("owner", "gigster")).toEqual({href:"/profile/",label:"Go to my profile"});
+  });
+  it.each(["owner", "developer", undefined] as const)("preserves owner dashboard destination for %s", mode => {
+    expect(signedInHomeDestination("owner", mode)).toEqual({href:"/owners/",label:"Go to the dashboard"});
+  });
+  it.each(["gigster", "owner", "developer", undefined] as const)("does not elevate a Gigster using saved %s", mode => {
+    expect(signedInHomeDestination("gigster", mode)).toEqual({href:"/profile/",label:"Go to my profile"});
   });
 });
