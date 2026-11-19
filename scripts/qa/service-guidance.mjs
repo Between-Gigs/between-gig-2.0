@@ -27,7 +27,16 @@ try { for (const width of [320, 390, 768, 1440]) for (const theme of ["light", "
   for (const category of serviceExamples) {
     await fixture(page, [category.value]); const before = await read(page), section = page.locator("#sec-help");
     await section.getByText(category.tagline, { exact: true }).waitFor();
-    const summary = section.locator("summary"); await summary.focus(); await page.keyboard.press("Enter");
+    const summary = section.locator("summary");
+    const field = page.locator("#f-line-0");
+    assert.equal(await summary.evaluate(el => Boolean(el.closest("[data-service-picker]")?.querySelector("#f-service-0"))), true, "examples share the selected dropdown’s column");
+    assert.equal(await summary.evaluate(el => Boolean(el.compareDocumentPosition(document.querySelector("#f-line-0")) & Node.DOCUMENT_POSITION_FOLLOWING)), true, "examples come before the answer in reading order");
+    const [pickerBox, examplesBox, fieldBox] = await Promise.all([page.locator("#f-service-0").boundingBox(), summary.boundingBox(), field.boundingBox()]);
+    assert.ok(examplesBox.y > pickerBox.y + pickerBox.height, "examples appear immediately under the dropdown");
+    if (width < 640) assert.ok(examplesBox.y < fieldBox.y, "mobile readers reach examples before the answer");
+    else assert.ok(examplesBox.x < fieldBox.x, "desktop examples stay in the dropdown column");
+    assert.ok(!await field.getAttribute("placeholder"), "the answer field does not repeat its label as a placeholder");
+    await summary.focus(); await page.keyboard.press("Enter");
     for (const example of category.examples) { await section.getByText(example.title, { exact: true }).waitFor(); await section.getByText(example.description, { exact: true }).waitFor(); }
     assert.equal(await page.locator("#f-line-0").inputValue(), personal);
     assert.equal((await section.innerText()).includes("Example: Hang artwork and style a room for a party."), false);
