@@ -847,6 +847,16 @@ async function activityFrom(ctx: Ctx, limit: number, w?: World): Promise<Activit
     const name = str(world.profileByPerson.get(personId ?? "")?.data.display_name) || str(p?.data.name);
     return name && name !== str(p?.data.email) ? name : str(p?.data.email) || email || "Someone";
   };
+  // A self-signup transaction can emit both auth.linked and user.signed_up.
+  // Prefer the completed signup's event and its authoritative Person link within this feed window.
+  const signupPersonByUser = new Map<string, string>();
+  for (const e of events) {
+    if (e.event !== "user.signed_up") continue;
+    const userId = str(e.details?.userId);
+    const personId = str(e.details?.personId);
+    if (userId && personId && str(personRow.get(personId)?.data.user) === userId) signupPersonByUser.set(userId, personId);
+  }
+  const shownSignupUsers = new Set<string>();
   const out: ActivityEvent[] = [];
   for (const e of events) {
     const d = e.details ?? {};
@@ -854,7 +864,19 @@ async function activityFrom(ctx: Ctx, limit: number, w?: World): Promise<Activit
     let personId: string | undefined;
     if (e.event === "form.submitted" && d.form_key === "call_sheet" && d.outcome === "created") kind = "joined_waitlist";
     else if (e.event === "user.invited") { kind = "invited"; personId = str(d.personId) || undefined; }
-    else if (e.event === "auth.linked") { kind = "registered"; personId = personByUser.get(str(d.userId)); }
+    else if (e.event === "user.signed_up") {
+      const userId = str(d.userId);
+      personId = signupPersonByUser.get(userId);
+      if (!personId || personId !== str(d.personId) || shownSignupUsers.has(userId)) continue;
+      shownSignupUsers.add(userId);
+      kind = "registered";
+    }
+    else if (e.event === "auth.linked") {
+      const userId = str(d.userId);
+      if (signupPersonByUser.has(userId)) continue;
+      kind = "registered";
+      personId = personByUser.get(userId);
+    }
     else if (e.event === "profile.submitted") { kind = "submitted"; personId = personByProfile.get(str(d.profile)); }
     else if (e.event === "profile.reviewed" && (d.to === "approved" || d.to === "changes_requested")) { kind = d.to; personId = personByProfile.get(str(d.profile)); }
     if (!kind) continue;

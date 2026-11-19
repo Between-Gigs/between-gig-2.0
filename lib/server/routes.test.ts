@@ -927,3 +927,46 @@ describe("owners.inviteAddresses: the invitation to typed addresses", () => {
     expect(res.status).toBe(503);
   });
 });
+
+describe("completed signup in owner read models", () => {
+  const at = "2026-11-19T03:45:00.000Z";
+  const signup = { id: "signup", event: "user.signed_up", at, actor: "u-maya", details: { userId: "u-maya", personId: PERSON } };
+  const linked = { id: "linked", event: "auth.linked", at, actor: "u-maya", details: { userId: "u-maya" } };
+  const invited = { id: "invited", event: "auth.linked", at, actor: "u-invited", details: { userId: "u-invited" } };
+  const recorded = (events: unknown[], owner = true) => fake((c) => {
+    if (c.path.startsWith("/audit")) return { body: { events } };
+    if (c.path === "/admin/users") return { body: { users: [{ userId: "u-maya", signedUp: true, selfSignedUp: true, memberships: [{ roleKey: "provider" }] }] } };
+    if (c.path === "/query" && (c.body as { entity?: string })?.entity === "person") return { body: { data: [{ id: PERSON, data: { email: "maya+signup@example.org", name: "Maya Fixture", user: "u-maya" }, createdAt: at, updatedAt: at }] } };
+    return undefined;
+  }, { superAdmin: owner });
+
+  it("lists a new signup with no profile and shows the corresponding registered event once", async () => {
+    const f = recorded([linked, signup, invited]);
+    const people = await call("people.list", [{ source: "self" }], undefined, f);
+    expect(people.body.result).toMatchObject([{ person: { id: PERSON, status: "registered", source: "self" } }]);
+    const { body } = await call("owners.dashboard", [], undefined, f);
+    expect(body.result).toMatchObject({ signedUpPersonIds: [PERSON], funnel: { signedUp: 1 }, activity: [
+      { id: "signup", kind: "registered", personId: PERSON, who: "Maya Fixture" },
+      { id: "invited", kind: "registered" },
+    ] });
+  });
+
+  it("surfaces a direct self-signup even without an auth.linked audit and keeps the feed owner-only", async () => {
+    expect((await call("owners.activity", [], undefined, recorded([signup]))).body.result)
+      .toMatchObject([{ id: "signup", kind: "registered", personId: PERSON }]);
+    const denied = await call("owners.activity", [], undefined, recorded([signup], false));
+    expect(denied.res.status).toBe(403);
+    expect(denied.calls.some((c) => c.path.startsWith("/audit"))).toBe(false);
+  });
+
+  it.each([
+    { userId: "u-maya", email: "not-the-fixture@example.org" },
+    { userId: "u-maya", personId: FILE, email: "not-the-fixture@example.org" },
+    { userId: "u-other", personId: PERSON, email: "not-the-fixture@example.org" },
+  ])("ignores missing, unknown or mismatched signup person IDs without hiding a valid invite event", async (details) => {
+    const broken = { ...signup, details };
+    const { body } = await call("owners.activity", [], undefined, recorded([broken, linked]));
+    expect(body.result).toEqual([{ id: "linked", kind: "registered", personId: PERSON, who: "Maya Fixture", at }]);
+  });
+
+});
