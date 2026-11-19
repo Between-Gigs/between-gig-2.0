@@ -1,4 +1,5 @@
 "use client";
+import { safeVideoEmbedUrl } from "@/lib/profile/video-embed";
 import { serviceLabel } from "@/lib/profile/service-labels";
 import { APPROVED_NOT_PUBLIC, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
 import { Accordion, Button, Field, Input, Modal, Select, Textarea, cx, useToast } from "@ds/components";
@@ -131,7 +132,7 @@ export function ProfileView(props: Props) {
 
       <Layout {...props} {...model} sections={sections} ids={ids} saved={saved} onSave={() => setSaved(!saved)}
         onShare={share} onPhoto={setLightbox} onRequest={() => setRequest(true)} />
-      <Lightbox name={fields.name} items={model.portfolio.filter((it) => !it.video)} index={lightbox} onIndex={setLightbox} />
+      <Lightbox name={fields.name} items={model.portfolio} index={lightbox} onIndex={setLightbox} />
       <RequestModal first={model.callName} open={request} onClose={() => setRequest(false)} />
     </div>
   );
@@ -334,7 +335,7 @@ function SwissProfile({ person, fields: f, mode, embedded, similar = [], draft =
             ))}
           </ul>
           <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
-            {portfolio.some((it) => !it.video) && <Button variant="secondary" size="md" onClick={() => onPhoto(0)}>Show all {portfolio.filter((it) => !it.video).length} photos</Button>}
+            {portfolio.length > 0 && <Button variant="secondary" size="md" onClick={() => onPhoto(0)}>Show all {workMeta(portfolio)}</Button>}
             {sample && <p className="flex items-start gap-2.5 text-body-md text-ink-muted"><b className="font-display text-ink">Note</b>Concept images showing the kind of work to discuss, not completed client projects.</p>}
           </div>
         </>
@@ -516,21 +517,25 @@ function Section({ n, title, meta, children, sectionId }: { sectionId?: ProfileS
   );
 }
 
-function Lightbox({ name, items, index, onIndex }: { name: string; items: { src: string; caption: string }[]; index: number | null; onIndex: (i: number | null) => void }) {
+function Lightbox({ name, items, index, onIndex }: { name: string; items: PortfolioItem[]; index: number | null; onIndex: (i: number | null) => void }) {
   const n = items.length;
   const it = index === null ? null : items[index];
+  const embed = it?.video ? safeVideoEmbedUrl(it.video.video.url) : null;
   React.useEffect(() => {
-    if (index === null) return;
+    if (index === null || !n) return;
     const key = (e: KeyboardEvent) => { if (e.key === "ArrowRight") onIndex((index + 1) % n); if (e.key === "ArrowLeft") onIndex((index - 1 + n) % n); };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
   }, [index, n, onIndex]);
   return (
-    <Modal open={index !== null} onClose={() => onIndex(null)} size="lg" title={it?.caption ?? ""} description={`${name} · image ${index === null ? "" : index + 1} of ${n}`}>
+    <Modal open={index !== null} onClose={() => onIndex(null)} size="lg" title={it?.caption ?? ""} description={`${name} · sample ${index === null ? "" : index + 1} of ${n}`}>
       {it && (
         <div className="grid gap-3">
           {/* The whole photo at its own ratio: thumbnails may show an aligned part, the lightbox never crops. */}
-          <img key={it.src} src={asset(parseSample(it.src).src)} alt={it.caption} className="mx-auto block h-auto max-h-120 w-auto max-w-full rounded-md" />
+          {it.video ? <div className="grid gap-3">
+            {embed && <iframe key={embed} src={embed} title={it.caption || "Showcase video"} className="aspect-video w-full rounded-md border-0" allow="fullscreen; picture-in-picture; encrypted-media" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />}
+            <p className="text-body-sm text-ink-muted">If the video cannot play here, <a href={it.video.video.url} target="_blank" rel="noopener noreferrer" className="underline">watch on {it.video.video.provider === "youtube" ? "YouTube" : "Vimeo"}</a>.</p>
+          </div> : <img key={it.src} src={asset(parseSample(it.src).src)} alt={it.caption} className="mx-auto block h-auto max-h-120 w-auto max-w-full rounded-md" />}
           <div className="flex items-center justify-between">
             <Button variant="secondary" size="md" iconStart={<ChevronLeft />} onClick={() => onIndex(((index ?? 0) - 1 + n) % n)}>Previous</Button>
             <span className="text-label-sm text-ink-muted tabular-nums">{(index ?? 0) + 1} / {n}</span>

@@ -47,11 +47,14 @@ describe("contentSecurityPolicy", () => {
     expect(d.get("frame-src")).toEqual(expect.arrayContaining(["https://challenges.cloudflare.com", "https://*.protect.clerk.com"]));
   });
 
-  it("allows the video thumbnail hosts only when video links are on, and then only as images", () => {
+  it("allows only explicit video player frames when video links are on", () => {
     expect(d.get("img-src")).toEqual(["'self'", "data:", "blob:", "https://img.clerk.com"]);
     const on = directives(contentSecurityPolicy({ nonce: "bm9uY2UtMTIz", clerkPublishableKey: devKey, videoLinks: true }));
     expect(on.get("img-src")).toEqual(["'self'", "data:", "blob:", "https://img.clerk.com", "https://i.ytimg.com", "https://i.vimeocdn.com"]);
-    for (const name of ["frame-src", "connect-src", "script-src", "media-src"]) expect((on.get(name) ?? []).join(" ")).not.toMatch(/youtube|ytimg|vimeo/);
+    expect(on.get("frame-src")).toEqual(["'self'", "https://challenges.cloudflare.com", "https://*.protect.clerk.com", "https://www.youtube-nocookie.com", "https://player.vimeo.com"]);
+    const off = directives(contentSecurityPolicy({ nonce: "bm9uY2UtMTIz", clerkPublishableKey: undefined }));
+    expect((off.get("frame-src") ?? []).join(" ")).not.toMatch(/youtube|vimeo/);
+    for (const name of ["connect-src", "script-src", "media-src"]) expect((on.get(name) ?? []).join(" ")).not.toMatch(/youtube|ytimg|vimeo/);
   });
 
   it("locks everything else down", () => {

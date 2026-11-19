@@ -68,7 +68,7 @@ export function ModernProfile({ person, fields: f, mode, embedded, draft, part, 
       </div>, "The services you'd offer clients between gigs", "block"),
     work: portfolio.length > 0 && <><ul className="modern-work">{portfolio.slice(0, 4).map((item, i) => (
       <li key={item.src}><WorkTile it={item} onPhoto={onPhoto} buttonClassName="relative block w-full overflow-hidden"><small>{String(i + 1).padStart(2, "0")}</small></WorkTile></li>))}</ul>
-      <div className="mt-3 flex flex-wrap items-center gap-3">{portfolio.some((it) => !it.video) && <Button size="sm" variant="secondary" onClick={() => onPhoto(0)}>Show all {portfolio.filter((it) => !it.video).length} photos</Button>}
+      <div className="mt-3 flex flex-wrap items-center gap-3">{portfolio.length > 0 && <Button size="sm" variant="secondary" onClick={() => onPhoto(0)}>Show all {workMeta(portfolio)}</Button>}
         {sample && <p className="text-body-sm text-ink-muted">Concept images showing the kind of work to discuss, not completed client projects.</p>}</div></>,
     credits: (show || credits.length > 0 || f.skills.length > 0 || !!f.linkedin || (mode === "owner" && !!f.imdb)) && <div className="grid gap-3">
       {P("skills", !!f.skills.length, <div className="flex flex-wrap gap-2">{f.skills.map(s => <span className="modern-label" key={s}>{s}</span>)}</div>, "Your on-set skills", "block")}

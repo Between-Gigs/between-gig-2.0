@@ -5,8 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { WorkTile } from "@/components/profile/WorkTile";
 import { portfolioItems } from "./video-links";
 
-// The public profile shows a video sample as its thumbnail with a play badge that links OUT to the video.
-// It never embeds: no iframe, video, embed or object element, and the link can't hand the new tab an opener.
+// Tiles do not mount players. Photos and videos enter one mixed-media lightbox on activation.
 const photo = "data:image/jpeg;base64,AAAA";
 const yt = "video:" + encodeURIComponent(JSON.stringify({ u: "https://youtu.be/dQw4w9WgXcQ", c: "Showreel" }));
 const vm = "video:" + encodeURIComponent(JSON.stringify({ u: "https://vimeo.com/76979871", c: "" }));
@@ -16,9 +15,9 @@ const render = (sample: string, enabled = true) => {
 };
 
 describe("portfolioItems", () => {
-  it("numbers photos for the lightbox and leaves videos out of that numbering", () => {
+  it("numbers photos and videos in the shared lightbox", () => {
     const items = portfolioItems([photo, yt, photo], true);
-    expect(items.map((i) => i.photoIndex)).toEqual([0, -1, 1]);
+    expect(items.map((i) => i.photoIndex)).toEqual([0, 1, 2]);
     expect(items[1]).toMatchObject({ caption: "Showreel" });
   });
   it("flag off: video samples are not shown at all, and photo captions stay as they were", () => {
@@ -32,19 +31,18 @@ describe("portfolioItems", () => {
 });
 
 describe("WorkTile", () => {
-  it("a YouTube sample is a link out with the provider thumbnail and a play badge", () => {
+  it("a YouTube sample opens the shared lightbox with the provider thumbnail and play badge", () => {
     const html = render(yt);
-    expect(html).toMatch(/<a [^>]*href="https:\/\/www\.youtube\.com\/watch\?v=dQw4w9WgXcQ"/);
-    expect(html).toContain('target="_blank"');
-    expect(html).toContain('rel="noopener noreferrer"');
+    expect(html).toContain('<button');
+    expect(html).not.toContain('target="_blank"');
     expect(html).toContain("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg");
     expect(html).toMatch(/data-play-badge/);
-    expect(html).toMatch(/aria-label="Watch video: Showreel \(opens in a new tab\)"/);
+    expect(html).toContain('aria-label="Play video: Showreel"');
     expect(html).not.toMatch(/<(iframe|video|embed|object|script)/i);
   });
   it("a Vimeo sample with no thumbnail yet shows a neutral placeholder, still with the badge and link", () => {
     const html = render(vm);
-    expect(html).toContain('href="https://vimeo.com/76979871"');
+    expect(html).toContain('aria-label="Play video: Video link"');
     expect(html).toContain("data-thumb-placeholder");
     expect(html).not.toContain("<img");
     expect(html).toMatch(/data-play-badge/);
@@ -61,12 +59,12 @@ describe("WorkTile", () => {
   });
 });
 
-describe("the four layouts share the tile and never embed", () => {
+describe("the four layouts share the tile; only the central lightbox mounts an iframe", () => {
   for (const file of ["components/profile/ProfileView.tsx", "components/profile/WarmProfile.tsx", "components/profile/ModernProfile.tsx", "components/ds/templates/ProfileTemplate.tsx"]) {
     it(file, () => {
       const src = fs.readFileSync(file, "utf8");
       expect(src).toContain("WorkTile");
-      expect(src).not.toMatch(/<iframe|<video|<embed/i);
+      if (!file.endsWith("/ProfileView.tsx")) expect(src).not.toMatch(/<iframe|<video|<embed/i);
     });
   }
 });

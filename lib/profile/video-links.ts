@@ -1,7 +1,7 @@
 /**
  * Work samples that are video links (Between Gigs, Nov 2026). A Gigster has up to five work samples in any mix of photos
  * and links to a YouTube or Vimeo video, each link with an optional caption and an optional thumbnail they upload. There
- * are no video uploads and no embeds: a visitor sees the thumbnail with a play badge and the link opens the provider's page.
+ * are no video uploads. A visitor opens the supported provider in the shared Showcase lightbox, with an external fallback.
  *
  * The rules mirror the API (profiles module 1.10.0): https only, no userinfo or port, the host exactly one of
  * youtube.com, www.youtube.com, youtu.be, vimeo.com, player.vimeo.com, and a path that names one video. The whole feature
@@ -43,7 +43,7 @@ export function parseVideoUrl(input: string): VideoParse {
     ? { ok: true, video: { provider: "vimeo", id, url: `https://vimeo.com/${id}${hash ? `/${hash}` : ""}` } } : refuse(NOT_ONE_VIDEO);
   if (u.hostname === "youtu.be") return parts.length === 1 ? youtube(parts[0]) : refuse(NOT_ONE_VIDEO);
   if (u.hostname === "vimeo.com") return parts.length === 1 || parts.length === 2 ? vimeo(parts[0], parts[1]) : refuse(NOT_ONE_VIDEO);
-  if (u.hostname === "player.vimeo.com") return parts.length === 2 && parts[0] === "video" ? vimeo(parts[1]) : refuse(NOT_ONE_VIDEO);
+  if (u.hostname === "player.vimeo.com") return parts.length === 2 && parts[0] === "video" ? vimeo(parts[1], u.searchParams.get("h") ?? undefined) : refuse(NOT_ONE_VIDEO);
   // youtube.com, www.youtube.com
   if (parts.length === 1 && parts[0] === "watch") return youtube(u.searchParams.get("v"));
   if (parts.length === 2 && (parts[0] === "shorts" || parts[0] === "embed")) return youtube(parts[1]);
@@ -91,18 +91,18 @@ export function thumbnailFor(s: VideoSample, vimeoThumb?: string | null): string
   return typeof vimeoThumb === "string" && /^https:\/\/i\.vimeocdn\.com\/[^\s]+$/.test(vimeoThumb) ? vimeoThumb : null;
 }
 
-export type PortfolioItem = { src: string; caption: string; /** Position among the photos (the lightbox), -1 for a video. */ photoIndex: number; video?: VideoSample };
+export type PortfolioItem = { src: string; caption: string; /** Position in the mixed-media lightbox. */ photoIndex: number; video?: VideoSample };
 
 /** "3 photos", "2 samples" (once a video is among them). */
 export const workMeta = (items: readonly PortfolioItem[]) => `${items.length} ${items.some((i) => i.video) ? (items.length === 1 ? "sample" : "samples") : "photos"}`;
 
 export function portfolioItems(list: readonly string[], enabled: boolean): PortfolioItem[] {
-  let photos = 0;
+  let samples = 0;
   return visibleSamples(list, enabled).flatMap((src, i) => {
     const s = decodeSample(src);
     if (!s) return [];
-    if (s.kind === "video") return [{ src, caption: s.caption || "Video link", photoIndex: -1, video: s }];
-    return [{ src, caption: `Work sample ${i + 1}`, photoIndex: photos++ }];
+    if (s.kind === "video") return [{ src, caption: s.caption || "Video link", photoIndex: samples++, video: s }];
+    return [{ src, caption: `Work sample ${i + 1}`, photoIndex: samples++ }];
   });
 }
 

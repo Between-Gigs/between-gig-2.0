@@ -15,7 +15,7 @@ describe("parseVideoUrl accepts the real forms", () => {
   });
   it("Vimeo numeric ids, the player form and an unlisted hash", () => {
     expect(ok("https://vimeo.com/76979871")).toEqual({ provider: "vimeo", id: "76979871", url: "https://vimeo.com/76979871" });
-    expect(ok("https://player.vimeo.com/video/76979871?h=abc")).toMatchObject({ provider: "vimeo", id: "76979871" });
+    expect(ok("https://player.vimeo.com/video/76979871?h=a1b2c3d4")).toMatchObject({ provider: "vimeo", id: "76979871" });
     expect(ok("https://vimeo.com/76979871/a1b2c3d4e5")).toMatchObject({ id: "76979871", url: "https://vimeo.com/76979871/a1b2c3d4e5" });
   });
 });

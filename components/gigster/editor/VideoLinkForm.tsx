@@ -67,7 +67,7 @@ export function VideoLinkForm({ initial, onSave, onCancel, toImage }: {
   return (
     <>
     <form onSubmit={submit} noValidate aria-label={was ? "Edit video link" : "Add a video link"} className="grid gap-4 rounded-lg border border-line bg-surface p-4 sm:p-5">
-      <Field label="YouTube or Vimeo link" error={error} hint={error ? undefined : "Paste the link from the video’s page. Videos open on YouTube or Vimeo; they aren’t uploaded here."}>
+      <Field label="YouTube or Vimeo link" error={error} hint={error ? undefined : "Paste the link from the video’s page. Videos play in your Showcase viewer where the provider permits it; they aren’t uploaded here."}>
         <Input id="f-video-url" ref={field} type="url" inputMode="url" autoComplete="off" value={url} placeholder="https://www.youtube.com/watch?v=…"
           onChange={(e) => { setUrl(e.target.value); if (error) setError(""); }} />
       </Field>
