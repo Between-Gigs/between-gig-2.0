@@ -19,6 +19,7 @@ import { servicePickerLabel, serviceLabel, serviceMatches } from "@/lib/profile/
 import { serviceDescription } from "@/lib/profile/service-descriptions";
 import { customServiceFrom, OTHER_SERVICE, serviceSelectOptions, type ServiceFields } from "@/lib/profile/service-choice";
 import { ServiceGuidance } from "./ServiceGuidance";
+import { ServiceAnswerTextarea } from "./ServiceAnswerTextarea";
 import { locationControlsEnabled, travelRadiusOptions } from "@/lib/profile/location-controls";
 import { travelPreferenceEnabled } from "@/lib/profile/travel-preference";
 import { customSkillsEnabled } from "@/lib/profile/skills";
@@ -272,16 +273,16 @@ export function CanvasHelp({ d, set, errors, onConvertToCustom }: SectionProps &
                   <div className="min-w-0 flex-1" data-service-picker>
                     <label htmlFor={`f-service-${i}`} className="mb-1 block text-body-sm text-ink-muted">Service {i + 1}</label>
                     <Select id={`f-service-${i}`} options={optionsFor(s)} value={s} onValueChange={(v) => replace(i, v)} />
-                    <ServiceGuidance service={s} className="mt-3" />
                   </div>
                   <button type="button" aria-label={`Remove ${servicePickerLabel(s)}`} onClick={() => remove(i)}
                     className="grid size-10 shrink-0 place-items-center rounded-md text-ink-muted hover:bg-surface-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-focus"><Trash2 aria-hidden="true" className="size-4" /></button>
                 </div>
                 <div className="grid min-w-0 content-start gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
                   <label htmlFor={`f-line-${i}`} className="text-body-md text-ink">What can a customer hire you to do?</label>
-                  <Textarea id={`f-line-${i}`} rows={2} showCount maxLength={SERVICE_LINE_MAX} value={line} invalid={!!lineError}
+                  <ServiceAnswerTextarea id={`f-line-${i}`} showCount maxLength={SERVICE_LINE_MAX} value={line} invalid={!!lineError}
                     onChange={(e) => setLine(s, e.target.value)} />
                   {lineError && <p className="text-body-sm text-danger">{lineError}</p>}
+                  <ServiceGuidance service={s} className="mt-2" />
                 </div>
               </div>
               {standard && <p className="text-body-sm text-ink-muted"><span className="font-semibold text-ink">Standard description</span> · the same for everyone who offers it: {standard}</p>}
@@ -305,7 +306,7 @@ export function CanvasHelp({ d, set, errors, onConvertToCustom }: SectionProps &
               </div>
               <div className="grid min-w-0 gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
                 <label htmlFor="f-other-line" className="text-body-md text-ink">What can a customer hire you to do?</label>
-                <Textarea id="f-other-line" rows={2} showCount maxLength={SERVICE_LINE_MAX} value={otherLine}
+                <ServiceAnswerTextarea id="f-other-line" showCount maxLength={SERVICE_LINE_MAX} value={otherLine}
                   onChange={(e) => setOther(otherName, e.target.value.slice(0, SERVICE_LINE_MAX))} />
               </div>
             </div>
