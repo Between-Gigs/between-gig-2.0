@@ -1,4 +1,5 @@
 "use client";
+import {keepPhotoCaptions, photoFileId} from "@/lib/profile/photo-captions";
 /*
  * The Gigster editor as Justin designed it (Figma "Wireframe flows", Flow p3): the profile itself is the form. A dashed
  * photo box beside the name, written large and edited in place; "How I can help" beside Rates; work samples; then
@@ -422,6 +423,7 @@ export function CanvasSamples({ d, set }: SectionProps) {
   const changeSamples = (next: string[]) => {
     photoRevision.current.value++;
     set("workSamples")(next);
+    if (d.photoCaptions) set("photoCaptions")(keepPhotoCaptions(next,d.photoCaptions));
   };
   // "menu": choosing Photo or Video link; "link": the link form (for slot `linkAt`, or a new one when null).
   const [adding, setAdding] = React.useState<"menu" | "link" | null>(null);
@@ -536,6 +538,9 @@ export function CanvasSamples({ d, set }: SectionProps) {
                   {i === samples.length && <span className="flex items-center gap-1.5 text-body-md"><Plus aria-hidden="true" className="size-4" />Add a work sample</span>}
                 </button>
               )}
+              {src && !clip && videos && <div className="mt-2">
+                {photoFileId(src) ? <Field label={`Photo ${i+1} description`} optional hint="Up to 160 characters. Changes follow profile review."><Input maxLength={160} value={d.photoCaptions?.[photoFileId(src)!] ?? ""} onChange={e=>set("photoCaptions")({...d.photoCaptions,[photoFileId(src)!]:e.target.value})} /></Field> : <p className="text-body-sm text-ink-muted">Save this photo first to add a description.</p>}
+              </div>}
             </li>
           );
         })}

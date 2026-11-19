@@ -1,4 +1,5 @@
 "use client";
+import {adoptPhotoCaptionSave} from "@/lib/profile/photo-captions";
 import { serviceDraftReducer, type ServiceDraftAction, type ServiceFields } from "@/lib/profile/service-choice";
 /*
  * /profile/canvas/: the Gigster profile editor (rebuilt 13 Nov 2026, Flow p3). One clean page in the Green Room look:
@@ -149,7 +150,8 @@ function Editor({ personId }: { personId: string }) {
       // Another tab may have saved since this one read the draft: lay this tab's own changes over that save.
       const stored = KEEPS_DRAFT ? await data.profiles.getDraft(personId) : null;
       const theirs = stored?.savedAt && stored.savedAt !== known.current ? stored.fields : null;
-      const merged = theirs ? { ...theirs, ...pick(fields, keys) } : fields;
+      const merged = { ...(theirs ? { ...theirs, ...pick(fields, keys) } : fields),
+        ...(keys.includes("photoCaptions") ? { photoCaptionBaseline: fields.photoCaptionBaseline } : {}) };
       const saved = await data.profiles.saveDraft(personId, merged, step.current);
       setProfileCreatedAt(saved.profileCreatedAt);
       known.current = saved.savedAt;
@@ -157,6 +159,7 @@ function Editor({ personId }: { personId: string }) {
       // Work samples live in Company OS (video links on): take its list (photos become /media links), unless they changed meanwhile.
       const stored_ = saved.fields.workSamples;
       if (videoLinksEnabled() && stored_ && !theirs) setD((cur) => (cur ? { ...cur, workSamples: adoptStored(merged.workSamples ?? [], stored_, cur.workSamples ?? []) } : cur));
+      if (saved.fields.photoCaptions) setD(cur=>cur?{...cur,photoCaptions:adoptPhotoCaptionSave(cur.photoCaptions,merged.photoCaptions,saved.fields.photoCaptions),photoCaptionBaseline:{...saved.fields.photoCaptions}}:cur);
       // The marketing choice lives in Company OS: take the stored choice as the new baseline (unless the box was changed meanwhile).
       if (profileDetailsEnabled()) setD((cur) => (cur ? adoptSavedMarketing(cur, saved.fields, touched.current.has("marketingEmailConsent")) : cur));
       setSave(dirty.current ? { status: "saving" } : { status: "saved", at: saved.savedAt });
@@ -296,7 +299,7 @@ function Editor({ personId }: { personId: string }) {
   };
 
   // It saves as you go; Save draft saves now and says so (Justin's bar: "Private draft · Preview · Save draft").
-  const saveDraft = () => { dirty.current = true; void flush().then(() => toast({ message: "Draft saved", tone: "success" })); };
+  const saveDraft = () => { dirty.current = true; void flush().then(ok => { if (ok) toast({ message: "Draft saved", tone: "success" }); }); };
 
   const sendButton = (size: "md" | "lg", full = false) => nothingToSend
     ? <Link href="/profile/submitted/" className={cx("inline-flex min-h-11 items-center justify-center gap-2 text-label-md font-semibold text-ink underline underline-offset-4", full && "w-full")}>
