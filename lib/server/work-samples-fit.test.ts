@@ -44,6 +44,11 @@ describe("durable nondestructive portfolio fit", () => {
       .rejects.toMatchObject({ code: "invalid_image_fit" });
     for (const fn of Object.values(c)) expect(fn).not.toHaveBeenCalled();
   });
+  it("rejects oversized fitted uploads before sanitizer size filtering can drop the original", () => {
+    const oversized = `data:image/jpeg;base64,${"A".repeat(4_500_001)}`;
+    expect(() => cleanSamples([`${oversized}#fit=${fit}`])).toThrow(/Save this photo first/);
+    expect(cleanSamples([oversized])).toEqual([]); // unrelated legacy plain-image filtering unchanged
+  });
   it("refuses forged fitted upload even before profile mutations in direct saveDraft", async () => {
     vi.stubEnv("NEXT_PUBLIC_PROFILE_VIDEO_LINKS", "1");
     const c = { ...mock(), query: vi.fn(async () => []), all: vi.fn(async () => []) };
