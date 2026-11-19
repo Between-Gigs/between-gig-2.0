@@ -301,7 +301,7 @@ describe("CI by area", () => {
 
   it("the tag carries the verified-baseline marker, written only after the checks job passed", () => {
     const tag = job(read("release.yml"), "tag");
-    expect(tag).toContain("printf 'checks: areas-v1\\n");
+    expect(tag).toContain("printf 'checks: areas-v2\\n");
   });
 
   it("the version comes from the tag: production deploys and labels the tag it was started from", () => {

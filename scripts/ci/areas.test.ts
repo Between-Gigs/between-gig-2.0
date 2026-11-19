@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { classify, normalizeScript, validateConfig } from "./affected-areas.mjs";
+import { buildGraph, classify, graphProblems, matchGlob, normalizeScript, validateConfig } from "./affected-areas.mjs";
 import { importProblems } from "./area-imports.mjs";
 
 // scripts/ci/areas.json decides which checks a change runs (playbook rule E14). No check may be lost: every script
@@ -9,6 +9,9 @@ import { importProblems } from "./area-imports.mjs";
 const root = new URL("../../", import.meta.url);
 const config = JSON.parse(readFileSync(new URL("scripts/ci/areas.json", root), "utf8"));
 const repoFiles = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" }).split("\n").filter(Boolean);
+const read = (p: string) => readFileSync(new URL(p, root), "utf8");
+// v2: app/, components/, lib/, emails/ and styles/ are classified by their importers (graph in areas.json).
+const graph = buildGraph({ config, files: repoFiles.filter((f) => existsSync(new URL(f, root))), read });
 
 // The QA scripts the old checks.yml ran, as `node <path>`, in workflow order.
 const OLD_QA_SCRIPTS = [
@@ -68,10 +71,54 @@ describe("scripts/ci/areas.json", () => {
 
   it("no file in an area is imported from shared, fast, unknown or another area's code (areas.json cannot fail open)", () => {
     const problems = importProblems({
-      config, files: repoFiles, read: (p: string) => readFileSync(new URL(p, root), "utf8"),
+      config, files: repoFiles, read,
       aliases: { "@/": "", "@ds/": "packages/design-system/src/" },
     });
     expect(problems).toEqual([]);
+  });
+
+  it("the import graph has no blind spot (no non-literal import, no unresolved or undeclared specifier, no dead glob or seam)", () => {
+    const pkg = JSON.parse(read("package.json"));
+    const packages = [...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.devDependencies ?? {})];
+    expect(graphProblems({ config, files: repoFiles, read, packages })).toEqual([]);
+  });
+
+  // Every page a QA script visits (and the layouts above it) is an entry of each area that runs the script: a change
+  // only that page imports must run the script. Visits are the route-like string literals in the script, matched to
+  // app/**/page.tsx and route handlers (route groups dropped, [param] and [[...path]] segments as wildcards).
+  it("each area's graph.entries cover every page its QA scripts visit", () => {
+    const appFiles = repoFiles.filter((f) => f.startsWith("app/"));
+    const pages = appFiles.filter((f) => /(^|\/)(page\.tsx|route\.server\.ts|route\.ts)$/.test(f));
+    const routeOf = (f: string) => "/" + f.replace(/^app\/?/, "").replace(/(^|\/)(page\.tsx|route\.server\.ts|route\.ts)$/, "").split("/").filter((x) => x && !/^\(.*\)$/.test(x)).join("/");
+    const re = (r: string) => new RegExp("^" + r.replace(/\/\[\[\.\.\.[^\]]+\]\]/g, "(?:/.*)?").replace(/\[\.\.\.[^\]]+\]/g, ".+").replace(/\[[^\]]+\]/g, "[^/]+") + "/?$");
+    const table = pages.map((f) => ({ f, r: re(routeOf(f)), route: routeOf(f) }));
+    const pageFor = (u: string) => {
+      const hits = table.filter((t) => t.r.test(u));
+      const exact = hits.filter((t) => !t.route.includes("["));
+      return (exact.length ? exact : hits).map((t) => t.f);
+    };
+    const layoutsAbove = (f: string) => {
+      const parts = f.split("/");
+      const out: string[] = [];
+      for (let i = parts.length - 1; i >= 2; i--) {
+        const l = `${parts.slice(0, i).join("/")}/layout.tsx`;
+        if (appFiles.includes(l)) out.push(l);
+      }
+      return out;
+    };
+    const missing: string[] = [];
+    for (const [area, a] of Object.entries(config.areas as Record<string, { scripts: unknown[] }>)) {
+      for (const sc of a.scripts.map((x) => normalizeScript(x).name as string)) {
+        // After a quote, a backtick or a `${…}` (`${url}/preview/forms/`): every path-like literal.
+        for (const m of read(sc).matchAll(/["'`}](\/(?:between-gig-2\.0\/)?[a-z][a-z0-9\-/[\]]*)/g)) {
+          const u = m[1].replace(/^\/between-gig-2\.0/, "").replace(/\/+$/, "") || "/";
+          for (const p of pageFor(u)) for (const f of [p, ...layoutsAbove(p)]) {
+            if (!config.graph.entries[area].some((g: string) => matchGlob(g, f))) missing.push(`${area}: ${f} (${sc} visits ${u})`);
+          }
+        }
+      }
+    }
+    expect([...new Set(missing)]).toEqual([]);
   });
 
   it("runs every script with node, and every listed script exists", () => {
@@ -105,18 +152,27 @@ describe("scripts/ci/areas.json", () => {
   });
 
   it("classifies the shapes the plan names", () => {
-    const mode = (...files: string[]) => classify(files, config, { protectedPaths: ["scripts/ci/areas.json"] });
+    const mode = (...files: string[]) => classify(files, config, { protectedPaths: ["scripts/ci/areas.json"], graph });
     expect(mode("AGENTS.md", ".claude/settings.json").mode).toBe("none");
     expect(mode("docs/ui-rules.md").mode).toBe("fast");
     for (const shared of ["package.json", "pnpm-lock.yaml", "lib/auth/clerk.ts", "components/auth/LoginView.tsx", "app/layout.tsx",
-      "app/globals.css", "lib/server/staff.ts", "components/ds/atoms/index.tsx", ".github/workflows/checks.yml", "scripts/ci/qa-flow.mjs"]) {
+      "app/globals.css", "components/ds/atoms/index.tsx", ".github/workflows/checks.yml", "scripts/ci/qa-flow.mjs"]) {
       expect(mode(shared).mode, shared).toBe("all");
     }
+    // A page no area lists, and code the root layout mounts on every page (AdminRoutes wraps every page in OwnerFrame).
     expect(mode("app/totally-new/page.tsx").mode).toBe("all");
-    expect(mode("app/profile/page.tsx")).toMatchObject({ mode: "areas", areas: ["profile"] });
-    expect(mode("app/page.tsx", "app/owners/staff/page.tsx")).toMatchObject({ mode: "areas", areas: ["owners", "public", "staff"] });
-    // A helper imported across areas is shared: a change to it runs everything.
-    expect(mode("lib/profile/skills.ts").mode).toBe("all");
+    expect(mode("components/owners/OwnerShell.tsx").mode).toBe("all");
+    expect(mode("components/site/Page.tsx").mode).toBe("all");
+    // v2: a page or helper runs the areas whose QA scripts visit a page that imports it (other areas' scripts visit
+    // these routes too, so most changes run several areas).
+    const areas = (...files: string[]) => mode(...files).areas.join(",");
+    expect(areas("app/profile/page.tsx")).toBe("profile,public,signup");
+    expect(areas("app/page.tsx", "app/owners/staff/page.tsx")).toBe("emails,hub,owners,preview,profile,public,staff");
+    expect(areas("lib/profile/skills.ts")).toBe("hub,owners,preview,profile,signup,staff");
+    expect(areas("lib/server/staff.ts")).toBe("emails,hub,owners,preview,staff");
+    expect(areas("components/emails/EmailPreview.tsx")).toBe("emails,hub,owners,preview,staff");
+    expect(areas("components/landing/ForProfessionals.tsx")).toBe("hub,owners,public");
+    for (const f of ["lib/profile/skills.ts", "components/landing/ForProfessionals.tsx"]) expect(mode(f).mode, f).toBe("areas");
     // A QA script's own file runs its area.
     expect(mode("scripts/qa/home-hero.mjs")).toMatchObject({ mode: "areas", areas: ["public"] });
   });
