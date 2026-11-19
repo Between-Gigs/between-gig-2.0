@@ -1,0 +1,22 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import type { NavigationMode } from "./navigation-preferences";
+const state=vi.hoisted(()=>({session:null as null|{role:string},loading:false,mode:undefined as NavigationMode|undefined}));
+vi.mock("@/lib/session",()=>({useSession:()=>state}));
+vi.mock("@/components/site/PersonalPreferences",()=>({usePersonalPreferences:()=>({preferences:{mode:state.mode}})}));
+vi.mock("@ds/components",()=>({Logo:()=>null}));
+vi.mock("@/components/ds/organisms",()=>({PhotoStage:({children}:{children:React.ReactNode})=>React.createElement("section",null,children)}));
+vi.mock("@/components/site/SiteFooter",()=>({SiteFooter:()=>null}));
+vi.mock("@/components/site/SiteHeader",()=>({SiteHeader:()=>null}));
+vi.mock("@/components/landing/JoinCta",()=>({JoinButton:({href="/join/",label="Create your Gigster profile"}:{href?:string,label?:string})=>React.createElement("a",{href},label)}));
+import { ComingSoon } from "@/components/landing/ComingSoon";
+const render=()=>renderToStaticMarkup(React.createElement(ComingSoon));
+describe("homepage primary CTA",()=>{
+ beforeEach(()=>{state.session=null;state.loading=false;state.mode=undefined;});
+ it("keeps signed-out onboarding even with an old owner preference",()=>{state.mode="owner";expect(render()).toContain('href="/join/"');expect(render()).not.toContain('href="/owners/"');});
+ it("does not flash an owner action while session loads",()=>{state.session={role:"owner"};state.loading=true;expect(render()).toContain('href="/join/"');});
+ it("uses the owner's saved Gigster mode on the public homepage",()=>{state.session={role:"owner"};state.mode="gigster";expect(render()).toContain('href="/profile/">Go to my profile');expect(render()).not.toContain('href="/owners/"');});
+ it.each(["owner","developer",undefined] as const)("keeps the dashboard for owner preference %s",mode=>{state.session={role:"owner"};state.mode=mode;expect(render()).toContain('href="/owners/">Go to the dashboard');});
+ it("never gives a nonowner the dashboard based on saved mode",()=>{state.session={role:"gigster"};state.mode="developer";expect(render()).toContain('href="/profile/">Go to my profile');});
+});

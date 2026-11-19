@@ -37,3 +37,10 @@ export function writePreferenceRecord(key: string, value: string, storage: Pick<
 export function modeDestination(href: string, basePath: string) {
   return { href, fullPage: basePath === "/hub" && /^\/owners(?:\/|$)/.test(href) };
 }
+
+/** Homepage CTA only: a remembered workspace choice never grants account authority. */
+export function signedInHomeDestination(role: string, savedMode?: NavigationMode) {
+  return role === "owner" && savedMode !== "gigster"
+    ? { href: "/owners/", label: "Go to the dashboard" }
+    : { href: "/profile/", label: "Go to my profile" };
+}
