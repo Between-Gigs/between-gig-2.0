@@ -29,12 +29,10 @@ try { for (const width of [320, 390, 768, 1440]) for (const theme of ["light", "
     await section.getByText(category.tagline, { exact: true }).waitFor();
     const summary = section.locator("summary");
     const field = page.locator("#f-line-0");
-    assert.equal(await summary.evaluate(el => Boolean(el.closest("[data-service-picker]")?.querySelector("#f-service-0"))), true, "examples share the selected dropdown’s column");
-    assert.equal(await summary.evaluate(el => Boolean(el.compareDocumentPosition(document.querySelector("#f-line-0")) & Node.DOCUMENT_POSITION_FOLLOWING)), true, "examples come before the answer in reading order");
-    const [pickerBox, examplesBox, fieldBox] = await Promise.all([page.locator("#f-service-0").boundingBox(), summary.boundingBox(), field.boundingBox()]);
-    assert.ok(examplesBox.y > pickerBox.y + pickerBox.height, "examples appear immediately under the dropdown");
-    if (width < 640) assert.ok(examplesBox.y < fieldBox.y, "mobile readers reach examples before the answer");
-    else assert.ok(examplesBox.x < fieldBox.x, "desktop examples stay in the dropdown column");
+    assert.equal(await field.evaluate(el => Boolean(el.compareDocumentPosition(el.closest("li")?.querySelector("summary")) & Node.DOCUMENT_POSITION_FOLLOWING)), true, "examples follow the personal answer in reading order");
+    const [examplesBox, fieldBox] = await Promise.all([summary.boundingBox(), field.boundingBox()]);
+    assert.ok(examplesBox.y > fieldBox.y + fieldBox.height, "examples appear under the answer at every width");
+    assert.ok(examplesBox.x >= fieldBox.x && examplesBox.x + examplesBox.width <= fieldBox.x + fieldBox.width + 1, "guidance shares the answer column");
     assert.ok(!await field.getAttribute("placeholder"), "the answer field does not repeat its label as a placeholder");
     await summary.focus(); await page.keyboard.press("Enter");
     for (const example of category.examples) { await section.getByText(example.title, { exact: true }).waitFor(); await section.getByText(example.description, { exact: true }).waitFor(); }
@@ -60,6 +58,13 @@ try { for (const width of [320, 390, 768, 1440]) for (const theme of ["light", "
   const longLine = "First exact line\n" + "x".repeat(150);
   await fixture(page, ["Hair Styling"], "Legacy custom\n" + longLine);
   await page.locator("#f-other").fill("Renamed custom"); await saved(page, { other: "Renamed custom\n" + longLine }); await page.reload(); await page.locator("#f-other").waitFor(); assert.equal(await page.locator("#f-other-line").inputValue(), longLine);
+  const full = (fieldId) => page.locator(fieldId).evaluate(el => el.value.length === 120 && el.scrollHeight <= el.clientHeight + 1);
+  const maxText = Array.from({length: 24}, () => "wrap").join(" ").padEnd(120, "z");
+  await fixture(page, ["Interior Styling"], "Fictional custom\n" + maxText, {"Interior Styling": maxText});
+  assert.ok(await full("#f-line-0"), "all 120 standard characters are visible at this width");
+  assert.ok(await full("#f-other-line"), "all 120 custom characters are visible at this width");
+  await page.locator("#f-line-0").fill(maxText.replaceAll("wrap", "wide"));
+  assert.ok(await full("#f-line-0"), "the answer resizes after editing");
   await fixture(page, ["Interior Styling"]); await section.locator("summary").click();
   await page.addScriptTag({ content: fs.readFileSync("node_modules/axe-core/axe.min.js", "utf8") });
   assert.deepEqual(await section.evaluate(async el => (await window.axe.run(el, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } })).violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) }))), []);
