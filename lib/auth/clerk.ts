@@ -45,8 +45,7 @@ export const clerkAppearance = {
     headerTitle: "font-display text-display-sm text-ink",
     headerSubtitle: "text-body-md text-ink-muted",
     formFieldLabel: "text-label-md text-ink",
-    // Clerk reuses this slot on the reset-password checkbox; keep its own square control.
-    formFieldInput: "[&:not([type=checkbox])]:h-10 [&:not([type=checkbox])]:rounded-md border-line-strong text-body-md",
+    formFieldInput: "h-10 rounded-md border-line-strong text-body-md",
     otpCodeFieldInput: "font-mono text-heading-lg",
     formButtonPrimary: "h-12 rounded-md text-label-md normal-case shadow-none",
     footer: "bg-transparent",

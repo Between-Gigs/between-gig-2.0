@@ -17,6 +17,14 @@
 /* Tailwind scans the vendored components for the classes they use. */
 @source "../packages/design-system/src";
 
+@layer utilities {
+  /* The text-input utilities on Clerk's shared field slot must not resize checkboxes. */
+  input.cl-formFieldInput[type="checkbox"] {
+    height: revert-layer;
+    border-radius: revert-layer;
+  }
+}
+
 /*
  * Type scale, per docs/ui-rules.md: body text 16px (17 → 18 for lead text, 13 → 14 for secondary), and
  * about 1.5 line height for anything people read, captions included. Overrides the system's scale until it
