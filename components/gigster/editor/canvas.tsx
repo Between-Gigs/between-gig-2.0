@@ -278,7 +278,7 @@ export function CanvasHelp({ d, set, errors, onConvertToCustom }: SectionProps &
                 </div>
                 <div className="grid min-w-0 content-start gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
                   <label htmlFor={`f-line-${i}`} className="text-body-md text-ink">What can a customer hire you to do?</label>
-                  <Textarea id={`f-line-${i}`} rows={2} className="min-h-[4.75rem] [field-sizing:content]" showCount maxLength={SERVICE_LINE_MAX} value={line} invalid={!!lineError}
+                  <Textarea id={`f-line-${i}`} rows={2} className="min-h-20 [field-sizing:content]" showCount maxLength={SERVICE_LINE_MAX} value={line} invalid={!!lineError}
                     onChange={(e) => setLine(s, e.target.value)} />
                   {lineError && <p className="text-body-sm text-danger">{lineError}</p>}
                   <ServiceGuidance service={s} className="mt-2" />
@@ -305,7 +305,7 @@ export function CanvasHelp({ d, set, errors, onConvertToCustom }: SectionProps &
               </div>
               <div className="grid min-w-0 gap-1.5 sm:col-span-7 sm:border-l sm:border-line-strong sm:pl-5">
                 <label htmlFor="f-other-line" className="text-body-md text-ink">What can a customer hire you to do?</label>
-                <Textarea id="f-other-line" rows={2} className="min-h-[4.75rem] [field-sizing:content]" showCount maxLength={SERVICE_LINE_MAX} value={otherLine}
+                <Textarea id="f-other-line" rows={2} className="min-h-20 [field-sizing:content]" showCount maxLength={SERVICE_LINE_MAX} value={otherLine}
                   onChange={(e) => setOther(otherName, e.target.value.slice(0, SERVICE_LINE_MAX))} />
               </div>
             </div>
