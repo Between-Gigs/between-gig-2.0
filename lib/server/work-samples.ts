@@ -41,6 +41,7 @@ export function assertSavedPhotoFits(v: readonly string[]): void {
 /** What a browser may send as its work-sample list: photos (new as data URLs, stored as /media links) and video entries. */
 export function cleanSamples(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
+  assertSavedPhotoFits(v);
   return v.filter((s): s is string => {
     if (typeof s !== "string" || s.length > MAX_CHARS) return false;
     if (s.startsWith("video:")) return decodeSample(s) !== null;
