@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { NavigationMode } from "./navigation-preferences";
+import type { NavigationMode } from "@/lib/navigation-preferences";
 const state=vi.hoisted(()=>({session:null as null|{role:string},loading:false,mode:undefined as NavigationMode|undefined}));
 vi.mock("@/lib/session",()=>({useSession:()=>state}));
 vi.mock("@/components/site/PersonalPreferences",()=>({usePersonalPreferences:()=>({preferences:{mode:state.mode}})}));
