@@ -71,7 +71,7 @@ function ThemeTogglePresentation({ theme, onChange, showLabel = true, size = "md
   return (
     <button type="button" role="switch" aria-checked={night} aria-label="Night mode" onClick={flip}
       className={cx("group inline-flex shrink-0 cursor-pointer items-center gap-2.5 rounded-full border border-line-strong bg-surface text-ink transition-colors duration-fast hover:border-ink-brand",
-        sm ? "h-8 p-0.5 pr-3" : "h-10 p-1 pr-3.5", !showLabel && (sm ? "pr-0.5" : "pr-1"), className)}>
+        sm ? "h-8 p-0.5" : "h-10 p-1", showLabel && (sm ? "pr-3" : "pr-3.5"), className)}>
       <span aria-hidden="true" className={cx("relative overflow-hidden rounded-full transition-colors duration-slow",
         sm ? "h-6 w-11" : "h-8 w-14", night ? "bg-surface-brand" : "bg-surface-selected")}>
         {/* stars, visible at night */}
