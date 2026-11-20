@@ -197,6 +197,7 @@ export function buildSeed(records: SeedPerson[] = seedPeople): SeedState {
   const drafts: ProfileDraft[] = [];
   const profiles: Profile[] = [];
 
+  const seededAt = Date.now();
   for (const s of records) {
     const invited = s.status === "invited";
     const updated = dayIso(s.days);
@@ -228,12 +229,14 @@ export function buildSeed(records: SeedPerson[] = seedPeople): SeedState {
       continue;
     }
     const token = s.id === "riley-park" ? DEMO_TOKENS.valid : s.id === "grace-liu" ? DEMO_TOKENS.used : s.id === "sky-morales" ? DEMO_TOKENS.expired : `${s.id}-invite`;
-    const createdAt = person.invitedAt;
     const expired = s.id === "sky-morales";
+    const active = invited && !expired;
+    // Renew the sample token on reset without changing its historical waitlist and activity dates.
+    const createdAt = active ? new Date(seededAt).toISOString() : person.invitedAt;
     invites.push({
       token, personId: s.id, email: person.email, createdAt,
-      // Invites last 30 days. The expired sample was sent long ago.
-      expiresAt: expired ? at("10-01T10:00") : at("11-20T10:00"),
+      // Active fictional invites get a normal 30-day window on sample reset; historical examples stay historical.
+      expiresAt: active ? new Date(seededAt + 30 * 86400000).toISOString() : expired ? at("10-01T10:00") : at("11-20T10:00"),
       usedAt: invited ? undefined : person.registeredAt,
     });
 
