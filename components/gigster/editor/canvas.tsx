@@ -28,7 +28,6 @@ import { PhoneInput } from "./PhoneInput";
 import { ExperienceFields } from "./ExperienceFields";
 import { SkillPicker } from "./SkillPicker";
 import { POSTAL_CODE_MAX } from "@/lib/profile/postal";
-import { INSURANCE_NOTES_MAX } from "@/lib/profile/insurance";
 import { stageTwoLimits } from "@/lib/profile/stage-two";
 import { ABOUT_MAX, DATES_MAX, DEPARTMENT_MAX, MAX_SERVICES, NAME_MAX, SERVICE_LINE_MAX, TITLE_MAX, hasRate } from "@/lib/profile/validate";
 import { Credits } from "@/components/builder/ProfileBuilder";
@@ -597,8 +596,7 @@ export function CanvasExperience({ d, set, errors, required }: SectionProps & { 
 /** The remaining ruled columns: Credits and the personality question. */
 export function CanvasColumns({ d, set, errors, required }: SectionProps & { required: (field: string) => boolean }) {
   const [credOpen, openCred] = useOpen(!!(d.credits.some((c) => c.trim()) || d.imdb || d.resumeUrl || d.linkedin || errors.credits || errors.imdb || errors.linkedin));
-  const [qOpen, openQ] = useOpen(!!(d.personalityQuestion || d.personality || errors.personality || errors.personalityQuestion));
-  const question = personalityQuestions.find((q) => q.id === d.personalityQuestion)?.text;
+  const question = personalityQuestions.find((q) => q.id === d.personalityQuestion);
   const col = "grid min-w-0 scroll-mt-40 content-start gap-4";
   return (
     <div className="grid gap-10 lg:grid-cols-2 lg:gap-0">
@@ -621,25 +619,20 @@ export function CanvasColumns({ d, set, errors, required }: SectionProps & { req
 
       <section id="sec-personality" aria-labelledby="sec-personality-h" className={cx(col, "lg:border-l lg:border-line-strong lg:pl-8")}>
         <p className="text-body-sm text-ink-muted">Let your potential clients get to know you better.</p>
-        <H id="sec-personality-h" size="md">{question ?? "A question about you"}</H>
-        {qOpen ? (
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <RadioGroup name="f-personality-q" label="Pick one question" value={d.personalityQuestion ?? ""} onChange={(v) => set("personalityQuestion")(v)}
-                options={personalityQuestions.map((q) => ({ value: q.id, label: q.text }))} />
-              <GroupError id="f-personality-q-error">{errors.personalityQuestion}</GroupError>
-            </div>
-            <Field label="Your answer" optional={!d.personalityQuestion} error={errors.personality} hint="A sentence or two, in your own words.">
+        <H id="sec-personality-h" size="md">A question about you</H>
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <RadioGroup name="f-personality-q" label="Pick one question" value={question?.id ?? ""} onChange={(v) => set("personalityQuestion")(v)}
+              options={personalityQuestions.map((q) => ({ value: q.id, label: q.text }))} />
+            <GroupError id="f-personality-q-error">{errors.personalityQuestion}</GroupError>
+          </div>
+          {question && (
+            <Field label="Your answer" error={errors.personality} hint="A sentence or two, in your own words.">
               <Textarea id="f-personality" rows={3} showCount maxLength={stageTwoLimits.personality} value={d.personality ?? ""}
                 onChange={(e) => set("personality")(e.target.value.slice(0, stageTwoLimits.personality))} />
             </Field>
-          </div>
-        ) : (
-          <>
-            <p className="text-body-md text-ink">Pick one of four questions and answer it. It shows at the end of your profile.</p>
-            <AddLink onClick={openQ}>Add your answer</AddLink>
-          </>
-        )}
+          )}
+        </div>
       </section>
     </div>
   );
@@ -647,7 +640,7 @@ export function CanvasColumns({ d, set, errors, required }: SectionProps & { req
 
 /** "Details · Optional": what the profile's Details block shows (languages and how they work), asked right here. */
 export function CanvasDetails({ d, set }: SectionProps) {
-  const filled = !!(d.languages.trim() || d.tools.trim() || d.mode !== "on-site" || d.insurance !== "private" || d.insuranceNotes?.trim());
+  const filled = !!(d.languages.trim() || d.tools.trim() || d.mode !== "on-site");
   const [open, openIt] = useOpen(filled);
   const atClient = d.mode === "on-site" || d.mode === "both";
   const atBusiness = d.mode === "studio" || d.mode === "both";
@@ -675,11 +668,6 @@ export function CanvasDetails({ d, set }: SectionProps) {
               onChange={(e) => chooseLocations(atClient, e.target.checked)} />
           </fieldset>
           <Field label="Tools and equipment" optional hint="One item per line, five or fewer works best."><Textarea id="f-tools" rows={5} value={d.tools} placeholder="Special Cameras, Lighting Kit, Box Truck, Makeup kit, etc." maxLength={160} onChange={(e) => set("tools")(e.target.value)} /></Field>
-          <RadioGroup name="f-insurance" label={<>Insurance <span className="font-normal text-ink-subtle">· optional, self-reported</span></>} value={d.insurance} onChange={(v) => set("insurance")(v as typeof d.insurance)}
-            options={[{ value: "private", label: "Prefer to discuss privately" }, { value: "yes", label: "I have liability insurance" }, { value: "no", label: "No insurance yet" }]} />
-          {d.insurance === "yes" && <Field label="Describe your liability insurance" optional hint="For the Between Gigs team. Not shown on your public profile.">
-            <Textarea id="f-insurance-notes" rows={3} maxLength={INSURANCE_NOTES_MAX} showCount value={d.insuranceNotes ?? ""} onChange={(e) => set("insuranceNotes")(e.target.value)} />
-          </Field>}
         </div>
       )}
     </section>
