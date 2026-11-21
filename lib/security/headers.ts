@@ -23,7 +23,7 @@ export interface CspOptions {
   clerkPublishableKey: string | undefined;
   /** next dev: React's debugging needs eval. Never in a production build. */
   dev?: boolean;
-  /** NEXT_PUBLIC_PROFILE_VIDEO_LINKS is on: the video providers' thumbnail hosts may serve images. */
+  /** NEXT_PUBLIC_PROFILE_VIDEO_LINKS is on: the video thumbnail hosts and exact player frame hosts are permitted. */
   videoLinks?: boolean;
 }
 
@@ -42,11 +42,11 @@ export function contentSecurityPolicy({ nonce, clerkPublishableKey, dev = false,
     "script-src": ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...clerk, CLOUDFLARE_CHALLENGES, CLERK_PROTECT, ...(dev ? ["'unsafe-eval'"] : [])],
     // Clerk's components inject their CSS at runtime.
     "style-src": ["'self'", "'unsafe-inline'"],
-    // The two video providers' thumbnail hosts, for work samples that link to a video (images only: no frames, no connections).
+    // The two video providers' thumbnail hosts, for work samples that link to a video (image sources only; player frames are separately allowlisted below).
     "img-src": ["'self'", "data:", "blob:", "https://img.clerk.com", ...(videoLinks ? VIDEO_THUMBNAIL_HOSTS : [])],
     "font-src": ["'self'", "data:"],
     "connect-src": ["'self'", ...clerk, `${CLERK_PROTECT}:*`],
-    "frame-src": ["'self'", CLOUDFLARE_CHALLENGES, CLERK_PROTECT],
+    "frame-src": ["'self'", CLOUDFLARE_CHALLENGES, CLERK_PROTECT, ...(videoLinks ? ["https://www.youtube-nocookie.com", "https://player.vimeo.com"] : [])],
     "worker-src": ["'self'", "blob:"],
     "manifest-src": ["'self'"],
     "object-src": ["'none'"],

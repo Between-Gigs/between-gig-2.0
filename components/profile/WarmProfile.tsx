@@ -181,7 +181,7 @@ export function WarmProfile({ person, fields: f, mode, embedded, similar = [], d
           ))}
         </ul>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          {portfolio.some((it) => !it.video) && <Button variant="secondary" size="sm" onClick={() => onPhoto(0)}>Show all {portfolio.filter((it) => !it.video).length} photos</Button>}
+          {portfolio.length > 0 && <Button variant="secondary" size="sm" onClick={() => onPhoto(0)}>Show all {workMeta(portfolio)}</Button>}
           {sample && <p className="inline-flex items-start gap-2 rounded-lg bg-tint-sand px-3 py-2 text-body-sm text-tint-ink"><Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />Concept images showing the kind of work to discuss, not completed client projects.</p>}
         </div>
       </Section>

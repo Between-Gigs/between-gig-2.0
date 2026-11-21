@@ -19,9 +19,9 @@ export function useVimeoThumb(id: string | null) {
 }
 
 /**
- * One work sample in a profile's grid, inside its own positioned <li>. A photo opens the lightbox. A video link shows its
- * thumbnail (uploaded, else the provider's, else a neutral placeholder) with a play badge and links OUT to the video in a new
- * tab. It never embeds the video.
+ * One work sample in a profile's grid, inside its own positioned <li>. Photos and videos open the shared lightbox. A video link shows its
+ * thumbnail (uploaded, else the provider's, else a neutral placeholder) with a play badge; the provider can still be opened in a new
+ * tab only from the lightbox fallback.
  */
 export function WorkTile({ it, onPhoto, buttonClassName, imgClassName, children }: { it: PortfolioItem; onPhoto: (index: number) => void; buttonClassName: string; imgClassName?: string; children?: React.ReactNode }) {
   const video = it.video;
@@ -35,13 +35,13 @@ export function WorkTile({ it, onPhoto, buttonClassName, imgClassName, children 
   }
   const thumb = thumbnailFor(video, vimeo);
   return (
-    <a href={video.video.url} target="_blank" rel="noopener noreferrer" aria-label={`Watch video: ${it.caption} (opens in a new tab)`} className={buttonClassName}>
+    <button type="button" onClick={() => onPhoto(it.photoIndex)} aria-label={`Play video: ${it.caption}`} className={buttonClassName}>
       {thumb
         ? <FittedImg sample={thumb} loading="lazy" imgClassName={imgClassName} />
         : <span data-thumb-placeholder="" aria-hidden="true" className="absolute inset-0 block bg-surface-sunken" />}
       <span data-play-badge="" aria-hidden="true" className="pointer-events-none absolute inset-0 grid place-content-center">
         <span className={cx("grid size-12 place-content-center rounded-full bg-surface/90 text-ink shadow-md")}><Play className="size-5 translate-x-px fill-current" /></span>
       </span>{children}
-    </a>
+    </button>
   );
 }
