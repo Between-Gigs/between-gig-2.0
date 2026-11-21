@@ -1,6 +1,6 @@
 "use client";
-import {adoptPhotoCaptionSave} from "@/lib/profile/photo-captions";
-import { serviceDraftReducer, type ServiceDraftAction, type ServiceFields } from "@/lib/profile/service-choice";
+import {reconcilePhotoCaptionSave} from "@/lib/profile/photo-captions";
+import { serviceDraftReducer, type ServiceDraftAction, type ServiceDraftState, type ServiceFields } from "@/lib/profile/service-choice";
 /*
  * /profile/canvas/: the Gigster profile editor (rebuilt 13 Nov 2026, Flow p3). One clean page in the Green Room look:
  * what's needed to submit and what can come later, then the profile's parts in the order clients read them, with
@@ -14,7 +14,7 @@ import type { EditorView as View } from "@/lib/profile/editor-view";
 import { departmentFieldRetired } from "@/lib/profile/department-retirement";
 import { adoptStored, videoLinksEnabled } from "@/lib/profile/video-links";
 import { profileDetailsEnabled } from "@/lib/profile/details";
-import { adoptSavedMarketing, saveErrorMessage, saveThenSubmit, urgentFields } from "@/lib/profile/save-flow";
+import { adoptSavedMarketing, createDraftSaveQueue, saveErrorMessage, saveThenSubmit, urgentFields } from "@/lib/profile/save-flow";
 import { Button, Skeleton, useToast } from "@ds/components";
 import { cx } from "@ds/components/cx";
 import { ArrowLeft, ArrowRight, ChevronDown, Eye, FileText, MessageSquareWarning, Save, Send } from "lucide-react";
@@ -94,9 +94,17 @@ function Editor({ personId }: { personId: string }) {
   const [profileCreatedAt, setProfileCreatedAt] = React.useState<string | null | undefined>(undefined);
   const template = React.useMemo(() => withTravelRequirement(baseTemplate, profileCreatedAt), [baseTemplate, profileCreatedAt]);
   const [person, setPerson] = React.useState<Person | null>(null);
-  const [draftState, dispatchDraft] = React.useReducer(serviceDraftReducer, { fields: null, conversion: null });
+  const [draftState, setDraftState] = React.useState<ServiceDraftState>({ fields: null, conversion: null });
+  const draftCursor = React.useRef(draftState);
+  // A state transition may be queued for rendering, but the next save must read
+  // its reconciled baseline immediately rather than waiting for a React effect.
+  const dispatchDraft = React.useCallback((action: ServiceDraftAction) => {
+    const next = serviceDraftReducer(draftCursor.current, action);
+    draftCursor.current = next;
+    setDraftState(next);
+  }, []);
   const d = draftState.fields;
-  const setD = React.useCallback((value: Extract<ServiceDraftAction, { type: "set" }>["value"]) => dispatchDraft({ type: "set", value }), []);
+  const setD = React.useCallback((value: Extract<ServiceDraftAction, { type: "set" }>["value"]) => dispatchDraft({ type: "set", value }), [dispatchDraft]);
   const conversionId = React.useRef(0);
   const conversionCallbacks = React.useRef(new Map<number, () => void>());
   const [sentVersion, setSentVersion] = React.useState<ProfileFields | null>(null);
@@ -105,15 +113,15 @@ function Editor({ personId }: { personId: string }) {
   const [summary, setSummary] = React.useState(false);
   const view = useEditorView();
   const [submitting, setSubmitting] = React.useState(false);
+  const submittingNow = React.useRef(false);
+  const [saveQueue] = React.useState(createDraftSaveQueue);
   const live = useLiveEditWarning(person?.status);
   const dirty = React.useRef(false);
   const step = React.useRef(0);
-  const latest = React.useRef<ProfileFields | null>(null);
   /** Fields this tab changed since its last save: they win over another tab's save. */
   const touched = React.useRef(new Set<keyof ProfileFields>());
   const known = React.useRef("");
   const summaryRef = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => { latest.current = d; }, [d]);
 
   React.useEffect(() => {
     let current = true;
@@ -138,9 +146,8 @@ function Editor({ personId }: { personId: string }) {
     setSentVersion(sent?.fields ?? null);
   }, [personId]);
 
-  /** Saves what changed; true when nothing was left to save or the save worked, false when it failed (the error stays shown). */
-  const flush = React.useCallback(async (): Promise<boolean> => {
-    const fields = latest.current;
+  const saveOnce = React.useCallback(async (urgent: boolean): Promise<boolean> => {
+    const fields = draftCursor.current.fields;
     if (!fields || !dirty.current) return true;
     dirty.current = false;
     const keys = [...touched.current];
@@ -148,18 +155,30 @@ function Editor({ personId }: { personId: string }) {
     setSave({ status: "saving" });
     try {
       // Another tab may have saved since this one read the draft: lay this tab's own changes over that save.
-      const stored = KEEPS_DRAFT ? await data.profiles.getDraft(personId) : null;
+      const stored = KEEPS_DRAFT && !urgent ? await data.profiles.getDraft(personId) : null;
       const theirs = stored?.savedAt && stored.savedAt !== known.current ? stored.fields : null;
       const merged = { ...(theirs ? { ...theirs, ...pick(fields, keys) } : fields),
         ...(keys.includes("photoCaptions") ? { photoCaptionBaseline: fields.photoCaptionBaseline } : {}) };
-      const saved = await data.profiles.saveDraft(personId, merged, step.current);
+      const request = () => data.profiles.saveDraft(personId, urgent ? urgentFields(merged) : merged, step.current);
+      let pending: ReturnType<typeof request> | undefined;
+      if (urgent) sendNow(() => { pending = request(); });
+      else pending = request();
+      const saved = await pending!;
+
       setProfileCreatedAt(saved.profileCreatedAt);
       known.current = saved.savedAt;
-      if (theirs) setD((cur) => (cur ? { ...merged, ...pick(cur, touched.current) } : cur));
+      const savedCaptions = saved.fields.photoCaptions;
+      const pendingKeys = new Set(touched.current);
+      if (theirs || savedCaptions) setD((cur) => {
+        if (!cur) return cur;
+        const next = theirs ? { ...merged, ...pick(cur, pendingKeys) } : cur;
+        return savedCaptions
+          ? { ...next, ...reconcilePhotoCaptionSave(cur, fields, merged, savedCaptions, pendingKeys.has("photoCaptions")) }
+          : next;
+      });
       // Work samples live in Company OS (video links on): take its list (photos become /media links), unless they changed meanwhile.
       const stored_ = saved.fields.workSamples;
-      if (videoLinksEnabled() && stored_ && !theirs) setD((cur) => (cur ? { ...cur, workSamples: adoptStored(merged.workSamples ?? [], stored_, cur.workSamples ?? []) } : cur));
-      if (saved.fields.photoCaptions) setD(cur=>cur?{...cur,photoCaptions:adoptPhotoCaptionSave(cur.photoCaptions,merged.photoCaptions,saved.fields.photoCaptions),photoCaptionBaseline:{...saved.fields.photoCaptions}}:cur);
+      if (videoLinksEnabled() && stored_ && !theirs && !urgent) setD((cur) => (cur ? { ...cur, workSamples: adoptStored(merged.workSamples ?? [], stored_, cur.workSamples ?? []) } : cur));
       // The marketing choice lives in Company OS: take the stored choice as the new baseline (unless the box was changed meanwhile).
       if (profileDetailsEnabled()) setD((cur) => (cur ? adoptSavedMarketing(cur, saved.fields, touched.current.has("marketingEmailConsent")) : cur));
       setSave(dirty.current ? { status: "saving" } : { status: "saved", at: saved.savedAt });
@@ -173,6 +192,17 @@ function Editor({ personId }: { personId: string }) {
       return false;
     }
   }, [personId, refresh, setD]);
+
+  /** Manual save, autosave, retry, page exit and submit all share the same drain. */
+  const flush = React.useCallback((mode: "normal" | "force" | "urgent" = "normal") => {
+    if (mode === "force" && !saveQueue.busy()) dirty.current = true;
+    let first = true;
+    return saveQueue.flush(() => !!draftCursor.current.fields && dirty.current, () => {
+      const urgent = first && mode === "urgent";
+      first = false;
+      return saveOnce(urgent);
+    });
+  }, [saveOnce, saveQueue]);
 
   // Consume each committed transaction once. Dirty tracking and focus cannot run inside the pure reducer.
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -200,17 +230,13 @@ function Editor({ personId }: { personId: string }) {
   // Closing the tab or switching away within the autosave pause: save at once (keepalive live).
   React.useEffect(() => {
     const now = () => {
-      const fields = latest.current;
-      if (!fields || !dirty.current) return;
-      dirty.current = false;
-      touched.current.clear();
-      sendNow(() => { void data.profiles.saveDraft(personId, urgentFields(fields), step.current).then((saved) => { known.current = saved.savedAt; }).catch(() => { dirty.current = true; }); });
+      if (dirty.current) void flush("urgent");
     };
     const hidden = () => { if (document.visibilityState === "hidden") now(); };
     window.addEventListener("pagehide", now);
     document.addEventListener("visibilitychange", hidden);
     return () => { window.removeEventListener("pagehide", now); document.removeEventListener("visibilitychange", hidden); };
-  }, [personId]);
+  }, [flush]);
   // Another tab saved (the sample's store changed): take its fields, keeping the ones changed here and not yet saved.
   React.useEffect(() => {
     if (!KEEPS_DRAFT) return;
@@ -272,6 +298,7 @@ function Editor({ personId }: { personId: string }) {
   const switchView = (v: View) => { setEditorView(v); window.scrollTo({ top: 0 }); };
 
   const submit = async () => {
+    if (submittingNow.current) return;
     const found = validateGigster(d, template);
     if (Object.keys(found).length) {
       setErrors(found);
@@ -280,13 +307,14 @@ function Editor({ personId }: { personId: string }) {
       requestAnimationFrame(() => { summaryRef.current?.scrollIntoView({ block: "start" }); summaryRef.current?.focus({ preventScroll: true }); });
       return;
     }
+    submittingNow.current = true;
     setSubmitting(true);
-    dirty.current = true;
     try {
       // Nothing is sent when the save before it failed: the save error stays on screen.
-      const result = await saveThenSubmit(flush, async () => { await data.profiles.submit(personId); });
+      const result = await saveThenSubmit(() => flush("force"), async () => { await data.profiles.submit(personId); });
       if (result === "not-saved") {
         toast({ message: "Your latest changes didn't save, so nothing was sent. Fix what the save message says, then try again.", tone: "danger" });
+        submittingNow.current = false;
         setSubmitting(false);
         return;
       }
@@ -294,12 +322,13 @@ function Editor({ personId }: { personId: string }) {
     } catch (e) {
       const message = e instanceof DataError && e.code === "profile_incomplete" ? "Some answers are still missing. Check each section, then try again." : "We couldn't send your profile. Try again.";
       toast({ message, tone: "danger" });
+      submittingNow.current = false;
       setSubmitting(false);
     }
   };
 
   // It saves as you go; Save draft saves now and says so (Justin's bar: "Private draft · Preview · Save draft").
-  const saveDraft = () => { dirty.current = true; void flush().then(ok => { if (ok) toast({ message: "Draft saved", tone: "success" }); }); };
+  const saveDraft = () => { void flush("force").then(ok => { if (ok) toast({ message: "Draft saved", tone: "success" }); }); };
 
   const sendButton = (size: "md" | "lg", full = false) => nothingToSend
     ? <Link href="/profile/submitted/" className={cx("inline-flex min-h-11 items-center justify-center gap-2 text-label-md font-semibold text-ink underline underline-offset-4", full && "w-full")}>
@@ -317,7 +346,7 @@ function Editor({ personId }: { personId: string }) {
           {/* Going back sits where back always is: first, on the left. */}
           {view === "preview" && <Button variant="secondary" iconStart={<ArrowLeft />} className="min-h-11" onClick={() => switchView("edit")}>Back to edit</Button>}
           <p className="flex min-w-0 items-center gap-2 text-label-md font-semibold text-ink"><FileText aria-hidden="true" className="size-4 shrink-0" />{stateLabel}</p>
-          <SaveIndicator state={save} onRetry={() => { dirty.current = true; void flush(); }} />
+          <SaveIndicator state={save} onRetry={() => { void flush("force"); }} />
           <div className="ml-auto flex items-center gap-2">
             {view === "edit" && <Button variant="ghost" iconStart={<Eye />} className="min-h-11" onClick={() => switchView("preview")}>Preview</Button>}
             {view === "edit" && <span aria-hidden="true" className="h-6 w-px bg-line-strong max-sm:hidden" />}

@@ -22,7 +22,7 @@ import { offSetServices, onSetSkills, waitlistCategories } from "@/lib/data/taxo
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { isReviewedStatus, publishGateOn } from "@/lib/profile/publish-gate";
 import { videoLinksEnabled } from "@/lib/profile/video-links";
-import { SAMPLE_KINDS, sampleRefusalMessage, samplesFrom, saveSamples, serialised } from "./work-samples";
+import { SAMPLE_KINDS, planSamples, sampleRefusalMessage, samplesFrom, saveSamples, serialised } from "./work-samples";
 import { CompanyOsError, and, eq, isIn, type AdminUser, type BatchOp, type CompanyOs, type Credential, type Row } from "./companyos";
 
 export interface Ctx {
@@ -428,6 +428,12 @@ async function saveDraftNow(ctx: Ctx, personId: string, input: ProfileFields): P
   const captionChanges = videoLinksEnabled() && fields.photoCaptions !== undefined
     ? planPhotoCaptions(own.profile?.id ?? "", fields.photoCaptions, own.sampleFiles ?? [], fields.photoCaptionBaseline ?? {})
     : [];
+  if (captionChanges.length && Array.isArray(fields.workSamples)) {
+    const removals = new Set(planSamples(fields.workSamples, own.items, own.sampleFiles).removeFiles);
+    if (captionChanges.some(({ id }) => removals.has(id))) {
+      throw new CompanyOsError(422, "invalid_photo_caption_removal", "A removed photo cannot also have its description changed. Reload before trying again.");
+    }
+  }
   const captionOps = photoCaptionOps(captionChanges);
   if (!own.profile) {
     // Only the person themself may create their profile; Company OS refuses anyone else (forbidden).

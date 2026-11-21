@@ -12,7 +12,7 @@ function fixture(mode='ok'){
   const photos=[photo('f',0),photo('g',1)];
   const cos={
     query:vi.fn(async(_c:unknown,s:{entity:string})=>s.entity==='profile'?[profile]:[]),
-    all:vi.fn(async(_c:unknown,s:{entity:string})=>s.entity==='file'?photos:[]),remove:vi.fn(),patch:vi.fn(),
+    all:vi.fn(async(_c:unknown,s:{entity:string})=>s.entity==='file'?photos:[]),remove:vi.fn(),patch:vi.fn(async()=>undefined),
     batch:vi.fn(async(_c:unknown, ops:BatchOp[])=>{
       const captionOps=ops.filter(op=>op.entity==='file');
       // The fixture simulates the contract, not the hosted DB or actual role/review policy.
@@ -59,4 +59,13 @@ it('foreign caption preflight happens before other profile mutation',async()=>{
 it('flag off does not accept caption persistence',()=>{
   vi.stubEnv('NEXT_PUBLIC_PROFILE_VIDEO_LINKS','0');
   expect(cleanFields({photoCaptions:{f:'text'}}).photoCaptions).toBeUndefined();
+});
+
+it('rejects an explicit caption change for a photo removed by the same request before any write',async()=>{
+  vi.stubEnv('NEXT_PUBLIC_PROFILE_VIDEO_LINKS','1');const f=fixture();
+  const input={...fields(),workSamples:['/media/g']};
+  await expect(saveDraft(f.ctx,'p',input)).rejects.toMatchObject({code:'invalid_photo_caption_removal'});
+  expect(f.cos.batch).not.toHaveBeenCalled();
+  expect(f.cos.remove).not.toHaveBeenCalled();
+  expect(f.photos.map(p=>p.data.caption)).toEqual(['Before','Before']);
 });

@@ -74,3 +74,25 @@ export function urgentFields(fields: ProfileFields): ProfileFields {
   void _unsaved;
   return rest as ProfileFields;
 }
+
+/** Coalesce callers, capture the next save only after its predecessor's receipt, and stop on failure. */
+export function createDraftSaveQueue() {
+  let inFlight: Promise<boolean> | null = null;
+  return {
+    busy: () => inFlight !== null,
+    flush(hasPending: () => boolean, saveOnce: () => Promise<boolean>): Promise<boolean> {
+      if (inFlight) return inFlight;
+      inFlight = Promise.resolve().then(async () => {
+        try {
+          while (hasPending()) {
+            if (!await saveOnce()) return false;
+          }
+          return true;
+        } finally {
+          inFlight = null;
+        }
+      });
+      return inFlight;
+    },
+  };
+}

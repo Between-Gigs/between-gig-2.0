@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { blankFields } from "@/lib/data/fields";
 import { DataError } from "@/lib/data/api";
 import { marketingChange, privateDetails } from "./details";
-import { adoptSavedMarketing, REFUSAL_COPY, saveErrorMessage, saveThenSubmit, urgentFields } from "./save-flow";
+import { adoptSavedMarketing, createDraftSaveQueue, REFUSAL_COPY, saveErrorMessage, saveThenSubmit, urgentFields } from "./save-flow";
 import { encodeVideoSample } from "./video-links";
+import { reconcilePhotoCaptionSave } from "./photo-captions";
+import { serviceDraftReducer, type ServiceDraftState } from "./service-choice";
 
 const base = blankFields();
 const PNG = "data:image/png;base64,AAAA";
@@ -97,5 +99,92 @@ describe("urgentFields (the save sent as the page closes, a keepalive body is ca
   it("drops it for an unsaved video thumbnail too", () => {
     const f = { ...base, workSamples: [encodeVideoSample({ url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", thumb: PNG })] };
     expect("workSamples" in urgentFields(f)).toBe(false);
+  });
+});
+
+function deferred() {
+  let release!: (ok: boolean) => void;
+  const result = new Promise<boolean>(resolve => { release = resolve; });
+  return { result, release };
+}
+
+describe("editor single-flight save drain", () => {
+  it("does not capture a follow-up until the first receipt establishes its CAS baseline", async () => {
+    const queue = createDraftSaveQueue();
+    const a = deferred(), b = deferred();
+    let current: ServiceDraftState = { fields: { ...base, photoCaptions: { a: "First typed" }, photoCaptionBaseline: { a: "Original" } }, conversion: null };
+    let dirty = true;
+    const captures: { caption: string; baseline: string }[] = [];
+    let active = 0, peak = 0;
+    const save = async () => {
+      dirty = false;
+      const snapshot = current.fields!;
+      const captured = { caption: snapshot.photoCaptions!.a!, baseline: snapshot.photoCaptionBaseline!.a! };
+      captures.push(captured);
+      peak = Math.max(peak, ++active);
+      const ok = await (captures.length === 1 ? a.result : b.result);
+      if (ok) current = serviceDraftReducer(current, {
+        type: "set", value: fields => fields && {
+          ...fields, ...reconcilePhotoCaptionSave(fields, snapshot, snapshot, { a: captured.caption }, dirty),
+        },
+      });
+      active--;
+      return ok;
+    };
+    const first = queue.flush(() => dirty, save);
+    await Promise.resolve();
+    current = serviceDraftReducer(current, { type: "set", value: fields => fields && {...fields, photoCaptions: { a: "Second typed" } } });
+    dirty = true;
+    const second = queue.flush(() => dirty, save);
+    expect(captures).toEqual([{ caption: "First typed", baseline: "Original" }]);
+    a.release(true);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(captures[1]).toEqual({ caption: "Second typed", baseline: "First typed" });
+    b.release(true);
+    expect(await first).toBe(true);
+    expect(await second).toBe(true);
+    expect(peak).toBe(1);
+    expect(current.fields?.photoCaptions?.a).toBe("Second typed");
+    expect(current.fields?.photoCaptionBaseline?.a).toBe("Second typed");
+  });
+
+  it("a submit joins an active autosave and waits for a later edit to finish", async () => {
+    const queue = createDraftSaveQueue();
+    const a = deferred(), b = deferred();
+    let dirty = true, attempt = 0;
+    const save = async () => { dirty = false; return await (++attempt === 1 ? a.result : b.result); };
+    void queue.flush(() => dirty, save);
+    await Promise.resolve();
+    const submit = vi.fn(async () => undefined);
+    const sending = saveThenSubmit(() => queue.flush(() => dirty, save), submit);
+    dirty = true;
+    a.release(true);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(attempt).toBe(2);
+    expect(submit).not.toHaveBeenCalled();
+    b.release(true);
+    expect(await sending).toBe("sent");
+    expect(submit).toHaveBeenCalledTimes(1);
+  });
+
+  it("a refusal stops the shared drain and prevents submit, leaving pending edits for explicit retry", async () => {
+    const queue = createDraftSaveQueue();
+    const a = deferred();
+    let dirty = true;
+    const save = vi.fn(async () => { dirty = false; return await a.result; });
+    void queue.flush(() => dirty, save);
+    await Promise.resolve();
+    const submit = vi.fn(async () => undefined);
+    const sending = saveThenSubmit(() => queue.flush(() => dirty, save), submit);
+    dirty = true;
+    a.release(false);
+    expect(await sending).toBe("not-saved");
+    expect(dirty).toBe(true);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(submit).not.toHaveBeenCalled();
+    expect(queue.busy()).toBe(false);
+    expect(await queue.flush(() => dirty, async () => { dirty = false; return true; })).toBe(true);
   });
 });
