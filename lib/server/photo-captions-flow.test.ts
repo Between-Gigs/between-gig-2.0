@@ -1,21 +1,62 @@
-import {afterEach,expect,it,vi} from 'vitest';
-import {saveDraft} from './gigs';
-import {cleanFields} from './routes';
-import {completeFields} from '@/lib/data/contract/fixtures';
-import {CompanyOsError,type Row} from './companyos';
+import { afterEach, expect, it, vi } from 'vitest';
+import { saveDraft } from './gigs';
+import { cleanFields } from './routes';
+import { completeFields } from '@/lib/data/contract/fixtures';
+import { CompanyOsError, type BatchOp, type Row } from './companyos';
+
 const row=(id:string,data:Record<string,unknown>):Row=>({id,data,createdAt:'',updatedAt:''});
 afterEach(()=>vi.unstubAllEnvs());
 function fixture(mode='ok'){
- const profile=row('prof',{person:'p',status:'approved',display_name:'Maya'});
- const photo=row('f',{owner_entity:'profile',owner_id:'prof',kind:'portfolio',status:'ready',position:0,caption:'Before',published:true});
- const patches:unknown[]=[];
- const cos={query:vi.fn(async(_c:unknown,s:{entity:string})=>s.entity==='profile'?[profile]:[]),all:vi.fn(async(_c:unknown,s:{entity:string})=>s.entity==='file'?[photo]:[]),batch:vi.fn(async()=>({ids:[]})),remove:vi.fn(),patch:vi.fn(async(_c:unknown,e:string,id:string,data:Record<string,unknown>)=>{patches.push({e,id,data});if(mode==='denied')throw new CompanyOsError(403,'forbidden');if(mode==='wrong')return photo;profile.data.status='submitted';photo.data={...photo.data,...data,published:false};return photo;})};
- return {ctx:{cos,cred:{kind:'session',token:'fictional'},appUrl:''} as never,cos,photo,profile,patches};
+  const profile=row('prof',{person:'p',status:'approved',display_name:'Maya'});
+  const photo=(id:string, position:number)=>row(id,{owner_entity:'profile',owner_id:'prof',kind:'portfolio',status:'ready',position,caption:'Before',published:true});
+  const photos=[photo('f',0),photo('g',1)];
+  const cos={
+    query:vi.fn(async(_c:unknown,s:{entity:string})=>s.entity==='profile'?[profile]:[]),
+    all:vi.fn(async(_c:unknown,s:{entity:string})=>s.entity==='file'?photos:[]),remove:vi.fn(),patch:vi.fn(),
+    batch:vi.fn(async(_c:unknown, ops:BatchOp[])=>{
+      const captionOps=ops.filter(op=>op.entity==='file');
+      // The fixture simulates the contract, not the hosted DB or actual role/review policy.
+      if(mode==='denied')throw new CompanyOsError(403,'forbidden');
+      if(mode==='cas-fails-second' && captionOps.length===2)throw new CompanyOsError(409,'ifMatch mismatch');
+      if(mode!=='wrong-readback')for(const op of captionOps){
+        const photo=photos.find(f=>f.id===op.id)!;
+        photo.data={...photo.data,...op.data,published:false};
+        profile.data.status='submitted';
+      }
+      return {ids:ops.map(op=>mode==='wrong-id'?'wrong':op.id??'generated')};
+    }),
+  };
+  return {ctx:{cos,cred:{kind:'session',token:'fictional'},appUrl:''} as never,cos,photos,profile};
 }
-it('editor save/reload returns canonical caption without touching original photo/order; backend review result retained',async()=>{
- vi.stubEnv('NEXT_PUBLIC_PROFILE_VIDEO_LINKS','1');const f=fixture();const fields=cleanFields({...completeFields('Maya','/media/avatar'),workSamples:['/media/f'],photoCaptions:{f:'After'},photoCaptionBaseline:{f:'Before'}});
- const saved=await saveDraft(f.ctx,'p',fields);expect(saved.fields.photoCaptions).toEqual({f:'After'});expect(saved.fields.workSamples).toEqual(['/media/f']);expect(f.profile.data.status).toBe('submitted');expect(f.photo.data.position).toBe(0);expect(f.cos.remove).not.toHaveBeenCalled();
+const fields=()=>cleanFields({...completeFields('Maya','/media/avatar'),workSamples:['/media/f','/media/g'],photoCaptions:{f:'After',g:'After 2'},photoCaptionBaseline:{f:'Before',g:'Before'}});
+
+it('sends two captions and profile fields in a single conditional batch and verifies canonical readback',async()=>{
+  vi.stubEnv('NEXT_PUBLIC_PROFILE_VIDEO_LINKS','1');const f=fixture();
+  const saved=await saveDraft(f.ctx,'p',fields());
+  expect(f.cos.batch).toHaveBeenCalledTimes(1);
+  const ops=f.cos.batch.mock.calls[0]![1];
+  expect(ops.some(op=>op.entity==='profile')).toBe(true);
+  expect(ops.filter(op=>op.entity==='file')).toEqual([
+    {op:'update',entity:'file',id:'f',data:{caption:'After'},ifMatch:{field:'caption',value:'Before'}},
+    {op:'update',entity:'file',id:'g',data:{caption:'After 2'},ifMatch:{field:'caption',value:'Before'}},
+  ]);
+  expect(saved.fields.photoCaptions).toEqual({f:'After',g:'After 2'});
+  expect(saved.fields.workSamples).toEqual(['/media/f','/media/g']);
+  expect(f.profile.data.status).toBe('submitted');expect(f.photos[0]!.data.position).toBe(0);
+  expect(f.cos.remove).not.toHaveBeenCalled();expect(f.cos.patch).not.toHaveBeenCalled();
 });
-it.each(['denied','wrong'])('refuses false save success on %s',async mode=>{vi.stubEnv('NEXT_PUBLIC_PROFILE_VIDEO_LINKS','1');const f=fixture(mode);await expect(saveDraft(f.ctx,'p',{...completeFields('Maya','/media/avatar'),workSamples:['/media/f'],photoCaptions:{f:'After'},photoCaptionBaseline:{f:'Before'}})).rejects.toBeInstanceOf(CompanyOsError);expect(f.cos.remove).not.toHaveBeenCalled();expect(f.photo.data.caption).toBe('Before');});
-it('foreign caption preflight happens before other profile mutation',async()=>{vi.stubEnv('NEXT_PUBLIC_PROFILE_VIDEO_LINKS','1');const f=fixture();await expect(saveDraft(f.ctx,'p',{...completeFields('Maya','/media/avatar'),photoCaptions:{foreign:'No'}})).rejects.toMatchObject({code:'invalid_photo_caption'});expect(f.cos.batch).not.toHaveBeenCalled();expect(f.cos.patch).not.toHaveBeenCalled();});
-it('flag off does not accept caption persistence',()=>{vi.stubEnv('NEXT_PUBLIC_PROFILE_VIDEO_LINKS','0');expect(cleanFields({photoCaptions:{f:'text'}}).photoCaptions).toBeUndefined();});
+it.each([['denied','forbidden'],['wrong-readback','photo_caption_not_saved'],['wrong-id','photo_caption_not_saved'],['cas-fails-second','photo_caption_conflict']])('refuses false save success on %s',async(mode,code)=>{
+  vi.stubEnv('NEXT_PUBLIC_PROFILE_VIDEO_LINKS','1');const f=fixture(mode);
+  await expect(saveDraft(f.ctx,'p',fields())).rejects.toMatchObject({code});
+  expect(f.cos.remove).not.toHaveBeenCalled();expect(f.cos.patch).not.toHaveBeenCalled();
+  if(mode==='cas-fails-second')expect(f.photos.map(p=>p.data.caption)).toEqual(['Before','Before']);
+});
+it('foreign caption preflight happens before other profile mutation',async()=>{
+  vi.stubEnv('NEXT_PUBLIC_PROFILE_VIDEO_LINKS','1');const f=fixture();
+  await expect(saveDraft(f.ctx,'p',{...fields(),photoCaptions:{foreign:'No'}})).rejects.toMatchObject({code:'invalid_photo_caption'});
+  expect(f.cos.batch).not.toHaveBeenCalled();expect(f.cos.patch).not.toHaveBeenCalled();
+});
+it('flag off does not accept caption persistence',()=>{
+  vi.stubEnv('NEXT_PUBLIC_PROFILE_VIDEO_LINKS','0');
+  expect(cleanFields({photoCaptions:{f:'text'}}).photoCaptions).toBeUndefined();
+});

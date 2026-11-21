@@ -1,4 +1,4 @@
-import { photoCaptionsFrom, savePhotoCaptions, planPhotoCaptions } from "./photo-captions";
+import { photoCaptionsFrom, photoCaptionOps, planPhotoCaptions, verifyPhotoCaptionReadback } from "./photo-captions";
 import { serviceLabel, serviceMatches } from "@/lib/profile/service-labels";
 /*
  * The DataSource methods on Company OS, server side: what each one reads and writes, and how Company OS's records
@@ -425,7 +425,10 @@ async function saveDraftNow(ctx: Ctx, personId: string, input: ProfileFields): P
   // Names make the public handle (at most 60 characters, getPublic), so they're capped as the editor caps them.
   const fields = typeof input?.name === "string" && input.name.length > 60 ? { ...input, name: input.name.trim().replace(/\s+/g, " ").slice(0, 60).trim() } : input;
   const own = await ownProfile(ctx, personId);
-  if (videoLinksEnabled() && fields.photoCaptions !== undefined) planPhotoCaptions(own.profile?.id ?? "",fields.photoCaptions,own.sampleFiles ?? [],fields.photoCaptionBaseline ?? {});
+  const captionChanges = videoLinksEnabled() && fields.photoCaptions !== undefined
+    ? planPhotoCaptions(own.profile?.id ?? "", fields.photoCaptions, own.sampleFiles ?? [], fields.photoCaptionBaseline ?? {})
+    : [];
+  const captionOps = photoCaptionOps(captionChanges);
   if (!own.profile) {
     // Only the person themself may create their profile; Company OS refuses anyone else (forbidden).
     const [person] = await ctx.cos.query(ctx.cred, { entity: "person", filter: eq("id", personId), limit: 1 });
@@ -443,6 +446,21 @@ async function saveDraftNow(ctx: Ctx, personId: string, input: ProfileFields): P
   let suppressed = false;
   const send = async (m: boolean | undefined) => {
     const ops = draftOps(personId, fields, own, undefined, { marketing: m });
+    if (captionOps.length) {
+      // No caption is written unless the profile edits and every caption all succeed.
+      if (ops.length + captionOps.length > 200) throw new CompanyOsError(422, "invalid_photo_caption_batch", "Save other profile changes before editing these photo descriptions.");
+      const batch = [...ops, ...captionOps];
+      try {
+        const result = await ctx.cos.batch(ctx.cred, batch);
+        if (!Array.isArray(result?.ids) || result.ids.length !== batch.length || captionOps.some((op, i) => result.ids[ops.length + i] !== op.id)) {
+          throw new CompanyOsError(502, "photo_caption_not_saved", "The saved photo description could not be verified. Reload before trying again.");
+        }
+      } catch (e) {
+        if (e instanceof CompanyOsError && e.status === 409 && e.code === "ifMatch mismatch") throw new CompanyOsError(409, "photo_caption_conflict");
+        throw e;
+      }
+      return;
+    }
     for (let i = 0; i < ops.length; i += 200) {
       // The first batch creates the profile when there is none; later chunks only touch items (rare: over 200 changes).
       await ctx.cos.batch(ctx.cred, ops.slice(i, i + 200));
@@ -453,11 +471,6 @@ async function saveDraftNow(ctx: Ctx, personId: string, input: ProfileFields): P
     if (marketing === undefined || !(e instanceof CompanyOsError) || e.code !== "contact_suppressed") throw e;
     suppressed = true;
     await send(undefined);
-  }
-  // Caption PATCH uses the existing file ownership/re-review rules and must succeed before any sample deletion.
-  if (videoLinksEnabled() && fields.photoCaptions !== undefined) {
-    if (!own.profile) throw new CompanyOsError(422,"invalid_photo_caption","Save the photo before adding its description.");
-    await savePhotoCaptions(ctx,own.profile.id,fields.photoCaptions,own.sampleFiles ?? [],fields.photoCaptionBaseline ?? {});
   }
   // Work samples (flag on): photos as files and video links as items, after the profile exists.
   if (videoLinksEnabled() && Array.isArray(fields.workSamples)) {
@@ -474,7 +487,7 @@ async function saveDraftNow(ctx: Ctx, personId: string, input: ProfileFields): P
   if (!fields.photo && own.photo && own.profile?.data.status === "draft") await ctx.cos.remove(ctx.cred, "file", own.photo.id);
   const after = await ownProfile(ctx, personId);
   let saved = after.profile ? await withMarketing(ctx, fieldsFrom(after)) : fields;
-  if (videoLinksEnabled() && fields.photoCaptions !== undefined && Object.entries(fields.photoCaptions).some(([id,caption])=>caption!==(fields.photoCaptionBaseline?.[id] ?? "") && (saved.photoCaptions?.[id] ?? "")!==caption)) throw new CompanyOsError(502,"photo_caption_not_saved","The saved photo description could not be verified. Reload before trying again.");
+  if (own.profile && captionChanges.length) verifyPhotoCaptionReadback(own.profile.id, captionChanges, after.sampleFiles ?? []);
   if (suppressed) saved = { ...saved, marketingSuppressed: true };
   if (marketingNotice) saved = { ...saved, marketingEmailConsent: fields.marketingEmailConsent, marketingConsentBaseline: fields.marketingConsentBaseline, marketingNotice };
   return { personId, profileCreatedAt: after.profile ? profileCreation(after.profile) : null, fields: saved, step: 0, savedAt: after.profile ? iso(after.profile.updatedAt) : nowIso() };
