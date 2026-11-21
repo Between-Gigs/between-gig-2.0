@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseSample, rectFor, withFit } from "./work-fit";
+import { canAdjustPhoto, parseSample, rectFor, withFit } from "./work-fit";
 
 describe("work sample fit", () => {
   const src = "data:image/jpeg;base64,AAAA";
@@ -20,5 +20,16 @@ describe("work sample fit", () => {
     // A portrait photo, zoomed 2×, centred near the corner: clamped inside.
     const p = rectFor({ cx: 0, cy: 1, z: 2, a: 0.75 }, 16 / 9);
     expect(p.x).toBe(0); expect(p.y + p.h).toBeCloseTo(1); expect(p.w).toBeCloseTo(0.5);
+  });
+});
+
+describe("hosted photo fit safety", () => {
+  it("waits for media adoption in hosted mode but keeps immediate sample/offline fit", () => {
+    for (const needsStoredPhoto of [false, true]) {
+      expect(canAdjustPhoto("/media/f1", needsStoredPhoto)).toBe(true);
+      expect(canAdjustPhoto("/media/f1#fit=0.5,0.5,1,1.5", needsStoredPhoto)).toBe(true);
+      expect(canAdjustPhoto("data:image/jpeg;base64,AAAA", needsStoredPhoto)).toBe(!needsStoredPhoto);
+      expect(canAdjustPhoto("video:abc", needsStoredPhoto)).toBe(false);
+    }
   });
 });

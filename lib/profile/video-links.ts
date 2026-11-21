@@ -122,4 +122,4 @@ export function adoptStored(sent: readonly string[], stored: readonly string[], 
 }
 
 /** Refusal codes of the work-sample step (their messages come from the server). */
-export const SAMPLE_ERROR_CODES = new Set(["work_samples_not_saved", "too_large", "invalid_video_url", "video_host_not_allowed", "video_links_disabled", "work_sample_limit", "invalid_thumbnail", "file_type_not_allowed", "file_too_large"]);
+export const SAMPLE_ERROR_CODES = new Set(["invalid_image_fit", "photo_fit_requires_review", "image_fit_not_available", "work_samples_not_saved", "too_large", "invalid_video_url", "video_host_not_allowed", "video_links_disabled", "work_sample_limit", "invalid_thumbnail", "file_type_not_allowed", "file_too_large"]);
