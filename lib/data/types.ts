@@ -140,6 +140,9 @@ export interface ProfileFields {
   title?: string;
   /** Up to three photos of the Gigster's own work (Flow p3 "Work samples · Optional"): resized image data or links. */
   workSamples?: string[];
+  /** Descriptions for stored portfolio photos, keyed by stable file ID. */
+  photoCaptions?: Record<string, string>;
+  photoCaptionBaseline?: Record<string, string>;
   /** A link to the Gigster's résumé (a website, Google Drive or Dropbox), shown as "View résumé" with the credits. */
   resumeUrl?: string;
 }

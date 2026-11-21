@@ -33,6 +33,9 @@ export async function saveThenSubmit(flush: () => Promise<boolean>, submit: () =
 
 /** Plain words for the refusals the details, contact and rate answers can come back with. */
 export const REFUSAL_COPY: Record<string, string> = {
+  photo_caption_conflict: "This photo description changed elsewhere. Reload before editing it.",
+  photo_caption_not_saved: "The photo description was not verified as saved. Reload before trying again.",
+  invalid_photo_caption: "Use a description of at most 160 characters for a saved photo.",
   invalid_private_details: "Your contact choices couldn’t be saved. Check your phone number and how we may reach you, then try again.",
   invalid_travel_preference: "Your travel answer couldn’t be saved. Check it and try again.",
   invalid_insurance_notes: "Your insurance note couldn’t be saved. Shorten it or remove unusual characters, then try again.",

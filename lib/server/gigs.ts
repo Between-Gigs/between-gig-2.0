@@ -1,3 +1,4 @@
+import { photoCaptionsFrom, savePhotoCaptions, planPhotoCaptions } from "./photo-captions";
 import { serviceLabel, serviceMatches } from "@/lib/profile/service-labels";
 /*
  * The DataSource methods on Company OS, server side: what each one reads and writes, and how Company OS's records
@@ -97,7 +98,8 @@ const itemsOf = (rows: Row[] | undefined): ProfileItem[] =>
 function fieldsOf(w: World, profile: Row): ProfileFields {
   const photo = w.photoByProfile.get(profile.id);
   return fromProfile(profile.data, itemsOf(w.itemsByProfile.get(profile.id)), photo ? mediaUrl(photo.id) : "",
-    videoLinksEnabled() ? samplesFrom(w.itemsByProfile.get(profile.id) ?? [], w.sampleFilesByProfile.get(profile.id) ?? []) : undefined);
+    videoLinksEnabled() ? samplesFrom(w.itemsByProfile.get(profile.id) ?? [], w.sampleFilesByProfile.get(profile.id) ?? []) : undefined,
+    videoLinksEnabled() ? photoCaptionsFrom(profile.id,w.sampleFilesByProfile.get(profile.id) ?? []) : undefined);
 }
 
 /** 2.0's status: the profile's, else whether the invited person's login has signed in (gap analysis §13.5). */
@@ -279,7 +281,8 @@ async function publicProfiles(ctx: Ctx, profiles: Row[]) {
   return profiles.map((p) => {
     const photo = photoBy.get(p.id);
     const fields = withoutPrivateDetails(fromProfile(p.data, itemsOf(itemsBy.get(p.id)), photo ? mediaUrl(photo.id) : "",
-      videoLinksEnabled() ? samplesFrom(itemsBy.get(p.id) ?? [], sampleFilesBy.get(p.id) ?? []) : undefined));
+      videoLinksEnabled() ? samplesFrom(itemsBy.get(p.id) ?? [], sampleFilesBy.get(p.id) ?? []) : undefined,
+      videoLinksEnabled() ? photoCaptionsFrom(p.id,sampleFilesBy.get(p.id) ?? []) : undefined));
     fields.other = ""; // Private review text never belongs in a public response, even on upstream over-return.
     // Private even if an upstream policy unexpectedly returns the field.
     delete fields.insuranceNotes;
@@ -321,7 +324,7 @@ async function ownProfile(ctx: Ctx, personId: string) {
 }
 
 const fieldsFrom = (p: { profile?: Row; items: Row[]; photo?: Row; sampleFiles?: Row[] }) =>
-  fromProfile(p.profile!.data, itemsOf(p.items), p.photo ? mediaUrl(p.photo.id) : "", videoLinksEnabled() ? samplesFrom(p.items, p.sampleFiles ?? []) : undefined);
+  fromProfile(p.profile!.data, itemsOf(p.items), p.photo ? mediaUrl(p.photo.id) : "", videoLinksEnabled() ? samplesFrom(p.items, p.sampleFiles ?? []) : undefined, videoLinksEnabled() ? photoCaptionsFrom(p.profile!.id,p.sampleFiles ?? []) : undefined);
 
 /** Derive metadata only from the authenticated API row, never a field supplied by a client. */
 function profileCreation(row: Row): string | undefined {
@@ -422,6 +425,7 @@ async function saveDraftNow(ctx: Ctx, personId: string, input: ProfileFields): P
   // Names make the public handle (at most 60 characters, getPublic), so they're capped as the editor caps them.
   const fields = typeof input?.name === "string" && input.name.length > 60 ? { ...input, name: input.name.trim().replace(/\s+/g, " ").slice(0, 60).trim() } : input;
   const own = await ownProfile(ctx, personId);
+  if (videoLinksEnabled() && fields.photoCaptions !== undefined) planPhotoCaptions(own.profile?.id ?? "",fields.photoCaptions,own.sampleFiles ?? [],fields.photoCaptionBaseline ?? {});
   if (!own.profile) {
     // Only the person themself may create their profile; Company OS refuses anyone else (forbidden).
     const [person] = await ctx.cos.query(ctx.cred, { entity: "person", filter: eq("id", personId), limit: 1 });
@@ -450,6 +454,11 @@ async function saveDraftNow(ctx: Ctx, personId: string, input: ProfileFields): P
     suppressed = true;
     await send(undefined);
   }
+  // Caption PATCH uses the existing file ownership/re-review rules and must succeed before any sample deletion.
+  if (videoLinksEnabled() && fields.photoCaptions !== undefined) {
+    if (!own.profile) throw new CompanyOsError(422,"invalid_photo_caption","Save the photo before adding its description.");
+    await savePhotoCaptions(ctx,own.profile.id,fields.photoCaptions,own.sampleFiles ?? [],fields.photoCaptionBaseline ?? {});
+  }
   // Work samples (flag on): photos as files and video links as items, after the profile exists.
   if (videoLinksEnabled() && Array.isArray(fields.workSamples)) {
     const mid = own.profile ? own : await ownProfile(ctx, personId);
@@ -465,6 +474,7 @@ async function saveDraftNow(ctx: Ctx, personId: string, input: ProfileFields): P
   if (!fields.photo && own.photo && own.profile?.data.status === "draft") await ctx.cos.remove(ctx.cred, "file", own.photo.id);
   const after = await ownProfile(ctx, personId);
   let saved = after.profile ? await withMarketing(ctx, fieldsFrom(after)) : fields;
+  if (videoLinksEnabled() && fields.photoCaptions !== undefined && Object.entries(fields.photoCaptions).some(([id,caption])=>caption!==(fields.photoCaptionBaseline?.[id] ?? "") && (saved.photoCaptions?.[id] ?? "")!==caption)) throw new CompanyOsError(502,"photo_caption_not_saved","The saved photo description could not be verified. Reload before trying again.");
   if (suppressed) saved = { ...saved, marketingSuppressed: true };
   if (marketingNotice) saved = { ...saved, marketingEmailConsent: fields.marketingEmailConsent, marketingConsentBaseline: fields.marketingConsentBaseline, marketingNotice };
   return { personId, profileCreatedAt: after.profile ? profileCreation(after.profile) : null, fields: saved, step: 0, savedAt: after.profile ? iso(after.profile.updatedAt) : nowIso() };
