@@ -14,7 +14,7 @@ import type { EditorView as View } from "@/lib/profile/editor-view";
 import { departmentFieldRetired } from "@/lib/profile/department-retirement";
 import { adoptStored, videoLinksEnabled } from "@/lib/profile/video-links";
 import { profileDetailsEnabled } from "@/lib/profile/details";
-import { adoptSavedMarketing, createDraftSaveQueue, saveErrorMessage, saveThenSubmit, urgentFields } from "@/lib/profile/save-flow";
+import { adoptSavedMarketing, createDraftSaveQueue, createDraftSaveVisibility, saveErrorMessage, saveThenSubmit } from "@/lib/profile/save-flow";
 import { Button, Skeleton, useToast } from "@ds/components";
 import { cx } from "@ds/components/cx";
 import { ArrowLeft, ArrowRight, ChevronDown, Eye, FileText, MessageSquareWarning, Save, Send } from "lucide-react";
@@ -115,6 +115,7 @@ function Editor({ personId }: { personId: string }) {
   const [submitting, setSubmitting] = React.useState(false);
   const submittingNow = React.useRef(false);
   const [saveQueue] = React.useState(createDraftSaveQueue);
+  const [saveVisibility] = React.useState(createDraftSaveVisibility);
   const live = useLiveEditWarning(person?.status);
   const dirty = React.useRef(false);
   const step = React.useRef(0);
@@ -146,7 +147,7 @@ function Editor({ personId }: { personId: string }) {
     setSentVersion(sent?.fields ?? null);
   }, [personId]);
 
-  const saveOnce = React.useCallback(async (urgent: boolean): Promise<boolean> => {
+  const saveOnce = React.useCallback(async (): Promise<boolean> => {
     const fields = draftCursor.current.fields;
     if (!fields || !dirty.current) return true;
     dirty.current = false;
@@ -155,15 +156,21 @@ function Editor({ personId }: { personId: string }) {
     setSave({ status: "saving" });
     try {
       // Another tab may have saved since this one read the draft: lay this tab's own changes over that save.
-      const stored = KEEPS_DRAFT && !urgent ? await data.profiles.getDraft(personId) : null;
+      const stored = KEEPS_DRAFT ? await data.profiles.getDraft(personId) : null;
       const theirs = stored?.savedAt && stored.savedAt !== known.current ? stored.fields : null;
       const merged = { ...(theirs ? { ...theirs, ...pick(fields, keys) } : fields),
         ...(keys.includes("photoCaptions") ? { photoCaptionBaseline: fields.photoCaptionBaseline } : {}) };
-      const request = () => data.profiles.saveDraft(personId, urgent ? urgentFields(merged) : merged, step.current);
+      const plan = saveVisibility.plan(merged, KEEPS_DRAFT);
+      const request = () => data.profiles.saveDraft(personId, plan.fields, step.current);
       let pending: ReturnType<typeof request> | undefined;
-      if (urgent) sendNow(() => { pending = request(); });
+      if (plan.urgent) sendNow(() => { pending = request(); });
       else pending = request();
       const saved = await pending!;
+      saveVisibility.noteSuccess(plan.deferredMedia);
+      if (plan.deferredMedia) {
+        dirty.current = true;
+        touched.current.add("workSamples");
+      }
 
       setProfileCreatedAt(saved.profileCreatedAt);
       known.current = saved.savedAt;
@@ -178,31 +185,28 @@ function Editor({ personId }: { personId: string }) {
       });
       // Work samples live in Company OS (video links on): take its list (photos become /media links), unless they changed meanwhile.
       const stored_ = saved.fields.workSamples;
-      if (videoLinksEnabled() && stored_ && !theirs && !urgent) setD((cur) => (cur ? { ...cur, workSamples: adoptStored(merged.workSamples ?? [], stored_, cur.workSamples ?? []) } : cur));
+      if (videoLinksEnabled() && stored_ && !theirs && !plan.deferredMedia) setD((cur) => (cur ? { ...cur, workSamples: adoptStored(merged.workSamples ?? [], stored_, cur.workSamples ?? []) } : cur));
       // The marketing choice lives in Company OS: take the stored choice as the new baseline (unless the box was changed meanwhile).
       if (profileDetailsEnabled()) setD((cur) => (cur ? adoptSavedMarketing(cur, saved.fields, touched.current.has("marketingEmailConsent")) : cur));
       setSave(dirty.current ? { status: "saving" } : { status: "saved", at: saved.savedAt });
       void refresh();
       return true;
     } catch (e) {
+      saveVisibility.noteFailure();
       dirty.current = true;
       keys.forEach((k) => touched.current.add(k));
       const message = saveErrorMessage(e, { samples: videoLinksEnabled() });
       setSave(message ? { status: "error", message } : { status: "error" });
       return false;
     }
-  }, [personId, refresh, setD]);
+  }, [personId, refresh, saveVisibility, setD]);
 
   /** Manual save, autosave, retry, page exit and submit all share the same drain. */
-  const flush = React.useCallback((mode: "normal" | "force" | "urgent" = "normal") => {
+  const flush = React.useCallback(async (mode: "normal" | "force" = "normal") => {
     if (mode === "force" && !saveQueue.busy()) dirty.current = true;
-    let first = true;
-    return saveQueue.flush(() => !!draftCursor.current.fields && dirty.current, () => {
-      const urgent = first && mode === "urgent";
-      first = false;
-      return saveOnce(urgent);
-    });
-  }, [saveOnce, saveQueue]);
+    const ok = await saveQueue.flush(() => !!draftCursor.current.fields && dirty.current && saveVisibility.canStart(), saveOnce);
+    return ok && !dirty.current;
+  }, [saveOnce, saveQueue, saveVisibility]);
 
   // Consume each committed transaction once. Dirty tracking and focus cannot run inside the pure reducer.
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -227,16 +231,28 @@ function Editor({ personId }: { personId: string }) {
     return () => window.clearTimeout(t);
   }, [d, flush]);
   React.useEffect(() => () => { void flush(); }, [flush]);
-  // Closing the tab or switching away within the autosave pause: save at once (keepalive live).
+  // Background/page-exit saves may omit inline assets; keep them pending until foreground can send a full save.
   React.useEffect(() => {
-    const now = () => {
-      if (dirty.current) void flush("urgent");
+    const background = () => {
+      saveVisibility.setForeground(false);
+      if (dirty.current) void flush();
     };
-    const hidden = () => { if (document.visibilityState === "hidden") now(); };
-    window.addEventListener("pagehide", now);
-    document.addEventListener("visibilitychange", hidden);
-    return () => { window.removeEventListener("pagehide", now); document.removeEventListener("visibilitychange", hidden); };
-  }, [flush]);
+    const foreground = () => {
+      saveVisibility.setForeground(true);
+      if (saveVisibility.hasDeferredMedia() && dirty.current) void flush();
+    };
+    const visibilityChanged = () => { if (document.hidden) background(); else foreground(); };
+    const pageShown = () => { if (!document.hidden) foreground(); };
+    saveVisibility.setForeground(!document.hidden);
+    window.addEventListener("pagehide", background);
+    window.addEventListener("pageshow", pageShown);
+    document.addEventListener("visibilitychange", visibilityChanged);
+    return () => {
+      window.removeEventListener("pagehide", background);
+      window.removeEventListener("pageshow", pageShown);
+      document.removeEventListener("visibilitychange", visibilityChanged);
+    };
+  }, [flush, saveVisibility]);
   // Another tab saved (the sample's store changed): take its fields, keeping the ones changed here and not yet saved.
   React.useEffect(() => {
     if (!KEEPS_DRAFT) return;

@@ -96,3 +96,23 @@ export function createDraftSaveQueue() {
     },
   };
 }
+
+/** A partial hidden-page save is not a complete editor save. Only the foreground drains omitted media. */
+export function createDraftSaveVisibility() {
+  let foreground = true;
+  let deferredMedia = false;
+  return {
+    setForeground(visible: boolean) { foreground = visible; },
+    canStart: () => foreground || !deferredMedia,
+    hasDeferredMedia: () => deferredMedia,
+    plan(fields: ProfileFields, localOnly = false) {
+      // The fictional local sample does not send a keepalive body.
+      const urgent = !foreground && !localOnly;
+      const payload = urgent ? urgentFields(fields) : fields;
+      return { fields: payload, urgent, deferredMedia: payload !== fields };
+    },
+    noteSuccess(omittedMedia: boolean) { deferredMedia = omittedMedia; },
+    // Never auto-repeat a refused/ambiguous full write just because the tab becomes visible again.
+    noteFailure() { deferredMedia = false; },
+  };
+}

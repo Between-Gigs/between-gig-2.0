@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { blankFields } from "@/lib/data/fields";
 import { DataError } from "@/lib/data/api";
 import { marketingChange, privateDetails } from "./details";
-import { adoptSavedMarketing, createDraftSaveQueue, REFUSAL_COPY, saveErrorMessage, saveThenSubmit, urgentFields } from "./save-flow";
+import { adoptSavedMarketing, createDraftSaveQueue, createDraftSaveVisibility, REFUSAL_COPY, saveErrorMessage, saveThenSubmit, urgentFields } from "./save-flow";
 import { encodeVideoSample } from "./video-links";
 import { reconcilePhotoCaptionSave } from "./photo-captions";
 import { serviceDraftReducer, type ServiceDraftState } from "./service-choice";
@@ -187,4 +187,81 @@ describe("editor single-flight save drain", () => {
     expect(queue.busy()).toBe(false);
     expect(await queue.flush(() => dirty, async () => { dirty = false; return true; })).toBe(true);
   });
+});
+
+describe("editor background media save", () => {
+  it.each(["data:image/jpeg;base64,AAAA", encodeVideoSample({ url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", thumb: PNG })])(
+    "does not report full save or send omitted inline media until it is foregrounded",
+    async sample => {
+      const queue = createDraftSaveQueue(), visibility = createDraftSaveVisibility();
+      const fields = { ...base, about: "Keep this text", workSamples: [sample] };
+      let dirty = true;
+      const touched = new Set<keyof typeof fields>();
+      const requests: typeof base[] = [];
+      const save = async () => {
+        dirty = false; touched.clear();
+        const plan = visibility.plan(fields);
+        requests.push(plan.fields);
+        visibility.noteSuccess(plan.deferredMedia);
+        if (plan.deferredMedia) { dirty = true; touched.add("workSamples"); }
+        return true;
+      };
+      const flush = async () => {
+        const ok = await queue.flush(() => dirty && visibility.canStart(), save);
+        return ok && !dirty;
+      };
+      visibility.setForeground(false);
+      expect(await flush()).toBe(false);
+      expect(requests).toHaveLength(1);
+      expect(requests[0]).toMatchObject({ about: "Keep this text" });
+      expect(requests[0]?.workSamples).toBeUndefined();
+      expect(touched.has("workSamples")).toBe(true);
+      expect(visibility.hasDeferredMedia()).toBe(true);
+      expect(await flush()).toBe(false);
+      expect(requests).toHaveLength(1);
+      visibility.setForeground(true);
+      expect(await flush()).toBe(true);
+      expect(requests[1]?.workSamples).toEqual([sample]);
+      expect(touched.size).toBe(0);
+      expect(visibility.hasDeferredMedia()).toBe(false);
+    },
+  );
+});
+
+it("continues the same save drain if foreground returns while the partial write is still in flight", async () => {
+  const queue = createDraftSaveQueue(), visibility = createDraftSaveVisibility();
+  const inline = { ...base, workSamples: [PNG] };
+  let pending = true;
+  const receipt = deferred();
+  const requests: Array<{ urgent: boolean; workSamples?: string[] }> = [];
+  const save = async () => {
+    pending = false;
+    const plan = visibility.plan(inline);
+    requests.push({ urgent: plan.urgent, workSamples: plan.fields.workSamples });
+    if (plan.urgent) await receipt.result;
+    visibility.noteSuccess(plan.deferredMedia);
+    pending = plan.deferredMedia;
+    return true;
+  };
+  const flush = () => queue.flush(() => pending && visibility.canStart(), save);
+  visibility.setForeground(false);
+  const first = flush();
+  await Promise.resolve();
+  visibility.setForeground(true);
+  expect(flush()).toBe(first);
+  expect(requests).toEqual([{ urgent: true, workSamples: undefined }]);
+  receipt.release(true);
+  expect(await first).toBe(true);
+  expect(requests).toEqual([{ urgent: true, workSamples: undefined }, { urgent: false, workSamples: [PNG] }]);
+  expect(pending).toBe(false);
+});
+
+it("does not mark a refused or ambiguous foreground save for automatic replay", () => {
+  const visibility = createDraftSaveVisibility();
+  visibility.setForeground(false);
+  visibility.noteSuccess(visibility.plan({ ...base, workSamples: [PNG] }).deferredMedia);
+  visibility.setForeground(true);
+  expect(visibility.hasDeferredMedia()).toBe(true);
+  visibility.noteFailure();
+  expect(visibility.hasDeferredMedia()).toBe(false);
 });

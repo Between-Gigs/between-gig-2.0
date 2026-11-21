@@ -1,4 +1,4 @@
-import { photoCaptionsFrom, photoCaptionOps, planPhotoCaptions, verifyPhotoCaptionReadback } from "./photo-captions";
+import { PhotoCaptionReceiptError, photoCaptionsFrom, photoCaptionOps, planPhotoCaptions, verifyPhotoCaptionReadback } from "./photo-captions";
 import { serviceLabel, serviceMatches } from "@/lib/profile/service-labels";
 /*
  * The DataSource methods on Company OS, server side: what each one reads and writes, and how Company OS's records
@@ -459,7 +459,7 @@ async function saveDraftNow(ctx: Ctx, personId: string, input: ProfileFields): P
       try {
         const result = await ctx.cos.batch(ctx.cred, batch);
         if (!Array.isArray(result?.ids) || result.ids.length !== batch.length || captionOps.some((op, i) => result.ids[ops.length + i] !== op.id)) {
-          throw new CompanyOsError(502, "photo_caption_not_saved", "The saved photo description could not be verified. Reload before trying again.");
+          throw new PhotoCaptionReceiptError();
         }
       } catch (e) {
         if (e instanceof CompanyOsError && e.status === 409 && e.code === "ifMatch mismatch") throw new CompanyOsError(409, "photo_caption_conflict");

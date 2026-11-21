@@ -16,6 +16,7 @@ import { INSURANCE_NOTES_MAX } from "@/lib/profile/insurance";
 import { cleanDetails } from "@/lib/profile/details";
 import { CompanyOsError, companyOs, configFromEnv, type CompanyOs, type Credential } from "./companyos";
 import * as gigs from "./gigs";
+import { PhotoCaptionReceiptError } from "./photo-captions";
 import { cleanSamples } from "./work-samples";
 import { videoLinksEnabled } from "@/lib/profile/video-links";
 import { diagnosticRequest } from "./diagnostic";
@@ -278,6 +279,10 @@ export async function handle(name: RouteName, req: Request, deps: Deps = {}): Pr
     const result = await route.run({ cos, cred, appUrl }, args, req);
     return json(200, { result: result ?? null });
   } catch (e) {
+    // The editor needs to reload after a locally detected ambiguous write, never retry it blindly.
+    if (name === "profiles.saveDraft" && cred.kind === "session" && e instanceof PhotoCaptionReceiptError) {
+      return json(502, { error: "photo_caption_not_saved" });
+    }
     return failure(e, route.access);
   }
 }

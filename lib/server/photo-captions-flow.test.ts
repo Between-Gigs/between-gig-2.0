@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { saveDraft } from './gigs';
-import { cleanFields } from './routes';
+import { cleanFields, handle } from './routes';
 import { completeFields } from '@/lib/data/contract/fixtures';
 import { CompanyOsError, type BatchOp, type Row } from './companyos';
 
@@ -16,6 +16,7 @@ function fixture(mode='ok'){
     batch:vi.fn(async(_c:unknown, ops:BatchOp[])=>{
       const captionOps=ops.filter(op=>op.entity==='file');
       // The fixture simulates the contract, not the hosted DB or actual role/review policy.
+      if(mode==='upstream-lookalike')throw new CompanyOsError(502,'photo_caption_not_saved','private upstream detail');
       if(mode==='denied')throw new CompanyOsError(403,'forbidden');
       if(mode==='cas-fails-second' && captionOps.length===2)throw new CompanyOsError(409,'ifMatch mismatch');
       if(mode!=='wrong-readback')for(const op of captionOps){
@@ -68,4 +69,29 @@ it('rejects an explicit caption change for a photo removed by the same request b
   expect(f.cos.batch).not.toHaveBeenCalled();
   expect(f.cos.remove).not.toHaveBeenCalled();
   expect(f.photos.map(p=>p.data.caption)).toEqual(['Before','Before']);
+});
+
+function saveRequest(authenticated = true) {
+  return new Request("https://fixture.example/api/profiles/saveDraft/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(authenticated ? { Authorization: "Bearer fictional-caption-session" } : {}) },
+    body: JSON.stringify({ args: ["p", fields()] }),
+  });
+}
+
+it('reports a locally detected ambiguous caption receipt only to the authenticated draft save', async()=>{
+  vi.stubEnv('NEXT_PUBLIC_PROFILE_VIDEO_LINKS','1');
+  const f=fixture('wrong-id');
+  const response=await handle("profiles.saveDraft",saveRequest(),{cos:f.cos as never});
+  expect(response.status).toBe(502);
+  expect(await response.json()).toEqual({error:'photo_caption_not_saved'});
+
+  const anonymous=await handle("profiles.saveDraft",saveRequest(false),{cos:f.cos as never});
+  expect(anonymous.status).toBe(401);
+  expect(await anonymous.json()).toEqual({error:'unauthorized'});
+
+  const lookalike=fixture('upstream-lookalike');
+  const opaque=await handle("profiles.saveDraft",saveRequest(),{cos:lookalike.cos as never});
+  expect(opaque.status).toBe(502);
+  expect(await opaque.json()).toEqual({error:'unavailable'});
 });
