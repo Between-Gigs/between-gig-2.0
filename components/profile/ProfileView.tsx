@@ -1,4 +1,5 @@
 "use client";
+import {photoCaptionFor} from "@/lib/profile/photo-captions";
 import { serviceLabel } from "@/lib/profile/service-labels";
 import { APPROVED_NOT_PUBLIC, isApprovedPrivate, isPublicStatus, isReviewedStatus } from "@/lib/profile/publish-gate";
 import { Accordion, Button, Field, Input, Modal, Select, Textarea, cx, useToast } from "@ds/components";
@@ -77,7 +78,7 @@ function profileContent({ person, fields: f, extras, mode, draft = false, part }
   const services = f.services, credits = pinnedCredits(f);
   const editing = !!part, show = draft || editing;
   const priced = hasRate(f.rate);
-  const ownWork = portfolioItems(f.workSamples ?? [], videoLinksEnabled());
+  const ownWork = portfolioItems(f.workSamples ?? [], videoLinksEnabled()).map(it=>it.video?it:{...it,caption:photoCaptionFor(it.src,f.photoCaptions)||it.caption});
   const P = (id: ProfilePart, filled: boolean, content: React.ReactNode, hint: string, kind: PartKind = "line") =>
     part ? <React.Fragment key={id}>{part(id, { content, hint, kind })}</React.Fragment>
       : filled ? content : draft ? <Placeholder key={id} kind={kind}>{hint}</Placeholder> : null;

@@ -1,3 +1,4 @@
+import { PhotoCaptionReceiptError, photoCaptionsFrom, photoCaptionOps, planPhotoCaptions, verifyPhotoCaptionReadback } from "./photo-captions";
 import { serviceLabel, serviceMatches } from "@/lib/profile/service-labels";
 /*
  * The DataSource methods on Company OS, server side: what each one reads and writes, and how Company OS's records
@@ -21,7 +22,7 @@ import { offSetServices, onSetSkills, waitlistCategories } from "@/lib/data/taxo
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { isReviewedStatus, publishGateOn } from "@/lib/profile/publish-gate";
 import { videoLinksEnabled } from "@/lib/profile/video-links";
-import { SAMPLE_KINDS, sampleRefusalMessage, samplesFrom, saveSamples, serialised } from "./work-samples";
+import { SAMPLE_KINDS, planSamples, sampleRefusalMessage, samplesFrom, saveSamples, serialised } from "./work-samples";
 import { CompanyOsError, and, eq, isIn, type AdminUser, type BatchOp, type CompanyOs, type Credential, type Row } from "./companyos";
 
 export interface Ctx {
@@ -97,7 +98,8 @@ const itemsOf = (rows: Row[] | undefined): ProfileItem[] =>
 function fieldsOf(w: World, profile: Row): ProfileFields {
   const photo = w.photoByProfile.get(profile.id);
   return fromProfile(profile.data, itemsOf(w.itemsByProfile.get(profile.id)), photo ? mediaUrl(photo.id) : "",
-    videoLinksEnabled() ? samplesFrom(w.itemsByProfile.get(profile.id) ?? [], w.sampleFilesByProfile.get(profile.id) ?? []) : undefined);
+    videoLinksEnabled() ? samplesFrom(w.itemsByProfile.get(profile.id) ?? [], w.sampleFilesByProfile.get(profile.id) ?? []) : undefined,
+    videoLinksEnabled() ? photoCaptionsFrom(profile.id,w.sampleFilesByProfile.get(profile.id) ?? []) : undefined);
 }
 
 /** 2.0's status: the profile's, else whether the invited person's login has signed in (gap analysis §13.5). */
@@ -279,7 +281,8 @@ async function publicProfiles(ctx: Ctx, profiles: Row[]) {
   return profiles.map((p) => {
     const photo = photoBy.get(p.id);
     const fields = withoutPrivateDetails(fromProfile(p.data, itemsOf(itemsBy.get(p.id)), photo ? mediaUrl(photo.id) : "",
-      videoLinksEnabled() ? samplesFrom(itemsBy.get(p.id) ?? [], sampleFilesBy.get(p.id) ?? []) : undefined));
+      videoLinksEnabled() ? samplesFrom(itemsBy.get(p.id) ?? [], sampleFilesBy.get(p.id) ?? []) : undefined,
+      videoLinksEnabled() ? photoCaptionsFrom(p.id,sampleFilesBy.get(p.id) ?? []) : undefined));
     fields.other = ""; // Private review text never belongs in a public response, even on upstream over-return.
     // Private even if an upstream policy unexpectedly returns the field.
     delete fields.insuranceNotes;
@@ -321,7 +324,7 @@ async function ownProfile(ctx: Ctx, personId: string) {
 }
 
 const fieldsFrom = (p: { profile?: Row; items: Row[]; photo?: Row; sampleFiles?: Row[] }) =>
-  fromProfile(p.profile!.data, itemsOf(p.items), p.photo ? mediaUrl(p.photo.id) : "", videoLinksEnabled() ? samplesFrom(p.items, p.sampleFiles ?? []) : undefined);
+  fromProfile(p.profile!.data, itemsOf(p.items), p.photo ? mediaUrl(p.photo.id) : "", videoLinksEnabled() ? samplesFrom(p.items, p.sampleFiles ?? []) : undefined, videoLinksEnabled() ? photoCaptionsFrom(p.profile!.id,p.sampleFiles ?? []) : undefined);
 
 /** Derive metadata only from the authenticated API row, never a field supplied by a client. */
 function profileCreation(row: Row): string | undefined {
@@ -422,6 +425,16 @@ async function saveDraftNow(ctx: Ctx, personId: string, input: ProfileFields): P
   // Names make the public handle (at most 60 characters, getPublic), so they're capped as the editor caps them.
   const fields = typeof input?.name === "string" && input.name.length > 60 ? { ...input, name: input.name.trim().replace(/\s+/g, " ").slice(0, 60).trim() } : input;
   const own = await ownProfile(ctx, personId);
+  const captionChanges = videoLinksEnabled() && fields.photoCaptions !== undefined
+    ? planPhotoCaptions(own.profile?.id ?? "", fields.photoCaptions, own.sampleFiles ?? [], fields.photoCaptionBaseline ?? {})
+    : [];
+  if (captionChanges.length && Array.isArray(fields.workSamples)) {
+    const removals = new Set(planSamples(fields.workSamples, own.items, own.sampleFiles).removeFiles);
+    if (captionChanges.some(({ id }) => removals.has(id))) {
+      throw new CompanyOsError(422, "invalid_photo_caption_removal", "A removed photo cannot also have its description changed. Reload before trying again.");
+    }
+  }
+  const captionOps = photoCaptionOps(captionChanges);
   if (!own.profile) {
     // Only the person themself may create their profile; Company OS refuses anyone else (forbidden).
     const [person] = await ctx.cos.query(ctx.cred, { entity: "person", filter: eq("id", personId), limit: 1 });
@@ -439,6 +452,21 @@ async function saveDraftNow(ctx: Ctx, personId: string, input: ProfileFields): P
   let suppressed = false;
   const send = async (m: boolean | undefined) => {
     const ops = draftOps(personId, fields, own, undefined, { marketing: m });
+    if (captionOps.length) {
+      // No caption is written unless the profile edits and every caption all succeed.
+      if (ops.length + captionOps.length > 200) throw new CompanyOsError(422, "invalid_photo_caption_batch", "Save other profile changes before editing these photo descriptions.");
+      const batch = [...ops, ...captionOps];
+      try {
+        const result = await ctx.cos.batch(ctx.cred, batch);
+        if (!Array.isArray(result?.ids) || result.ids.length !== batch.length || captionOps.some((op, i) => result.ids[ops.length + i] !== op.id)) {
+          throw new PhotoCaptionReceiptError();
+        }
+      } catch (e) {
+        if (e instanceof CompanyOsError && e.status === 409 && e.code === "ifMatch mismatch") throw new CompanyOsError(409, "photo_caption_conflict");
+        throw e;
+      }
+      return;
+    }
     for (let i = 0; i < ops.length; i += 200) {
       // The first batch creates the profile when there is none; later chunks only touch items (rare: over 200 changes).
       await ctx.cos.batch(ctx.cred, ops.slice(i, i + 200));
@@ -465,6 +493,7 @@ async function saveDraftNow(ctx: Ctx, personId: string, input: ProfileFields): P
   if (!fields.photo && own.photo && own.profile?.data.status === "draft") await ctx.cos.remove(ctx.cred, "file", own.photo.id);
   const after = await ownProfile(ctx, personId);
   let saved = after.profile ? await withMarketing(ctx, fieldsFrom(after)) : fields;
+  if (own.profile && captionChanges.length) verifyPhotoCaptionReadback(own.profile.id, captionChanges, after.sampleFiles ?? []);
   if (suppressed) saved = { ...saved, marketingSuppressed: true };
   if (marketingNotice) saved = { ...saved, marketingEmailConsent: fields.marketingEmailConsent, marketingConsentBaseline: fields.marketingConsentBaseline, marketingNotice };
   return { personId, profileCreatedAt: after.profile ? profileCreation(after.profile) : null, fields: saved, step: 0, savedAt: after.profile ? iso(after.profile.updatedAt) : nowIso() };

@@ -33,6 +33,9 @@ export async function saveThenSubmit(flush: () => Promise<boolean>, submit: () =
 
 /** Plain words for the refusals the details, contact and rate answers can come back with. */
 export const REFUSAL_COPY: Record<string, string> = {
+  photo_caption_conflict: "This photo description changed elsewhere. Reload before editing it.",
+  photo_caption_not_saved: "The photo description was not verified as saved. Reload before trying again.",
+  invalid_photo_caption: "Use a description of at most 160 characters for a saved photo.",
   invalid_private_details: "Your contact choices couldn’t be saved. Check your phone number and how we may reach you, then try again.",
   invalid_travel_preference: "Your travel answer couldn’t be saved. Check it and try again.",
   invalid_insurance_notes: "Your insurance note couldn’t be saved. Shorten it or remove unusual characters, then try again.",
@@ -70,4 +73,46 @@ export function urgentFields(fields: ProfileFields): ProfileFields {
   const { workSamples: _unsaved, ...rest } = fields;
   void _unsaved;
   return rest as ProfileFields;
+}
+
+/** Coalesce callers, capture the next save only after its predecessor's receipt, and stop on failure. */
+export function createDraftSaveQueue() {
+  let inFlight: Promise<boolean> | null = null;
+  return {
+    busy: () => inFlight !== null,
+    flush(hasPending: () => boolean, saveOnce: () => Promise<boolean>): Promise<boolean> {
+      if (inFlight) return inFlight;
+      inFlight = Promise.resolve().then(async () => {
+        try {
+          while (hasPending()) {
+            if (!await saveOnce()) return false;
+          }
+          return true;
+        } finally {
+          inFlight = null;
+        }
+      });
+      return inFlight;
+    },
+  };
+}
+
+/** A partial hidden-page save is not a complete editor save. Only the foreground drains omitted media. */
+export function createDraftSaveVisibility() {
+  let foreground = true;
+  let deferredMedia = false;
+  return {
+    setForeground(visible: boolean) { foreground = visible; },
+    canStart: () => foreground || !deferredMedia,
+    hasDeferredMedia: () => deferredMedia,
+    plan(fields: ProfileFields, localOnly = false) {
+      // The fictional local sample does not send a keepalive body.
+      const urgent = !foreground && !localOnly;
+      const payload = urgent ? urgentFields(fields) : fields;
+      return { fields: payload, urgent, deferredMedia: payload !== fields };
+    },
+    noteSuccess(omittedMedia: boolean) { deferredMedia = omittedMedia; },
+    // Never auto-repeat a refused/ambiguous full write just because the tab becomes visible again.
+    noteFailure() { deferredMedia = false; },
+  };
 }

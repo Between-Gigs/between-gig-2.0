@@ -16,6 +16,7 @@ import { INSURANCE_NOTES_MAX } from "@/lib/profile/insurance";
 import { cleanDetails } from "@/lib/profile/details";
 import { CompanyOsError, companyOs, configFromEnv, type CompanyOs, type Credential } from "./companyos";
 import * as gigs from "./gigs";
+import { PhotoCaptionReceiptError } from "./photo-captions";
 import { cleanSamples } from "./work-samples";
 import { videoLinksEnabled } from "@/lib/profile/video-links";
 import { diagnosticRequest } from "./diagnostic";
@@ -48,6 +49,11 @@ export function cleanFields(v: unknown): ProfileFields {
   }
   // Work samples reach Company OS only with the video-links flag; otherwise they stay in the browser, as before.
   if (videoLinksEnabled() && input.workSamples !== undefined) out.workSamples = cleanSamples(input.workSamples);
+  for (const key of ["photoCaptions","photoCaptionBaseline"] as const) if (videoLinksEnabled() && input[key] !== undefined) {
+    const captions=input[key];
+    if (!captions || typeof captions!=="object" || Array.isArray(captions) || Object.keys(captions).length>5 || Object.entries(captions).some(([id,c])=>! /^[A-Za-z0-9-]{1,64}$/.test(id) || typeof c!=="string" || c.length>160)) throw new CompanyOsError(422,"invalid_photo_caption","Use descriptions of at most 160 characters for saved photos.");
+    out[key]=captions;
+  }
   if (input.travelBeyondLA !== undefined) {
     if (typeof input.travelBeyondLA !== "boolean") throw new CompanyOsError(422,"invalid_travel_preference","Choose whether you are willing to travel beyond Los Angeles.");
     out.travelBeyondLA = input.travelBeyondLA;
@@ -273,6 +279,10 @@ export async function handle(name: RouteName, req: Request, deps: Deps = {}): Pr
     const result = await route.run({ cos, cred, appUrl }, args, req);
     return json(200, { result: result ?? null });
   } catch (e) {
+    // The editor needs to reload after a locally detected ambiguous write, never retry it blindly.
+    if (name === "profiles.saveDraft" && cred.kind === "session" && e instanceof PhotoCaptionReceiptError) {
+      return json(502, { error: "photo_caption_not_saved" });
+    }
     return failure(e, route.access);
   }
 }
