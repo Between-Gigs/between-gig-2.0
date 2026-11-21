@@ -1,9 +1,9 @@
 "use client";
 /*
  * Template · Public profile (Figma: DS · Patterns → Public profile; mockup Flow p4). The Green Room presentation of a
- * Gigster's page: the portrait, serif name, title, area and years; then "How I can help" (each service with its
- * standard description and the Gigster's own line) beside the rate column (price and what it applies to, minimum,
- * "Available for work", availability and earliest start); then work samples, and Experience, Selected credits and the
+ * Gigster's page: portrait and name, then public rates and availability near the top. Previews keep the original rate
+ * column beside "How I can help" (each service with its standard description and the Gigster's own line).
+ * The profile also includes work samples, Experience, Selected credits and the
  * chosen personality question with its answer in italic serif. It takes exactly the props WarmProfile gets
  * (components/profile/ProfileView picks it for the editorial look), so every edit spot, permission and action is the
  * same: only the presentation changes.
@@ -76,6 +76,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
   const question = personalityQuestionText(f.personalityQuestion);
   const available = f.monthStatus === "available";
   const publicActions = mode === "public" && !editing;
+  const ratesUnderIdentity = publicActions && !embedded && !draft && !part && !aside;
   const lineOf = (s: string) => f.serviceLines?.[s]?.trim() ?? "";
 
   const years = (f.years || editing) && (part
@@ -150,7 +151,7 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
   );
 
   const rateColumn = (
-    <div className="grid min-w-0 content-start gap-4 lg:border-l lg:border-line-strong lg:pl-10">
+    <div className={cx("grid min-w-0 content-start gap-4", !ratesUnderIdentity && "lg:border-l lg:border-line-strong lg:pl-10")}>
       {rateBlock}
       {P("availability", !!f.dates.trim() || !show, <Text>{f.dates || monthStatusLabel[f.monthStatus]}</Text>, "When you're usually free")}
       {start && <Text muted>Earliest start · {start}</Text>}
@@ -253,13 +254,19 @@ export function ProfileTemplate({ person, fields: f, mode, embedded, similar = [
   return (
     <div className="relative">
       {identity}
+      {ratesUnderIdentity && (
+        <section aria-label="Rates & availability" className="mt-12 grid gap-5 border-t border-line-strong pt-8">
+          <SectionHeading title="Rates & availability" level="h2" />
+          <div className="min-w-0 max-w-md">{rateColumn}</div>
+        </section>
+      )}
 
       <div className={cx("mt-12 grid gap-10", !!aside && "lg:grid-cols-12 lg:gap-x-10 xl:gap-x-14")}>
         <div className={cx("grid min-w-0 content-start gap-12", !!aside && "lg:col-span-8")}>
           {experience}
-          <div className="grid gap-8 border-t border-line-strong pt-8 lg:grid-cols-12 lg:gap-x-10">
-            <div className="min-w-0 lg:col-span-8">{help}</div>
-            <div className="min-w-0 lg:col-span-4">{rateColumn}</div>
+          <div className={cx("grid gap-8 border-t border-line-strong pt-8", !ratesUnderIdentity && "lg:grid-cols-12 lg:gap-x-10")}>
+            <div className={cx("min-w-0", !ratesUnderIdentity && "lg:col-span-8")}>{help}</div>
+            {!ratesUnderIdentity && <div className="min-w-0 lg:col-span-4">{rateColumn}</div>}
           </div>
           {sections.map((key) => body[key] && <React.Fragment key={key}>{body[key]}</React.Fragment>)}
           {sample && !editing && <Text size="sm" muted>This is a fictional sample profile: the person, biography and credits are made up for the preview.</Text>}
